@@ -554,6 +554,33 @@ factory can then build/install.
 aggressive threats, and the risk of a crippling hit shall make simply getting out
 and back a meaningful achievement.
 
+### Loss and insurance
+
+> *Elite Dangerous*-style rebuy: a lost ship stings but is rarely game-ending,
+> and the player can never be permanently stranded.
+
+**LOSS-1** — When a player's ship is destroyed or lost, the game shall offer a
+**rebuy** that restores the ship to its launch specification (hull and fitted
+components) for **10% of the ship's launch value**, with insurance covering the
+remaining 90%.
+
+**LOSS-2** — The game shall define **launch value** as the value of the ship's
+hull and fitted components at the moment it launched, excluding cargo.
+
+**LOSS-3** — When a ship is lost, the game shall forfeit the cargo (gems) it was
+carrying. *(The carried profit is what's at risk — the heart of the
+survival-and-return tension.)*
+
+**LOSS-4** — When the player accepts a rebuy, the game shall deduct the 10% rebuy
+cost from the player's funds.
+
+**LOSS-5** — If the player cannot afford the rebuy cost, then the game shall allow
+the player to sell assets (components, blueprints, holdings) to raise the funds.
+
+**LOSS-6** — If the player's net worth is below a configured threshold, then the
+game shall provide a **free minimum-spec ship**, so a player can never be
+permanently stranded without a ship.
+
 ---
 
 ## 17. Presentation and aesthetic
@@ -628,8 +655,11 @@ Sequencing and rationale:
 
 ---
 
-## Appendix B — Open Questions
+## Appendix B — Decisions & Open Questions
 
-**Q1 — Loss model.** What happens when a ship is destroyed or stranded? Leaning
-toward **insurance contracts** that soften (not erase) the loss — premiums vs.
-payouts as another economic dial. Permadeath vs. recoverable is unresolved.
+**Q1 — Loss model. RESOLVED.** *Elite Dangerous*-style rebuy: on loss, insurance
+covers 90% of the ship's launch value and the player pays a 10% rebuy; carried
+cargo is forfeit; a free minimum-spec ship is provided below a net-worth
+threshold. See **LOSS-1…6** (Section 16). Not permadeath; ships are recoverable.
+
+*(No open questions outstanding.)*
