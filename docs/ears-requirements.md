@@ -606,9 +606,25 @@ energy.*
 black-box instance of a future capability in which the player can **program**
 ship logic (assist behaviours, weapon control, automation). Needs design.
 
-**A.3 — Multiplayer.** Flagged as a high-potential future pillar. Interacts
-directly with the determinism requirement (NFR-1) and a future netcode model.
-Parked, not forgotten.
+**A.3 — Multiplayer.** A desired future pillar in two forms: **local
+split-screen** (multiple players on one device) and **networked** play.
+**Single-player must work well first** — multiplayer follows once the core game
+is good.
+
+Sequencing and rationale:
+
+- **Split-screen is the cheaper, earlier step.** It runs one shared
+  deterministic simulation on one machine, so it sidesteps netcode, rollback,
+  and clock-sync entirely. It is the natural first multiplayer milestone and it
+  de-risks the networked version by forcing the engine to handle multiple
+  players cleanly.
+- **Networked play** is the harder step and interacts directly with the
+  determinism requirement (NFR-1) and a future netcode/rollback model.
+- **Build single-player multiplayer-ready, cheaply.** Even with one player,
+  route input through a **per-player input source** and render through a
+  **per-player camera/viewport** abstraction. This small discipline now avoids a
+  large refactor when split-screen arrives, without doing any multiplayer work
+  yet.
 
 ---
 
