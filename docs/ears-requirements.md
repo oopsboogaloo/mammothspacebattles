@@ -583,7 +583,59 @@ permanently stranded without a ship.
 
 ---
 
-## 17. Presentation and aesthetic
+## 17. Game world and viewport
+
+> The sector is a closed, wrap-around arena larger than the screen. You cannot
+> fly out of it — the only way in or out is the hyperspace point.
+
+### World
+
+**WORLD-1** — The game world (a **sector**) shall be larger than the player's
+screen.
+
+**WORLD-2** — The world shall **wrap around** on both axes (toroidal topology): a
+body leaving one edge shall re-enter at the opposite edge with continuous
+position and velocity, so it is not possible to leave the sector by flying away.
+
+**WORLD-3** — The simulation shall compute physics interactions across the wrap
+boundary — collisions, gravity, beams, and projectiles — using the **nearest
+toroidal image** of each body, so behaviour is seamless across the seam.
+
+**WORLD-4** — The sector shall contain an **indestructible hyperspace point** used
+to enter and leave the sector.
+
+**WORLD-5** — The hyperspace point shall not take damage and shall not be
+destroyed by collisions or weapons.
+
+**WORLD-6** — When the player launches a sortie, the game shall bring the ship
+into the sector at the hyperspace point.
+
+**WORLD-7** — When the player's ship uses the hyperspace point, the game shall let
+the player leave the sector (ending the sortie / transiting to another sector or
+to base).
+
+### Viewport
+
+**VIEW-1** — The game shall present a **scrolling viewport** that follows the
+player's ship, showing a portion of the larger world.
+
+**VIEW-2** — While the ship moves through the world, the viewport shall scroll to
+keep the ship in view.
+
+**VIEW-3** — The viewport shall render the wrap-around **seamlessly**, so objects
+near the opposite edge appear correctly when in view across the boundary, with no
+visible hard edge.
+
+**VIEW-4** — The viewport shall be a **per-player camera**, so split-screen can
+give each player an independent view (ties to Appendix A.3).
+
+**VIEW-5 (Phase 2)** — Where situational awareness is needed off-screen, the game
+shall indicate significant off-screen objects (e.g. threats, the hyperspace
+point) at the screen edge.
+
+---
+
+## 18. Presentation and aesthetic
 
 **ART-1** — The game shall render in a **retro neon vector style**: glowing
 line-art silhouettes, vector motion trails, and a dark backdrop.
@@ -592,7 +644,7 @@ line-art silhouettes, vector motion trails, and a dark backdrop.
 
 ---
 
-## 18. Non-functional / cross-cutting
+## 19. Non-functional / cross-cutting
 
 **NFR-1** — The simulation shall be deterministic for a given seed and input
 sequence, so that runs are reproducible for testing and replay. *(Note: this
