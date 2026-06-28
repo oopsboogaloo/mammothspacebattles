@@ -1,0 +1,1 @@
+{"type":"module","scripts":{"test":"node --test","build":"tsc --noEmit false --outDir dist && cp index.html dist/index.html && cp src/style.css dist/style.css","dev":"python3 -m http.server 5173"},"devDependencies":{"typescript":"latest"}}
