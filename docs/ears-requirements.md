@@ -1,8 +1,8 @@
 # Mammoth Space Battles — EARS Requirements Specification
 
 **Status:** Initial concept specification  
-**Version:** 0.1  
-**Date:** 2026-06-27
+**Version:** 0.2  
+**Date:** 2026-07-20
 
 ## 1. Purpose
 
@@ -70,11 +70,44 @@ The initial specification does not require:
 | **Structural link** | A connector that transfers forces and torque between components. |
 | **Background body** | A configured planet, moon, star, wormhole, or other source whose gravitational effect is simulated even if the source is not a locally collidable body. |
 | **Simulation profile** | A named collection of numerical tolerances, time-step limits, particle limits, and fidelity settings. |
-| **Functional efficiency** | A value from zero to one that scales a damaged component’s capability. |
+| **Functional efficiency** | A value from zero to one that scales a damaged component's capability. |
+| **Sandbox scenario** | An arbitrary, player-composed arrangement of bodies and components, not necessarily a connected or flight-ready ship, used to configure and run an isolated physics experiment. |
 
-## 5. System-Wide Physics
+## 5. Physics Sandbox
 
-### 5.1 State and integration
+The sandbox is the primary tool for building and validating the physics engine. It allows any authored body or component type to be placed and observed in isolation, independent of whether it forms part of a complete ship, so that individual pieces of simulation behaviour can be added and tested one at a time before being combined. The ship designer (Section 9) is a specialised use of the sandbox: composing a scenario whose components form one or more connected, flight-ready assemblies.
+
+### 5.1 Scenario composition
+
+- **SBX-001:** The sandbox shall allow the player to place any authored body or component type individually in a scenario without requiring a complete or connected ship.
+- **SBX-002:** The sandbox shall allow the player to set each placed item's initial position, orientation, linear velocity, and angular velocity.
+- **SBX-003:** Where a placed item type supports resource contents, integrity, or damage state, the sandbox shall allow the player to set its initial values for those properties.
+- **SBX-004:** The sandbox shall allow the player to connect placed components with control, resource, manufacturing, and structural links using the same link model available to the ship designer.
+- **SBX-005:** The sandbox shall allow a scenario to contain any combination of a partial ship assembly, a complete ship assembly, and independent unconnected bodies.
+- **SBX-006:** The sandbox shall simulate placed items using the same simulation systems and authored data used in flight scenarios, without sandbox-specific physics approximations.
+
+### 5.2 Execution control
+
+- **SBX-007:** The sandbox shall allow the player to run, pause, and single-step a scenario's simulation.
+- **SBX-008:** The sandbox shall allow the player to reset a scenario to its last defined initial state.
+- **SBX-009:** When a scenario resets, the system shall restore every placed item's initial position, orientation, velocity, contents, links, and damage state exactly as configured.
+- **SBX-010:** When a reset scenario is rerun without a change to its configuration or player input, the simulation shall reproduce the same outcome within the active simulation profile's tolerance.
+- **SBX-011:** The sandbox shall allow the player to adjust simulation time scale for observation without altering the underlying physical result.
+
+### 5.3 Scenario persistence
+
+- **SBX-012:** The system shall allow the player to save, load, and duplicate sandbox scenarios independently from ship designs and flight saves.
+- **SBX-013:** A saved sandbox scenario shall record every placed item's type, initial state, and links sufficient to reconstruct the scenario exactly.
+
+### 5.4 Diagnostics and growth path
+
+- **SBX-014:** The sandbox shall expose the same diagnostic visualisations and conservation/violation logging available in flight, including forces, centres of mass, thrust vectors, structural loads, and resource paths.
+- **SBX-015:** The system shall allow a sandbox scenario to be treated as a ship design once its placed components form one or more valid connected, flight-ready assemblies.
+- **SBX-016:** The system shall allow a ship design to be loaded back into the sandbox for live physics preview before it is made available to launch into a flight scenario.
+
+## 6. System-Wide Physics
+
+### 6.1 State and integration
 
 - **PHY-001:** The simulation shall represent every dynamic body with mass, centre of mass, position, linear velocity, orientation, angular velocity, and collision geometry.
 - **PHY-002:** The simulation shall derive each body's linear acceleration from the net force acting on that body.
@@ -91,7 +124,7 @@ The initial specification does not require:
 - **PHY-013:** The simulation shall expose the active physics time scale to the presentation layer.
 - **PHY-014:** While the simulation is paused, the system shall not advance physical state.
 
-### 5.2 Material properties
+### 6.2 Material properties
 
 - **MAT-001:** The system shall assign each physical material a density, toughness, elasticity, thermal tolerance, and damage response.
 - **MAT-002:** The system shall derive an object's dry mass from its geometry and material unless the object's definition provides a validated explicit mass.
@@ -100,7 +133,7 @@ The initial specification does not require:
 - **MAT-005:** The system shall prevent any store from containing more than its intact usable capacity.
 - **MAT-006:** When a store is damaged, the system shall recalculate its usable capacity and containment effectiveness from its remaining integrity.
 
-## 6. Gravity and Environmental Forces
+## 7. Gravity and Environmental Forces
 
 - **GRV-001:** The simulation shall calculate gravitational force between local bodies whose mass and distance place their interaction above the configured significance threshold.
 - **GRV-002:** The simulation shall apply configured gravitational fields from background planets, moons, stars, and wormholes.
@@ -112,9 +145,9 @@ The initial specification does not require:
 - **GRV-008:** When a body crosses a traversable wormhole boundary, the simulation shall transform its position, orientation, linear momentum, and angular momentum according to the wormhole definition.
 - **GRV-009:** If a body enters a region in which the gravitational model is undefined or singular, then the simulation shall apply a documented finite limiting rule.
 
-## 7. Collision, Contact, and Damage
+## 8. Collision, Contact, and Damage
 
-### 7.1 Contact physics
+### 8.1 Contact physics
 
 - **COL-001:** When two collision geometries intersect during a physics step, the simulation shall resolve contact at the detected contact location.
 - **COL-002:** When resolving a collision, the simulation shall account for the bodies' relative linear velocity, angular velocity, mass, inertia, shape, material, elasticity, and friction.
@@ -124,7 +157,7 @@ The initial specification does not require:
 - **COL-006:** When bodies remain in contact, the simulation shall prevent persistent unphysical interpenetration beyond the active profile's tolerance.
 - **COL-007:** When a gas parcel contacts a solid surface, the simulation shall transfer momentum and thermal energy according to the configured gas-surface interaction model.
 
-### 7.2 Local trauma and integrity
+### 8.2 Local trauma and integrity
 
 - **DMG-001:** When an impact affects a ship component, the simulation shall apply trauma to that component at the impact location.
 - **DMG-002:** When an impact affects an asteroid child, the simulation shall apply trauma to that child and its load-bearing bonds.
@@ -140,9 +173,11 @@ The initial specification does not require:
 - **DMG-012:** The simulation shall retain the momentum of every separated fragment.
 - **DMG-013:** If damage leaves invalid or degenerate collision geometry, then the system shall replace it with a documented safe physical representation while preserving mass and momentum.
 
-## 8. Ship Construction and Structure
+## 9. Ship Construction and Structure
 
-### 8.1 Components and layout
+The ship designer applies the placement, connection, execution-control, and persistence requirements of Section 5 to the specific goal of composing a connected, flight-ready assembly. Requirements in this section are additional constraints that apply when a sandbox scenario is being used as a ship design.
+
+### 9.1 Components and layout
 
 - **SHP-001:** The ship designer shall allow the player to place ship components in a two-dimensional construction area.
 - **SHP-002:** The ship designer shall prevent the solid geometry of two components from overlapping.
@@ -161,7 +196,7 @@ The initial specification does not require:
 - **SHP-015:** When an incoming object first contacts armour, the simulation shall resolve the contact with the armour before applying any subsequent contact to protected components.
 - **SHP-016:** The system shall allow an unarmoured impact to directly damage the struck internal component.
 
-### 8.2 Connectivity and controls
+### 9.2 Connectivity and controls
 
 - **LNK-001:** The ship designer shall allow the player to create control, resource, manufacturing, and structural links.
 - **LNK-002:** The ship designer shall display each link's type, endpoints, direction, capacity, and integrity.
@@ -172,7 +207,7 @@ The initial specification does not require:
 - **LNK-007:** When multiple compatible stores can supply a request, the system shall distribute the draw according to the configured resource-routing rule.
 - **LNK-008:** When a link carries more force or resource flow than its rated capacity, the simulation shall apply overload trauma to that link.
 
-### 8.3 Design validation
+### 9.3 Design validation
 
 - **VAL-001:** When the player requests design validation, the system shall report overlapping components, disconnected required links, unsupported components, invalid control mappings, and inaccessible stores.
 - **VAL-002:** The design validator shall distinguish launch-blocking errors from survivability warnings.
@@ -183,9 +218,9 @@ The initial specification does not require:
 - **VAL-007:** The system shall allow the player to save, load, duplicate, and revise ship designs.
 - **VAL-008:** When a component definition changes between game versions, the system shall identify affected saved designs before migration.
 
-## 9. Propulsion and Manoeuvring Thrusters
+## 10. Propulsion and Manoeuvring Thrusters
 
-### 9.1 Reactants and combustion
+### 10.1 Reactants and combustion
 
 - **THR-001:** A chemical thruster shall require intact resource paths to compatible fuel and oxidiser stores before it can sustain thrust.
 - **THR-002:** When a chemical thruster receives an activation command, the system shall inject compact fuel parcels and oxidiser parcels into that thruster at rates limited by the command, component condition, link capacity, and available resources.
@@ -200,7 +235,7 @@ The initial specification does not require:
 - **THR-011:** If either required reactant is unavailable, then the thruster shall cease generating newly reacted gas.
 - **THR-012:** If fuel and oxidiser mix outside intended containment and meet ignition conditions, then the simulation shall apply the same configured chemistry and energy rules used for intentional combustion.
 
-### 9.2 Rotation and control
+### 10.2 Rotation and control
 
 - **CTL-001:** The system shall rotate ships only through simulated torque or collision impulses.
 - **CTL-002:** The system shall not directly set a ship's angular velocity in response to a normal player steering command.
@@ -211,9 +246,9 @@ The initial specification does not require:
 - **CTL-007:** Where flight-assistance software is installed and enabled, the system shall not apply non-physical corrective forces or torque.
 - **CTL-008:** When a ship's centre of mass moves because of resource use, damage, or separation, the system shall use the new centre of mass when calculating thruster torque.
 
-## 10. Weapons, Ammunition, and Explosions
+## 11. Weapons, Ammunition, and Explosions
 
-### 10.1 Cannon operation
+### 11.1 Cannon operation
 
 - **WPN-001:** A cannon shall require an intact control path, an available compatible shell, and all configured propellant resources before it can fire.
 - **WPN-002:** When a valid fire command reaches a ready cannon, the cannon shall load or accept one shell from its linked ammunition store.
@@ -228,7 +263,7 @@ The initial specification does not require:
 - **WPN-011:** The system shall apply cannon recoil to the ship at the cannon's structural attachment points.
 - **WPN-012:** When cannon recoil exceeds local structural capacity, the simulation shall damage or detach the cannon or connected structure.
 
-### 10.2 Shells and detonation
+### 11.2 Shells and detonation
 
 - **AMM-001:** The simulation shall represent each fired shell as a body with mass, geometry, position, velocity, orientation, angular velocity, integrity, and internal contents.
 - **AMM-002:** The system shall allow a shell to contain separated concentrated fuel and oxidiser.
@@ -241,7 +276,7 @@ The initial specification does not require:
 - **AMM-009:** The simulation shall not apply an unexplained radial damage value independently of represented fragments, gas, heat, or contact forces.
 - **AMM-010:** When a shell fragments, the simulation shall preserve the mass and momentum of its represented fragments and gas within numerical tolerance.
 
-### 10.3 Ammunition hazards
+### 11.3 Ammunition hazards
 
 - **HAZ-001:** The simulation shall represent stored shells as damageable contents of an ammunition store.
 - **HAZ-002:** When an ammunition store is struck, the system shall apply transmitted trauma to affected stored shells according to the store's protection and internal arrangement.
@@ -249,9 +284,9 @@ The initial specification does not require:
 - **HAZ-004:** When damage causes multiple stored shells to react, the simulation shall resolve the resulting chain reaction from their physical interactions.
 - **HAZ-005:** If an ammunition store ruptures without detonating all shells, then the system shall release surviving shells or their contents as physical bodies or parcels.
 
-## 11. Asteroids
+## 12. Asteroids
 
-### 11.1 Aggregate construction
+### 12.1 Aggregate construction
 
 - **AST-001:** The system shall represent each destructible asteroid as an aggregate of asteroid children.
 - **AST-002:** The system shall connect neighbouring asteroid children with damageable bonds.
@@ -261,7 +296,7 @@ The initial specification does not require:
 - **AST-006:** The system shall generate or load asteroid bonds such that the initial aggregate has a declared structural stability.
 - **AST-007:** The system shall permit asteroid composition, porosity, bond strength, and mineral distribution to vary between asteroids.
 
-### 11.2 Collision and fragmentation
+### 12.2 Collision and fragmentation
 
 - **AST-008:** When an asteroid child collides with another body, the simulation shall resolve the collision at that child's geometry.
 - **AST-009:** When an asteroid aggregate is loaded by collision, gravity, rotation, or weapon effects, the simulation shall distribute forces through intact neighbouring bonds.
@@ -273,9 +308,9 @@ The initial specification does not require:
 - **AST-015:** If rotational or tidal loading exceeds bond strength, then the asteroid shall be able to shed children or split without a weapon impact.
 - **AST-016:** When a child is pulverised below the explicitly simulated fragment scale, the system shall convert it into conserved collectible mineral parcels or a documented aggregate representation.
 
-## 12. Mining, Scooping, and Resources
+## 13. Mining, Scooping, and Resources
 
-### 12.1 Resource model
+### 13.1 Resource model
 
 - **RES-001:** The system shall represent fuel feedstock, oxidiser feedstock, metal, other minerals, and cannon shells as distinct resource types.
 - **RES-002:** The system shall assign mass to every stored resource.
@@ -284,7 +319,7 @@ The initial specification does not require:
 - **RES-005:** When a recipe converts resources, the system shall account for input mass, output mass, waste products, energy, and processing time.
 - **RES-006:** The system shall distinguish immediately usable resources from raw minerals requiring processing.
 
-### 12.2 Collection
+### 13.2 Collection
 
 - **SCP-001:** The simulation shall represent collectible minerals and resource parcels as physical bodies or conserved parcel groups.
 - **SCP-002:** When a collectible parcel enters an active scoop's capture region, the simulation shall resolve its contact or capture force rather than teleporting its momentum away.
@@ -295,9 +330,9 @@ The initial specification does not require:
 - **SCP-007:** When an incoming parcel exceeds the scoop's safe relative speed or load, the simulation shall permit the parcel to damage, rebound from, or pass the scoop according to contact physics.
 - **SCP-008:** When a store accepts a captured resource, the system shall update ship mass properties during the next physics step.
 
-## 13. Manufacturing and Repair
+## 14. Manufacturing and Repair
 
-### 13.1 Nanofactory
+### 14.1 Nanofactory
 
 - **MFG-001:** A nanofactory shall require an intact component, an installed program or recipe, accessible inputs, and sufficient operating resources before beginning a job.
 - **MFG-002:** The system shall allow a nanofactory to be programmed to repair supported components.
@@ -310,7 +345,7 @@ The initial specification does not require:
 - **MFG-009:** When a damaged nanofactory operates, the system shall scale its speed, efficiency, precision, and failure risk according to its damage model.
 - **MFG-010:** The system shall not permit a broken nanofactory to repair itself unless the design includes another functioning repair-capable factory or a separately defined self-repair mechanism.
 
-### 13.2 Repair
+### 14.2 Repair
 
 - **RPR-001:** A repair operation shall require a functioning repair-capable nanofactory and an intact manufacturing path to the repair target.
 - **RPR-002:** A repair operation shall consume the metal, fuel, oxidiser, and other resources declared by the target's repair recipe.
@@ -322,7 +357,7 @@ The initial specification does not require:
 - **RPR-008:** If required repair resources become unavailable, then the system shall pause the repair without granting unpaid integrity.
 - **RPR-009:** When a repair changes mass distribution or structural connectivity, the simulation shall recalculate the assembly's mass properties and connected groups.
 
-## 14. Basic Ship Reference Configuration
+## 15. Basic Ship Reference Configuration
 
 The game shall provide at least one basic ship design demonstrating the component and link model.
 
@@ -342,9 +377,9 @@ The game shall provide at least one basic ship design demonstrating the componen
 - **BAS-014:** The basic ship shall include armour that demonstrates protection of at least one critical component.
 - **BAS-015:** The basic ship shall remain vulnerable to loss of control, propulsion, ammunition, manufacturing, or structural integrity through local damage.
 
-## 15. Player Interaction and Information
+## 16. Player Interaction and Information
 
-### 15.1 Flight controls
+### 16.1 Flight controls
 
 - **UIF-001:** The flight interface shall provide controls for forward thrust, left rotation thrust, right rotation thrust, cannon fire, scoop operation, repair jobs, and manufacturing jobs when the ship supports those functions.
 - **UIF-002:** The flight interface shall distinguish a control command from successful component activation.
@@ -355,7 +390,7 @@ The game shall provide at least one basic ship design demonstrating the componen
 - **UIF-007:** The flight interface shall indicate active leaks, fires, reactions, broken links, detached assemblies, and critical component failures detected by the ship.
 - **UIF-008:** The system shall allow the player to inspect component integrity, efficiency, temperature, and connectivity when those values are available to the player's ship or design interface.
 
-### 15.2 Physics legibility
+### 16.2 Physics legibility
 
 - **VIS-001:** The presentation layer shall depict thruster exhaust with position and direction consistent with simulated escaping gas.
 - **VIS-002:** The presentation layer shall depict explosion expansion consistently with simulated gas and fragments.
@@ -364,7 +399,7 @@ The game shall provide at least one basic ship design demonstrating the componen
 - **VIS-005:** The system shall provide a diagnostic visualisation mode for forces, centres of mass, thrust vectors, torque, structural loads, resource paths, and control paths.
 - **VIS-006:** The ship designer shall allow the player to preview expected thrust and torque vectors for each control mapping.
 
-## 16. Game Loop and Progression
+## 17. Game Loop and Progression
 
 - **GAM-001:** The system shall allow the player to transition from ship design to a flight scenario using the selected valid design.
 - **GAM-002:** During flight, the system shall allow the player to obtain resources by breaking asteroids and collecting released material.
@@ -378,7 +413,7 @@ The game shall provide at least one basic ship design demonstrating the componen
 - **GAM-010:** The post-sortie interface shall report gross gains, consumed resources, damage and repair costs, losses, and net profit or loss.
 - **GAM-011:** The system shall permit profitable outcomes through mining, combat, salvage, mission rewards, or a configured combination of those activities.
 
-## 17. Saving, Replay, and Diagnostics
+## 18. Saving, Replay, and Diagnostics
 
 - **SAV-001:** The system shall save ship designs independently from active flight state.
 - **SAV-002:** The system shall save each component's type, geometry, placement, condition, contents, programs, and links required to reconstruct a design.
@@ -389,7 +424,7 @@ The game shall provide at least one basic ship design demonstrating the componen
 - **DBG-003:** The system shall log any violation of declared conservation, stability, capacity, or geometry tolerances in diagnostic builds.
 - **DBG-004:** The system shall allow a diagnostic run to report per-system computation cost and active counts for bodies, contacts, bonds, links, gas parcels, and fragments.
 
-## 18. Performance and Quality Constraints
+## 19. Performance and Quality Constraints
 
 - **NFR-001:** The simulation profile shall declare supported maximum counts for dynamic bodies, gas parcels, contacts, bonds, components, links, and fragments.
 - **NFR-002:** The simulation profile shall declare tolerances for linear momentum, angular momentum, mass, energy, penetration depth, and constraint error.
@@ -400,7 +435,7 @@ The game shall provide at least one basic ship design demonstrating the componen
 - **NFR-007:** The system shall validate authored component, reaction, material, recipe, and scenario data before making it available in normal play.
 - **NFR-008:** If authored data violates conservation, geometry, or dependency constraints, then the validation tool shall identify the offending data and prevent its use in a release build.
 
-## 19. Acceptance Scenarios
+## 20. Acceptance Scenarios
 
 These scenarios exercise multiple requirements and provide early vertical-slice targets.
 
@@ -476,7 +511,13 @@ These scenarios exercise multiple requirements and provide early vertical-slice 
 **when** the player launches, breaks an asteroid, gathers valuable minerals, expends fuel and ammunition, takes damage, and returns successfully,  
 **then** the post-sortie report includes all gains and costs and applies the resulting net value and ship condition to the next design phase.
 
-## 20. Open Decisions and Required Tuning
+### AS-13 — Sandbox leak-driven thrust
+
+**Given** a sandboxed store containing pressurised gas, placed with no ship or control input around it,  
+**when** its containment is damaged,  
+**then** the store releases contents through the breach as an escaping gas parcel, the store's mass and pressure drain accordingly, and the escaping gas imparts thrust to the store through the same gas-surface contact model used for intentional propulsion.
+
+## 21. Open Decisions and Required Tuning
 
 The following are intentionally not fixed by the initial concept and should be decided through prototypes:
 
@@ -500,18 +541,22 @@ The following are intentionally not fixed by the initial concept and should be d
 | **TBD-016** | Whether connectors are abstract paths or player-routed lines with localised collision and damage geometry. |
 | **TBD-017** | Whether a nanofactory can replace entire missing components in flight or only repair surviving components. |
 | **TBD-018** | Accessibility options for players who enjoy ship design but not demanding manual inertial control. |
+| **TBD-019** | Whether individual sandbox scenarios accumulate into a permanent regression-test library or remain disposable, ad hoc experiments. |
 
-## 21. Recommended First Vertical Slice
+## 22. Recommended Development Approach
 
-The first vertical slice should demonstrate the causal chain that defines the game:
+The physics engine should be built and validated incrementally inside the sandbox (Section 5), rather than by assembling a complete ship first. Each stage below should be demonstrable as its own sandbox scenario before being combined with the others, and the list is illustrative of the approach rather than an exhaustive or fixed sequence — sandbox scenarios for new pieces of physics behaviour will keep being added as the engine grows:
 
-1. Build a small ship from separate components and links.
-2. Fire physical fuel and oxidiser parcels in one main engine and two manoeuvring thrusters.
-3. Translate and rotate solely through gas contact, momentum, and torque.
-4. Fire one physical cannon shell with recoil.
-5. Damage a component and break one structural link.
-6. Fragment one aggregate asteroid.
-7. Scoop one released mineral type.
-8. Spend that material through a nanofactory to repair damage or build one replacement shell.
+1. **Free bodies:** place bodies with mass, geometry, and initial velocity; verify integration, momentum conservation, and collision response with no components or resources involved.
+2. **Gas parcels and reactions:** place fuel and oxidiser parcels in contact; verify ignition, conserved-mass reaction, and hot gas parcel creation.
+3. **Contained pressure and thrust:** place a store of pressurised gas or reactants next to engine geometry; verify gas-surface contact produces thrust without a direct force being applied to the body.
+4. **Damage-driven leaks:** damage a store's containment; verify it releases contents, drains its contents, and — where linked to thrust-generating geometry — produces unintended thrust from the escaping gas.
+5. **Linked components:** connect a store to a thruster or cannon through resource, control, and structural links; verify link capacity, breakage, and disconnection behaviour in isolation.
+6. **Local structural failure:** load a link or bond in isolation; verify trauma accumulation, breakage, and separation into independent bodies.
+7. **Asteroid aggregates:** place a bonded aggregate; verify fragmentation and mineral release under load, independent of any ship.
+8. **Mining and collection:** add a scoop and store to a minimal assembly; verify momentum-conserving capture.
+9. **Manufacturing and repair:** add a nanofactory to a minimal assembly; verify job progression, resource consumption, and repair or manufacture outcomes.
+10. **Composition into a ship:** combine validated component behaviours into a complete, flight-ready ship inside the same sandbox, using it as the ship designer's live physics preview.
+11. **Sortie loop:** launch the composed ship into a flight scenario and exercise the full design → launch → fly → return loop.
 
-Economy, procedural content, advanced chemistry, wormholes, and large gravitational environments can follow once this chain is stable, measurable, and enjoyable.
+Economy, procedural content, advanced chemistry, wormholes, and large gravitational environments can follow once this chain is stable, measurable, and enjoyable inside the sandbox.
