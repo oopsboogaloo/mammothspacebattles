@@ -166,7 +166,7 @@ Tests shall use independent oracles. Comparing the simulation with itself does n
 - **SCN-006** `[S · M1 · E]` The sandbox shall export the current experiment, including commands recorded while playing, as a scenario. You can then add assertions to turn it into a test.
 - **SCN-007** `[M · M0 · U]` If a scenario has an older schema version, then the system shall migrate it explicitly or reject it with a clear message.
 
-*Format notes (M3).* A number in `world`, `timeline`, `end` or `assertions` can be `{"$param": "id"}` or `{"$expr": "formula over parameters"}` (e.g. `"boxMass * 0.22 / 0.84"`). `world.gas` lists rectangle fills (count, mass, temperature, composition, bulk velocity, jitter); `world.bounds` sets the world boundary for gas. Besides plain paths into the world, probes can read `gas.<field>` (totals over all parcels: `mass`, `momentum.x`, `temperature`, `removed.mass`, `wallImpulse`, …) and `assembly[id=X].<field>` (the assembly X belongs to, as one rigid body: `mass`, `momentum.x`, `velocity.x`, `angularVelocity`, `angularMomentum`, …). `ui.follow` names a body to select and follow.
+*Format notes (M3).* A number in `world`, `timeline`, `end` or `assertions` can be `{"$param": "id"}` or `{"$expr": "formula over parameters"}` (e.g. `"boxMass * 0.22 / 0.84"`). `world.gas` lists rectangle fills (count, mass, temperature, composition, bulk velocity, jitter); `world.bounds` sets the world boundary for gas. Besides plain paths into the world, probes can read `gas.<field>` (totals over all parcels: `mass`, `momentum.x`, `temperature`, `removed.mass`, `wallImpulse`, …) and `assembly[id=X].<field>` (the assembly X belongs to, as one rigid body: `mass`, `momentum.x`, `velocity.x`, `angularVelocity`, `angularMomentum`, …). `ui.follow` names a body to select and follow. `world.challenge` declares a landing challenge (FLT-005): `{kind: "landing", ship, pad, maxSpeed, maxTilt}`; its status is at `challenge.status` for probes.
 
 ## 8. Sandbox UI Design
 
@@ -401,6 +401,18 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **FLT-002** `[M · M4b · S]` Firing only one of two engines shall turn the ship's nose toward the idle engine's side, with the torque coming only from gas on the firing engine's walls (RS-16).
 - **FLT-003** `[M · M4b · P]` A ship coasting with no engine firing and nothing touching it shall keep its spin and its angular momentum about its centre of mass (RS-16).
 - **FLT-004** `[S · M4b · S]` Unequal thrust shall load the welds between the engines and the hull, and the joint-load overlay shall show it (RS-16).
+- **FLT-005** `[M · M4b · S]` A scenario may declare a landing challenge: a ship, a fixed pad, the fastest touchdown and the largest tilt allowed. The world shall judge it after every step, as part of its state, so a run, a replay and a scrub reach the same verdict at the same step. It shall report the ship's height above the pad, its velocity, its tilt and the propellant left (RS-17).
+- **FLT-006** `[M · M4b · S]` Touching anything but the pad, or touching the pad faster than the limit, shall be a crash, with the reason in words (RS-17).
+- **FLT-007** `[M · M4b · S]` A ship that comes to rest on the pad (under 0.15 m/s and 0.15 rad/s for 0.25 s) within the tilt limit shall have landed, with a score: up to 500 for propellant left and up to 500 for a soft touchdown (RS-17).
+- **FLT-008** `[M · M4b · S]` A ship that comes to rest on the pad tilted beyond the limit shall have crashed (RS-17).
+- **FLT-009** `[M · M4b · E]` While a challenge runs, the sandbox shall show height, vertical and sideways speed, tilt and propellant; then the verdict with its reason and score, and a way to try again. This shall work by touch too.
+
+*Model as built (M4b).*
+- **The landing judge only reads the world.** It never pushes on anything, so the ledger is unchanged. Its verdict is also an event (`landed` or `crashed`) in the event log.
+- **Feeds and injectors under gravity.** Moving propellant between stores at different heights, or from a store to an outlet, changes gravitational potential energy: the pump's work. The ledger records it as a transfer, like the angular momentum such moves change. Before, it showed as an energy residual whenever gravity was on.
+- **Large bodies and gas.** The gas's wall grid covers only cells near gas, and a body still too big for that is tested against every parcel. A ground no longer costs a second a step, and gas no longer passes through a body bigger than the grid could hold. The far field ignores fixed bodies: gas far from everything that moves leaves, even over the ground.
+- **Welds don't warm start.** Each step's weld impulses start from zero; contacts still warm start, which stacks need (COL-005). Reapplying last step's weld impulse after the load had changed made the velocity solve create kinetic energy. A landed ship was pushed back up off the pad, and a 6 m/s crash gained up to 19 J in a step, which the ledger reported. Weld loads come from each step's own impulse, so ASM-004 breaks are unchanged.
+- **The LAND ship stands on two splayed legs** welded to its wing. They give it a wide stance, so it is harder to tip over on touchdown.
 
 ### 9.6 Damage (M5)
 
@@ -504,6 +516,7 @@ The simplest possible rocket has no fuel, no chemistry, no injector and no contr
 | RS-09 | M4 | Off-axis thruster spins a ship | PRP-006 |
 | RS-10 | M4 | Engine attachment too weak for full thrust | ASM-004, PRP-005 |
 | RS-16 | M4b | Twin-engine ship: both engines, then the left one only, then coasting | FLT-001…FLT-004 |
+| RS-17 | M4b | **LAND** Twin-engine lander on a pad, 1.6 m/s² gravity, limited propellant | FLT-005…FLT-008 |
 | RS-11 | M5 | Ram an armoured vs an unarmoured tank | DMG-002, DMG-005 |
 | RS-12 | M6 | Off-centre cannon fires | WPN-002, WPN-003 |
 | RS-13 | M6 | Magazine chain reaction | WPN-007 |
@@ -520,7 +533,7 @@ Each milestone ends with: all its `M` requirements passing their stated verifica
 | **M2 Assemblies** | Compound bodies, joints with limits, splitting, links, attach/detach/link tools, scrub-back and branching, optional gravity | RS-05 passes. W4 and W8 E2E tests pass. |
 | **M3 Gas** | Gas parcels, pressure, wall interaction, boundary accounting, parcel rendering | RS-06, RS-07, RS-07b pass (SC-02 and SC-03 built in). GAS-008 benchmark met. |
 | **M4 Propulsion** | Tanks, feeds, injectors, reactions, chambers, nozzles, key bindings, component status reasons | RS-08…RS-10 pass. W3 E2E test passes. A ship can be flown by hand in the sandbox. |
-| **M4b Flight trials** | Ships of increasing complexity built from the M4 parts and flown by hand. First: a twin-engine ship steered by throttling one engine. Ports along long faces, a control channel per engine. | RS-16 passes. W9 E2E test passes. |
+| **M4b Flight trials** | Ships of increasing complexity built from the M4 parts and flown by hand. First: a twin-engine ship steered by throttling one engine. Ports along long faces, a control channel per engine. Then a landing challenge under gravity. | RS-16 and RS-17 pass. W9 E2E test passes. FLT-009 E2E test passes. |
 | **M5 Damage** | Integrity, damage rules, leaks, armour | RS-11 passes. |
 | **M6 Weapons** | Gas-driven cannon, shells, fuzes, explosions | RS-12, RS-13 pass. |
 | **M7 Asteroids** | Aggregate asteroid generator and fracture | RS-14 passes. |

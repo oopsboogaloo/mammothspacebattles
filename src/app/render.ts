@@ -150,6 +150,8 @@ export interface RenderOptions {
   velocityScale?: number;
   /** How to colour gas parcels (default temperature). */
   gasColour?: "temperature" | "composition";
+  /** A landing pad to mark (FLT-009). */
+  pad?: string;
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -259,6 +261,34 @@ function drawGrid(ctx: Ctx, c: Camera, vp: Viewport): void {
   ctx.stroke();
 }
 
+/** Marks a landing pad: a bright top edge with end posts, so it stands out from the ground. */
+function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string): void {
+  const b = world.bodies.find((x) => x.id === id);
+  if (!b || b.shape.kind === "disc") return;
+  const q = sinCos(b.angle);
+  const vs = localVertices(b.shape).map((v) => add(b.position, rotate(q, v)));
+  const top = Math.max(...vs.map((v) => v.y));
+  const edge = vs.filter((v) => v.y > top - 1e-6).sort((u, v) => u.x - v.x);
+  if (edge.length < 2) return;
+  const a = toScreen(c, vp, edge[0]);
+  const z = toScreen(c, vp, edge[edge.length - 1]);
+  ctx.strokeStyle = COLORS.preview;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(z.x, z.y);
+  for (const p of [a, z]) {
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x, p.y - 12);
+  }
+  ctx.stroke();
+  ctx.fillStyle = COLORS.preview;
+  ctx.font = "12px 'IBM Plex Mono', monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("PAD", (a.x + z.x) / 2, a.y - 4);
+}
+
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
@@ -297,6 +327,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       ctx.fillText(b.id, s0.x, s0.y + Math.max(8, reach * c.zoom * 0.35));
     }
   }
+  if (opts.pad) drawPad(ctx, world, c, vp, opts.pad);
 
   if (opts.overlays.has("com")) {
     for (const b of world.bodies) {

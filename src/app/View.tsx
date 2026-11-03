@@ -28,6 +28,8 @@ import { COLORS, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, type
 import {
   achieved,
   bump,
+  openScenario,
+  scenarioKey,
   camera,
   contextMenu,
   edit,
@@ -174,6 +176,8 @@ export function View() {
     const stepper = createStepper();
     let last = performance.now();
     let lastBump = 0;
+    // When the run last fell behind; the "slow" mark stays on a second after, so it doesn't flicker.
+    let behindAt = -Infinity;
     let smoothed = 1;
     let raf = 0;
     const frame = (now: number) => {
@@ -190,8 +194,15 @@ export function View() {
         const t0 = performance.now();
         let done = 0;
         while (done < r.steps) {
+          const flying = sb.world.challenge?.status.phase === "flying";
           sb.step(1);
           done++;
+          // A landing verdict (FLT-009) pauses the run, so the moment it happened stays on screen.
+          if (flying && sb.world.challenge?.status.phase !== "flying") {
+            playing.value = false;
+            bump();
+            break;
+          }
           if (performance.now() - t0 > STEP_BUDGET_MS) break;
         }
         const cut = done < r.steps;
@@ -199,7 +210,8 @@ export function View() {
         const scaleNow = realDt > 0 ? (done * sb.profile.timestep) / realDt : 0;
         smoothed = smoothed * 0.9 + scaleNow * 0.1;
         if (now - lastBump > 100) {
-          achieved.value = { scale: smoothed, behind: r.fellBehind || cut || smoothed < timeScale.value * 0.95 };
+          if (r.fellBehind || cut || smoothed < timeScale.value * 0.95) behindAt = now;
+          achieved.value = { scale: smoothed, behind: now - behindAt < 1000 };
           bump();
           lastBump = now;
         }
@@ -241,6 +253,9 @@ export function View() {
         ports: portMarkers.current,
         highlight: highlight.current ?? undefined,
         gasColour: gasColour.value,
+        pad: sb.world.challenge?.goal.pad,
+        // In a challenge the parts' ids are clutter: the pad is marked instead.
+        labels: !sb.world.challenge,
       });
       // Rotate handle for a single selected body with the Move tool.
       const handle = rotateHandle();
@@ -764,7 +779,7 @@ export function View() {
 
   return (
     <div
-      class="view"
+      class={`view${sb?.world.challenge ? " has-hud" : ""}`}
       ref={wrap}
       data-testid="view"
       onPointerDown={onPointerDown}
@@ -788,7 +803,7 @@ export function View() {
           </div>
         </div>
       )}
-      {lookFor && !lookForHidden && (
+      {lookFor && !lookForHidden && sb?.world.challenge?.status.phase !== "landed" && sb?.world.challenge?.status.phase !== "crashed" && (
         <div class="lookfor" data-testid="look-for">
           <strong>What to look for</strong>
           {lookFor}
@@ -816,6 +831,7 @@ export function View() {
           {attachText}
         </div>
       )}
+      {sb?.world.challenge && <ChallengeHud />}
       {sb && <FlightPad />}
       {Object.keys(bindings.value).length > 0 && sb && (
         <div class="keylegend" aria-label="Key bindings" data-testid="key-legend">
@@ -898,6 +914,52 @@ let padGroup = 7_000_000;
  * be flown by touch with no keyboard. Each button tracks its own pointer, so two thumbs can hold
  * two engines at once. A bound key's letter is shown on its button.
  */
+/** Landing challenge readout and verdict (FLT-009). */
+function ChallengeHud() {
+  const sb = sandbox.value!;
+  void version.value;
+  const c = sb.world.challenge!;
+  const s = c.status;
+  const g = c.goal;
+  const tooFast = -s.vy > g.maxSpeed;
+  const tilted = Math.abs(s.tilt) > g.maxTilt;
+  const fuelPct = s.fuelStart > 0 ? Math.round((100 * s.fuel) / s.fuelStart) : 0;
+  // A fresh attempt: reopen the scenario, so the last attempt's key presses aren't replayed.
+  const retry = () => {
+    if (openScenario(sb.raw, scenarioKey.value, sb.scenario.values, { keepOverlays: true })) playing.value = true;
+  };
+  return (
+    <>
+      <div class="hud" role="group" aria-label="Landing readout" data-testid="challenge-hud">
+        <span>
+          <i>Above pad</i> {s.altitude.toFixed(1)} m
+        </span>
+        <span class={tooFast ? "over" : ""} title={`Touch the pad slower than ${g.maxSpeed} m/s`}>
+          <i>Down</i> {(-s.vy).toFixed(1)} m/s{tooFast ? " ▲" : ""}
+        </span>
+        <span>
+          <i>Side</i> {s.vx.toFixed(1)} m/s
+        </span>
+        <span class={tilted ? "over" : ""} title={`Come to rest within ${g.maxTilt}° of upright`}>
+          <i>Tilt</i> {Math.round(s.tilt)}°{tilted ? " ▲" : ""}
+        </span>
+        <span>
+          <i>Fuel</i> {fuelPct}%
+        </span>
+      </div>
+      {s.phase !== "flying" && (
+        <div class={`verdict ${s.phase}`} role="status" aria-live="polite" data-testid="challenge-verdict">
+          <strong>{s.phase === "landed" ? `Landed · score ${s.score}` : "Crashed"}</strong>
+          <div>{s.reason}</div>
+          <button class="btn primary" onPointerDown={(e) => e.stopPropagation()} onClick={retry} data-testid="challenge-retry">
+            Try again
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function FlightPad() {
   void version.value;
   const sb = sandbox.value!;

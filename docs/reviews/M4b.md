@@ -45,6 +45,33 @@ Building and flying now works by touch alone:
 - **Follow sticks to its body.** It keeps the body it was turned on for, so tapping empty space or another part doesn't lose the ship, and a press has to move 8 px before it counts as a pan (which stops following). A tap's wobble used to stop it.
 - **Tests** (`e2e/touch.spec.ts`): W3 and W9 at 390 px and 820 px (tap to build; hold one button, or both and then release one to turn), plus the release and many-buttons cases. Playwright can't hold real multi-touch, so holds are touch-type pointer events, which is what the app reads. The SBX-045 test now checks the tools are a strip under the world.
 
+## Landing challenge (RS-17, FLT-005…FLT-009)
+
+`scenarios/land-twin-engine.json`, **LAND** in the picker. The twin-engine ship starts 13.7 m above the pad and 22 m short of it, drifting toward it at 1.2 m/s. Gravity is 1.6 m/s², and the ship carries 8.1 kg of propellant. To land, touch the pad slower than 1.5 m/s and come to rest within 12° of upright. Touching the terrain anywhere else, or the pad too fast, is a crash. The verdict pauses the run and says why. **Try again** reopens the scenario fresh, without replaying the last attempt's key presses.
+
+| Check | Result | Test |
+|---|---|---|
+| A free fall drifts onto the slope short of the pad | Crashed: "Touched the ground off the pad, at 6.4 m/s." No ledger violations for 1.5 s after the impact | `FLT-006` |
+| A free fall straight down onto the pad | Crashed: "Hit the pad at … m/s: land slower than 1.5 m/s." | `FLT-006` |
+| A descent from 1.5 m, flown by a test autopilot | Landed at 0.6 m/s, 6° from upright, score 730, no violations. The autopilot holds about 0.5 m/s down with both engines, corrects tilt with one, and cuts both just above the pad | `FLT-007` |
+| A tall box coming to rest on its side | Crashed: "Came to rest tilted 90°: land within 12° of upright." | `FLT-008` |
+| The verdict | Part of the world state: the same run reaches it at the same step, and it stays | `FLT-005` |
+| On screen | Height above pad, down and sideways speed, tilt, fuel %. Values outside the limits show in yellow with ▲. Verdict card with the reason, score and Try again. Desktop and 390 px | `e2e/landing.spec.ts` |
+
+**Flying it.** At full throttle on both engines the ship climbs at about 2.5 m/s² against gravity, so you hover by pulsing. The jets wobble, so the ship tilts on its own: correct it with one engine (Q alone turns the nose right). Just above the pad your own exhaust cushions the ship, so cut the engines for the last few centimetres. On phones the two flight buttons sit at the bottom corners, under each thumb.
+
+### Physics fixed on the way
+
+- **The ledger with gravity on.** Feed links move propellant from the tank down to the engines. That changes potential energy (the pump's work), but it wasn't recorded, so every step with gravity showed an energy residual of about 14 mJ. It is now recorded as a transfer, as is the outlet height for injectors.
+- **A ground and the gas.** Each step, the gas put every body into every grid cell under its bounding circle. An 80 m ground filled about 145,000 cells, so a step took about 1 s; it now takes about 15–19 ms with the engines firing near the ground. Only cells near gas are filled now, and a body that would still fill very many is tested against every parcel. Before, a body bigger than the cap was left out entirely, so gas passed through it. The far field now ignores fixed bodies, so exhaust that spreads along the ground away from the ship leaves.
+- **Welds no longer warm start.** Reapplying last step's weld impulses after the load had changed made the velocity solve create energy. After a landing it pushed the ship back up off the pad, and a 6 m/s crash gained up to 19 J in a step, all reported by the ledger. Weld loads come from each step's own impulse, so every joint-break test passes unchanged. Contacts still warm start, which stacks need (RS-04).
+
+### Known limits
+
+- **Slow motion while firing near the ground:** about 300–450 parcels, 15–19 ms a step headless here, against 4.2 ms for real time. The sandbox shows the achieved speed.
+- **Keys are still on/off**, so hovering takes pulsing.
+- **One pad, one terrain.** No level choice or score table yet.
+
 ## Next flight trials (to agree)
 
 Increasingly complex ships, flown by hand with what exists. For example: a ship with a payload pod; a four-engine cross for turning both ways; flying a course of fixed markers; and, with gravity on, hovering and landing on a fixed pad.
@@ -53,3 +80,4 @@ Increasingly complex ships, flown by hand with what exists. For example: a ship 
 
 1. Open RS-16 and watch the turn, with Joint load on.
 2. Build W9's twin-engine ship from an empty world and fly it: Q and E together to climb, one of them to turn.
+3. Open LAND and land on the pad, on a keyboard and on a phone or tablet. Then crash on purpose and use Try again.

@@ -83,8 +83,13 @@ export function TopBar() {
         <span class="wide">
           tick <b data-testid="tick">{sb.world.tick}</b>
         </span>
-        <span class={playing.value && a.behind ? "behind" : ""} data-testid="achieved" title="Achieved simulation speed (SBX-005)">
-          {playing.value ? `speed ${a.scale.toFixed(2)}×${a.behind ? " (can't keep up)" : ""}` : "paused"}
+        <span
+          class={`achieved${playing.value && a.behind ? " behind" : ""}`}
+          data-testid="achieved"
+          title={playing.value && a.behind ? "Slow: this machine can't keep up with the chosen speed, so the run is in slow motion (SBX-005)" : "Achieved simulation speed (SBX-005)"}
+        >
+          {playing.value ? `speed ${a.scale.toFixed(2)}×` : "paused"}
+          {playing.value && a.behind && <span class="sr-only"> (slow: can't keep up)</span>}
         </span>
       </div>
       <div class="spacer" />

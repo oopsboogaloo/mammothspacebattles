@@ -9,6 +9,7 @@ import { evaluateJoints, recordGasLoads } from "./joints.ts";
 import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, rigid, solveContacts } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
+import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { burn, emptyGas, igniteAndBurn, makeFill, mixture, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type GasFill, type GasState, type Parcel } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
@@ -210,6 +211,8 @@ export interface World {
   pendingUser: Delta;
   /** Bodies touched by unattributed debug commands since the last step. */
   pendingDebug: string[];
+  /** A landing challenge, judged after every step (FLT-005). */
+  challenge?: Challenge;
 }
 
 /** Commands are the only way to change a world other than stepping it. */
@@ -258,7 +261,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds } = {},
+  extra: { joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -287,6 +290,7 @@ export function createWorld(
   for (const f of extra.gas ?? []) fillGas(world, f, profile);
   world.events = [];
   world.ledger.totals = computeTotals(world);
+  if (extra.challenge) world.challenge = startLanding(world, structuredClone(extra.challenge));
   return world;
 }
 
@@ -604,6 +608,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     t0 = t;
   };
 
+  const fromTick = world.tick;
   applyCommands(world, commands, profile);
   mark("commands");
   const start = world.ledger.totals;
@@ -618,24 +623,30 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   };
 
   // Feed links move resources between stores. Mass and momentum must not change; angular momentum may,
-  // because a store's contents sit at its body's centre (recorded, not checked).
+  // because a store's contents sit at its body's centre (recorded, not checked). So may gravitational
+  // potential energy, when the stores are at different heights: that is the feed pumping propellant
+  // up or down (recorded as a transfer, like angular momentum).
   let before = computeTotals(world);
   if (world.links.length) {
     const touchedFixed = runFeeds(world, dt);
     const after = computeTotals(world);
     // Mass moving to or from a fixed body leaves or enters the dynamic totals: attribute all of it then.
-    sources.transfer = touchedFixed ? diff(before, after) : { ...zeroDelta(), angularMomentum: after.angularMomentum - before.angularMomentum };
+    sources.transfer = touchedFixed
+      ? diff(before, after)
+      : { ...zeroDelta(), angularMomentum: after.angularMomentum - before.angularMomentum, energy: after.energy.potential - before.energy.potential };
     before = after;
   }
   // Injectors turn stored propellant into gas; mixtures that are hot enough burn (PRP-002, PRP-003).
   // Mass, momentum and energy are unchanged; angular momentum may change as mass moves from a
-  // store at the body's centre to the outlet (recorded, not checked, as for feeds).
+  // store at the body's centre to the outlet (recorded, not checked, as for feeds), and so may
+  // gravitational potential energy, by the height of the outlet above the centre.
   if (world.bodies.some((b) => b.injector) || world.gas.parcels.length) {
     const t0 = computeTotals(world);
     runInjectors(world, dt, profile);
     igniteAndBurn(world.gas);
     const t1 = computeTotals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
+    sources.transfer.energy += t1.energy.potential - t0.energy.potential;
     before = t1;
   }
   const rbs = prepareBodies(world);
@@ -745,6 +756,13 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   world.pendingUser = zeroDelta();
   world.pendingDebug = [];
   mark("ledger");
+  if (world.challenge) {
+    const verdict = judgeLanding(world, world.challenge, fromTick);
+    if (verdict) {
+      const st = world.challenge.status;
+      pushEvent(world, { tick: world.tick, type: verdict, data: st.score !== undefined ? { reason: st.reason ?? "", score: st.score } : { reason: st.reason ?? "" } });
+    }
+  }
 }
 
 function finishLedger(
