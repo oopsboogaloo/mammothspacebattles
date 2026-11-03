@@ -180,12 +180,38 @@ describe("gas parcels", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("PRF-003 a huge fill is refused without building it", () => {
+    const w = createWorld(1, [], { x: 0, y: 0 }, {}, test);
+    const t0 = performance.now();
+    applyCommands(w, [{ type: "gas.fill", fill: fill({ count: 4_000_000, min: { x: -100, y: -100 }, max: { x: 100, y: 100 } }) }], test);
+    expect(w.gas.parcels.length).toBe(0);
+    expect(w.events.at(-1)!.type).toBe("limit.refused");
+    expect(performance.now() - t0).toBeLessThan(500); // stops at the limit instead of making 4 million parcels
+  });
+
+  it("GAS-004 GAS-005 a sealed box moving at 100 m/s, or spinning, keeps its gas: walls move with the gas substeps", () => {
+    for (const [v, spin] of [
+      [100, 0],
+      [0, 5],
+    ]) {
+      const { bodies, joints } = sealedBox({ velocity: { x: v, y: 0 }, angularVelocity: spin });
+      const w = createWorld(1, bodies, { x: 0, y: 0 }, { joints: joints as never, gas: [fill({ count: 100, velocity: { x: v, y: 0 } })] }, test);
+      run(w, 30);
+      const b = assemblyTotals(w, "top")!;
+      for (const p of w.gas.parcels) expect(Math.hypot(p.position.x - b.centre.x, p.position.y - b.centre.y)).toBeLessThan(1.42);
+      if (v) expect(b.velocity.x).toBeCloseTo(v, 2);
+      expect(w.ledger.violations).toBe(0);
+    }
+  });
+
   it("PRF-003 a fill that would exceed limit.gasParcels is refused and recorded", () => {
     const w = createWorld(1, [], { x: 0, y: 0 }, {}, test);
     applyCommands(w, [{ type: "gas.fill", fill: fill({ count: 3969 }) }], test); // a 63 × 63 lattice
     expect(w.gas.parcels.length).toBe(3969);
+    const rng = structuredClone(w.rng);
     applyCommands(w, [{ type: "gas.fill", fill: fill({ count: 2025, min: { x: 2, y: 2 }, max: { x: 3, y: 3 } }) }], test);
     expect(w.gas.parcels.length).toBe(3969);
+    expect(w.rng).toEqual(rng); // a refused fill draws no random numbers
     const e = w.events.find((x) => x.type === "limit.refused")!;
     expect(e.data).toEqual({ entity: "gasParcels", requested: 2025, existing: 3969, limit: test.limit.gasParcels });
     expect(computeTotals(w).mass).toBeCloseTo(0.5, 12); // nothing was added

@@ -404,10 +404,10 @@
     },
     {
       "kind": "rangeOver",
-      "probe": "gasMassNow",
+      "probe": "leftMass",
       "from": "end",
       "to": "end",
-      "max": 0.1
+      "min": 0.75
     },
     {
       "kind": "ledgerResidual",

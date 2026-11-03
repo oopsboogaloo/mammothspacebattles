@@ -293,10 +293,10 @@ function runFeeds(world: World, dt: number): boolean {
 
 /** Adds parcels for a fill, or refuses it if the parcel limit would be exceeded (PRF-003). */
 function fillGas(world: World, fill: GasFill, profile?: Profile): void {
-  const parcels = makeFill(fill, world.rng, wallBodies(world.bodies), world.gas.nextId);
   const limit = profile?.limit.gasParcels ?? Infinity;
-  if (world.gas.parcels.length + parcels.length > limit) {
-    pushEvent(world, { tick: world.tick, type: "limit.refused", data: { entity: "gasParcels", requested: parcels.length, existing: world.gas.parcels.length, limit } });
+  const parcels = makeFill(fill, world.rng, wallBodies(world.bodies), world.gas.nextId, limit - world.gas.parcels.length);
+  if (!parcels) {
+    pushEvent(world, { tick: world.tick, type: "limit.refused", data: { entity: "gasParcels", requested: fill.count, existing: world.gas.parcels.length, limit } });
     return;
   }
   world.gas.parcels.push(...parcels);

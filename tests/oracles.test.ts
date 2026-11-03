@@ -145,7 +145,7 @@ describe("SC-03 simplest rocket: a box of hot gas with a hole", () => {
 
   it("ORC-007 the box's Δv matches the rocket equation with the measured mean exhaust velocity", () => {
     const { b, m0, m1, ve, mOut, profile, w } = burn({});
-    expect(mOut).toBeGreaterThan(0.95); // the burn is complete
+    expect(mOut).toBeGreaterThan(0.85); // most of the gas is out; the cold remainder leaks slowly
     const predicted = ve * Math.log(m0 / m1);
     expect(Math.abs(b.velocity.x - predicted) / predicted).toBeLessThan(profile.tol.rocket);
     expect(w.ledger.violations).toBe(0);

@@ -314,6 +314,15 @@ interface Unit {
   sx: number;
   sy: number;
   sw: number;
+  /**
+   * The unit moves with the gas through the step (cx, cy, th are its pose now). Walls are built at
+   * the end-of-step pose (ex, ey, angle offset 0); th is the rotation from that pose, with cos/sin qc, qs.
+   */
+  ex: number;
+  ey: number;
+  th: number;
+  qc: number;
+  qs: number;
 }
 
 function buildWalls(bodies: WallBody[], joints: { a: string; b: string }[], margin: number): { walls: Wall[]; units: Unit[] } {
@@ -363,6 +372,11 @@ function buildWalls(bodies: WallBody[], joints: { a: string; b: string }[], marg
       dvx: 0,
       dvy: 0,
       dw: 0,
+      ex: cx,
+      ey: cy,
+      th: 0,
+      qc: 1,
+      qs: 0,
       sx: 0,
       sy: 0,
       sw: 0,
@@ -524,9 +538,10 @@ function blocked(walls: Wall[], x: number, y: number, clearance: number): boolea
 
 /**
  * Makes the parcels for a fill: a regular lattice over the rectangle, skipping points inside bodies.
- * The lattice has about `count` points; the result says how many were made.
+ * The lattice has about `count` points; the result says how many were made. Returns null, having
+ * drawn nothing from the RNG, if more than `maxCount` would be made.
  */
-export function makeFill(fill: GasFill, rng: RngState, bodies: WallBody[], firstId: number): Parcel[] {
+export function makeFill(fill: GasFill, rng: RngState, bodies: WallBody[], firstId: number, maxCount = Infinity): Parcel[] | null {
   const w = fill.max.x - fill.min.x;
   const h = fill.max.y - fill.min.y;
   const s = Math.sqrt((w * h) / fill.count);
@@ -549,6 +564,8 @@ export function makeFill(fill: GasFill, rng: RngState, bodies: WallBody[], first
       const y = fill.min.y + (j + 0.5) * sy;
       if (blocked(walls, x, y, 0.5 * radius)) continue;
       pts.push({ i, j, x, y });
+      // Over the limit: stop before doing more work, and draw no random numbers (PRF-003).
+      if (pts.length > maxCount) return null;
     }
   }
   const out: Parcel[] = [];
@@ -757,26 +774,65 @@ export function stepGas(
   const s = { d: 0, nx: 0, ny: 0 };
   let wallImpulse = 0;
 
-  // Wall candidates per grid cell, built once per step (bodies don't move during the gas phase).
-  const wallCells = new Map<number, number[]>();
   // Cell coordinates are clamped to ±32767 so keys stay small integers; far parcels share edge cells (still correct, just slower).
   const clampCell = (c: number) => (c < -32767 ? -32767 : c > 32767 ? 32767 : c);
   const cellKey = (cx: number, cy: number) => (clampCell(cx) + 32768) * 65536 + (clampCell(cy) + 32768);
-  for (let k = 0; k < walls.length; k++) {
-    const w = walls[k];
-    const x0 = Math.floor(w.minX * inv);
-    const x1 = Math.floor(w.maxX * inv);
-    const y0 = Math.floor(w.minY * inv);
-    const y1 = Math.floor(w.maxY * inv);
-    if ((x1 - x0 + 1) * (y1 - y0 + 1) > 1_000_000) continue; // absurdly large body: skip from the gas grid
-    for (let cx = x0; cx <= x1; cx++)
-      for (let cy = y0; cy <= y1; cy++) {
-        const key = cellKey(cx, cy);
-        const list = wallCells.get(key);
-        if (list) list.push(k);
-        else wallCells.set(key, [k]);
-      }
+
+  // Bodies move with the gas through the step: rewind each unit from its end-of-step pose (where
+  // the rigid-body integrator left it) to its start, then drift it with every substep. Moving walls
+  // then sweep through the gas instead of jumping, and every impulse acts at the true geometry.
+  for (const u of units) {
+    u.cx = u.ex - u.vx0 * dt;
+    u.cy = u.ey - u.vy0 * dt;
+    u.th = -u.w0 * dt;
+    const q = sinCos(u.th);
+    u.qc = q.c;
+    u.qs = q.s;
   }
+  /** A world point in the end-of-step frame the walls were built in. */
+  const toWallFrame = (wall: Wall, px: number, py: number, out: { x: number; y: number }) => {
+    if (wall.unit < 0) {
+      out.x = px;
+      out.y = py;
+      return;
+    }
+    const u = units[wall.unit];
+    const dx = px - u.cx;
+    const dy = py - u.cy;
+    out.x = u.ex + u.qc * dx + u.qs * dy;
+    out.y = u.ey - u.qs * dx + u.qc * dy;
+  };
+  const local = { x: 0, y: 0 };
+  // Wall candidates per grid cell, rebuilt each substep from each wall's bounding circle at its current pose.
+  const wallCells = new Map<number, number[]>();
+  const buildWallCells = () => {
+    wallCells.clear();
+    for (let k = 0; k < walls.length; k++) {
+      const w = walls[k];
+      let cx = 0.5 * (w.minX + w.maxX);
+      let cy = 0.5 * (w.minY + w.maxY);
+      const r = 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2);
+      if (w.unit >= 0) {
+        const u = units[w.unit];
+        const dx = cx - u.ex;
+        const dy = cy - u.ey;
+        cx = u.cx + u.qc * dx - u.qs * dy;
+        cy = u.cy + u.qs * dx + u.qc * dy;
+      }
+      const x0 = Math.floor((cx - r) * inv);
+      const x1 = Math.floor((cx + r) * inv);
+      const y0 = Math.floor((cy - r) * inv);
+      const y1 = Math.floor((cy + r) * inv);
+      if ((x1 - x0 + 1) * (y1 - y0 + 1) > 1_000_000) continue; // absurdly large body: skip from the gas grid
+      for (let gx = x0; gx <= x1; gx++)
+        for (let gy = y0; gy <= y1; gy++) {
+          const key = cellKey(gx, gy);
+          const list = wallCells.get(key);
+          if (list) list.push(k);
+          else wallCells.set(key, [k]);
+        }
+    }
+  };
 
   const applyUnit = (u: Unit, jx: number, jy: number, px: number, py: number) => {
     // Impulse (jx, jy) on the unit at point (px, py).
@@ -873,6 +929,7 @@ export function stepGas(
     if (tDone + ds >= dt * (1 - 1e-12)) ds = dt - tDone;
 
     // --- Wall contacts within one smoothing length. ---
+    buildWallCells();
     let nc = 0;
     for (let i = 0; i < n; i++) {
       cStart[i] = nc;
@@ -880,9 +937,17 @@ export function stepGas(
       if (!list) continue;
       for (const k of list) {
         const w = walls[k];
-        if (x[i] < w.minX || x[i] > w.maxX || y[i] < w.minY || y[i] > w.maxY) continue;
-        surface(w, x[i], y[i], s);
+        toWallFrame(w, x[i], y[i], local);
+        if (local.x < w.minX || local.x > w.maxX || local.y < w.minY || local.y > w.maxY) continue;
+        surface(w, local.x, local.y, s);
         if (s.d >= hh[i]) continue;
+        if (w.unit >= 0) {
+          // The normal back in the world frame.
+          const u = units[w.unit];
+          const nx = u.qc * s.nx - u.qs * s.ny;
+          s.ny = u.qs * s.nx + u.qc * s.ny;
+          s.nx = nx;
+        }
         if (nc === cCap) growContacts();
         cP[nc] = i;
         cW[nc] = k;
@@ -1308,10 +1373,18 @@ export function stepGas(
       wallImpulse += Jm;
     }
 
-    // --- Drift. ---
+    // --- Drift: parcels, and the bodies with them. ---
     for (let i = 0; i < n; i++) {
       x[i] += vx[i] * ds;
       y[i] += vy[i] * ds;
+    }
+    for (const u of units) {
+      u.cx += u.vx * ds;
+      u.cy += u.vy * ds;
+      u.th += u.w * ds;
+      const q = sinCos(u.th);
+      u.qc = q.c;
+      u.qs = q.s;
     }
   }
 
@@ -1381,28 +1454,31 @@ export function stepGas(
   tot.energy += acc.removed.energy;
   gas.wallImpulse += wallImpulse;
 
-  // Write back body velocities: each unit's change, applied rigidly to its parts.
+  // Write back each unit's pose and velocity to its parts. A part keeps its offset from the
+  // unit's rigid motion (rotated with it), so momentum, angular momentum and energy carry over exactly.
   const byId = new Map(bodies.map((b) => [b.id, b]));
   for (const u of units) {
-    const dvx = u.vx - u.vx0;
-    const dvy = u.vy - u.vy0;
-    const dw = u.w - u.w0;
-    if (dvx === 0 && dvy === 0 && dw === 0) continue;
+    const moved = u.cx !== u.ex || u.cy !== u.ey || u.th !== 0;
+    if (!moved && u.vx === u.vx0 && u.vy === u.vy0 && u.w === u.w0) continue;
     for (const id of u.ids) {
       const b = byId.get(id)!;
-      const rx = b.position.x - u.cx;
-      const ry = b.position.y - u.cy;
-      b.velocity = {
-        x: b.velocity.x + dvx - dw * ry,
-        y: b.velocity.y + dvy + dw * rx,
-      };
-      b.angularVelocity += dw;
+      const rx = b.position.x - u.ex;
+      const ry = b.position.y - u.ey;
+      // Offset from rigid motion at the end-of-step pose.
+      const ox = b.velocity.x - (u.vx0 - u.w0 * ry);
+      const oy = b.velocity.y - (u.vy0 + u.w0 * rx);
+      const nrx = u.qc * rx - u.qs * ry;
+      const nry = u.qs * rx + u.qc * ry;
+      b.position = { x: u.cx + nrx, y: u.cy + nry };
+      b.angle += u.th;
+      b.velocity = { x: u.vx - u.w * nry + (u.qc * ox - u.qs * oy), y: u.vy + u.w * nrx + (u.qs * ox + u.qc * oy) };
+      b.angularVelocity += u.w - u.w0;
     }
   }
   return acc;
 }
 
-/** Views of bodies for the gas phase: mass and inertia include stores; velocity writes land on the body. */
+/** Views of bodies for the gas phase: mass and inertia include stores; pose and velocity writes land on the body. */
 export function wallBodies(
   bodies: readonly {
     id: string;
@@ -1425,8 +1501,18 @@ export function wallBodies(
       fixed: b.fixed,
       mass,
       inertia,
-      position: b.position,
-      angle: b.angle,
+      get position() {
+        return b.position;
+      },
+      set position(v: Vec2) {
+        b.position = v;
+      },
+      get angle() {
+        return b.angle;
+      },
+      set angle(a: number) {
+        b.angle = a;
+      },
       get velocity() {
         return b.velocity;
       },
