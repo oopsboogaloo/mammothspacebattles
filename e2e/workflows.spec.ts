@@ -77,6 +77,8 @@ test("UXV-001 W7 SBX-034 find the step and entity behind a conservation violatio
   const chooser = page.waitForEvent("filechooser");
   await page.getByTestId("open-file").click();
   await (await chooser).setFiles("e2e/fixtures/violation.json");
+  // Reading the file is asynchronous: wait for the sandbox before pressing play.
+  await expect(page.getByTestId("sandbox")).toBeVisible();
   await page.keyboard.press("Space");
   await expect(page.getByTestId("violations")).toContainText(/[1-9]\d* violation/, { timeout: 10_000 });
   await page.keyboard.press("Space");
