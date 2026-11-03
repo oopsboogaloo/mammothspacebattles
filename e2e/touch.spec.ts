@@ -181,6 +181,41 @@ test.describe("flight buttons (phone, 390 px)", () => {
     expect(controls.left ?? 0).toBe(0);
   });
 
+  test("SBX-030 SBX-047 the camera keeps following the ship after a tap on empty space, a wobbly tap, or a tap on another part", async ({ page }) => {
+    await page.goto("./");
+    await page.getByTestId("pick-fly-twin-engine").click();
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    const view = (await page.getByTestId("view").boundingBox())!;
+    const hullOnScreen = async () => {
+      const h = (await world(page)).bodies.find((b) => b.id === "hull")!;
+      return toPage(page, h.position.x, h.position.y);
+    };
+    const centre = async () => {
+      const v = (await page.getByTestId("view").boundingBox())!;
+      return { x: v.x + v.width / 2, y: v.y + v.height / 2 };
+    };
+    // Tap empty space (clears the selection), then a tap that wobbles 5 px, then a tap on the left engine.
+    await page.mouse.click(view.x + 30, view.y + 40);
+    await page.mouse.move(view.x + 30, view.y + 60);
+    await page.mouse.down();
+    await page.mouse.move(view.x + 33, view.y + 64, { steps: 3 });
+    await page.mouse.up();
+    const engine = (await world(page)).bodies.find((b) => b.id === "chamber-left-l")!;
+    const e = await toPage(page, engine.position.x, engine.position.y);
+    await page.mouse.click(e.x, e.y);
+    await expect(page.getByTestId("mobile-follow")).toHaveAttribute("aria-pressed", "true");
+    const left = await hold(page, "fly-left", 11);
+    const right = await hold(page, "fly-right", 12);
+    await runFor(page, 150);
+    await left();
+    await right();
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    const hull = (await world(page)).bodies.find((b) => b.id === "hull")!;
+    expect(hull.position.y).toBeGreaterThan(2.5); // it climbed
+    const [end, c] = [await hullOnScreen(), await centre()];
+    expect(Math.hypot(end.x - c.x, end.y - c.y)).toBeLessThan(10); // and the camera stayed on it
+  });
+
   test("SBX-047 with many channels every button stays on screen", async ({ page }) => {
     await page.goto("./");
     await page.getByTestId("pick-fly-twin-engine").click();

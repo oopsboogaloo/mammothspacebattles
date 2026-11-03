@@ -11,6 +11,7 @@ import {
   bindingFor,
   bindings,
   follow,
+  toggleFollow,
   freshId,
   gasOptions,
   prefabs,
@@ -934,8 +935,8 @@ export function MobileBar() {
         class={`btn ${follow.value ? "on" : ""}`}
         aria-pressed={follow.value}
         disabled={!selection.value.length}
-        title={selection.value.length ? "Keep the selection in view" : "Select something to follow it"}
-        onClick={() => (follow.value = !follow.value)}
+        title={follow.value ? "Stop following" : selection.value.length ? "Keep the selection in view" : "Select something to follow it"}
+        onClick={() => toggleFollow()}
         data-testid="mobile-follow"
       >
         Follow

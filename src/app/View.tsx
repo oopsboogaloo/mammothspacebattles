@@ -32,6 +32,7 @@ import {
   contextMenu,
   edit,
   follow,
+  followId,
   freshId,
   gasColour,
   gasOptions,
@@ -82,7 +83,7 @@ export function spawnBody(kind: SpawnKind, id: string, at: Vec2, velocity: Vec2)
 }
 
 type Gesture =
-  | { kind: "pan"; last: Vec2 }
+  | { kind: "pan"; last: Vec2; start: Vec2; moved: boolean }
   | { kind: "box"; start: Vec2; now: Vec2 }
   | { kind: "move"; id: string; grab: Vec2; original: Vec2; running: false }
   | { kind: "drag"; id: string; anchor: Vec2; group: number; running: true }
@@ -96,6 +97,8 @@ type Gesture =
 
 /** Frame budget for simulation steps, ms: heavy scenes run in slow motion instead of freezing the page. */
 const STEP_BUDGET_MS = 12;
+/** How far a press must move before it counts as a pan rather than a tap. */
+const PAN_SLOP_PX = 8;
 
 /** The fill (or clear) a gas-tool rectangle makes, from the tool settings. */
 export function gasRect(a: Vec2, b: Vec2): { min: Vec2; max: Vec2; area: number; count: number; mass: number } {
@@ -204,8 +207,8 @@ export function View() {
         stepper.accumulator = 0;
         smoothed = timeScale.value;
       }
-      if (follow.value && selection.value.length) {
-        const b = sb.world.bodies.find((x) => x.id === selection.value[0]);
+      if (follow.value && followId.value) {
+        const b = sb.world.bodies.find((x) => x.id === followId.value);
         if (b) camera.value = { ...camera.value, x: b.position.x, y: b.position.y };
       }
       const dpr = window.devicePixelRatio || 1;
@@ -384,7 +387,7 @@ export function View() {
     const body = hit(p);
     const t = tool.value;
     if (e.button === 1 || (t === "select" && !body && !e.shiftKey)) {
-      gesture.current = { kind: "pan", last: s };
+      gesture.current = { kind: "pan", last: s, start: s, moved: false };
       if (t === "select" && e.button === 0) selection.value = [];
       bump();
       return;
@@ -408,7 +411,7 @@ export function View() {
           return;
         }
         if (!body) {
-          gesture.current = { kind: "pan", last: s };
+          gesture.current = { kind: "pan", last: s, start: s, moved: false };
           return;
         }
         selection.value = [body.id];
@@ -531,6 +534,9 @@ export function View() {
     setHoverPos(null);
     switch (g.kind) {
       case "pan":
+        // A finger wobbles when it taps: only a real drag pans (and so stops following).
+        if (!g.moved && length(sub(s, g.start)) < PAN_SLOP_PX) return;
+        g.moved = true;
         camera.value = panBy(camera.value, s.x - g.last.x, s.y - g.last.y);
         g.last = s;
         follow.value = false;

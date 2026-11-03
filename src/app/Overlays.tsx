@@ -16,6 +16,7 @@ import {
   duplicateSelection,
   edit,
   follow,
+  toggleFollow,
   jumpTo,
   openEmpty,
   openFile,
@@ -272,7 +273,7 @@ export function ContextMenu() {
   return (
     <Menu x={m.x} y={m.y} title={b.id} onClose={close}>
       {item("Probe…", "P", () => (probeMenu.value = { x: m.x, y: m.y, bodyId: b.id }), "probe")}
-      {item(follow.value ? "Stop following" : "Follow", "F", () => (follow.value = !follow.value), "follow")}
+      {item(follow.value ? "Stop following" : "Follow", "F", () => toggleFollow(b.id), "follow")}
       {item("Duplicate", "Ctrl+D", duplicateSelection, "duplicate")}
       {item(b.fixed ? "Make free" : "Make fixed", undefined, () => edit([{ type: "body.set", id: b.id, patch: { fixed: !b.fixed } }], b.fixed ? "Make free" : "Make fixed"), "fixed")}
       {item("Stop (zero velocity)", undefined, () => edit([{ type: "body.set", id: b.id, patch: { velocity: { x: 0, y: 0 }, angularVelocity: 0 } }], `Stop ${b.id}`), "stop")}
