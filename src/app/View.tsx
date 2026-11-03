@@ -214,6 +214,9 @@ export function View() {
 
   const local = (e: PointerEvent | MouseEvent | WheelEvent): Vec2 => {
     const r = wrap.current!.getBoundingClientRect();
+    // Keep the viewport in step with the element before mapping, so a click that lands
+    // before the resize observer fires still hits what's under the pointer.
+    if (r.width !== viewport.value.width || r.height !== viewport.value.height) viewport.value = { width: Math.max(1, r.width), height: Math.max(1, r.height) };
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
   const worldAt = (s: Vec2) => toWorld(camera.value, viewport.value, s);
@@ -261,7 +264,11 @@ export function View() {
       preview.current = null;
       return;
     }
-    if (e.button === 2) return;
+    if (e.button === 2) {
+      // Open the context menu on press: not every engine fires `contextmenu` reliably for every right-click.
+      openContextMenu(e);
+      return;
+    }
     const p = worldAt(s);
     const body = hit(p);
     const t = tool.value;
@@ -472,13 +479,16 @@ export function View() {
     camera.value = zoomAt(camera.value, viewport.value, local(e), Math.exp(-e.deltaY * 0.0015));
   };
 
-  const onContextMenu = (e: MouseEvent) => {
-    e.preventDefault();
+  function openContextMenu(e: MouseEvent) {
     const body = hit(worldAt(local(e)));
     if (!body) return;
     if (!selection.value.includes(body.id)) selection.value = [body.id];
     contextMenu.value = { x: e.clientX, y: e.clientY, bodyId: body.id };
     bump();
+  }
+  const onContextMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    if (!contextMenu.value) openContextMenu(e);
   };
 
   useEffect(() => {

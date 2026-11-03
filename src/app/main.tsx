@@ -7,7 +7,6 @@ import { Drawer, Inspector, MobileBar, SpawnPalette, StatusBar, ToolRail, TopBar
 import {
   action,
   camera,
-  viewport,
   cmdkOpen,
   contextMenu,
   dialog,
@@ -106,7 +105,7 @@ function App() {
   sandbox: () => sandbox.value,
   toPage: (x: number, y: number) => {
     const view = document.querySelector('[data-testid="view"]')!.getBoundingClientRect();
-    const s = toScreen(camera.value, viewport.value, { x, y });
+    const s = toScreen(camera.value, { width: view.width, height: view.height }, { x, y });
     return { x: view.left + s.x, y: view.top + s.y };
   },
   hash: () => (sandbox.value ? hashValue(sandbox.value.world) : null),

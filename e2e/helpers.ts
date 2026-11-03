@@ -77,6 +77,8 @@ export async function openStarter(page: Page, file: string) {
   await page.goto("./");
   await page.getByTestId(`pick-${file}`).click();
   await expect(page.getByTestId("sandbox")).toBeVisible();
+  // Let layout settle (two frames) before tests aim at world coordinates.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 }
 
 export async function waitForTick(page: Page, atLeast: number, timeout = 15_000) {
