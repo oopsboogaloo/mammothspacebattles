@@ -360,3 +360,27 @@ export function engineFor(world: World): MountedPrefab {
   head.injector = { ...head.injector!, channel: freeChannel(world) };
   return p;
 }
+
+/**
+ * Copies of bodies with every injector moved to a fresh channel (one per original channel, so a
+ * copied twin-engine assembly keeps two distinct channels) and its run state reset (SBX-025).
+ */
+export function withFreshChannels<T extends Pick<BodyInput, "injector">>(world: World, bodies: T[]): T[] {
+  const taken = new Set(world.bodies.map((b) => b.injector?.channel).filter(Boolean) as string[]);
+  const map = new Map<string, string>();
+  const next = () => {
+    if (!taken.has("main")) return "main";
+    for (let k = 2; ; k++) if (!taken.has(`main-${k}`)) return `main-${k}`;
+  };
+  return bodies.map((b) => {
+    if (!b.injector) return b;
+    const old = b.injector.channel;
+    let ch = map.get(old);
+    if (!ch) {
+      ch = next();
+      taken.add(ch);
+      map.set(old, ch);
+    }
+    return { ...b, injector: { ...b.injector, channel: ch, credit: 0, count: 0, firing: false } };
+  });
+}

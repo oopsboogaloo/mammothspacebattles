@@ -1,7 +1,7 @@
 // M4b flight trials: a twin-engine ship steered only by throttling its engines (RS-16).
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { parseScenario, runScenario, type RunResult } from "../../src/core/index.ts";
+import { getProfile, parseScenario, runScenario, type RunResult } from "../../src/core/index.ts";
 import { readJson, ROOT } from "../helpers.ts";
 
 const mean = (xs: number[], a: number, b: number) => xs.slice(a, b).reduce((s, x) => s + x, 0) / (b - a);
@@ -28,6 +28,10 @@ describe("twin-engine ship (RS-16)", () => {
     // Momentum still balances against the gas: nothing pushed the ship but its exhaust.
     const end = r.steps;
     expect(r.probes.py[end] + r.probes.gasPy[end] + r.probes.leftPy[end]).toBeCloseTo(0, 6);
+    // And so does angular momentum, every step: any torque not exchanged with the gas (or recorded
+    // as a store-to-outlet transfer) would be an unattributed residual here.
+    expect(r.world.ledger.maxResidual.angularMomentum).toBeLessThan(getProfile("sandbox").tol.angularMomentum);
+    expect(r.world.ledger.violations).toBe(0);
   });
 
   it("FLT-003 coasting, the ship and the gas left in its chambers keep their total angular momentum; the spin holds", () => {

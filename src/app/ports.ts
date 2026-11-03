@@ -28,6 +28,8 @@ export interface Port {
 /** Spacing of extra ports along a long face, and how close to a corner one may sit, m (SBX-024). */
 const PORT_SPACING = 1;
 const PORT_CORNER_CLEARANCE = 0.25;
+/** At most this many ports either side of a face's midpoint; longer faces space them wider, so previews stay cheap. */
+const MAX_PORTS_PER_SIDE = 4;
 
 /**
  * Ports: four rim points for discs. For boxes and polygons, each face's midpoint, plus a port every
@@ -53,9 +55,15 @@ export function ports(shape: Shape): Port[] {
     const normal = { x: u.y, y: -u.x };
     const mid = { x: (v.x + w.x) / 2, y: (v.y + w.y) / 2 };
     // Offsets from the midpoint, in face order: …, −1, 0, +1, …
-    const reach = Math.floor((l / 2 - PORT_CORNER_CLEARANCE) / PORT_SPACING + 1e-9);
-    for (let k = -Math.max(0, reach); k <= Math.max(0, reach); k++) {
-      out.push({ index: out.length, local: { x: mid.x + u.x * k * PORT_SPACING, y: mid.y + u.y * k * PORT_SPACING }, normal });
+    const usable = l / 2 - PORT_CORNER_CLEARANCE;
+    let reach = Math.max(0, Math.floor(usable / PORT_SPACING + 1e-9));
+    let spacing = PORT_SPACING;
+    if (reach > MAX_PORTS_PER_SIDE) {
+      reach = MAX_PORTS_PER_SIDE;
+      spacing = usable / MAX_PORTS_PER_SIDE;
+    }
+    for (let k = -reach; k <= reach; k++) {
+      out.push({ index: out.length, local: { x: mid.x + u.x * k * spacing, y: mid.y + u.y * k * spacing }, normal });
     }
   });
   return out;

@@ -85,6 +85,29 @@ describe("ports along long faces and engine channels (M4b)", () => {
     expect(pl.position.y).toBeCloseTo(-0.35, 9);
   });
 
+  it("SBX-024 a very long face still has at most 9 ports, spread evenly", async () => {
+    const { ports } = await import("../../src/app/ports.ts");
+    const ps = ports({ kind: "box", width: 1000, height: 1 }).filter((p) => p.normal.y < -0.5);
+    expect(ps).toHaveLength(9);
+    const xs = ps.map((p) => p.local.x).sort((a, b) => a - b);
+    expect(xs[0]).toBeCloseTo(-499.75, 6);
+    expect(xs[8]).toBeCloseTo(499.75, 6);
+  });
+
+  it("SBX-025 copies of engines (prefab spawns, duplicates) get fresh channels, distinct per original channel", async () => {
+    const { withFreshChannels } = await import("../../src/app/parts.ts");
+    const { createWorld } = await import("../../src/core/index.ts");
+    const w = createWorld(1);
+    w.bodies.push({ id: "e1", injector: { channel: "main" } } as never, { id: "e2", injector: { channel: "main-2" } } as never);
+    const copies = withFreshChannels(w, [
+      { id: "a", injector: { channel: "main", count: 40 } },
+      { id: "b", injector: { channel: "main-2" } },
+      { id: "c" },
+    ]);
+    expect(copies.map((b) => b.injector?.channel)).toEqual(["main-3", "main-4", undefined]);
+    expect(copies[0].injector!.count).toBe(0);
+  });
+
   it("SBX-025 each new engine gets a channel no other injector uses", async () => {
     const { engineFor, freeChannel } = await import("../../src/app/parts.ts");
     const { createWorld } = await import("../../src/core/index.ts");
