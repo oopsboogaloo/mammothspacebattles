@@ -267,4 +267,51 @@ describe("sealed box oracle", () => {
     expect(fastest).toBeLessThan(test.tol.velocity * c);
     expect(r.world.ledger.violations).toBe(0);
   });
+
+  describe("out of the plane (GAS-009)", () => {
+    const sandbox = getProfile("sandbox");
+    const cloud = (depth: number | undefined, bodies: Parameters<typeof createWorld>[1] = []) =>
+      createWorld(1, bodies, { x: 0, y: 0 }, { bounds: { min: { x: -50, y: -50 }, max: { x: 50, y: 50 }, ...(depth ? { depth } : {}) }, gas: [fill({ count: 100, mass: 0.1, temperature: 300 })] }, sandbox);
+    const mass = (w: ReturnType<typeof cloud>) => w.gas.parcels.reduce((m, p) => m + p.mass, 0);
+
+    it("GAS-009 with a depth, gas older than DEPTH_DELAY spreads out at its sound speed, and the ledger records what leaves", () => {
+      const w = cloud(2);
+      const m0 = mass(w);
+      for (let s = 0; s < 24; s++) stepInPlace(w, [], sandbox); // 0.1 s: none leaves yet
+      expect(mass(w)).toBe(m0);
+      let boundary = 0;
+      for (let s = 0; s < 48; s++) {
+        stepInPlace(w, [], sandbox);
+        boundary += w.ledger.last!.sources.boundary.mass;
+      }
+      expect(mass(w)).toBeLessThan(0.9 * m0);
+      expect(mass(w) + w.gas.removed.mass).toBeCloseTo(m0, 12);
+      expect(boundary).toBeCloseTo(-w.gas.removed.mass, 12);
+      expect(w.ledger.violations).toBe(0);
+    });
+
+    it("GAS-009 without a depth no gas leaves through the plane and parcels carry no age", () => {
+      const w = cloud(undefined);
+      const m0 = mass(w);
+      for (let s = 0; s < 72; s++) stepInPlace(w, [], sandbox);
+      expect(mass(w) + w.gas.removed.mass).toBeCloseTo(m0, 12);
+      expect(w.gas.removed.mass).toBe(0);
+      expect(w.gas.parcels.every((p) => p.age === undefined)).toBe(true);
+    });
+
+    it("GAS-009 gas inside an engine's declared interior stays in the plane", () => {
+      // An idle engine head above the world whose declared interior covers the whole world, so the
+      // expanding cloud stays inside it.
+      const head = { id: "head", shape: { kind: "box" as const, width: 1, height: 0.2 }, mass: 1, fixed: true, position: { x: 0, y: 60 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, injector: { channel: "main", outlet: { x: 0, y: 0 }, direction: { x: 0, y: -1 }, chamber: { width: 200, length: 120 } } };
+      const open = cloud(2);
+      const engine = cloud(2, [head]);
+      for (let s = 0; s < 72; s++) {
+        stepInPlace(open, [], sandbox);
+        stepInPlace(engine, [], sandbox);
+      }
+      expect(mass(engine)).toBeGreaterThan(0.99 * (mass(engine) + engine.gas.removed.mass));
+      expect(mass(open)).toBeLessThan(0.9 * (mass(open) + open.gas.removed.mass));
+      expect(engine.ledger.violations).toBe(0);
+    });
+  });
 });

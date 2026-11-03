@@ -58,13 +58,20 @@ Building and flying now works by touch alone:
 | The verdict | Part of the world state: the same run reaches it at the same step, and it stays | `FLT-005` |
 | On screen | Height above pad, down and sideways speed, tilt, fuel %. Values outside the limits show in yellow with ▲. Verdict card with the reason, score and Try again. Desktop and 390 px | `e2e/landing.spec.ts` |
 
-**Flying it.** At full throttle on both engines the ship climbs at about 2.5 m/s² against gravity, so you hover by pulsing. The jets wobble, so the ship tilts on its own: correct it with one engine (Q alone turns the nose right). Just above the pad your own exhaust cushions the ship, so cut the engines for the last few centimetres. On phones the two flight buttons sit at the bottom corners, under each thumb.
+**Flying it.** At full throttle on both engines the ship climbs at about 2.5 m/s² against gravity, so you hover by pulsing. The jets wobble, so the ship tilts on its own: correct it with one engine (Q alone turns the nose right). While the engines fire close to the pad, their exhaust pushes back off it (ground effect). After you cut them, the exhaust spreads out of the plane within about 0.4 s, so a cushion no longer holds a landed ship up. On phones the two flight buttons sit at the bottom corners, under each thumb.
 
 ### Physics fixed on the way
 
 - **The ledger with gravity on.** Feed links move propellant from the tank down to the engines. That changes potential energy (the pump's work), but it wasn't recorded, so every step with gravity showed an energy residual of about 14 mJ. It is now recorded as a transfer, as is the outlet height for injectors.
 - **A ground and the gas.** Each step, the gas put every body into every grid cell under its bounding circle. An 80 m ground filled about 145,000 cells, so a step took about 1 s; it now takes about 15–19 ms with the engines firing near the ground. Only cells near gas are filled now, and a body that would still fill very many is tested against every parcel. Before, a body bigger than the cap was left out entirely, so gas passed through it. The far field now ignores fixed bodies, so exhaust that spreads along the ground away from the ship leaves.
 - **Welds no longer warm start.** Reapplying last step's weld impulses after the load had changed made the velocity solve create energy. After a landing it pushed the ship back up off the pad, and a 6 m/s crash gained up to 19 J in a step, all reported by the ledger. Weld loads come from each step's own impulse, so every joint-break test passes unchanged. Contacts still warm start, which stacks need (RS-04).
+
+### The exhaust cushion (GAS-009, FLT-007)
+
+You noticed that after landing, the ship floated on its own exhaust and the landing never finished. The cause was the 2D world, not cold gas: the gas trapped under the ship was about 2,800 K. A 2D world is a slab that never thins, so exhaust caught in a pocket under the wing, between the legs and the pad, stayed there. In 3D the pocket is open at the front and back. Measured 0.35–0.75 s after a cutoff 0.6 m above the pad, the gas still pushed with 3.4 N, 8% of the ship's weight. It bobbed for well over a second and kept resetting the rest timer.
+
+- **Gas out of the plane:** LAND's world has a depth of 2 m. Exhaust older than 0.1 s, outside the engines' interiors, loses mass at its own sound speed over that depth, as a cloud in vacuum would. The ledger records what leaves at the boundary. Over the same window, the push is now under 3% of the weight (`GAS-009` tests). Thrust in open space after a 1 s burn is within 2% of before, because the chamber and nozzle are declared closed (`injector.chamber`).
+- **Settling:** "Landed" now needs under 0.3 m/s and 0.3 rad/s for 0.5 s, and a bounce off the pad shorter than 0.1 s doesn't restart the count. A 3 m autopilot descent is now called about 0.9 s sooner. It touches down faster than before (1.1 m/s, score 483) because nothing cushions the last drop.
 
 ### Known limits
 

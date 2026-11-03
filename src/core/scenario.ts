@@ -231,6 +231,10 @@ function validateInjector(v: V, i: unknown, path: string): void {
   for (const k of ["parcelMass", "radius"]) if (i[k] !== undefined) num(v, i[k], `${path}.${k}`, { positive: true });
   for (const k of ["outlet", "direction"]) if (i[k] !== undefined) vec(v, i[k], `${path}.${k}`);
   if (i.igniter !== undefined && typeof i.igniter !== "boolean") err(v, `${path}.igniter`, "must be true or false");
+  if (i.chamber !== undefined) {
+    if (!isObj(i.chamber)) err(v, `${path}.chamber`, "must be an object {width, length}");
+    else for (const k of ["width", "length"]) num(v, i.chamber[k], `${path}.chamber.${k}`, { positive: true });
+  }
   if (i.mixture !== undefined) {
     if (!isObj(i.mixture) || !Object.keys(i.mixture).length) return err(v, `${path}.mixture`, "must be an object of species mass fractions");
     let sum = 0;
@@ -303,6 +307,7 @@ function validateBounds(v: V, b: unknown, path: string): void {
   if (!isObj(b)) return err(v, path, "must be an object {min, max}");
   validateRect(v, b.min, b.max, path);
   if (b.farField !== undefined) num(v, b.farField, `${path}.farField`, { positive: true });
+  if (b.depth !== undefined) num(v, b.depth, `${path}.depth`, { positive: true });
 }
 
 function validateChallenge(v: V, c: unknown, bodies: unknown, path: string): void {
