@@ -8,11 +8,14 @@
 // and position correction moves pairs apart along the contact normal.
 // The solver structure follows Box2D (Erin Catto).
 
+import { bodyMass } from "./bodies.ts";
 import { collide, type Manifold, type Placed } from "./collide.ts";
+import { assemblyRoots, correctJoints, emptyAccount, finishJoints, prepareJoints, solveJoints, warmStartJoints, type ConstraintAccount, type JointBody } from "./joints.ts";
 import { add, cross, crossSV, dot, invRotate, length, rotate, scale, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
 import type { Profile } from "./profile.ts";
 import { massProps } from "./shapes.ts";
 import type { Body, Contact, World } from "./world.ts";
+export type { JointBody };
 
 /** Normal approach speed below which restitution is ignored, so resting contacts don't jitter. m/s */
 const RESTITUTION_THRESHOLD = 0.1;
@@ -22,6 +25,8 @@ const MAX_CORRECTION = 0.2; // m per iteration
 
 interface RB {
   body: Body;
+  /** Total mass including stores, kg. */
+  mass: number;
   invMass: number;
   invInertia: number;
   inertia: number;
@@ -59,22 +64,16 @@ interface SolverContact {
 }
 
 /** What the contact solver did, for the ledger. */
-export interface ContactAccount {
-  /** Impulse delivered to dynamic bodies by fixed bodies. */
-  externalImpulse: Vec2;
-  /** Angular impulse about the origin delivered to dynamic bodies by all contact impulses. */
-  angular: number;
-  /** Kinetic energy change predicted from every impulse application, J. */
-  predictedKE: number;
-  involved: Set<string>;
-}
+export type ContactAccount = ConstraintAccount;
 
 function rigid(body: Body): RB {
-  const mp = massProps(body.shape, body.mass);
+  const mass = bodyMass(body);
+  const mp = massProps(body.shape, mass);
   const fixed = body.fixed;
   return {
     body,
-    invMass: fixed ? 0 : 1 / body.mass,
+    mass,
+    invMass: fixed ? 0 : 1 / mass,
     invInertia: fixed ? 0 : 1 / mp.inertia,
     inertia: mp.inertia,
     radius: mp.boundingRadius,
@@ -83,6 +82,8 @@ function rigid(body: Body): RB {
 }
 
 const placed = (r: RB): Placed => ({ shape: r.body.shape, position: r.body.position, rot: r.rot });
+
+export { rigid };
 
 export function prepareBodies(world: World): RB[] {
   return world.bodies.map(rigid);
@@ -96,7 +97,7 @@ export function applyField(rbs: RB[], g: Vec2, dt: number): { impulse: Vec2; ang
   if (g.x === 0 && g.y === 0) return { impulse: { x: 0, y: 0 }, angular: 0 };
   for (const r of rbs) {
     if (r.invMass === 0) continue;
-    const J = { x: r.body.mass * g.x * dt, y: r.body.mass * g.y * dt };
+    const J = { x: r.mass * g.x * dt, y: r.mass * g.y * dt };
     r.body.velocity = { x: r.body.velocity.x + g.x * dt, y: r.body.velocity.y + g.y * dt };
     ix += J.x;
     iy += J.y;
@@ -120,7 +121,7 @@ export function applyDrags(world: World, rbs: RB[], dt: number): void {
     const anchor = add(r.body.position, rotate(r.rot, d.anchor));
     const rr = sub(anchor, r.body.position);
     const vAnchor = add(r.body.velocity, crossSV(r.body.angularVelocity, rr));
-    const m = r.body.mass;
+    const m = r.mass;
     const k = d.stiffness * m;
     const c = 2 * Math.sqrt(k * m);
     let f = sub(scale(sub(d.target, anchor), k), scale(vAnchor, c));
@@ -156,7 +157,11 @@ export function broadPhase(boxes: { minX: number; minY: number; maxX: number; ma
   return pairs.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
 }
 
-export function solveContacts(world: World, rbs: RB[], profile: Profile): { account: ContactAccount; solved: SolvedContacts } {
+/**
+ * Velocity solve for one step: contacts and joints together (sequential impulses).
+ * Bodies in the same assembly don't collide with each other.
+ */
+export function solveContacts(world: World, rbs: RB[], profile: Profile): { account: ContactAccount; jointAccount: ConstraintAccount; solved: SolvedContacts } {
   const dt = profile.timestep;
   const slop = profile.tol.penetration / 2;
   const sweep = rbs.map((r) => (r.invMass === 0 ? 0 : (length(r.body.velocity) + Math.abs(r.body.angularVelocity) * r.radius) * dt));
@@ -176,11 +181,13 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   // Pairs that were actually pushing last step; a speculative contact with no impulse is not a touch.
   const previousPairs = new Set(world.contacts.filter((c) => c.normalImpulse > 0).map((c) => `${c.a}\u0000${c.b}`));
 
+  const roots = world.joints.length ? assemblyRoots(world) : null;
   const contacts: SolverContact[] = [];
   for (const [i, j] of broadPhase(boxes)) {
     const a = rbs[i];
     const b = rbs[j];
     if (a.invMass === 0 && b.invMass === 0) continue;
+    if (roots && roots.get(a.body.id) === roots.get(b.body.id)) continue;
     const m = collide(placed(a), placed(b), sweep[i] + sweep[j] + slop, slop);
     if (!m) continue;
     let toi: number | undefined;
@@ -234,7 +241,10 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
     });
   }
 
-  const account: ContactAccount = { externalImpulse: { x: 0, y: 0 }, angular: 0, predictedKE: 0, involved: new Set() };
+  const account: ContactAccount = emptyAccount();
+  const jointAccount = emptyAccount();
+  const byId = new Map<string, JointBody>(rbs.map((r) => [r.body.id, r]));
+  const joints = prepareJoints(world, byId);
 
   // Applies impulse `lambda` along `dir` at a contact point: +B, −A. Tracks energy and external impulse exactly.
   const relVel = (c: SolverContact, p: SolverPoint): Vec2 =>
@@ -261,6 +271,7 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   };
 
   // Warm start from the previous step's impulses.
+  warmStartJoints(joints, jointAccount);
   for (const c of contacts) {
     const t = { x: c.normal.y, y: -c.normal.x };
     for (const p of c.points) {
@@ -270,6 +281,7 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   }
 
   for (let it = 0; it < profile.solverIterations; it++) {
+    solveJoints(joints, jointAccount);
     for (const c of contacts) {
       const n = c.normal;
       const t = { x: n.y, y: -n.x };
@@ -346,7 +358,8 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
     }
   }
   world.contacts = records;
-  return { account, solved: { contacts } };
+  finishJoints(joints, jointAccount);
+  return { account, jointAccount, solved: { contacts, byId } };
 }
 
 /**
@@ -401,23 +414,77 @@ export function applyImpactFix(solved: SolvedContacts): void {
 /** Solver state handed from the velocity solve to position correction within one step. */
 export interface SolvedContacts {
   contacts: SolverContact[];
+  byId: Map<string, JointBody>;
 }
 
-/** Semi-implicit Euler position update: uses the velocities after forces and contacts. */
-export function integratePositions(rbs: RB[], dt: number): void {
+/**
+ * Semi-implicit Euler position update, using the velocities after forces and contacts.
+ * A free assembly of welded parts moves exactly as one rigid body for the step: positions
+ * and velocities rotate together about its centre of mass. Sliding each part in a straight
+ * line instead loses angular momentum by (ω·dt)²/2 per step (a welded pair visibly slows
+ * its spin). Returns the impulse each part received from that rotation, i.e. the
+ * centripetal impulse its joints supplied, so joint loads can include it.
+ */
+export function integratePositions(rbs: RB[], dt: number, world?: World): Map<string, Vec2> {
+  const rigidImpulse = new Map<string, Vec2>();
+  const grouped = new Set<RB>();
+  if (world && world.joints.length) {
+    const roots = assemblyRoots(world);
+    const groups = new Map<string, RB[]>();
+    for (const r of rbs) {
+      const root = roots.get(r.body.id)!;
+      groups.set(root, [...(groups.get(root) ?? []), r]);
+    }
+    for (const members of groups.values()) {
+      if (members.length < 2 || members.some((m) => m.invMass === 0)) continue;
+      let M = 0;
+      let cx = 0;
+      let cy = 0;
+      let px = 0;
+      let py = 0;
+      for (const m of members) {
+        M += m.mass;
+        cx += m.mass * m.body.position.x;
+        cy += m.mass * m.body.position.y;
+        px += m.mass * m.body.velocity.x;
+        py += m.mass * m.body.velocity.y;
+      }
+      const com = { x: cx / M, y: cy / M };
+      const vcom = { x: px / M, y: py / M };
+      let I = 0;
+      let Lrel = 0;
+      for (const m of members) {
+        const d = sub(m.body.position, com);
+        I += m.inertia + m.mass * dot(d, d);
+        Lrel += m.mass * cross(d, sub(m.body.velocity, vcom)) + m.inertia * m.body.angularVelocity;
+      }
+      const q = sinCos((Lrel / I) * dt);
+      const newCom = { x: com.x + vcom.x * dt, y: com.y + vcom.y * dt };
+      for (const m of members) {
+        m.body.position = add(newCom, rotate(q, sub(m.body.position, com)));
+        const v = add(vcom, rotate(q, sub(m.body.velocity, vcom)));
+        rigidImpulse.set(m.body.id, scale(sub(v, m.body.velocity), m.mass));
+        m.body.velocity = v;
+        m.body.angle += m.body.angularVelocity * dt;
+        grouped.add(m);
+      }
+    }
+  }
   for (const r of rbs) {
-    if (r.invMass === 0) continue;
+    if (r.invMass === 0 || grouped.has(r)) continue;
     const b = r.body;
     b.position = { x: b.position.x + b.velocity.x * dt, y: b.position.y + b.velocity.y * dt };
     b.angle += b.angularVelocity * dt;
   }
+  return rigidImpulse;
 }
 
 /** Pushes overlapping pairs apart along their normals without touching velocities (non-linear Gauss–Seidel). */
-export function correctPositions(solved: SolvedContacts, profile: Profile): void {
+export function correctPositions(world: World, solved: SolvedContacts, profile: Profile): void {
   const slop = profile.tol.penetration / 2;
   const contacts = solved.contacts;
   for (let it = 0; it < POSITION_ITERATIONS; it++) {
+    correctJoints(world, solved.byId);
     for (const c of contacts) {
       const A = c.a.body;
       const B = c.b.body;

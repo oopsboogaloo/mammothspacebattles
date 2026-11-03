@@ -4,16 +4,20 @@
 // to the conserved totals is attributed in the ledger (LED-001…LED-003).
 
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
-import { add, rotate, sinCos, type Vec2 } from "./math.ts";
-import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, solveContacts } from "./physics.ts";
+import { bodyMass, type Store } from "./bodies.ts";
+import { evaluateJoints } from "./joints.ts";
+import { add, length, rotate, scale, sinCos, type Vec2 } from "./math.ts";
+import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, rigid, solveContacts } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
+export type { Store } from "./bodies.ts";
+export { bodyMass } from "./bodies.ts";
 
-export const WORLD_SCHEMA = 2;
+export const WORLD_SCHEMA = 3;
 const MAX_EVENTS = 10_000;
 
 export interface Body {
@@ -29,10 +33,47 @@ export interface Body {
   velocity: Vec2; // m/s
   angle: number; // rad
   angularVelocity: number; // rad/s
+  /** Stores this component holds; their mass adds to `mass` (ASM-002). */
+  contents?: Store[];
 }
 
 /** Body as written in scenarios and commands: material fields are optional. */
 export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction"> & Partial<Pick<Body, "fixed" | "restitution" | "friction">>;
+
+export interface JointLimits {
+  tension: number; // N
+  compression: number; // N
+  shear: number; // N
+  torque: number; // N·m
+}
+
+export const JOINT_DEFAULT_LIMITS: JointLimits = { tension: 5000, compression: 10000, shear: 3000, torque: 2000 };
+
+/** A weld between two bodies (ASM-003). */
+export interface Joint {
+  id: string;
+  a: string;
+  b: string;
+  /** Anchor on a and on b, in each body's local coordinates, m. */
+  anchorA: Vec2;
+  anchorB: Vec2;
+  /** Unit axis in a's local frame for tension/compression; shear is across it. */
+  axis: Vec2;
+  /** b.angle − a.angle held by the weld, rad. */
+  referenceAngle: number;
+  limits: JointLimits;
+  /** Last step's accumulated impulse on b (warm start), N·s and N·m·s. */
+  impulse: { x: number; y: number; angular: number };
+  /** Last step's load; fraction is the worst of each load ÷ its limit. */
+  load: { tension: number; compression: number; shear: number; torque: number; fraction: number };
+}
+
+export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle">> & { limits?: Partial<JointLimits> };
+
+/** Zero-mass connections (ASM-006): feed links move a resource between stores; control links carry a channel to a component. */
+export type Link =
+  | { id: string; kind: "feed"; from: string; to: string; resource: string; rate: number /* kg/s */ }
+  | { id: string; kind: "control"; channel: string; to: string };
 
 export const BODY_DEFAULTS = { fixed: false, restitution: 0.5, friction: 0.4 } as const;
 
@@ -76,6 +117,10 @@ export interface World {
   /** Uniform gravitational field, m/s². */
   gravity: Vec2;
   bodies: Body[];
+  joints: Joint[];
+  links: Link[];
+  /** Current value of each control channel. */
+  controls: Record<string, number>;
   drags: Drag[];
   contacts: Contact[];
   ledger: Ledger;
@@ -95,6 +140,14 @@ export type Command =
   | { type: "drag.set"; id: string; anchor: Vec2; target: Vec2; stiffness?: number; maxAcceleration?: number }
   | { type: "drag.clear"; id: string }
   | { type: "world.set"; patch: { gravity?: Vec2 } }
+  | { type: "joint.add"; joint: JointInput }
+  | { type: "joint.remove"; id: string }
+  | { type: "joint.set"; id: string; limits: Partial<JointLimits> }
+  /** Removes every joint touching the body: it leaves its assembly with its own momentum. */
+  | { type: "body.detach"; id: string }
+  | { type: "link.add"; link: Link }
+  | { type: "link.remove"; id: string }
+  | { type: "control.set"; channel: string; value: number }
   | { type: "rng.sample"; label: string }
   /** Test hook: changes a velocity WITHOUT telling the ledger, to exercise violation reporting. */
   | { type: "debug.kick"; id: string; dv: Vec2 };
@@ -114,7 +167,12 @@ export function normalizeBody(input: BodyInput): Body {
   return body;
 }
 
-export function createWorld(seed: number, bodies: BodyInput[] = [], gravity: Vec2 = { x: 0, y: 0 }): World {
+export function createWorld(
+  seed: number,
+  bodies: BodyInput[] = [],
+  gravity: Vec2 = { x: 0, y: 0 },
+  extra: { joints?: JointInput[]; links?: Link[] } = {},
+): World {
   const world: World = {
     schema: WORLD_SCHEMA,
     tick: 0,
@@ -122,6 +180,9 @@ export function createWorld(seed: number, bodies: BodyInput[] = [], gravity: Vec
     rng: createRng(seed),
     gravity: { ...gravity },
     bodies: [],
+    joints: [],
+    links: [],
+    controls: {},
     drags: [],
     contacts: [],
     ledger: emptyLedger(),
@@ -130,6 +191,8 @@ export function createWorld(seed: number, bodies: BodyInput[] = [], gravity: Vec
     pendingDebug: [],
   };
   for (const body of bodies) addBody(world, body);
+  for (const j of extra.joints ?? []) addJoint(world, j);
+  for (const l of extra.links ?? []) addLink(world, l);
   world.ledger.totals = computeTotals(world);
   return world;
 }
@@ -144,7 +207,75 @@ function addBody(world: World, input: BodyInput): void {
   world.bodies.sort((a, b) => compareIds(a.id, b.id));
 }
 
-export function findBody(world: World, id: string): Body {
+export function addJoint(world: World, input: JointInput): void {
+  if (world.joints.some((j) => j.id === input.id)) throw new Error(`Duplicate joint id "${input.id}"`);
+  if (input.a === input.b) throw new Error("A joint needs two different bodies");
+  const a = findBody(world, input.a);
+  const b = findBody(world, input.b);
+  const al = length(input.anchorA);
+  const joint: Joint = {
+    id: input.id,
+    a: input.a,
+    b: input.b,
+    anchorA: { ...input.anchorA },
+    anchorB: { ...input.anchorB },
+    axis: input.axis ? scale(input.axis, 1 / length(input.axis)) : al > 1e-9 ? scale(input.anchorA, 1 / al) : { x: 1, y: 0 },
+    referenceAngle: input.referenceAngle ?? b.angle - a.angle,
+    limits: { ...JOINT_DEFAULT_LIMITS, ...input.limits },
+    impulse: { x: 0, y: 0, angular: 0 },
+    load: { tension: 0, compression: 0, shear: 0, torque: 0, fraction: 0 },
+  };
+  world.joints = [...world.joints, joint].sort((p, q) => compareIds(p.id, q.id));
+}
+
+function addLink(world: World, link: Link): void {
+  if (world.links.some((l) => l.id === link.id)) throw new Error(`Duplicate link id "${link.id}"`);
+  const to = findBody(world, link.to);
+  if (link.kind === "feed") {
+    const from = findBody(world, link.from);
+    if (from.id === to.id) throw new Error("A feed link needs two different stores");
+    for (const b of [from, to]) {
+      if (!b.contents?.some((s) => s.resource === link.resource)) throw new Error(`Feed links need a "${link.resource}" store at both ends; ${b.id} has none`);
+    }
+  }
+  world.links = [...world.links, structuredClone(link)].sort((p, q) => compareIds(p.id, q.id));
+}
+
+/** Control channels reaching a body through intact control links, with their values (ASM-006). */
+export function controlInputs(world: World, bodyId: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const l of world.links) if (l.kind === "control" && l.to === bodyId) out[l.channel] = world.controls[l.channel] ?? 0;
+  return out;
+}
+
+/**
+ * Feed links move resource mass between stores at up to their rate. The receiving body's
+ * velocity is updated so momentum is conserved; the mixing loses a little kinetic energy as heat.
+ */
+function runFeeds(world: World, dt: number): boolean {
+  let touchedFixed = false;
+  for (const l of world.links) {
+    if (l.kind !== "feed") continue;
+    const from = world.bodies.find((b) => b.id === l.from);
+    const to = world.bodies.find((b) => b.id === l.to);
+    const src = from?.contents?.find((s) => s.resource === l.resource);
+    const dst = to?.contents?.find((s) => s.resource === l.resource);
+    if (!from || !to || !src || !dst) continue;
+    const dm = Math.min(l.rate * dt, src.mass, Math.max(0, dst.capacity - dst.mass));
+    if (!(dm > 0)) continue;
+    if (from.fixed || to.fixed) touchedFixed = true;
+    const keBefore = 0.5 * dm * (from.velocity.x ** 2 + from.velocity.y ** 2) + 0.5 * bodyMass(to) * (to.velocity.x ** 2 + to.velocity.y ** 2);
+    const mTo = bodyMass(to);
+    if (!to.fixed) to.velocity = { x: (mTo * to.velocity.x + dm * from.velocity.x) / (mTo + dm), y: (mTo * to.velocity.y + dm * from.velocity.y) / (mTo + dm) };
+    src.mass -= dm;
+    dst.mass += dm;
+    const keAfter = 0.5 * bodyMass(to) * (to.velocity.x ** 2 + to.velocity.y ** 2);
+    world.ledger.thermal += Math.max(0, keBefore - keAfter);
+  }
+  return touchedFixed;
+}
+
+function findBody(world: World, id: string): Body {
   const body = world.bodies.find((b) => b.id === id);
   if (!body) throw new Error(`No body with id "${id}"`);
   return body;
@@ -163,6 +294,8 @@ function applyOne(world: World, cmd: Command): void {
     case "body.remove":
       findBody(world, cmd.id);
       world.bodies = world.bodies.filter((b) => b.id !== cmd.id);
+      world.joints = world.joints.filter((j) => j.a !== cmd.id && j.b !== cmd.id);
+      world.links = world.links.filter((l) => l.to !== cmd.id && (l.kind !== "feed" || l.from !== cmd.id));
       world.drags = world.drags.filter((d) => d.id !== cmd.id);
       world.contacts = world.contacts.filter((c) => c.a !== cmd.id && c.b !== cmd.id);
       break;
@@ -178,10 +311,38 @@ function applyOne(world: World, cmd: Command): void {
     }
     case "body.impulse": {
       const body = findBody(world, cmd.id);
-      const mp = massProps(body.shape, body.mass);
-      applyImpulseAt({ body, invMass: body.fixed ? 0 : 1 / body.mass, invInertia: body.fixed ? 0 : 1 / mp.inertia }, cmd.impulse, cmd.point);
+      const m = bodyMass(body);
+      const mp = massProps(body.shape, m);
+      applyImpulseAt({ body, invMass: body.fixed ? 0 : 1 / m, invInertia: body.fixed ? 0 : 1 / mp.inertia }, cmd.impulse, cmd.point);
       break;
     }
+    case "joint.add":
+      addJoint(world, cmd.joint);
+      break;
+    case "joint.remove":
+      if (!world.joints.some((j) => j.id === cmd.id)) throw new Error(`No joint with id "${cmd.id}"`);
+      world.joints = world.joints.filter((j) => j.id !== cmd.id);
+      break;
+    case "joint.set": {
+      const j = world.joints.find((x) => x.id === cmd.id);
+      if (!j) throw new Error(`No joint with id "${cmd.id}"`);
+      j.limits = { ...j.limits, ...cmd.limits };
+      break;
+    }
+    case "body.detach":
+      findBody(world, cmd.id);
+      world.joints = world.joints.filter((j) => j.a !== cmd.id && j.b !== cmd.id);
+      break;
+    case "link.add":
+      addLink(world, cmd.link);
+      break;
+    case "link.remove":
+      if (!world.links.some((l) => l.id === cmd.id)) throw new Error(`No link with id "${cmd.id}"`);
+      world.links = world.links.filter((l) => l.id !== cmd.id);
+      break;
+    case "control.set":
+      world.controls = { ...world.controls, [cmd.channel]: cmd.value };
+      break;
     case "drag.set": {
       findBody(world, cmd.id);
       const drag: Drag = {
@@ -252,11 +413,28 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   applyCommands(world, commands);
   mark("commands");
   const start = world.ledger.totals;
-  const sources: Record<Source, Delta> = { user: world.pendingUser, field: zeroDelta(), contact: zeroDelta(), correction: zeroDelta() };
+  const sources: Record<Source, Delta> = {
+    user: world.pendingUser,
+    field: zeroDelta(),
+    contact: zeroDelta(),
+    joint: zeroDelta(),
+    transfer: zeroDelta(),
+    correction: zeroDelta(),
+  };
+
+  // Feed links move resources between stores. Mass and momentum must not change; angular momentum may,
+  // because a store's contents sit at its body's centre (recorded, not checked).
+  let before = computeTotals(world);
+  if (world.links.length) {
+    const touchedFixed = runFeeds(world, dt);
+    const after = computeTotals(world);
+    // Mass moving to or from a fixed body leaves or enters the dynamic totals: attribute all of it then.
+    sources.transfer = touchedFixed ? diff(before, after) : { ...zeroDelta(), angularMomentum: after.angularMomentum - before.angularMomentum };
+    before = after;
+  }
   const rbs = prepareBodies(world);
 
   // External field.
-  let before = computeTotals(world);
   const field = applyField(rbs, world.gravity, dt);
   let after = computeTotals(world);
   sources.field.momentumX = field.impulse.x;
@@ -273,19 +451,34 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   // Contacts: kinetic energy lost becomes heat.
   before = after;
-  const { account, solved } = solveContacts(world, rbs, profile);
-  world.ledger.thermal -= account.predictedKE;
-  const contactHeat = -account.predictedKE;
+  const { account, jointAccount, solved } = solveContacts(world, rbs, profile);
+  world.ledger.thermal -= account.predictedKE + jointAccount.predictedKE;
+  const contactHeat = -account.predictedKE - jointAccount.predictedKE;
   sources.contact.momentumX = account.externalImpulse.x;
   sources.contact.momentumY = account.externalImpulse.y;
   sources.contact.angularMomentum = account.angular;
+  sources.joint.momentumX = jointAccount.externalImpulse.x;
+  sources.joint.momentumY = jointAccount.externalImpulse.y;
+  sources.joint.angularMomentum = jointAccount.angular;
+  for (const id of jointAccount.involved) account.involved.add(id);
   mark("contacts");
 
-  // Integrate positions. Only gravitational potential can change here.
+  // Integrate positions. Only gravitational potential can change here: free assemblies move
+  // rigidly, which conserves momentum, angular momentum and kinetic energy exactly.
   before = computeTotals(world);
-  integratePositions(rbs, dt);
+  const rigidImpulse = integratePositions(rbs, dt, world);
   after = computeTotals(world);
   sources.field.energy += after.energy.potential - before.energy.potential;
+  let breakHeat = 0;
+  if (world.joints.length) {
+    const brk = evaluateJoints(world, dt, rigidImpulse, rigid);
+    world.ledger.thermal -= brk.predictedKE;
+    breakHeat = -brk.predictedKE;
+    sources.joint.momentumX += brk.externalImpulse.x;
+    sources.joint.momentumY += brk.externalImpulse.y;
+    sources.joint.angularMomentum += brk.angular;
+    after = computeTotals(world);
+  }
 
   // Disc pairs that met mid-step move onto their true paths; this is part of the contact.
   before = after;
@@ -296,7 +489,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   // Position correction moves bodies, not velocities; record what that did.
   before = after;
-  correctPositions(solved, profile);
+  correctPositions(world, solved, profile);
   after = computeTotals(world);
   sources.correction.angularMomentum = after.angularMomentum - before.angularMomentum;
   sources.correction.energy = after.energy.total - before.energy.total;
@@ -308,7 +501,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   world.tick += 1;
   world.time = world.tick * dt;
-  finishLedger(world, start, after, sources, profile, [...account.involved], contactHeat);
+  finishLedger(world, start, after, sources, profile, [...account.involved], contactHeat + breakHeat);
   world.pendingUser = zeroDelta();
   world.pendingDebug = [];
   mark("ledger");
@@ -352,7 +545,7 @@ function finishLedger(
   check("momentum", Math.sqrt(residual.momentumX * residual.momentumX + residual.momentumY * residual.momentumY), profile.tol.momentum);
   check("angularMomentum", residual.angularMomentum, profile.tol.angularMomentum);
   check("energy", residual.energy, profile.tol.energy);
-  // Contacts may only turn kinetic energy into heat, never the reverse.
+  // Contacts and joints may only turn kinetic energy into heat, never the reverse.
   check("contactEnergy", Math.min(0, contactHeat), profile.tol.energy);
 }
 

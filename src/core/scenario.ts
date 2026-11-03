@@ -6,7 +6,7 @@ import { evaluateFormula } from "./formula.ts";
 import { resolvePath } from "./path.ts";
 import { PROFILES, getProfile } from "./profile.ts";
 import { polygonProblem } from "./shapes.ts";
-import { createWorld, stepInPlace, type BodyInput, type Command, type Vec2, type World } from "./world.ts";
+import { createWorld, stepInPlace, type BodyInput, type Command, type JointInput, type Link, type Vec2, type World } from "./world.ts";
 
 export const SCENARIO_SCHEMA = 1;
 
@@ -52,7 +52,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2 };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: Link[] };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -184,6 +184,46 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.fixed !== undefined && typeof b.fixed !== "boolean") err(v, `${path}.fixed`, "must be true or false");
   if (b.restitution !== undefined) num(v, b.restitution, `${path}.restitution`, { min: 0, max: 1 });
   if (b.friction !== undefined) num(v, b.friction, `${path}.friction`, { min: 0 });
+  if (b.contents !== undefined) {
+    if (!Array.isArray(b.contents)) return err(v, `${path}.contents`, "must be an array of stores");
+    b.contents.forEach((s, i) => {
+      const sp = `${path}.contents[${i}]`;
+      if (!isObj(s)) return err(v, sp, "must be {resource, mass, capacity}");
+      str(v, s.resource, `${sp}.resource`);
+      const okM = num(v, s.mass, `${sp}.mass`, { min: 0 });
+      const okC = num(v, s.capacity, `${sp}.capacity`, { min: 0 });
+      if (okM && okC && (s.mass as number) > (s.capacity as number)) err(v, `${sp}.mass`, "must not exceed capacity");
+    });
+  }
+}
+
+function validateJoint(v: V, j: unknown, path: string): void {
+  if (!isObj(j)) return err(v, path, "must be an object");
+  str(v, j.id, `${path}.id`);
+  str(v, j.a, `${path}.a`);
+  str(v, j.b, `${path}.b`);
+  vec(v, j.anchorA, `${path}.anchorA`);
+  vec(v, j.anchorB, `${path}.anchorB`);
+  if (j.axis !== undefined) vec(v, j.axis, `${path}.axis`);
+  if (j.referenceAngle !== undefined) num(v, j.referenceAngle, `${path}.referenceAngle`);
+  if (j.limits !== undefined) validateLimits(v, j.limits, `${path}.limits`);
+}
+
+function validateLimits(v: V, l: unknown, path: string): void {
+  if (!isObj(l)) return err(v, path, "must be an object");
+  for (const k of ["tension", "compression", "shear", "torque"]) if (l[k] !== undefined) num(v, l[k], `${path}.${k}`, { positive: true });
+}
+
+function validateLink(v: V, l: unknown, path: string): void {
+  if (!isObj(l)) return err(v, path, "must be an object");
+  str(v, l.id, `${path}.id`);
+  str(v, l.to, `${path}.to`);
+  if (l.kind === "feed") {
+    str(v, l.from, `${path}.from`);
+    str(v, l.resource, `${path}.resource`);
+    num(v, l.rate, `${path}.rate`, { positive: true });
+  } else if (l.kind === "control") str(v, l.channel, `${path}.channel`);
+  else err(v, `${path}.kind`, 'must be "feed" or "control"');
 }
 
 function validateCommand(v: V, c: unknown, path: string): void {
@@ -214,6 +254,22 @@ function validateCommand(v: V, c: unknown, path: string): void {
     case "world.set":
       if (!isObj(c.patch)) return err(v, `${path}.patch`, "must be an object");
       if (c.patch.gravity !== undefined) vec(v, c.patch.gravity, `${path}.patch.gravity`);
+      return;
+    case "joint.add":
+      return validateJoint(v, c.joint, `${path}.joint`);
+    case "joint.remove":
+    case "body.detach":
+    case "link.remove":
+      str(v, c.id, `${path}.id`);
+      return;
+    case "joint.set":
+      str(v, c.id, `${path}.id`);
+      return validateLimits(v, c.limits, `${path}.limits`);
+    case "link.add":
+      return validateLink(v, c.link, `${path}.link`);
+    case "control.set":
+      str(v, c.channel, `${path}.channel`);
+      num(v, c.value, `${path}.value`);
       return;
     case "rng.sample":
       str(v, c.label, `${path}.label`);
@@ -348,6 +404,14 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
       }
     });
     if (data.world.gravity !== undefined) vec(v, data.world.gravity, "$.world.gravity");
+    if (data.world.joints !== undefined) {
+      if (!Array.isArray(data.world.joints)) err(v, "$.world.joints", "must be an array");
+      else data.world.joints.forEach((j, i) => validateJoint(v, j, `$.world.joints[${i}]`));
+    }
+    if (data.world.links !== undefined) {
+      if (!Array.isArray(data.world.links)) err(v, "$.world.links", "must be an array");
+      else data.world.links.forEach((l, i) => validateLink(v, l, `$.world.links[${i}]`));
+    }
   }
 
   let endSteps = Infinity;
@@ -445,7 +509,7 @@ export interface RunResult {
 
 /** Builds the scenario's world at tick 0, with step-0 commands not yet applied. */
 export function initialWorld(scn: Scenario): World {
-  return createWorld(scn.seed, scn.world.bodies, scn.world.gravity);
+  return createWorld(scn.seed, scn.world.bodies, scn.world.gravity, { joints: scn.world.joints, links: scn.world.links });
 }
 
 export function timelineByStep(scn: Scenario): Map<number, Command[]> {

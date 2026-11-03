@@ -4,6 +4,7 @@
 // A residual above the profile tolerance is recorded as a violation.
 
 import { cross, dot, type Vec2 } from "./math.ts";
+import { bodyMass } from "./bodies.ts";
 import { massProps } from "./shapes.ts";
 import type { World } from "./world.ts";
 
@@ -30,8 +31,8 @@ export interface Delta {
   energy: number;
 }
 
-export type Source = "user" | "field" | "contact" | "correction";
-export const SOURCES: readonly Source[] = ["user", "field", "contact", "correction"];
+export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction";
+export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction"];
 
 export interface StepLedger {
   tick: number;
@@ -81,14 +82,15 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
   const g = world.gravity;
   for (const b of world.bodies) {
     if (b.fixed) continue;
-    const { inertia } = massProps(b.shape, b.mass);
+    const m = bodyMass(b);
+    const { inertia } = massProps(b.shape, m);
     const v = b.velocity;
-    mass += b.mass;
-    px += b.mass * v.x;
-    py += b.mass * v.y;
-    L += b.mass * cross(b.position, v) + inertia * b.angularVelocity;
-    ke += 0.5 * b.mass * dot(v, v) + 0.5 * inertia * b.angularVelocity * b.angularVelocity;
-    pe -= b.mass * dot(g, b.position);
+    mass += m;
+    px += m * v.x;
+    py += m * v.y;
+    L += m * cross(b.position, v) + inertia * b.angularVelocity;
+    ke += 0.5 * m * dot(v, v) + 0.5 * inertia * b.angularVelocity * b.angularVelocity;
+    pe -= m * dot(g, b.position);
   }
   return {
     mass,
