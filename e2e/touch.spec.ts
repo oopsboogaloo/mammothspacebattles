@@ -11,7 +11,7 @@ async function tapWorld(page: Page, x: number, y: number) {
   await page.mouse.click(p.x, p.y);
 }
 
-const tickNow = async (page: Page) => (await world(page)).tick;
+const tickNow = (page: Page) => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { tick: number } } } }).__msb.sandbox().world.tick);
 
 /**
  * Runs the simulation for at least `ticks` steps from now, then pauses. Buttons are pressed and

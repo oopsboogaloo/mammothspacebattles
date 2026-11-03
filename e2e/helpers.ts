@@ -82,7 +82,9 @@ export async function openStarter(page: Page, file: string) {
 }
 
 export async function waitForTick(page: Page, atLeast: number, timeout = 15_000) {
-  await expect.poll(async () => (await world(page)).tick, { timeout }).toBeGreaterThanOrEqual(atLeast);
+  // Read only the step count: copying the whole world (every gas parcel) out of the page on each poll is slow in some engines.
+  const tick = () => page.evaluate(() => (window as unknown as Hook).__msb.sandbox()!.world.tick);
+  await expect.poll(tick, { timeout }).toBeGreaterThanOrEqual(atLeast);
 }
 
 /** Saves a screenshot for milestone review (TST-010, UXV-004). */
