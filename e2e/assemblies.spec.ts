@@ -43,9 +43,12 @@ test("UXV-001 W8 SBX-004 pause, scrub back 5 s, change a value and resume, branc
   const b = new Budget(page, 5);
   await b.press("Space");
   const end = (await world(page)).tick;
+  // Scrub back to t = 2 s (at least 5 s back), where both discs are still on screen.
+  const back = 480;
+  expect(end - back).toBeGreaterThanOrEqual(240 * 5);
   b.count++;
-  await setSlider(page, "scrub", end - 240 * 5);
-  expect((await world(page)).tick).toBe(end - 240 * 5);
+  await setSlider(page, "scrub", back);
+  expect((await world(page)).tick).toBe(back);
   const original = await hash(page);
   const a = (await body(page, "a"))!;
   await b.clickWorld(a.position.x, a.position.y);
@@ -53,13 +56,13 @@ test("UXV-001 W8 SBX-004 pause, scrub back 5 s, change a value and resume, branc
   await b.press("Enter");
   await b.press("Space");
   b.done();
-  await waitForTick(page, end - 240 * 5 + 60);
+  await waitForTick(page, back + 60);
   await page.keyboard.press("Space");
   const sb = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { maxTick: number } } }).__msb.sandbox().maxTick);
   expect(sb).toBeLessThan(end); // the old future was discarded
   // One undo brings the discarded future back.
   await page.keyboard.press("Control+z");
-  await setSlider(page, "scrub", end - 240 * 5);
+  await setSlider(page, "scrub", back);
   expect(await hash(page)).toBe(original);
 });
 
