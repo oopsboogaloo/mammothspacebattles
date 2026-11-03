@@ -5,6 +5,7 @@
 
 import { cross, dot, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
+import { parcelChemical, storeEnergy } from "./gas.ts";
 import { massProps } from "./shapes.ts";
 import type { World } from "./world.ts";
 
@@ -17,7 +18,7 @@ export interface Totals {
     kinetic: number; // J
     potential: number; // J, gravitational
     thermal: number; // J, heat from contacts plus the gas's thermal energy
-    chemical: number; // J
+    chemical: number; // J, in stores and unburnt gas
     total: number; // J
   };
 }
@@ -92,6 +93,14 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
     L += m * cross(b.position, v) + inertia * b.angularVelocity;
     ke += 0.5 * m * dot(v, v) + 0.5 * inertia * b.angularVelocity * b.angularVelocity;
     pe -= m * dot(g, b.position);
+    // Propellant in stores carries its thermal and chemical energy (PRP-001).
+    if (b.contents) {
+      for (const st of b.contents) {
+        const e = storeEnergy(st, world.gas.scale ?? 1);
+        thermal += e.thermal;
+        chemical += e.chemical;
+      }
+    }
   }
   // Gas parcels are point masses with thermal energy.
   for (const p of world.gas.parcels) {
@@ -103,6 +112,7 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
     ke += 0.5 * p.mass * dot(v, v);
     pe -= p.mass * dot(g, p.position);
     thermal += p.thermal;
+    chemical += parcelChemical(p, world.gas.scale ?? 1);
   }
   return {
     mass,

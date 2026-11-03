@@ -44,6 +44,8 @@ export interface Species {
   gamma: number;
   /** Colour for composition view. */
   colour: string;
+  /** Chemical energy relative to the reaction products, J/kg (declared; 0 for oxidisers and products). */
+  heat?: number;
 }
 
 /**
@@ -55,9 +57,119 @@ export const SPECIES: Readonly<Record<string, Species>> = {
   helium: { molarMass: 0.0040026, gamma: 5 / 3, colour: "#ffd166" },
   co2: { molarMass: 0.04401, gamma: 1.289, colour: "#ef8a62" },
   h2o: { molarMass: 0.018015, gamma: 1.33, colour: "#67a9cf" },
-  h2: { molarMass: 0.002016, gamma: 1.405, colour: "#f7f7f7" },
+  // Declared heat: 3.4e7 J/kg of H₂ (the lower heating value is 1.2e8). With 8 kg O₂ per kg H₂ the
+  // products reach about 3,000 K, as dissociation limits a real H₂/O₂ flame to (PRP-003).
+  h2: { molarMass: 0.002016, gamma: 1.405, colour: "#f7f7f7", heat: 3.4e7 },
   o2: { molarMass: 0.031998, gamma: 1.395, colour: "#b2182b" },
 };
+
+/** Declared reaction rules (PRP-003): fuel + ratio × oxidiser → product, releasing the fuel's heat. */
+export interface Reaction {
+  fuel: string;
+  oxidiser: string;
+  product: string;
+  /** kg of oxidiser per kg of fuel. */
+  ratio: number;
+  /** Gas at or above this temperature, or next to gas that is, ignites, K. */
+  ignition: number;
+}
+
+export const REACTIONS: readonly Reaction[] = [{ fuel: "h2", oxidiser: "o2", product: "h2o", ratio: 8, ignition: 800 }];
+
+/** Temperature of propellant in stores, K. Injected gas starts at this temperature. */
+export const STORE_TEMPERATURE = 300;
+
+/** Thermal and chemical energy of a store's contents, J (0 for resources that are not gas species). */
+export function storeEnergy(st: { resource: string; mass: number }, scale = 1): { thermal: number; chemical: number } {
+  const sp = SPECIES[st.resource];
+  if (!sp) return { thermal: 0, chemical: 0 };
+  const cv = R_GAS / sp.molarMass / (sp.gamma - 1);
+  return { thermal: (st.mass * cv * STORE_TEMPERATURE) / scale, chemical: (st.mass * (sp.heat ?? 0)) / scale };
+}
+
+/** Chemical energy a parcel still holds, J. */
+export function parcelChemical(p: { mass: number; composition: Record<string, number> }, scale = 1): number {
+  let e = 0;
+  for (const k of Object.keys(p.composition)) e += p.composition[k] * (SPECIES[k]?.heat ?? 0);
+  return (p.mass * e) / scale;
+}
+
+/**
+ * Burns what a parcel can of each reaction, completely (fast chemistry). Mass and momentum are
+ * unchanged; the released chemical energy becomes thermal energy, so total energy is unchanged.
+ * Returns the energy released, J.
+ */
+export function burn(p: Parcel, scale = 1): number {
+  let released = 0;
+  for (const r of REACTIONS) {
+    const yf = p.composition[r.fuel] ?? 0;
+    const yo = p.composition[r.oxidiser] ?? 0;
+    const b = Math.min(yf, yo / r.ratio);
+    if (!(b > 0)) continue;
+    const before = parcelChemical(p, scale);
+    const c: Record<string, number> = { ...p.composition };
+    c[r.fuel] = yf - b;
+    c[r.oxidiser] = yo - r.ratio * b;
+    c[r.product] = (c[r.product] ?? 0) + (1 + r.ratio) * b;
+    for (const k of Object.keys(c)) if (!(c[k] > 1e-15)) delete c[k];
+    p.composition = c;
+    const q = before - parcelChemical(p, scale);
+    p.thermal += q;
+    released += q;
+  }
+  return released;
+}
+
+/** Reactions that a parcel's composition can still run. */
+export function canBurn(p: Parcel): Reaction | null {
+  for (const r of REACTIONS) if ((p.composition[r.fuel] ?? 0) > 0 && (p.composition[r.oxidiser] ?? 0) > 0) return r;
+  return null;
+}
+
+/**
+ * Ignition (PRP-003): a parcel that can burn does so when it, or any parcel within its smoothing
+ * length, is at or above the reaction's ignition temperature. Returns the parcels that burned.
+ */
+export function igniteAndBurn(gas: GasState): number {
+  const scale = gas.scale ?? 1;
+  const ps = gas.parcels;
+  const reactive = ps.filter((p) => canBurn(p));
+  if (!reactive.length) return 0;
+  let tmin = Infinity;
+  for (const r of REACTIONS) tmin = Math.min(tmin, r.ignition);
+  // Hot parcels, bucketed by cell for the neighbour test.
+  let cell = 0;
+  for (const p of reactive) cell = Math.max(cell, SMOOTHING * p.radius);
+  const hot = new Map<string, Parcel[]>();
+  for (const p of ps) {
+    if (temperatureOf(p, scale) < tmin) continue;
+    const key = `${Math.floor(p.position.x / cell)},${Math.floor(p.position.y / cell)}`;
+    const list = hot.get(key);
+    if (list) list.push(p);
+    else hot.set(key, [p]);
+  }
+  let burned = 0;
+  for (const p of reactive) {
+    const r = canBurn(p)!;
+    let lit = temperatureOf(p, scale) >= r.ignition;
+    const cx = Math.floor(p.position.x / cell);
+    const cy = Math.floor(p.position.y / cell);
+    const h = SMOOTHING * p.radius;
+    for (let dx = -1; dx <= 1 && !lit; dx++)
+      for (let dy = -1; dy <= 1 && !lit; dy++)
+        for (const q of hot.get(`${cx + dx},${cy + dy}`) ?? []) {
+          if (q === p) continue;
+          const ddx = q.position.x - p.position.x;
+          const ddy = q.position.y - p.position.y;
+          if (ddx * ddx + ddy * ddy < h * h && temperatureOf(q, scale) >= r.ignition) {
+            lit = true;
+            break;
+          }
+        }
+    if (lit && burn(p, scale) > 0) burned++;
+  }
+  return burned;
+}
 
 export interface Parcel {
   id: number;
@@ -90,6 +202,12 @@ export interface GasState {
   wallImpulse: number;
   /** Substeps the last step needed. */
   substeps: number;
+  /**
+   * Dynamic scale (DEC-13): gas behaves as if every molar mass were this many times larger. Specific
+   * energies at a given temperature are 1/scale as big, so sound and exhaust speeds are 1/√scale as fast.
+   * 1 is real gas (the test profile); the sandbox uses 100.
+   */
+  scale: number;
 }
 
 export interface GasFill {
@@ -121,8 +239,9 @@ const VISC_BETA = 2;
 /** A parcel closer than this × radius to a surface and still approaching bounces elastically. */
 const HARD_WALL = 0.5;
 
-export function emptyGas(): GasState {
+export function emptyGas(scale = 1): GasState {
   return {
+    scale,
     parcels: [],
     nextId: 1,
     removed: {
@@ -190,8 +309,9 @@ function computeMixture(composition: Record<string, number>): Mixture {
   return { gamma: 1 + rSpec / cv, cv, molarMass: R_GAS / rSpec };
 }
 
-export function temperatureOf(p: Parcel): number {
-  return p.thermal / (p.mass * mixture(p.composition).cv);
+/** Temperature of a parcel, K. `scale` is the gas's dynamic scale (GasState.scale). */
+export function temperatureOf(p: Parcel, scale = 1): number {
+  return (p.thermal * scale) / (p.mass * mixture(p.composition).cv);
 }
 
 export function soundSpeed(p: Parcel): number {
@@ -237,7 +357,7 @@ export function gasTotals(gas: GasState): GasTotals {
     L += p.mass * cross(p.position, p.velocity);
     ke += 0.5 * p.mass * (p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y);
     th += p.thermal;
-    mT += p.mass * temperatureOf(p);
+    mT += p.mass * temperatureOf(p, gas.scale ?? 1);
   }
   const c = m > 0 ? { x: cx / m, y: cy / m } : { x: 0, y: 0 };
   let s2 = 0;
@@ -541,7 +661,7 @@ function blocked(walls: Wall[], x: number, y: number, clearance: number): boolea
  * The lattice has about `count` points; the result says how many were made. Returns null, having
  * drawn nothing from the RNG, if more than `maxCount` would be made.
  */
-export function makeFill(fill: GasFill, rng: RngState, bodies: WallBody[], firstId: number, maxCount = Infinity): Parcel[] | null {
+export function makeFill(fill: GasFill, rng: RngState, bodies: WallBody[], firstId: number, maxCount = Infinity, scale = 1): Parcel[] | null {
   const w = fill.max.x - fill.min.x;
   const h = fill.max.y - fill.min.y;
   const s = Math.sqrt((w * h) / fill.count);
@@ -598,7 +718,7 @@ export function makeFill(fill: GasFill, rng: RngState, bodies: WallBody[], first
       composition: { ...composition },
       position: { x: p.x, y: p.y },
       velocity: { x: vx, y: vy },
-      thermal: m * cv * fill.temperature,
+      thermal: (m * cv * fill.temperature) / scale,
       radius,
     });
   }
@@ -629,12 +749,22 @@ export interface GasAccount {
   removed: RemovedGas;
   /** Gravitational potential energy of the parcels that left, at the point they left, J. */
   removedPotential: number;
+  /**
+   * For parts of free assemblies: the impulse their joints had to supply this step because the gas
+   * pushed the assembly as one rigid body (rigid share minus the gas's direct push), for joint loads.
+   */
+  jointImpulse: Map<string, { x: number; y: number; angular: number }>;
   involved: Set<string>;
 }
 
 export interface Bounds {
   min: Vec2;
   max: Vec2;
+  /**
+   * Gas farther than this from every body also leaves the world (exhaust that has flown off), m.
+   * Keeps the parcel count to what can still hit something. Off when absent.
+   */
+  farField?: number;
 }
 
 const W_C2 = 7 / Math.PI;
@@ -715,6 +845,7 @@ export function stepGas(
       energy: 0,
     },
     removedPotential: 0,
+    jointImpulse: new Map(),
     involved: new Set(),
   };
   const ps = gas.parcels;
@@ -765,6 +896,26 @@ export function stepGas(
     return vmax;
   };
   const minDs = dt / MAX_SUBSTEPS;
+  // Gas impulses on each body (x, y, torque about the body's centre), for joint loads.
+  const partJ = new Float64Array(3 * walls.length);
+  const tPart = new Float64Array(3 * walls.length);
+  /** Adds an impulse on body k, acting along a line through (px, py), to `into`. */
+  const pushPart = (into: Float64Array, k: number, jx: number, jy: number, px: number, py: number) => {
+    const b = bodies[k];
+    const w = walls[k];
+    let bx = b.position.x;
+    let by = b.position.y;
+    if (w.unit >= 0) {
+      const u = units[w.unit];
+      const dx = bx - u.ex;
+      const dy = by - u.ey;
+      bx = u.cx + u.qc * dx - u.qs * dy;
+      by = u.cy + u.qs * dx + u.qc * dy;
+    }
+    into[3 * k] += jx;
+    into[3 * k + 1] += jy;
+    into[3 * k + 2] += (px - bx) * jy - (py - by) * jx;
+  };
 
   const rho = new Float64Array(n);
   const A = new Float64Array(n); // P/ρ²
@@ -1180,6 +1331,7 @@ export function stepGas(
     let extA = 0;
     let wallImp = 0;
     for (let attempt = 0; ; attempt++) {
+      tPart.fill(0);
       extX = 0;
       extY = 0;
       extA = 0;
@@ -1271,6 +1423,7 @@ export function stepGas(
           u.dvx -= jx / u.M;
           u.dvy -= jy / u.M;
           u.dw -= ((x[i] - u.cx) * jy - (y[i] - u.cy) * jx) / u.I;
+          if (u.ids.length > 1) pushPart(tPart, cW[c], -jx, -jy, x[i], y[i]);
         } else {
           extX += jx;
           extY += jy;
@@ -1349,6 +1502,7 @@ export function stepGas(
     acc.externalImpulse.x += extX;
     acc.externalImpulse.y += extY;
     acc.angular += extA;
+    for (let k = 0; k < partJ.length; k++) partJ[k] += tPart[k];
     wallImpulse += wallImp;
     tDone = ds === dt - tDone ? dt : tDone + ds;
     nsub++;
@@ -1409,8 +1563,10 @@ export function stepGas(
     const iy = sc * jy;
     vx[i] += ix / m[i];
     vy[i] += iy / m[i];
-    if (u) applyUnit(u, -ix, -iy, px, py);
-    else {
+    if (u) {
+      applyUnit(u, -ix, -iy, px, py);
+      if (u.ids.length > 1) pushPart(partJ, wallIdx, -ix, -iy, px, py);
+    } else {
       acc.externalImpulse.x += ix;
       acc.externalImpulse.y += iy;
       // About the origin: the impulse's line of action passes through the parcel.
@@ -1423,6 +1579,15 @@ export function stepGas(
 
   gas.substeps = nsub;
 
+  // Far field: bodies as bounding circles at their end-of-step pose.
+  const ff = bounds.farField;
+  const circles = ff ? walls.map((w) => ({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff })) : [];
+  const far = (px: number, py: number): boolean => {
+    if (!ff || !circles.length) return false; // with no bodies there is nothing to be far from
+    for (const c of circles) if ((px - c.x) ** 2 + (py - c.y) ** 2 < c.r * c.r) return false;
+    return true;
+  };
+
   // Write back parcels, removing those outside the world boundary.
   const kept: Parcel[] = [];
   for (let i = 0; i < n; i++) {
@@ -1430,7 +1595,7 @@ export function stepGas(
     p.position = { x: x[i], y: y[i] };
     p.velocity = { x: vx[i], y: vy[i] };
     p.thermal = E[i];
-    if (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y) {
+    if (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y || far(x[i], y[i])) {
       const r = acc.removed;
       r.count += 1;
       r.mass += m[i];
@@ -1453,6 +1618,24 @@ export function stepGas(
   tot.angularMomentum += acc.removed.angularMomentum;
   tot.energy += acc.removed.energy;
   gas.wallImpulse += wallImpulse;
+
+  // What the joints of each free assembly had to supply: each part's rigid share of the unit's
+  // change, minus the gas's direct push on it.
+  bodies.forEach((b, k) => {
+    const w = walls[k];
+    if (w.unit < 0) return;
+    const u = units[w.unit];
+    if (u.ids.length < 2) return;
+    const dvx = u.vx - u.vx0;
+    const dvy = u.vy - u.vy0;
+    const dw = u.w - u.w0;
+    const rx = b.position.x - u.ex;
+    const ry = b.position.y - u.ey;
+    const sx = b.mass * (dvx - dw * ry) - partJ[3 * k];
+    const sy = b.mass * (dvy + dw * rx) - partJ[3 * k + 1];
+    const sa = b.inertia * dw - partJ[3 * k + 2];
+    if (sx !== 0 || sy !== 0 || sa !== 0) acc.jointImpulse.set(b.id, { x: sx, y: sy, angular: sa });
+  });
 
   // Write back each unit's pose and velocity to its parts. A part keeps its offset from the
   // unit's rigid motion (rotated with it), so momentum, angular momentum and energy carry over exactly.

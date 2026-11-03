@@ -1,0 +1,592 @@
+{
+  "schema": 1,
+  "profile": "sandbox",
+  "seed": 8,
+  "timeline": [
+    {
+      "step": 0,
+      "commands": [
+        {
+          "type": "control.set",
+          "channel": "main",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "probes": [
+    {
+      "id": "vy",
+      "path": "assembly[id=hull].velocity.y"
+    },
+    {
+      "id": "vx",
+      "path": "assembly[id=hull].velocity.x"
+    },
+    {
+      "id": "spin",
+      "path": "assembly[id=hull].angularVelocity"
+    },
+    {
+      "id": "py",
+      "path": "assembly[id=hull].momentum.y"
+    },
+    {
+      "id": "px",
+      "path": "assembly[id=hull].momentum.x"
+    },
+    {
+      "id": "mass",
+      "path": "assembly[id=hull].mass"
+    },
+    {
+      "id": "gasPy",
+      "path": "gas.momentum.y"
+    },
+    {
+      "id": "gasPx",
+      "path": "gas.momentum.x"
+    },
+    {
+      "id": "leftPy",
+      "path": "gas.removed.momentum.y"
+    },
+    {
+      "id": "leftPx",
+      "path": "gas.removed.momentum.x"
+    },
+    {
+      "id": "h2",
+      "path": "bodies[id=tank].contents[0].mass"
+    },
+    {
+      "id": "o2",
+      "path": "bodies[id=tank].contents[1].mass"
+    },
+    {
+      "id": "parcels",
+      "path": "gas.count"
+    },
+    {
+      "id": "temp",
+      "path": "gas.temperature"
+    },
+    {
+      "id": "chemical",
+      "path": "ledger.totals.energy.chemical"
+    }
+  ],
+  "name": "rs09-off-axis-thruster",
+  "title": "Off-axis thruster spins a ship",
+  "description": "RS-09. The same engine, mounted 1 m to one side of the hull's centre of mass. Its thrust line misses the centre of mass, so the ship spins up as well as speeding up \u2014 with no special code for torque.",
+  "world": {
+    "bodies": [
+      {
+        "id": "chamber-left",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -0.45,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "chamber-right",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 0.45,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "engine",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": 0,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "main",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true
+        }
+      },
+      {
+        "id": "hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1.0
+        },
+        "mass": 8.0,
+        "position": {
+          "x": 1.0,
+          "y": 1.6
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "nozzle-left",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -0.325,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "nozzle-right",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 0.325,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.5
+        },
+        "mass": 2.0,
+        "position": {
+          "x": 0,
+          "y": 0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.05,
+            "capacity": 0.05
+          },
+          {
+            "resource": "o2",
+            "mass": 0.4,
+            "capacity": 0.4
+          }
+        ]
+      },
+      {
+        "id": "throat-left",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -0.325,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-right",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 0.325,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      }
+    ],
+    "joints": [
+      {
+        "id": "w-head-left",
+        "a": "engine",
+        "b": "chamber-left",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-head-right",
+        "a": "engine",
+        "b": "chamber-right",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-left-throat",
+        "a": "chamber-left",
+        "b": "throat-left",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-right-throat",
+        "a": "chamber-right",
+        "b": "throat-right",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-throat-nozzle-left",
+        "a": "throat-left",
+        "b": "nozzle-left",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-throat-nozzle-right",
+        "a": "throat-right",
+        "b": "nozzle-right",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-engine-mount",
+        "a": "engine",
+        "b": "tank",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.25
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-tank-hull",
+        "a": "tank",
+        "b": "hull",
+        "anchorA": {
+          "x": 0.5,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "feed-h2",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "feed-o2",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "ctl-main",
+        "kind": "control",
+        "channel": "main",
+        "to": "engine"
+      }
+    ],
+    "bounds": {
+      "min": {
+        "x": -1000,
+        "y": -1000
+      },
+      "max": {
+        "x": 1000,
+        "y": 1000
+      },
+      "farField": 15
+    }
+  },
+  "end": {
+    "steps": 480
+  },
+  "assertions": [
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "py + gasPy + leftPy",
+      "right": "0",
+      "tol": 1e-06
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "spin",
+      "from": "end",
+      "to": "end",
+      "max": -0.2
+    },
+    {
+      "kind": "event",
+      "type": "joint.break",
+      "occurred": false
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "energy",
+      "maxAbs": 0.001
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "The thrust line misses the centre of mass: the ship turns as it accelerates.",
+    "overlays": [
+      "velocity",
+      "com"
+    ],
+    "graphs": [
+      "spin",
+      "vy"
+    ],
+    "camera": {
+      "x": 0.5,
+      "y": 0.5,
+      "zoom": 50
+    },
+    "follow": "hull"
+  }
+}

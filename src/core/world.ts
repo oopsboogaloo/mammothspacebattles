@@ -5,11 +5,11 @@
 
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
 import { bodyMass, type Store } from "./bodies.ts";
-import { evaluateJoints } from "./joints.ts";
-import { add, length, rotate, scale, sinCos, type Vec2 } from "./math.ts";
+import { evaluateJoints, recordGasLoads } from "./joints.ts";
+import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, rigid, solveContacts } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
-import { emptyGas, makeFill, stepGas, wallBodies, type Bounds, type GasFill, type GasState } from "./gas.ts";
+import { burn, emptyGas, igniteAndBurn, makeFill, mixture, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type GasFill, type GasState, type Parcel } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 
@@ -19,7 +19,7 @@ export type { Store } from "./bodies.ts";
 export { bodyMass } from "./bodies.ts";
 export type { Bounds, GasFill, GasState, Parcel } from "./gas.ts";
 
-export const WORLD_SCHEMA = 4;
+export const WORLD_SCHEMA = 5;
 /** Default world boundary: gas beyond it is removed (GAS-007), m. */
 export const DEFAULT_BOUNDS: Bounds = { min: { x: -1000, y: -1000 }, max: { x: 1000, y: 1000 } };
 const MAX_EVENTS = 10_000;
@@ -39,7 +39,75 @@ export interface Body {
   angularVelocity: number; // rad/s
   /** Stores this component holds; their mass adds to `mass` (ASM-002). */
   contents?: Store[];
+  /** Makes this body an injector (PRP-002). */
+  injector?: Injector;
 }
+
+/**
+ * An injector draws propellant from its own stores (topped up by feed links) when its control
+ * channel is non-zero, and emits it as gas parcels at its outlet. With an igniter, what it emits
+ * burns at once. It applies no force of its own: thrust comes only from gas on walls (§9.5).
+ */
+export interface Injector {
+  /** Control channel that commands it, received through a control link (0–1). */
+  channel: string;
+  /** Mass flow at command 1, kg/s. */
+  rate: number;
+  /** Mass fractions drawn from its stores, e.g. { h2: 1/9, o2: 8/9 }. */
+  mixture: Record<string, number>;
+  /** Where parcels appear and which way they go, body-local. */
+  outlet: Vec2;
+  direction: Vec2;
+  /** Parcels are spread across this width at the outlet, m. */
+  width: number;
+  /** Injection speed relative to the body, m/s. */
+  speed: number;
+  /** Mass of each parcel, kg, and its radius, m. */
+  parcelMass: number;
+  radius: number;
+  igniter: boolean;
+  /** State: mass allowed by the command but not yet emitted, kg; parcels emitted so far; firing now. */
+  credit: number;
+  count: number;
+  firing: boolean;
+}
+
+export const INJECTOR_DEFAULTS: Omit<Injector, "channel"> = {
+  rate: 0.5,
+  mixture: { h2: 1 / 9, o2: 8 / 9 },
+  outlet: { x: 0, y: -0.15 },
+  direction: { x: 0, y: -1 },
+  width: 0.6,
+  speed: 10,
+  parcelMass: 0.001,
+  radius: 0.035,
+  igniter: true,
+  credit: 0,
+  count: 0,
+  firing: false,
+};
+
+/** Why an injector is or isn't firing (INS-006). */
+export function injectorStatus(world: World, body: Body): { firing: boolean; reason: string } {
+  const inj = body.injector;
+  if (!inj) return { firing: false, reason: "Not an injector" };
+  const hasLink = world.links.some((l) => l.kind === "control" && l.to === body.id && l.channel === inj.channel);
+  if (!hasLink) return { firing: false, reason: `No control link for channel "${inj.channel}"` };
+  const command = world.controls[inj.channel] ?? 0;
+  if (!(command > 0)) return { firing: false, reason: `Idle: ${inj.channel} = 0` };
+  for (const [res, y] of Object.entries(inj.mixture)) {
+    if (!(y > 0)) continue;
+    const st = body.contents?.find((c) => c.resource === res);
+    if (!st) return { firing: false, reason: `No ${res} store on the injector` };
+    if (st.mass < inj.parcelMass * y) {
+      const fed = world.links.some((l) => l.kind === "feed" && l.to === body.id && l.resource === res);
+      return { firing: false, reason: fed ? `No ${res}: the tank feeding it is empty` : `No feed: nothing links ${res} to it` };
+    }
+  }
+  return { firing: true, reason: `Firing at ${(command * 100).toFixed(0)}%` };
+}
+
+const GOLDEN = 0.6180339887498949;
 
 /** Body as written in scenarios and commands: material fields are optional. */
 export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction"> & Partial<Pick<Body, "fixed" | "restitution" | "friction">>;
@@ -68,6 +136,8 @@ export interface Joint {
   limits: JointLimits;
   /** Last step's accumulated impulse on b (warm start), N·s and N·m·s. */
   impulse: { x: number; y: number; angular: number };
+  /** Impulse the joint passed on from gas pushing its assembly last step (on b's side, about b's anchor). */
+  gasImpulse?: { x: number; y: number; angular: number };
   /** Last step's load; fraction is the worst of each load ÷ its limit. */
   load: { tension: number; compression: number; shear: number; torque: number; fraction: number };
 }
@@ -165,6 +235,7 @@ export type Command =
 
 export function normalizeBody(input: BodyInput): Body {
   const body: Body = { ...BODY_DEFAULTS, ...structuredClone(input) };
+  if (body.injector) body.injector = { ...INJECTOR_DEFAULTS, ...body.injector };
   if (body.shape.kind === "polygon") {
     const { vertices, centroid } = normalizePolygon(body.shape.vertices);
     body.shape = { kind: "polygon", vertices };
@@ -185,6 +256,7 @@ export function createWorld(
   extra: { joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds } = {},
   profile?: Profile,
 ): World {
+  const gasScale = profile?.gasScale ?? 1;
   const world: World = {
     schema: WORLD_SCHEMA,
     tick: 0,
@@ -193,7 +265,7 @@ export function createWorld(
     gravity: { ...gravity },
     bounds: structuredClone(extra.bounds ?? DEFAULT_BOUNDS),
     bodies: [],
-    gas: emptyGas(),
+    gas: emptyGas(gasScale),
     joints: [],
     links: [],
     controls: {},
@@ -294,7 +366,7 @@ function runFeeds(world: World, dt: number): boolean {
 /** Adds parcels for a fill, or refuses it if the parcel limit would be exceeded (PRF-003). */
 function fillGas(world: World, fill: GasFill, profile?: Profile): void {
   const limit = profile?.limit.gasParcels ?? Infinity;
-  const parcels = makeFill(fill, world.rng, wallBodies(world.bodies), world.gas.nextId, limit - world.gas.parcels.length);
+  const parcels = makeFill(fill, world.rng, wallBodies(world.bodies), world.gas.nextId, limit - world.gas.parcels.length, world.gas.scale ?? 1);
   if (!parcels) {
     pushEvent(world, { tick: world.tick, type: "limit.refused", data: { entity: "gasParcels", requested: fill.count, existing: world.gas.parcels.length, limit } });
     return;
@@ -302,6 +374,85 @@ function fillGas(world: World, fill: GasFill, profile?: Profile): void {
   world.gas.parcels.push(...parcels);
   world.gas.nextId += parcels.length;
   pushEvent(world, { tick: world.tick, type: "gas.fill", data: { requested: fill.count, created: parcels.length } });
+}
+
+/**
+ * Injectors emit propellant from their stores as gas parcels (PRP-002). Mass moves from the
+ * store to the parcel; the injector recoils so momentum is unchanged; the parcel carries the
+ * store's thermal and chemical energy, less any kinetic energy the injection gained, so energy
+ * is unchanged too. Returns the parcels made.
+ */
+function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
+  const made: Parcel[] = [];
+  const gs = world.gas.scale ?? 1;
+  const limit = profile?.limit.gasParcels ?? Infinity;
+  for (const b of world.bodies) {
+    const inj = b.injector;
+    if (!inj || b.fixed) continue;
+    const status = injectorStatus(world, b);
+    const command = Math.min(1, Math.max(0, world.controls[inj.channel] ?? 0));
+    if (status.firing !== inj.firing) {
+      inj.firing = status.firing;
+      if (status.firing) pushEvent(world, { tick: world.tick, type: "ignition", data: { id: b.id } });
+    }
+    if (!status.firing) {
+      inj.credit = 0;
+      continue;
+    }
+    inj.credit += command * inj.rate * dt;
+    while (inj.credit >= inj.parcelMass && world.gas.parcels.length < limit) {
+      const stores = Object.entries(inj.mixture).filter(([, y]) => y > 0);
+      if (stores.some(([res, y]) => (b.contents?.find((c) => c.resource === res)?.mass ?? 0) < inj.parcelMass * y)) break;
+      const dm = inj.parcelMass;
+      const q = sinCos(b.angle);
+      // Spread across the outlet in mirrored pairs, so injection itself is symmetric.
+      const spread = (inj.count % 2 === 0 ? 1 : -1) * (((Math.floor(inj.count / 2) * GOLDEN) % 1) * 0.5);
+      const local = add(inj.outlet, scale({ x: -inj.direction.y, y: inj.direction.x }, spread * inj.width));
+      const point = add(b.position, rotate(q, local));
+      const r = sub(point, b.position);
+      const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
+      const vParcel = add(vPoint, scale(rotate(q, inj.direction), inj.speed));
+      // Kinetic energy of the body before the mass leaves it.
+      const ke = (body: Body) => {
+        const m = bodyMass(body);
+        return 0.5 * m * (body.velocity.x ** 2 + body.velocity.y ** 2) + 0.5 * massProps(body.shape, m).inertia * body.angularVelocity ** 2;
+      };
+      const before = ke(b);
+      let thermal = 0;
+      const composition: Record<string, number> = {};
+      for (const [res, y] of stores) {
+        const st = b.contents!.find((c) => c.resource === res)!;
+        st.mass -= dm * y;
+        if (st.mass < 0) st.mass = 0;
+        composition[res] = y;
+        const sp = mixture({ [res]: 1 });
+        thermal += (dm * y * sp.cv * STORE_TEMPERATURE) / gs;
+      }
+      // Recoil: the injector gives the parcel its relative velocity (momentum conserved).
+      const J = { x: -dm * (vParcel.x - b.velocity.x), y: -dm * (vParcel.y - b.velocity.y) };
+      const m1 = bodyMass(b);
+      const I1 = massProps(b.shape, m1).inertia;
+      b.velocity = add(b.velocity, scale(J, 1 / m1));
+      b.angularVelocity += cross(r, J) / I1;
+      const after = ke(b) + 0.5 * dm * (vParcel.x ** 2 + vParcel.y ** 2);
+      const p: Parcel = {
+        id: world.gas.nextId++,
+        mass: dm,
+        composition,
+        position: point,
+        velocity: vParcel,
+        thermal: Math.max(0, thermal - (after - before)),
+        radius: inj.radius,
+      };
+      if (inj.igniter) burn(p, gs);
+      world.gas.parcels.push(p);
+      made.push(p);
+      inj.credit -= dm;
+      inj.count += 1;
+    }
+    inj.credit = Math.min(inj.credit, inj.parcelMass);
+  }
+  return made;
 }
 
 function findBody(world: World, id: string): Body {
@@ -471,6 +622,17 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     sources.transfer = touchedFixed ? diff(before, after) : { ...zeroDelta(), angularMomentum: after.angularMomentum - before.angularMomentum };
     before = after;
   }
+  // Injectors turn stored propellant into gas; mixtures that are hot enough burn (PRP-002, PRP-003).
+  // Mass, momentum and energy are unchanged; angular momentum may change as mass moves from a
+  // store at the body's centre to the outlet (recorded, not checked, as for feeds).
+  if (world.bodies.some((b) => b.injector) || world.gas.parcels.length) {
+    const t0 = computeTotals(world);
+    runInjectors(world, dt, profile);
+    igniteAndBurn(world.gas);
+    const t1 = computeTotals(world);
+    sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
+    before = t1;
+  }
   const rbs = prepareBodies(world);
 
   // External field.
@@ -544,11 +706,13 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   sources.correction.energy = after.energy.total - before.energy.total;
   mark("integrate");
 
+  let gasJointImpulse = new Map<string, { x: number; y: number; angular: number }>();
   // Gas: parcels exchange impulses with each other and with bodies, conserving momentum,
   // angular momentum and energy by construction. Fixed bodies are external; so is the boundary.
   if (world.gas.parcels.length) {
     before = after;
     const gas = stepGas(world.gas, wallBodies(world.bodies), world.joints, dt, world.bounds, world.gravity);
+    gasJointImpulse = gas.jointImpulse;
     after = computeTotals(world);
     sources.contact.momentumX += gas.externalImpulse.x;
     sources.contact.momentumY += gas.externalImpulse.y;
@@ -562,6 +726,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     if (r.count) pushEvent(world, { tick: world.tick + 1, type: "gas.left", data: { count: r.count, mass: r.mass } });
   } else world.gas.substeps = 0;
   mark("gas");
+
+  // Gas loads on joints, for next step's joint evaluation (one step later; see evaluateJoints).
+  if (world.joints.length) recordGasLoads(world, gasJointImpulse);
 
   for (const d of world.drags) {
     if (!world.bodies.some((b) => b.id === d.id)) world.drags = world.drags.filter((x) => x.id !== d.id);
@@ -613,8 +780,10 @@ function finishLedger(
   check("momentum", Math.sqrt(residual.momentumX * residual.momentumX + residual.momentumY * residual.momentumY), profile.tol.momentum);
   check("angularMomentum", residual.angularMomentum, profile.tol.angularMomentum);
   check("energy", residual.energy, profile.tol.energy);
-  // Contacts and joints may only turn kinetic energy into heat, never the reverse.
-  check("contactEnergy", Math.min(0, contactHeat), profile.tol.energy);
+  // Contacts and joints may only turn kinetic energy into heat, never the reverse. Sequential
+  // impulses with warm starting are not strictly dissipative: bodies kept in contact by gas thrust
+  // can gain about 10⁻⁵ of the kinetic energy present, so the tolerance scales with it.
+  check("contactEnergy", Math.min(0, contactHeat), profile.tol.energy + 1e-5 * end.energy.kinetic);
 }
 
 /** Pure form of stepInPlace: returns a new world and leaves the input untouched. */

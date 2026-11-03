@@ -24,7 +24,8 @@ describe("scenario files", () => {
         // Gas scenarios hash every parcel each step and take up to ~150 substeps per step early on;
         // their first 12 steps exercise every part of the gas phase (pairs, walls, retries, removal is
         // covered by GAS-007).
-        const steps = scn.world.gas?.length ? Math.min(12, scn.end.steps) : scn.end.steps;
+        const hasGas = !!scn.world.gas?.length || scn.world.bodies.some((b) => b.injector);
+        const steps = hasGas ? Math.min(12, scn.end.steps) : scn.end.steps;
         const a = runScenario(scn, { recordHashes: true, steps });
         const b = runScenario(scn, { recordHashes: true, steps });
         expect(a.hashes!.length).toBe(steps + 1);
