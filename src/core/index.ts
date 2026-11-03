@@ -4,6 +4,7 @@ export * from "./collide.ts";
 export * from "./formula.ts";
 export * from "./gas.ts";
 export * from "./joints.ts";
+export * from "./landing.ts";
 export * from "./bodies.ts";
 export * from "./ledger.ts";
 export * from "./math.ts";

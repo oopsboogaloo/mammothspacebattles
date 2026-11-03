@@ -955,9 +955,28 @@ export function stepGas(
   };
   const local = { x: 0, y: 0 };
   // Wall candidates per grid cell, rebuilt each substep from each wall's bounding circle at its current pose.
+  // Only cells where gas is are filled, so a large body (a ground) costs no more than the gas it touches;
+  // a wall that would still fill very many cells is tested against every parcel instead.
   const wallCells = new Map<number, number[]>();
+  const bigWalls: number[] = [];
+  const BIG_WALL_CELLS = 4096;
   const buildWallCells = () => {
     wallCells.clear();
+    bigWalls.length = 0;
+    let gx0 = Infinity;
+    let gx1 = -Infinity;
+    let gy0 = Infinity;
+    let gy1 = -Infinity;
+    for (let i = 0; i < n; i++) {
+      if (x[i] < gx0) gx0 = x[i];
+      if (x[i] > gx1) gx1 = x[i];
+      if (y[i] < gy0) gy0 = y[i];
+      if (y[i] > gy1) gy1 = y[i];
+    }
+    const cx0 = Math.floor(gx0 * inv) - 1;
+    const cx1 = Math.floor(gx1 * inv) + 1;
+    const cy0 = Math.floor(gy0 * inv) - 1;
+    const cy1 = Math.floor(gy1 * inv) + 1;
     for (let k = 0; k < walls.length; k++) {
       const w = walls[k];
       let cx = 0.5 * (w.minX + w.maxX);
@@ -970,11 +989,15 @@ export function stepGas(
         cx = u.cx + u.qc * dx - u.qs * dy;
         cy = u.cy + u.qs * dx + u.qc * dy;
       }
-      const x0 = Math.floor((cx - r) * inv);
-      const x1 = Math.floor((cx + r) * inv);
-      const y0 = Math.floor((cy - r) * inv);
-      const y1 = Math.floor((cy + r) * inv);
-      if ((x1 - x0 + 1) * (y1 - y0 + 1) > 1_000_000) continue; // absurdly large body: skip from the gas grid
+      const x0 = Math.max(cx0, Math.floor((cx - r) * inv));
+      const x1 = Math.min(cx1, Math.floor((cx + r) * inv));
+      const y0 = Math.max(cy0, Math.floor((cy - r) * inv));
+      const y1 = Math.min(cy1, Math.floor((cy + r) * inv));
+      if (x0 > x1 || y0 > y1) continue; // no gas near this body
+      if ((x1 - x0 + 1) * (y1 - y0 + 1) > BIG_WALL_CELLS) {
+        bigWalls.push(k);
+        continue;
+      }
       for (let gx = x0; gx <= x1; gx++)
         for (let gy = y0; gy <= y1; gy++) {
           const key = cellKey(gx, gy);
@@ -1085,8 +1108,8 @@ export function stepGas(
     for (let i = 0; i < n; i++) {
       cStart[i] = nc;
       const list = wallCells.get(cellKey(clampCell(Math.floor(x[i] * inv)), clampCell(Math.floor(y[i] * inv))));
-      if (!list) continue;
-      for (const k of list) {
+      if (!list && !bigWalls.length) continue;
+      for (const k of list ? (bigWalls.length ? [...list, ...bigWalls] : list) : bigWalls) {
         const w = walls[k];
         toWallFrame(w, x[i], y[i], local);
         if (local.x < w.minX || local.x > w.maxX || local.y < w.minY || local.y > w.maxY) continue;
@@ -1579,9 +1602,10 @@ export function stepGas(
 
   gas.substeps = nsub;
 
-  // Far field: bodies as bounding circles at their end-of-step pose.
+  // Far field: free bodies as bounding circles at their end-of-step pose. Fixed bodies (a ground) don't
+  // count: gas far from everything that moves can't change what happens to it.
   const ff = bounds.farField;
-  const circles = ff ? walls.map((w) => ({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff })) : [];
+  const circles = ff ? walls.filter((w) => w.unit >= 0).map((w) => ({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff })) : [];
   const far = (px: number, py: number): boolean => {
     if (!ff || !circles.length) return false; // with no bodies there is nothing to be far from
     for (const c of circles) if ((px - c.x) ** 2 + (py - c.y) ** 2 < c.r * c.r) return false;

@@ -136,8 +136,12 @@ export function prepareJoints(world: World, byId: Map<string, JointBody>): Joint
       m12: -inv * k12,
       m22: inv * k11,
       angularMass: iA + iB > 0 ? 1 / (iA + iB) : 0,
-      P: { x: j.impulse.x, y: j.impulse.y },
-      L: j.impulse.angular,
+      // No warm start: each step's weld impulse starts from zero. Reapplying last step's impulse
+      // after the load has changed (an impact ending, thrust cut, gas pressure dropping) made the
+      // solve create kinetic energy, up to 19 J in a crash, which the ledger reported. Loads come
+      // from this step's impulse anyway (evaluateJoints).
+      P: { x: 0, y: 0 },
+      L: 0,
     });
   }
   return out;
@@ -171,13 +175,6 @@ function applyAngular(s: JointSolver, L: number, acc: ConstraintAccount): void {
   acc.predictedKE += (L * (before + after)) / 2;
   if (s.a.invMass !== 0) acc.angular -= L;
   if (s.b.invMass !== 0) acc.angular += L;
-}
-
-export function warmStartJoints(js: JointSolver[], acc: ConstraintAccount): void {
-  for (const s of js) {
-    applyAngular(s, s.L, acc);
-    applyLinear(s, s.P, acc);
-  }
 }
 
 export function solveJoints(js: JointSolver[], acc: ConstraintAccount): void {

@@ -10,7 +10,7 @@
 
 import { bodyMass } from "./bodies.ts";
 import { collide, type Manifold, type Placed } from "./collide.ts";
-import { assemblyRoots, correctJoints, emptyAccount, finishJoints, prepareJoints, solveJoints, warmStartJoints, type ConstraintAccount, type JointBody } from "./joints.ts";
+import { assemblyRoots, correctJoints, emptyAccount, finishJoints, prepareJoints, solveJoints, type ConstraintAccount, type JointBody } from "./joints.ts";
 import { add, cross, crossSV, dot, invRotate, length, rotate, scale, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
 import type { Profile } from "./profile.ts";
 import { massProps } from "./shapes.ts";
@@ -270,8 +270,7 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
     else if (c.b.invMass === 0) account.externalImpulse = sub(account.externalImpulse, P);
   };
 
-  // Warm start from the previous step's impulses.
-  warmStartJoints(joints, jointAccount);
+  // Warm start contacts from the previous step's impulses (welds start from zero: see prepareJoints).
   for (const c of contacts) {
     const t = { x: c.normal.y, y: -c.normal.x };
     for (const p of c.points) {

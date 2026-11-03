@@ -1,0 +1,1376 @@
+{
+  "schema": 1,
+  "name": "land-twin-engine",
+  "title": "Land: twin-engine ship on the pad",
+  "description": "Bring the twin-engine ship down onto the pad. Gravity is 1.6 m/s² and propellant is limited. Touch the pad slower than 1.5 m/s and come to rest within 12° of upright. Touching the ground anywhere else, or hitting the pad too hard, is a crash. Both engines together slow your fall; one alone turns you (the left engine turns the nose right). On a touch screen use the buttons on the view; on a keyboard, Q fires left and E fires right.",
+  "profile": "sandbox",
+  "seed": 23,
+  "world": {
+    "bodies": [
+      {
+        "id": "chamber-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -15.45,
+          "y": 15.0
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "chamber-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -13.45,
+          "y": 15.0
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "chamber-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -14.55,
+          "y": 15.0
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "chamber-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -12.55,
+          "y": 15.0
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "engine-l",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": -15.0,
+          "y": 15.5
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true
+        }
+      },
+      {
+        "id": "engine-r",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": -13.0,
+          "y": 15.5
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true
+        }
+      },
+      {
+        "id": "ground-1",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -7.145833,
+              "y": -8.010417
+            },
+            {
+              "x": 6.854167,
+              "y": -8.010417
+            },
+            {
+              "x": 6.854167,
+              "y": 8.989583
+            },
+            {
+              "x": -7.145833,
+              "y": 6.989583
+            }
+          ]
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": -32.854167,
+          "y": -3.989583
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.8
+      },
+      {
+        "id": "ground-2",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -4.642857,
+              "y": -7.107143
+            },
+            {
+              "x": 5.357143,
+              "y": -7.107143
+            },
+            {
+              "x": 5.357143,
+              "y": 3.892857
+            },
+            {
+              "x": -4.642857,
+              "y": 9.892857
+            }
+          ]
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": -21.357143,
+          "y": -4.892857
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.8
+      },
+      {
+        "id": "ground-3",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -5.170068,
+              "y": -6.146259
+            },
+            {
+              "x": 4.829932,
+              "y": -6.146259
+            },
+            {
+              "x": 4.829932,
+              "y": 7.353741
+            },
+            {
+              "x": -5.170068,
+              "y": 4.853741
+            }
+          ]
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": -10.829932,
+          "y": -5.853741
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.8
+      },
+      {
+        "id": "ground-4",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -4.386454,
+              "y": -6.286985
+            },
+            {
+              "x": 4.613546,
+              "y": -6.286985
+            },
+            {
+              "x": 4.613546,
+              "y": 5.313015
+            },
+            {
+              "x": -4.386454,
+              "y": 7.213015
+            }
+          ]
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": -1.613546,
+          "y": -5.713015
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.8
+      },
+      {
+        "id": "ground-5",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -5.0,
+              "y": -5.8
+            },
+            {
+              "x": 5.0,
+              "y": -5.8
+            },
+            {
+              "x": 5.0,
+              "y": 5.8
+            },
+            {
+              "x": -5.0,
+              "y": 5.8
+            }
+          ]
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": 8.0,
+          "y": -6.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.8
+      },
+      {
+        "id": "ground-6",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -3.15942,
+              "y": -6.958454
+            },
+            {
+              "x": 2.84058,
+              "y": -6.958454
+            },
+            {
+              "x": 2.84058,
+              "y": 9.041546
+            },
+            {
+              "x": -3.15942,
+              "y": 4.641546
+            }
+          ]
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": 16.15942,
+          "y": -5.041546
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.8
+      },
+      {
+        "id": "ground-7",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -3.6,
+              "y": -8.771429
+            },
+            {
+              "x": 3.4,
+              "y": -8.771429
+            },
+            {
+              "x": 3.4,
+              "y": 10.228571
+            },
+            {
+              "x": -3.6,
+              "y": 7.228571
+            }
+          ]
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": 22.6,
+          "y": -3.228571
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.8
+      },
+      {
+        "id": "ground-8",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -6.646465,
+              "y": -8.313131
+            },
+            {
+              "x": 7.353535,
+              "y": -8.313131
+            },
+            {
+              "x": 7.353535,
+              "y": 5.686869
+            },
+            {
+              "x": -6.646465,
+              "y": 10.686869
+            }
+          ]
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": 32.646465,
+          "y": -3.686869
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.8
+      },
+      {
+        "id": "hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1.0
+        },
+        "mass": 8.0,
+        "position": {
+          "x": -14.0,
+          "y": 16.8
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "leg-left",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": 0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": -15.752381,
+          "y": 14.578571
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9
+      },
+      {
+        "id": "leg-right",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": -0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": -12.247619,
+          "y": 14.578571
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9
+      },
+      {
+        "id": "nozzle-left-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -15.325,
+          "y": 14.2
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "nozzle-left-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -13.325,
+          "y": 14.2
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "nozzle-right-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -14.675,
+          "y": 14.2
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "nozzle-right-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -12.675,
+          "y": 14.2
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "pad",
+        "shape": {
+          "kind": "box",
+          "width": 6,
+          "height": 0.4
+        },
+        "mass": 1,
+        "fixed": true,
+        "position": {
+          "x": 8,
+          "y": -0.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9
+      },
+      {
+        "id": "tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.5
+        },
+        "mass": 2.0,
+        "position": {
+          "x": -14.0,
+          "y": 16.05
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ]
+      },
+      {
+        "id": "throat-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -15.325,
+          "y": 14.55
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -13.325,
+          "y": 14.55
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -14.675,
+          "y": 14.55
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -12.675,
+          "y": 14.55
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "wing",
+        "shape": {
+          "kind": "box",
+          "width": 3.0,
+          "height": 0.2
+        },
+        "mass": 2.0,
+        "position": {
+          "x": -14.0,
+          "y": 15.7
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      }
+    ],
+    "joints": [
+      {
+        "id": "w-head-left-l",
+        "a": "engine-l",
+        "b": "chamber-left-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-head-right-l",
+        "a": "engine-l",
+        "b": "chamber-right-l",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-left-throat-l",
+        "a": "chamber-left-l",
+        "b": "throat-left-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-right-throat-l",
+        "a": "chamber-right-l",
+        "b": "throat-right-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-throat-nozzle-left-l",
+        "a": "throat-left-l",
+        "b": "nozzle-left-l",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-throat-nozzle-right-l",
+        "a": "throat-right-l",
+        "b": "nozzle-right-l",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-head-left-r",
+        "a": "engine-r",
+        "b": "chamber-left-r",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-head-right-r",
+        "a": "engine-r",
+        "b": "chamber-right-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-left-throat-r",
+        "a": "chamber-left-r",
+        "b": "throat-left-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-right-throat-r",
+        "a": "chamber-right-r",
+        "b": "throat-right-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-throat-nozzle-left-r",
+        "a": "throat-left-r",
+        "b": "nozzle-left-r",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-throat-nozzle-right-r",
+        "a": "throat-right-r",
+        "b": "nozzle-right-r",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-wing-left",
+        "a": "wing",
+        "b": "engine-l",
+        "anchorA": {
+          "x": -1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-wing-right",
+        "a": "wing",
+        "b": "engine-r",
+        "anchorA": {
+          "x": 1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-wing-tank",
+        "a": "wing",
+        "b": "tank",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.25
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-tank-hull",
+        "a": "tank",
+        "b": "hull",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-wing-leg-left",
+        "a": "wing",
+        "b": "leg-left",
+        "anchorA": {
+          "x": -1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-wing-leg-right",
+        "a": "wing",
+        "b": "leg-right",
+        "anchorA": {
+          "x": 1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": -0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "feed-h2-l",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine-l",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "feed-o2-l",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine-l",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "feed-h2-r",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine-r",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "feed-o2-r",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine-r",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "ctl-left",
+        "kind": "control",
+        "channel": "left",
+        "to": "engine-l"
+      },
+      {
+        "id": "ctl-right",
+        "kind": "control",
+        "channel": "right",
+        "to": "engine-r"
+      }
+    ],
+    "bounds": {
+      "min": {
+        "x": -60,
+        "y": -20
+      },
+      "max": {
+        "x": 60,
+        "y": 60
+      },
+      "farField": 10
+    },
+    "gravity": {
+      "x": 0,
+      "y": -1.6
+    },
+    "challenge": {
+      "kind": "landing",
+      "ship": "hull",
+      "pad": "pad",
+      "maxSpeed": 1.5,
+      "maxTilt": 12
+    }
+  },
+  "timeline": [],
+  "end": {
+    "steps": 120
+  },
+  "probes": [
+    {
+      "id": "alt",
+      "path": "challenge.status.altitude"
+    },
+    {
+      "id": "vy",
+      "path": "challenge.status.vy"
+    },
+    {
+      "id": "vx",
+      "path": "challenge.status.vx"
+    },
+    {
+      "id": "tilt",
+      "path": "challenge.status.tilt"
+    },
+    {
+      "id": "fuel",
+      "path": "challenge.status.fuel"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "Land on the pad: slower than 1.5 m/s, within 12° of upright. Q = left engine, E = right engine.",
+    "overlays": [
+      "velocity"
+    ],
+    "graphs": [
+      "alt",
+      "vy"
+    ],
+    "camera": {
+      "x": -6,
+      "y": 6,
+      "zoom": 18
+    },
+    "follow": "hull",
+    "keys": {
+      "q": "left",
+      "e": "right"
+    }
+  }
+}

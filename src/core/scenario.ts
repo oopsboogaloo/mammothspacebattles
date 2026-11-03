@@ -6,6 +6,7 @@ import { evaluateFormula } from "./formula.ts";
 import { SPECIES } from "./gas.ts";
 import { resolvePath } from "./path.ts";
 import { resolveProbe } from "./probes.ts";
+import type { LandingGoal } from "./landing.ts";
 import { PROFILES, getProfile } from "./profile.ts";
 import { polygonProblem } from "./shapes.ts";
 import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type GasFill, type JointInput, type Link, type Vec2, type World } from "./world.ts";
@@ -58,7 +59,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -304,6 +305,19 @@ function validateBounds(v: V, b: unknown, path: string): void {
   if (b.farField !== undefined) num(v, b.farField, `${path}.farField`, { positive: true });
 }
 
+function validateChallenge(v: V, c: unknown, bodies: unknown, path: string): void {
+  if (!isObj(c)) return err(v, path, "must be an object {kind, ship, pad, maxSpeed, maxTilt}");
+  if (c.kind !== "landing") return err(v, `${path}.kind`, 'must be "landing"');
+  const list = Array.isArray(bodies) ? bodies.filter(isObj) : [];
+  const ship = list.find((b) => b.id === c.ship);
+  const pad = list.find((b) => b.id === c.pad);
+  if (!ship) err(v, `${path}.ship`, "must be the id of a body in the world");
+  if (!pad) err(v, `${path}.pad`, "must be the id of a body in the world");
+  else if (pad.fixed !== true) err(v, `${path}.pad`, "must be a fixed body");
+  num(v, c.maxSpeed, `${path}.maxSpeed`, { positive: true });
+  num(v, c.maxTilt, `${path}.maxTilt`, { min: 0, max: 180 });
+}
+
 function validateCommand(v: V, c: unknown, path: string): void {
   if (!isObj(c)) return err(v, path, "must be an object");
   switch (c.type) {
@@ -500,6 +514,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
       else data.world.gas.forEach((f, i) => validateFill(v, f, `$.world.gas[${i}]`));
     }
     if (data.world.bounds !== undefined) validateBounds(v, data.world.bounds, "$.world.bounds");
+    if (data.world.challenge !== undefined) validateChallenge(v, data.world.challenge, data.world.bodies, "$.world.challenge");
   }
 
   let endSteps = Infinity;
@@ -606,7 +621,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     scn.world.bodies,
     scn.world.gravity,
-    { joints: scn.world.joints, links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds },
+    { joints: scn.world.joints, links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge },
     getProfile(scn.profile),
   );
 }
