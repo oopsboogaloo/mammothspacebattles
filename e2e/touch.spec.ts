@@ -115,3 +115,25 @@ test.describe("tablet (820 px), two thumbs", () => {
     expect(w.ledger.violations).toBe(0);
   });
 });
+
+test.describe("tablet (820 px), ready-made ship", () => {
+  test.use({ viewport: { width: 820, height: 1180 } });
+
+  test("SBX-047 SBX-020 the FLY scenario opens ready to fly: left/right buttons, Q/E bound, camera following", async ({ page }) => {
+    await page.goto("./");
+    await page.getByTestId("pick-fly-twin-engine").click();
+    await expect(page.getByTestId("fly-left")).toBeVisible();
+    await expect(page.getByTestId("fly-right")).toBeVisible();
+    await expect(page.getByTestId("fly-left")).toContainText("Q");
+    await expect(page.getByTestId("fly-right")).toContainText("E");
+    await page.getByTestId("play").click();
+    const left = await hold(page, "fly-left", 1);
+    await waitForTick(page, 120, 60_000);
+    await left();
+    await page.getByTestId("play").click();
+    const w = await world(page);
+    const hull = w.bodies.find((b) => b.id === "hull")! as (typeof w.bodies)[number] & { angularVelocity: number };
+    expect(hull.angularVelocity).toBeLessThan(-0.2); // left engine alone: nose turns right
+    expect(w.ledger.violations).toBe(0);
+  });
+});

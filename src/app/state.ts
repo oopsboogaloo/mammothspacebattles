@@ -145,6 +145,11 @@ export function openScenario(raw: unknown, key: string, values: Record<string, n
   if (ui?.overlays && !opts.keepOverlays) overlays.value = new Set([...(ui.overlays as OverlayId[]), "grid"]);
   visibleSeries.value = ui?.graphs?.length ? ui.graphs.filter((g) => sb.series.some((s) => s.id === g)) : ["ledger.px", "ledger.ke"];
   camera.value = ui?.camera ?? fitBounds(worldBounds(sb.world), viewport.value);
+  if (ui?.keys) {
+    // The scenario's suggested keys win for their channels; other bindings stay.
+    const channels = new Set(Object.values(ui.keys));
+    bindings.value = { ...Object.fromEntries(Object.entries(bindings.value).filter(([k, c]) => !channels.has(c) && !(k in ui.keys!))), ...ui.keys };
+  }
   if (ui?.follow) {
     selection.value = [ui.follow];
     follow.value = true;
