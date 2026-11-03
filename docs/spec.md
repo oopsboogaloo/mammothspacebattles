@@ -27,6 +27,7 @@ Game rules (economy, AI, missions, progression) are deferred to a later spec (§
 | Simulation and UI not separated | The simulation core is headless and has no DOM dependency (§5). |
 | Game and sandbox mixed together | Game rules deferred (§13). The sandbox is the product for now. |
 | Blocking decisions left open | Proposed defaults given (§14). Please confirm or override. |
+| Prototype UI was hard to use | §8 now designs the UI around workflows, with a mockup gate, action budgets and usability tests. |
 
 ## 2. Principles
 
@@ -36,6 +37,7 @@ Game rules (economy, AI, missions, progression) are deferred to a later spec (§
 4. **Conservation is measured, not assumed.** Every step publishes a ledger of mass, momentum, angular momentum and energy. Tests and the UI both read it.
 5. **Determinism.** The same scenario, seed and command timeline produce the same result.
 6. **One scenario format everywhere.** The same scenario file runs in a test, a CLI and the sandbox UI. An experiment saved from the UI can become a regression test.
+7. **Usability is a requirement.** The sandbox is designed around real experiment workflows, and those workflows are tested like physics is (§8).
 
 ## 3. Requirement Conventions
 
@@ -73,6 +75,8 @@ All tolerances (`tol.*`) and limits (`limit.*`) come from the active simulation 
 | **Probe** | A named measurement recorded over time, e.g. a body's velocity or a joint's load. |
 | **Ledger** | Per-step totals of mass, linear momentum, angular momentum and energy, with the change attributed to each source. |
 | **Simulation profile** | Named numeric settings: timestep, tolerances, limits. |
+| **Port** | A defined point on a component where a joint or link can attach. |
+| **Prefab** | A saved assembly that can be spawned again. |
 | **Oracle** | A known correct answer used by a test, e.g. an analytic solution or a conservation law. |
 
 ## 5. Architecture Requirements
@@ -161,45 +165,161 @@ Tests shall use independent oracles. Comparing the simulation with itself does n
 - **SCN-006** `[S · M1 · E]` The sandbox shall export the current experiment, including commands recorded while playing, as a scenario. You can then add assertions to turn it into a test.
 - **SCN-007** `[M · M0 · U]` If a scenario has an older schema version, then the system shall migrate it explicitly or reject it with a clear message.
 
-## 8. Sandbox UI Requirements
+## 8. Sandbox UI Design
 
-### 8.1 Time control
+Usability was the weakest part of the earlier prototype, so this section designs the UI rather than just listing features. The physics is only useful if experiments are quick to set up, easy to see, and safe to undo.
 
-- **SBX-001** `[M · M1 · E]` The sandbox shall provide play, pause, single-step, step-N, and reset-to-start.
+Prior art studied: Algodoo (movable edge toolbars, a properties panel, a right-click menu on each object, plot-any-quantity) and the Box2D samples app (pause/single-step, debug-draw toggles, parameter tuning). We borrow from both, and add the ledger and the scenario round-trip.
+
+### 8.1 User and context
+
+- **Primary user:** you, experimenting with physics and ship designs. You are expert in the concepts, but come back after gaps and must not have to relearn the tool.
+- **Primary device:** desktop browser, mouse/trackpad and keyboard, window ≥ 1280×720.
+- **Secondary device:** tablet or phone, to open, run, watch and scrub scenarios. Editing on touch is a *could*.
+
+### 8.2 Usability principles
+
+These follow Nielsen's usability heuristics, made specific to this tool.
+
+1. **The world is the main view.** The simulation view takes most of the screen. Panels dock to the edges and collapse.
+2. **Direct manipulation.** You place, move, rotate, attach and push things by acting on them in the world, not by typing coordinates. You can still type exact values in the inspector.
+3. **State is always visible:** play or pause, time scale, the active tool, simulated time, achieved speed, the selection, and any conservation violation.
+4. **Safe to experiment.** Every edit can be undone. Reset to start is one key. Scrubbing back is always available.
+5. **One tool at a time.** The active tool is highlighted and named in the status bar. `Esc` always returns to Select.
+6. **Discoverable.** Every action appears in a command palette with its shortcut. Tooltips show shortcuts. An empty world shows a short "get started" hint.
+7. **Explain, don't just fail.** When something doesn't happen (a thruster stays dark, an attach is refused), the UI says why.
+8. **Readable numbers.** Values show SI units with sensible prefixes (e.g. `1.24 kN`, `3.5 m/s`) and consistent significant figures.
+
+### 8.3 Core workflows
+
+The UI is designed and tested around these tasks. The click counts are budgets: the E2E test for each workflow fails if the scripted path needs more steps.
+
+| ID | Workflow | Budget |
+|---|---|---|
+| W1 | Open the sandbox and run a reference scenario | ≤ 3 actions from page load |
+| W2 | Spawn two bodies, give one a velocity, watch them collide, read the impulse | ≤ 8 actions |
+| W3 | Build a ship: hull + tank + chamber + nozzle, link feed and control, bind a key, fly it | ≤ 20 actions |
+| W4 | Delete or detach a component mid-flight and watch the mass properties update | ≤ 3 actions |
+| W5 | Add a probe to a quantity, graph it, and measure with the ruler | ≤ 5 actions |
+| W6 | Save the experiment as a scenario, reload it, and get the same result | ≤ 4 actions |
+| W7 | A conservation violation appears: find the step and the entity responsible | ≤ 3 actions from the warning |
+| W8 | Pause, scrub back 5 s, change a value, and resume from there (branching the run) | ≤ 5 actions |
+
+### 8.4 Layout
+
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ☰ Scenario: rocket-test*   ⏮ ⏯ ⏭ ×1 ▾   t=12.350 s  speed 0.98×   ⚠ 0     │ top bar
+├────┬───────────────────────────────────────────────────────┬─────────────┤
+│ ↖  │                                                       │ INSPECTOR   │
+│ ✥  │                                                       │ Nozzle #7   │
+│ ＋ │                 simulation view                       │ ─ Shape     │
+│ ⛓  │            (pan, zoom, follow; overlays)              │ ─ Material  │
+│ ↯  │                                                       │ ─ Joints    │
+│ 🔗 │                                                       │ ─ Links     │
+│ ◎  │                                  [overlays ▾] [⊕ fit] │ ─ Live      │
+│ 📏 │                                                       │             │
+├────┴───────────────────────────────────────────────────────┴─────────────┤
+│ ▁▂▃▅▇ graphs: momentum · energy · probe:nozzle.thrust  ◀━━━━━━●━━━━▶ scrub│ bottom drawer
+├──────────────────────────────────────────────────────────────────────────┤
+│ Attach: drag a component onto a highlighted port · Esc to cancel          │ status bar
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Top bar:** scenario menu (new, open, save, export as test, recent), time controls, time scale, sim clock, achieved speed, violations badge.
+- **Left tool rail:** Select, Move/Rotate, Spawn, Attach, Impulse, Link, Probe, Ruler. Spawn and Attach open a palette flyout of bodies and components, with search.
+- **Right inspector:** properties of the selection, grouped and collapsible. Shows "Nothing selected" with world settings when empty.
+- **Bottom drawer:** graphs and the timeline scrub bar. Collapsed by default to a thin scrub bar.
+- **Status bar:** a one-line hint for the active tool and its next step.
+
+### 8.5 Interaction model
+
+| Tool | Key | Mouse action | Result |
+|---|---|---|---|
+| Select | `V` | Click; shift-click; drag a box | Select. The first click selects the assembly, a second click drills into the component (like groups in drawing tools). |
+| Move/Rotate | `M` | Drag body; drag rotate handle; shift snaps 15° | Moves while paused. While running, drag applies a spring force so physics is not broken (no teleporting). |
+| Spawn | `S` | Pick from palette, click or drag to set initial velocity | A new free body appears with the velocity shown as an arrow. |
+| Attach | `A` | Drag a component from the palette or the world onto an assembly | Valid ports glow and the ghost shows green or red. On release a joint is created with default strength. |
+| Impulse | `I` | Drag from a point on a body; length = magnitude | Applies the impulse on release. A preview shows magnitude and resulting Δv and Δω. |
+| Link | `L` | Drag from a port to a port | Compatible ports highlight. Incompatible ones are dimmed, with a tooltip saying why. |
+| Probe | `P` | Click entity → choose quantity | Adds a graph series and an on-world label. |
+| Ruler | `R` | Drag between two points | Shows distance, relative velocity and closing speed, updated live. |
+
+Global keys: `Space` play/pause · `.` step · `Shift+.` step 10 · `Home` reset to start · `[` `]` time scale · `F` follow selection · `Z` zoom to fit · `Del` delete · `Ctrl+Z`/`Ctrl+Shift+Z` undo/redo · `Ctrl+D` duplicate · `Ctrl+K` command palette · `Esc` back to Select · `?` shortcut sheet.
+
+Right-click on any entity opens a context menu with the common actions for that entity type, such as probe, delete, detach, duplicate, follow, and save as prefab.
+
+### 8.6 Requirements — time control
+
+- **SBX-001** `[M · M1 · E]` The sandbox shall provide play, pause, single-step, step-10 and reset-to-start, via both buttons and keys.
 - **SBX-002** `[M · M1 · E]` The sandbox shall provide a time scale from at least 1/16× to 8×, implemented as more or fewer fixed steps, never a larger timestep.
-- **SBX-003** `[S · M2 · E]` The sandbox shall keep a rolling history of snapshots so you can scrub back over at least the last 10 seconds of simulated time.
-- **SBX-004** `[M · M1 · E]` If the simulation cannot keep up in real time, then the sandbox shall show the achieved time scale instead of silently dropping steps.
+- **SBX-003** `[M · M2 · E]` The sandbox shall keep a snapshot history so you can scrub back over at least the last 10 s of simulated time.
+- **SBX-004** `[M · M2 · E]` When you edit while scrubbed back, the sandbox shall discard the future after that point and continue from the edited state. A single undo restores the discarded future.
+- **SBX-005** `[M · M1 · E]` If the simulation cannot keep up in real time, then the sandbox shall show the achieved time scale instead of silently dropping steps.
 
-### 8.2 Creating and editing
+### 8.7 Requirements — creating and editing
 
-- **SBX-010** `[M · M1 · E]` The sandbox shall provide a palette for spawning primitive bodies (disc, box, convex polygon) and, from the relevant milestone, components and gas emitters.
-- **SBX-011** `[M · M1 · E]` The sandbox shall allow selecting, moving, rotating and deleting any body, while paused or running.
-- **SBX-012** `[M · M1 · E]` An inspector shall show and edit the selected entity's properties (mass, material, velocity, spin, shape dimensions, integrity). Edits apply through a core command, so they are recorded and replayable.
-- **SBX-013** `[M · M2 · E]` The sandbox shall allow attaching a component to an existing assembly with a joint, and detaching or deleting a component from it, while paused or running.
-- **SBX-014** `[M · M2 · E]` When a component is added or removed, the system shall recompute the assembly's mass properties before the next step.
-- **SBX-015** `[M · M2 · E]` The sandbox shall allow creating and deleting control and feed links between components.
-- **SBX-016** `[M · M1 · E]` The sandbox shall provide an impulse tool: drag from a point on a body to apply an impulse there, with the magnitude shown before release.
-- **SBX-017** `[S · M1 · E]` The sandbox shall provide undo and redo for edit operations.
-- **SBX-018** `[S · M2 · E]` The sandbox shall allow binding keyboard keys to control channels, so you can fly an assembly by hand.
-- **SBX-019** `[C · M2 · E]` The sandbox shall allow saving an assembly as a reusable prefab and spawning copies of it.
+- **SBX-010** `[M · M1 · E]` The sandbox shall provide a searchable palette of primitive bodies (disc, box, convex polygon) and, from the relevant milestone, components, gas emitters and saved prefabs.
+- **SBX-011** `[M · M1 · E]` The sandbox shall allow selecting, moving, rotating, duplicating and deleting any body, while paused or running.
+- **SBX-012** `[M · M1 · E]` While running, moving a body by drag shall apply a bounded spring force, not set its position directly, and the ledger shall attribute the impulse to "user".
+- **SBX-013** `[M · M1 · E]` Every edit shall go through a core command, so it is undoable, recorded in the command timeline, and replayable.
+- **SBX-014** `[M · M2 · E]` The sandbox shall allow attaching a component to an assembly by dragging it onto a compatible port, with a live preview showing whether the placement is valid and why not.
+- **SBX-015** `[M · M2 · E]` The sandbox shall allow detaching or deleting a component from an assembly while paused or running. Detached parts keep their momentum.
+- **SBX-016** `[M · M2 · E]` When a component is added or removed, the system shall recompute the assembly's mass properties before the next step and show the change in the inspector.
+- **SBX-017** `[M · M2 · E]` The sandbox shall allow creating and deleting control and feed links by dragging between ports, highlighting compatible ports only.
+- **SBX-018** `[M · M1 · E]` The impulse tool shall preview the impulse magnitude and the resulting Δv and Δω before release.
+- **SBX-019** `[M · M1 · E]` The sandbox shall provide undo and redo for every edit, with at least 200 levels.
+- **SBX-020** `[M · M2 · E]` The sandbox shall allow binding keys to control channels, and shall show the current bindings in an on-screen legend while flying.
+- **SBX-021** `[S · M2 · E]` The sandbox shall allow saving an assembly as a prefab and spawning copies of it.
+- **SBX-022** `[S · M1 · E]` The sandbox shall show a right-click context menu per entity with its common actions.
 
-### 8.3 Seeing what's happening
+### 8.8 Requirements — inspector
 
-- **SBX-030** `[M · M1 · E]` The sandbox shall provide pan, zoom and follow-selected camera controls.
-- **SBX-031** `[M · M1 · E]` The sandbox shall provide toggleable overlays: velocity vectors, centres of mass, contact points and impulses, applied forces, and the world boundary.
-- **SBX-032** `[M · M2 · E]` The sandbox shall overlay joint load as a fraction of its strength, colour-coded.
-- **SBX-033** `[M · M1 · E]` The sandbox shall show live graphs of ledger totals and any probe, with a selectable time window.
-- **SBX-034** `[M · M1 · E]` The sandbox shall show conservation violations (LED-003) visibly when they occur, and link each to the entities involved.
-- **SBX-035** `[S · M3 · E]` The sandbox shall render gas parcels coloured by temperature or composition (selectable).
-- **SBX-036** `[S · M1 · E]` The sandbox shall allow adding a probe by right-clicking an entity and choosing a quantity.
-- **SBX-037** `[S · M1 · E]` The sandbox shall provide a ruler tool that reports distance and relative velocity between two points.
+- **INS-001** `[M · M1 · E]` The inspector shall group properties (Identity, Shape, Material, Motion, Contents, Joints, Links, Live values) in collapsible sections that remember their state.
+- **INS-002** `[M · M1 · E]` Editable values shall support both typing and dragging to scrub, and shall show units.
+- **INS-003** `[M · M1 · E]` Derived values (e.g. mass from density × area) shall be shown read-only, with a tooltip explaining how they are derived.
+- **INS-004** `[M · M1 · E]` If an entered value is invalid (e.g. negative mass), then the inspector shall reject it inline with a reason and keep the previous value.
+- **INS-005** `[M · M1 · E]` Where several entities are selected, the inspector shall edit shared properties together and show "mixed" where they differ.
+- **INS-006** `[M · M4 · E]` A functional component shall show its status and, when inactive, the reason (e.g. "No feed: link #12 broken", "Tank empty", "No control binding").
 
-### 8.4 Quality
+### 8.9 Requirements — seeing what's happening
 
-- **SBX-040** `[M · M1 · B]` The sandbox shall render at 60 fps with the reference sandbox scenario on the reference hardware (§14).
+- **SBX-030** `[M · M1 · E]` The sandbox shall provide pan (drag empty space or middle-drag), zoom to the cursor (wheel or pinch), zoom to fit, and follow selection.
+- **SBX-031** `[M · M1 · E]` The sandbox shall provide toggleable overlays for velocity vectors, centres of mass, contact points and impulses, applied forces, joint load, link paths and the world boundary, with a legend for the active overlays.
+- **SBX-032** `[M · M2 · E]` Joint load shall be shown as a fraction of its strength, using colour plus line thickness.
+- **SBX-033** `[M · M1 · E]` The sandbox shall show live graphs of ledger totals and probes, with a selectable time window, hover readout, and a cursor synced to the scrub bar.
+- **SBX-034** `[M · M1 · E]` When a conservation violation occurs, the sandbox shall increment the top-bar badge. Clicking an entry shall jump to that step and select the entities involved.
+- **SBX-035** `[S · M3 · E]` The sandbox shall render gas parcels coloured by temperature or composition (selectable), with a colour scale shown.
+- **SBX-036** `[M · M1 · E]` Hovering any entity shall show a compact readout of its type, mass, speed and spin.
+- **SBX-037** `[S · M1 · E]` The sandbox shall keep an event log (collisions above a threshold, joint breaks, ignitions, violations). Clicking an event jumps to its step.
+- **SBX-038** `[M · M1 · R]` Overlays and status colours shall be distinguishable by colour-blind users, using a colour-blind-safe palette plus shape or line-style redundancy.
+
+### 8.10 Requirements — onboarding and discoverability
+
+- **UX-001** `[M · M1 · E]` On first load, the sandbox shall show a scenario picker listing the reference scenarios (§11) with thumbnails and one-line descriptions, plus "Empty world".
+- **UX-002** `[M · M1 · E]` The sandbox shall provide a command palette (`Ctrl+K`) that lists every action with its shortcut and runs it.
+- **UX-003** `[M · M1 · E]` Every toolbar control shall have a tooltip with its name and shortcut.
+- **UX-004** `[M · M1 · E]` The status bar shall always show a hint for the active tool's next step.
+- **UX-005** `[S · M1 · E]` The sandbox shall remember panel layout, overlay toggles and the last scenario between visits, per browser.
+- **UX-006** `[M · M1 · E]` If loading a scenario fails, then the sandbox shall show the validation errors with their JSON paths and keep the current world untouched.
+- **UX-007** `[M · M1 · E]` The sandbox shall warn before discarding unsaved changes.
+
+### 8.11 Requirements — quality and accessibility
+
+- **SBX-040** `[M · M1 · B]` The sandbox shall render at 60 fps with the reference sandbox scenario on the reference hardware (§14). UI panels shall not block simulation rendering.
 - **SBX-041** `[M · M1 · E]` The sandbox shall work in current Chromium, Firefox and Safari desktop browsers.
-- **SBX-042** `[S · M1 · E]` The sandbox shall expose stable `data-testid` attributes on controls for E2E tests.
-- **SBX-043** `[S · M1 · R]` The layout shall keep the simulation view dominant, with a collapsible toolbar, palette, inspector and graph panels.
+- **SBX-042** `[M · M1 · E]` Every interactive control shall expose a stable `data-testid` and an accessible name.
+- **SBX-043** `[M · M1 · E]` Every action shall be reachable by keyboard, with a visible focus indicator.
+- **SBX-044** `[M · M1 · R]` Text and controls shall meet WCAG 2.2 AA contrast in the default dark theme.
+- **SBX-045** `[S · M1 · E]` At widths below 900 px, the sandbox shall switch to a view-and-run layout: the world, time controls and scrub bar, with panels as bottom sheets.
+- **SBX-046** `[S · M1 · E]` UI animations shall respect `prefers-reduced-motion`. This does not affect the simulation.
+
+### 8.12 Usability verification
+
+- **UXV-001** `[M · M1 · E]` Each workflow W1–W8 shall have a Playwright test that performs it through the UI within its action budget, as soon as its milestone is reached.
+- **UXV-002** `[M · M0 · R]` Before building M1's UI, a clickable HTML mockup of the layout and workflows W1–W3 shall be reviewed and approved by you.
+- **UXV-003** `[M · M1 · R]` At the end of each milestone, you shall try the new workflows unaided. Every friction point gets an issue labelled `ux`, and `ux` issues shall be triaged before the next milestone starts.
+- **UXV-004** `[S · M1 · E]` The E2E suite shall capture a screenshot of every panel in its main states (empty, selected, error) for each milestone review.
 
 ## 9. Physics Requirements
 
@@ -315,11 +435,11 @@ Each milestone ends with: all its `M` requirements passing tests, its reference 
 
 | Milestone | Delivers | Exit criteria |
 |---|---|---|
-| **M0 Foundation** | Repo layout, core skeleton, world serialisation, PRNG, profile, scenario schema and runner, CLI, CI, determinism harness | `pnpm test` green in CI. An empty scenario runs headless and hashes identically twice. |
-| **M1 Rigid bodies + sandbox v1** | Integrator, collisions, ledger, sandbox UI with time control, spawn/edit/delete, impulse tool, overlays, graphs | RS-01…RS-04 pass. You can build and run them in the sandbox. |
-| **M2 Assemblies** | Compound bodies, joints with limits, splitting, links, attach/detach in the UI, optional gravity | RS-05 passes. Components can be attached and removed live. |
+| **M0 Foundation** | Repo layout, core skeleton, world serialisation, PRNG, profile, scenario schema and runner, CLI, CI, determinism harness, clickable UI mockup | `pnpm test` green in CI. An empty scenario runs headless and hashes identically twice. UI mockup approved (UXV-002). |
+| **M1 Rigid bodies + sandbox v1** | Integrator, collisions, ledger, sandbox UI shell (layout, tools, inspector, overlays, graphs, command palette, undo) | RS-01…RS-04 pass. W1, W2, W5–W7 E2E tests pass. You have reviewed it unaided (UXV-003). |
+| **M2 Assemblies** | Compound bodies, joints with limits, splitting, links, attach/detach/link tools, scrub-back and branching, optional gravity | RS-05 passes. W4 and W8 E2E tests pass. |
 | **M3 Gas** | Gas parcels, pressure, wall interaction, boundary accounting, parcel rendering | RS-06, RS-07 pass. GAS-008 benchmark met. |
-| **M4 Propulsion** | Tanks, feeds, injectors, reactions, chambers, nozzles, key bindings | RS-08…RS-10 pass. A ship can be flown by hand in the sandbox. |
+| **M4 Propulsion** | Tanks, feeds, injectors, reactions, chambers, nozzles, key bindings, component status reasons | RS-08…RS-10 pass. W3 E2E test passes. A ship can be flown by hand in the sandbox. |
 | **M5 Damage** | Integrity, damage rules, leaks, armour | RS-11 passes. |
 | **M6 Weapons** | Gas-driven cannon, shells, fuzes, explosions | RS-12, RS-13 pass. |
 | **M7 Asteroids** | Aggregate asteroid generator and fracture | RS-14 passes. |
@@ -351,6 +471,8 @@ Proposed defaults. **Please confirm or change each.**
 | DEC-07 | Test tools | Vitest (unit, property, scenario), fast-check (property), Playwright (E2E, Chromium in CI). | Standard, fast, TypeScript-native. |
 | DEC-08 | Rendering | Canvas 2D first. Move to WebGL only if parcel rendering misses 60 fps. | Simplest path. Rendering stays behind an interface (TST-011). |
 | DEC-09 | Reference hardware | A 2020-era mid-range laptop (4-core CPU, integrated GPU), Chromium. | Needed to make SBX-040 and GAS-008 testable. |
+| DEC-11 | UI framework | **Preact + signals** for panels, plain Canvas 2D for the world view, CSS custom properties for theming. Testing with Playwright and Testing Library. | Panels need real components (inspector, palette, menus). Preact is small and React-compatible. Signals update fine-grained live values without re-rendering the whole UI each frame. |
+| DEC-12 | Theme | Dark by default, light optional. | Physics overlays read better on dark. Light mode helps for screenshots and in daylight. |
 | DEC-10 | Cross-browser determinism | Same-runtime bit-exactness is a must. Cross-browser is a should (DET-003). | Cross-browser requires a custom trig library. Worth it before replays or multiplayer, not before. |
 
 ## 15. References
@@ -359,5 +481,9 @@ Proposed defaults. **Please confirm or change each.**
 - ECMAScript `Math` functions are implementation-approximated — https://tc39.es/ecma262/#sec-function-properties-of-the-math-object
 - Cross-platform `Math.sin` differences — https://tc39.es/archives/bugzilla/285/
 - Rapier determinism guarantees — https://rapier.rs/docs/user_guides/javascript/determinism
+- Nielsen, "10 Usability Heuristics for User Interface Design" — https://www.nngroup.com/articles/ten-usability-heuristics/
+- Algodoo UI (edge toolbars, properties panel, per-object menu, plotting) — https://en.wikipedia.org/wiki/Algodoo
+- Box2D samples app (pause/single-step, debug draw, parameter tuning) — https://box2d.org/documentation/samples_app.html
+- WCAG 2.2 — https://www.w3.org/TR/WCAG22/
 - Tsiolkovsky rocket equation — https://en.wikipedia.org/wiki/Tsiolkovsky_rocket_equation
 - Erin Catto, "Iterative Dynamics with Temporal Coherence" (sequential impulses), GDC 2005 — https://box2d.org/publications/
