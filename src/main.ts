@@ -2,5 +2,5 @@
 const root = document.getElementById("root");
 if (root) {
   root.innerHTML =
-    "<h1>Mammoth Space Battles</h1><p>Physics sandbox rebuild in progress. See docs/spec.md.</p>";
+    "<h1>Mammoth Space Battles</h1><p>Physics sandbox rebuild in progress. See the <a href=\"https://github.com/oopsboogaloo/mammothspacebattles/blob/main/docs/spec.md\">spec</a>.</p>";
 }

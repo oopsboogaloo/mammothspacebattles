@@ -102,14 +102,15 @@ All tolerances (`tol.*`) and limits (`limit.*`) come from the active simulation 
 
 ### 5.3 Ledger and diagnostics
 
-- **LED-001** `[M · M1 · P]` After every step, the system shall record total mass, linear momentum, angular momentum about the world origin, and total energy split into kinetic, thermal and chemical.
-- **LED-002** `[M · M1 · P]` The ledger shall attribute each change to its source: external field, reaction, removal at the world boundary, or numerical residual.
+- **LED-001** `[M · M1 · P]` After every step, the system shall record total mass, linear momentum, angular momentum about the world origin, and total energy split into kinetic, gravitational potential, thermal and chemical.
+- **LED-002** `[M · M1 · P]` The ledger shall attribute each change to its source: internal exchange between energy forms (e.g. kinetic ↔ gravitational potential), external field, user edit, reaction, removal at the world boundary, or numerical residual.
 - **LED-003** `[M · M1 · P]` If an unattributed residual exceeds its profile tolerance, then the system shall record a conservation violation with step number, quantity, magnitude and the entities involved.
 - **LED-004** `[S · M1 · B]` The system shall report per-step compute time for each subsystem and active counts of bodies, contacts, joints and gas parcels.
 
 ### 5.4 Simulation profile
 
-- **PRF-001** `[M · M0 · U]` The system shall load a named profile declaring: timestep, solver iterations, tolerances for mass, momentum, angular momentum, energy and penetration, and limits for bodies, gas parcels and contacts.
+- **PRF-001** `[M · M0 · U]` The system shall load a named profile declaring: timestep, solver iterations, every `tol.*` and every `limit.*` referenced in this spec, at least `tol.mass`, `tol.momentum`, `tol.angularMomentum`, `tol.energy`, `tol.velocity`, `tol.penetration`, `tol.rocket`, `limit.bodies`, `limit.gasParcels`, `limit.contacts`, `limit.maxSpeed`, `limit.minThickness` and `limit.minFragment`.
+- **PRF-004** `[M · M0 · U]` If a profile omits a required value, then the system shall reject the profile and name the missing keys.
 - **PRF-002** `[M · M0 · U]` The system shall ship a `test` profile (small, strict tolerances) and a `sandbox` profile (real-time, larger limits).
 - **PRF-003** `[M · M3 · P]` If an entity limit would be exceeded, then the system shall refuse the spawn or apply a declared merge rule that conserves mass, momentum and energy, and shall record which it did.
 
@@ -141,14 +142,14 @@ All tolerances (`tol.*`) and limits (`limit.*`) come from the active simulation 
 Tests shall use independent oracles. Comparing the simulation with itself does not count.
 
 - **ORC-001** `[M · M1 · S]` Free body: constant velocity and spin with no forces, to within float tolerance over 10,000 steps.
-- **ORC-002** `[M · M1 · S]` 1D elastic and inelastic collisions of two discs shall match the closed-form final velocities to within `tol.momentum`.
+- **ORC-002** `[M · M1 · S]` 1D elastic and inelastic collisions of two discs shall match the closed-form final velocities to within `tol.velocity` (relative to the closing speed), and total momentum to within `tol.momentum`.
 - **ORC-003** `[M · M1 · S]` An off-centre impact on a resting body shall produce linear and angular velocities matching the impulse equations.
 - **ORC-004** `[M · M2 · S]` Mass, centre of mass and moment of inertia of compound assemblies shall match hand-computed values (parallel axis theorem).
 - **ORC-005** `[S · M2 · S]` Where gravity is enabled, a two-body circular orbit shall keep its radius and period within tolerance for 10 orbits.
-- **ORC-006** `[M · M3 · P]` A sealed box of gas at rest shall keep zero net momentum on the box and conserve total energy within tolerance.
+- **ORC-006** `[M · M3 · P]` For a sealed box of gas, the box-plus-gas system shall conserve total momentum, angular momentum and energy within tolerance, for any initial gas distribution. For a symmetric, equilibrated initial state, the box's own velocity shall also stay below `tol.velocity`.
 - **ORC-007** `[M · M4 · S]` A rocket burning its full propellant shall reach a Δv within `tol.rocket` of the Tsiolkovsky prediction Δv = vₑ·ln(m₀/m₁), where vₑ is the measured mean exhaust velocity.
 - **ORC-008** `[M · M4 · P]` The impulse on a ship over a burn shall equal, within tolerance, minus the momentum carried away by exhaust gas.
-- **ORC-009** `[M · M5 · S]` Cannon shell momentum plus recoil momentum shall equal the momentum of the gas released, to within tolerance.
+- **ORC-009** `[M · M6 · S]` For a cannon assembly fired from rest, the momenta of shell, cannon assembly and released gas shall sum to zero, to within `tol.momentum`.
 
 ### 6.4 Visual verification
 
@@ -306,8 +307,8 @@ Right-click on any entity opens a context menu with the common actions for that 
 
 ### 8.11 Requirements — quality and accessibility
 
-- **SBX-040** `[M · M1 · B]` The sandbox shall render at 60 fps with the reference sandbox scenario on the reference hardware (§14). UI panels shall not block simulation rendering.
-- **SBX-041** `[M · M1 · E]` The sandbox shall work in current Chromium, Firefox and Safari desktop browsers.
+- **SBX-040** `[M · M1 · B]` The sandbox shall render at 60 fps with the reference sandbox workload RS-00 (§11) on the reference hardware (§14). UI panels shall not block simulation rendering.
+- **SBX-041** `[M · M1 · E]` The sandbox shall work in current Chromium, Firefox and Safari desktop browsers. The E2E suite shall run on Playwright's Chromium, Firefox and WebKit engines.
 - **SBX-042** `[M · M1 · E]` Every interactive control shall expose a stable `data-testid` and an accessible name.
 - **SBX-043** `[M · M1 · E]` Every action shall be reachable by keyboard, with a visible focus indicator.
 - **SBX-044** `[M · M1 · R]` Text and controls shall meet WCAG 2.2 AA contrast in the default dark theme.
@@ -355,7 +356,7 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **GAS-002** `[M · M3 · P]` Parcels shall exchange momentum only through pairwise equal-and-opposite interactions, so total momentum is conserved to float precision.
 - **GAS-003** `[M · M3 · S]` Parcels at higher density and temperature shall push apart more strongly, producing pressure that increases with density and temperature.
 - **GAS-004** `[M · M3 · S]` Parcels hitting a body shall exchange momentum and energy with that body at the contact point, according to a declared wall model.
-- **GAS-005** `[M · M3 · S]` A sealed container of gas shall not move or spin from internal pressure alone (ORC-006).
+- **GAS-005** `[M · M3 · S]` A sealed container of gas shall gain no net momentum or spin from internal pressure, beyond the exchange with its own gas (ORC-006).
 - **GAS-006** `[M · M3 · S]` Gas released into vacuum shall expand freely, and its centre of mass shall keep the original velocity.
 - **GAS-007** `[M · M3 · P]` When parcels leave the world boundary or are merged, the ledger shall record the mass, momentum and energy removed or combined.
 - **GAS-008** `[S · M3 · B]` The `sandbox` profile shall support at least 2,000 active parcels in real time on the reference hardware.
@@ -414,6 +415,7 @@ These live in `scenarios/` and serve as both tests and sandbox starting points.
 
 | ID | Milestone | Scenario | Key checks |
 |---|---|---|---|
+| RS-00 | M1+ | Sandbox performance workload: 200 rigid bodies in continuous collision, one followed selection, all overlays on, graphs open. From M3, add 2,000 gas parcels. From M4, add one ship under thrust. | SBX-040, GAS-008 |
 | RS-01 | M1 | Two discs, head-on elastic collision | ORC-002 |
 | RS-02 | M1 | Rod hit off-centre by a disc | ORC-003, COL-003 |
 | RS-03 | M1 | Bullet vs thin wall at max speed | COL-004 |
@@ -431,7 +433,7 @@ These live in `scenarios/` and serve as both tests and sandbox starting points.
 
 ## 12. Milestones
 
-Each milestone ends with: all its `M` requirements passing tests, its reference scenarios loadable in the sandbox, and a short demo note.
+Each milestone ends with: all its `M` requirements passing their stated verification (tests for `U`/`P`/`S`/`D`/`E`/`B`, a recorded review for `R`), its reference scenarios loadable in the sandbox, and a short demo note.
 
 | Milestone | Delivers | Exit criteria |
 |---|---|---|
@@ -468,7 +470,7 @@ Proposed defaults. **Please confirm or change each.**
 | DEC-04 | Gas model | Soft-sphere particles with pairwise pressure forces (DEM/SPH-like), with each parcel's thermal energy setting its pressure. | Pairwise forces give exact momentum conservation (GAS-002). It scales with a spatial grid. |
 | DEC-05 | Timestep | 1/240 s fixed for `sandbox`, with substeps for gas if needed. | Gas parcels move fast. A small step keeps nozzle contact stable. Tune in M3. |
 | DEC-06 | World scale | Ships 5–30 m, gas parcels 0.05–0.2 m radius, max speed 2 km/s. | Keeps parcels much smaller than engines while staying within budget. Tune in M3–M4. |
-| DEC-07 | Test tools | Vitest (unit, property, scenario), fast-check (property), Playwright (E2E, Chromium in CI). | Standard, fast, TypeScript-native. |
+| DEC-07 | Test tools | Vitest (unit, property, scenario), fast-check (property), Playwright (E2E: Chromium on every PR, Firefox and WebKit on every PR or nightly if too slow). | Standard, fast, TypeScript-native. |
 | DEC-08 | Rendering | Canvas 2D first. Move to WebGL only if parcel rendering misses 60 fps. | Simplest path. Rendering stays behind an interface (TST-011). |
 | DEC-09 | Reference hardware | A 2020-era mid-range laptop (4-core CPU, integrated GPU), Chromium. | Needed to make SBX-040 and GAS-008 testable. |
 | DEC-11 | UI framework | **Preact + signals** for panels, plain Canvas 2D for the world view, CSS custom properties for theming. Testing with Playwright and Testing Library. | Panels need real components (inspector, palette, menus). Preact is small and React-compatible. Signals update fine-grained live values without re-rendering the whole UI each frame. |
