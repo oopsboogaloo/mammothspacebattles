@@ -109,7 +109,7 @@ All tolerances (`tol.*`) and limits (`limit.*`) come from the active simulation 
 
 ### 5.4 Simulation profile
 
-- **PRF-001** `[M · M0 · U]` The system shall load a named profile declaring: timestep, solver iterations, every `tol.*` and every `limit.*` referenced in this spec, at least `tol.mass`, `tol.momentum`, `tol.angularMomentum`, `tol.energy`, `tol.velocity`, `tol.penetration`, `tol.rocket`, `limit.bodies`, `limit.gasParcels`, `limit.contacts`, `limit.maxSpeed`, `limit.minThickness` and `limit.minFragment`.
+- **PRF-001** `[M · M0 · U]` The system shall load a named profile declaring: timestep, solver iterations, every `tol.*` and every `limit.*` referenced in this spec, at least `tol.mass`, `tol.momentum`, `tol.angularMomentum`, `tol.energy`, `tol.velocity`, `tol.pressure`, `tol.penetration`, `tol.rocket`, `limit.bodies`, `limit.gasParcels`, `limit.contacts`, `limit.maxSpeed`, `limit.minThickness` and `limit.minFragment`.
 - **PRF-004** `[M · M0 · U]` If a profile omits a required value, then the system shall reject the profile and name the missing keys.
 - **PRF-002** `[M · M0 · U]` The system shall ship a `test` profile (small, strict tolerances) and a `sandbox` profile (real-time, larger limits).
 - **PRF-003** `[M · M3 · P]` If an entity limit would be exceeded, then the system shall refuse the spawn or apply a declared merge rule that conserves mass, momentum and energy, and shall record which it did.
@@ -297,7 +297,7 @@ Right-click on any entity opens a context menu with the common actions for that 
 
 ### 8.10 Requirements — onboarding and discoverability
 
-- **UX-001** `[M · M1 · E]` On first load, the sandbox shall show a scenario picker listing the reference scenarios (§11) with thumbnails and one-line descriptions, plus "Empty world".
+- **UX-001** `[M · M1 · E]` On first load, the sandbox shall show a scenario picker listing the starter scenarios SC-01–SC-03 first (§11.1), then the other reference scenarios, with thumbnails and one-line descriptions, plus "Empty world".
 - **UX-002** `[M · M1 · E]` The sandbox shall provide a command palette (`Ctrl+K`) that lists every action with its shortcut and runs it.
 - **UX-003** `[M · M1 · E]` Every toolbar control shall have a tooltip with its name and shortcut.
 - **UX-004** `[M · M1 · E]` The status bar shall always show a hint for the active tool's next step.
@@ -413,17 +413,67 @@ Thrust must come from gas pushing on engine geometry. No component applies a dir
 
 These live in `scenarios/` and serve as both tests and sandbox starting points.
 
+### 11.1 Starter scenarios
+
+Three scenarios are built into the sandbox and appear first in the scenario picker. Each is the simplest experiment that demonstrates one core idea. Each has adjustable parameters, a known correct answer, and a test that checks it.
+
+- **SCN-008** `[M · M1 · E]` A scenario may declare parameters (name, unit, range, default). The sandbox shall show them as sliders/fields in a "Scenario" panel, and changing one shall reset and rerun the scenario.
+- **SCN-009** `[M · M1 · S]` Tests shall run each starter scenario at its defaults and across a seeded sweep of its parameters, checking the expected results below.
+- **SCN-010** `[M · M1 · E]` Each starter scenario shall open with the overlays, probes and graphs that show its key result already switched on, plus a one-paragraph "what to look for" note.
+
+#### SC-01 — Elastic collision of two discs (M1)
+
+| | |
+|---|---|
+| **Setup** | Disc A: radius 0.5 m, mass 1 kg, at x = −3 m, velocity +2 m/s. Disc B: radius 0.5 m, mass 3 kg, at x = +3 m, velocity −1 m/s. Head-on along the x-axis. Restitution 1, friction 0, no gravity. |
+| **Parameters** | Both masses (0.1–100 kg), both velocities (−20 to +20 m/s), restitution (0–1), impact offset (0–0.9 × sum of radii). |
+| **Expected** | After contact, A = −2.5 m/s and B = +0.5 m/s, from vₐ' = ((mₐ−m_b)vₐ + 2m_b·v_b)/(mₐ+m_b). Total momentum stays −1 kg·m/s and kinetic energy stays 3.5 J. With restitution e < 1, energy lost = ½·μ·(1−e²)·v_rel², where μ is the reduced mass. With an offset, momentum is still conserved and the discs leave at an angle. |
+| **Shown** | Velocity vectors, contact impulse, graphs of each disc's velocity, total momentum and total kinetic energy. |
+| **Checks** | ORC-002, COL-002, LED-001. |
+
+#### SC-02 — Gas in a box (M3)
+
+| | |
+|---|---|
+| **Setup** | A free square box, 2 m inside, walls 0.1 m thick, mass 10 kg. Inside: 500 gas parcels with 0.5 kg of gas in total, at 300 K. Velocities are random (seeded) with net momentum zeroed. |
+| **Parameters** | Parcel count (50–2,000), gas mass, temperature (50–3,000 K), box mass, initial layout (uniform, or all packed in the left half). |
+| **Expected** | Uniform start: the box stays still (speed < `tol.velocity`), the gas stays spread evenly, and total momentum and energy are conserved. Left-half start: the gas expands to fill the box, the box rocks as gas hits the far wall, and box-plus-gas momentum stays zero. Wall pressure matches the gas model's equation of state to within `tol.pressure` once settled. |
+| **Try** | Delete a wall while it runs. The gas escapes and the box recoils away from the gap. This is SC-03 discovered by hand. |
+| **Shown** | Parcels coloured by temperature, box velocity, graphs of box momentum, gas momentum, their sum, and measured vs predicted wall pressure. |
+| **Checks** | ORC-006, GAS-002, GAS-003, GAS-004, GAS-005. |
+
+#### SC-03 — Simplest rocket: a box of hot gas with a hole (M3)
+
+The simplest possible rocket has no fuel, no chemistry, no injector and no controls. It is a sealed box pre-filled with hot gas, with one hole.
+
+| | |
+|---|---|
+| **Setup** | The SC-02 box, with a 0.4 m gap centred in its left wall. 1,000 parcels, 1 kg of gas, at 1,000 K. Nothing outside. |
+| **Parameters** | Hole width (0.1–1.0 m), hole position along the wall (centred to offset), gas mass, temperature, box mass. |
+| **Expected** | Gas jets out of the hole and the box accelerates to the right. Box momentum equals minus the momentum of the escaped gas, to within `tol.momentum` (ORC-008). The box's final Δv matches the rocket equation Δv = vₑ·ln(m₀/m₁), using the measured mean exhaust velocity (ORC-007). A centred hole gives no spin. An offset hole gives spin, with angular momentum conserved. A wider hole gives a shorter, stronger burst with the same total impulse, within tolerance. |
+| **Shown** | Parcels, box velocity vector, graphs of thrust (box force), box speed vs the rocket equation prediction, and remaining gas mass. |
+| **Checks** | ORC-007, ORC-008, PRP-005, PRP-006. |
+
+**Path to a real engine (M4).** Each step is one change from the last and becomes its own scenario:
+
+1. SC-03, plus a flared nozzle on the hole. Compare thrust with the plain hole.
+2. Replace the pre-filled gas with an injector that feeds hot gas from a tank, controlled by a key.
+3. Replace the hot gas with fuel and oxidiser that react in the chamber (RS-08).
+
+### 11.2 All reference scenarios
+
 | ID | Milestone | Scenario | Key checks |
 |---|---|---|---|
 | RS-00 | M1+ | Sandbox performance workload: 200 rigid bodies in continuous collision, one followed selection, all overlays on, graphs open. From M3, add 2,000 gas parcels. From M4, add one ship under thrust. | SBX-040, GAS-008 |
-| RS-01 | M1 | Two discs, head-on elastic collision | ORC-002 |
+| RS-01 | M1 | **SC-01** Two discs, elastic collision | ORC-002 |
 | RS-02 | M1 | Rod hit off-centre by a disc | ORC-003, COL-003 |
 | RS-03 | M1 | Bullet vs thin wall at max speed | COL-004 |
 | RS-04 | M1 | Box stack settles | COL-005 |
 | RS-05 | M2 | Assembly with a weak joint, pulled apart by impulse | ASM-004, ASM-005 |
-| RS-06 | M3 | Sealed box of hot gas | ORC-006, GAS-005 |
+| RS-06 | M3 | **SC-02** Gas in a box | ORC-006, GAS-005 |
 | RS-07 | M3 | Gas burst in vacuum | GAS-006 |
-| RS-08 | M4 | Single-engine rocket, full burn | ORC-007, ORC-008 |
+| RS-07b | M3 | **SC-03** Simplest rocket: box of hot gas with a hole | ORC-007, ORC-008 |
+| RS-08 | M4 | Single-engine chemical rocket, full burn | ORC-007, ORC-008 |
 | RS-09 | M4 | Off-axis thruster spins a ship | PRP-006 |
 | RS-10 | M4 | Engine attachment too weak for full thrust | ASM-004, PRP-005 |
 | RS-11 | M5 | Ram an armoured vs an unarmoured tank | DMG-002, DMG-005 |
@@ -438,9 +488,9 @@ Each milestone ends with: all its `M` requirements passing their stated verifica
 | Milestone | Delivers | Exit criteria |
 |---|---|---|
 | **M0 Foundation** | Repo layout, core skeleton, world serialisation, PRNG, profile, scenario schema and runner, CLI, CI, determinism harness, clickable UI mockup | `pnpm test` green in CI. An empty scenario runs headless and hashes identically twice. UI mockup approved (UXV-002). |
-| **M1 Rigid bodies + sandbox v1** | Integrator, collisions, ledger, sandbox UI shell (layout, tools, inspector, overlays, graphs, command palette, undo) | RS-01…RS-04 pass. W1, W2, W5–W7 E2E tests pass. You have reviewed it unaided (UXV-003). |
+| **M1 Rigid bodies + sandbox v1** | Integrator, collisions, ledger, sandbox UI shell (layout, tools, inspector, overlays, graphs, command palette, undo) | RS-01…RS-04 pass (SC-01 built in). W1, W2, W5–W7 E2E tests pass. You have reviewed it unaided (UXV-003). |
 | **M2 Assemblies** | Compound bodies, joints with limits, splitting, links, attach/detach/link tools, scrub-back and branching, optional gravity | RS-05 passes. W4 and W8 E2E tests pass. |
-| **M3 Gas** | Gas parcels, pressure, wall interaction, boundary accounting, parcel rendering | RS-06, RS-07 pass. GAS-008 benchmark met. |
+| **M3 Gas** | Gas parcels, pressure, wall interaction, boundary accounting, parcel rendering | RS-06, RS-07, RS-07b pass (SC-02 and SC-03 built in). GAS-008 benchmark met. |
 | **M4 Propulsion** | Tanks, feeds, injectors, reactions, chambers, nozzles, key bindings, component status reasons | RS-08…RS-10 pass. W3 E2E test passes. A ship can be flown by hand in the sandbox. |
 | **M5 Damage** | Integrity, damage rules, leaks, armour | RS-11 passes. |
 | **M6 Weapons** | Gas-driven cannon, shells, fuzes, explosions | RS-12, RS-13 pass. |
