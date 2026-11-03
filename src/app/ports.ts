@@ -25,7 +25,16 @@ export interface Port {
   normal: Vec2; // outward unit normal, body-local
 }
 
-/** Ports: edge midpoints for boxes and polygons, four rim points for discs. */
+/** Spacing of extra ports along a long face, and how close to a corner one may sit, m (SBX-024). */
+const PORT_SPACING = 1;
+const PORT_CORNER_CLEARANCE = 0.25;
+/** At most this many ports either side of a face's midpoint; longer faces space them wider, so previews stay cheap. */
+const MAX_PORTS_PER_SIDE = 4;
+
+/**
+ * Ports: four rim points for discs. For boxes and polygons, each face's midpoint, plus a port every
+ * metre out from it while at least 0.25 m from the corners, so a 3 m wing has ports at −1, 0 and +1 m.
+ */
 export function ports(shape: Shape): Port[] {
   if (shape.kind === "disc") {
     const r = shape.radius;
@@ -37,12 +46,27 @@ export function ports(shape: Shape): Port[] {
     ].map((n, index) => ({ index, local: { x: n.x * r, y: n.y * r }, normal: n }));
   }
   const vs = localVertices(shape);
-  return vs.map((v, index) => {
-    const w = vs[(index + 1) % vs.length];
+  const out: Port[] = [];
+  vs.forEach((v, i) => {
+    const w = vs[(i + 1) % vs.length];
     const e = sub(w, v);
     const l = length(e);
-    return { index, local: { x: (v.x + w.x) / 2, y: (v.y + w.y) / 2 }, normal: { x: e.y / l, y: -e.x / l } };
+    const u = { x: e.x / l, y: e.y / l };
+    const normal = { x: u.y, y: -u.x };
+    const mid = { x: (v.x + w.x) / 2, y: (v.y + w.y) / 2 };
+    // Offsets from the midpoint, in face order: …, −1, 0, +1, …
+    const usable = l / 2 - PORT_CORNER_CLEARANCE;
+    let reach = Math.max(0, Math.floor(usable / PORT_SPACING + 1e-9));
+    let spacing = PORT_SPACING;
+    if (reach > MAX_PORTS_PER_SIDE) {
+      reach = MAX_PORTS_PER_SIDE;
+      spacing = usable / MAX_PORTS_PER_SIDE;
+    }
+    for (let k = -reach; k <= reach; k++) {
+      out.push({ index: out.length, local: { x: mid.x + u.x * k * spacing, y: mid.y + u.y * k * spacing }, normal });
+    }
   });
+  return out;
 }
 
 export const worldPort = (b: Body, p: Port) => {
@@ -99,11 +123,13 @@ export function place(world: World, part: { id: string; shape: Shape }, target: 
   const tp = worldPort(target, targetPort);
   const tAngle = Math.atan2(tp.normal.y, tp.normal.x);
   // Prefer the part port that keeps the part upright relative to the target (smallest rotation).
-  let best: { port: Port; angle: number; turn: number } | null = null;
+  // Among ports on that face (a long face has several), the one nearest the part's centre, so a wing hangs centred.
+  let best: { port: Port; angle: number; turn: number; off: number } | null = null;
   for (const port of ports(part.shape)) {
     const angle = tAngle + Math.PI - Math.atan2(port.normal.y, port.normal.x);
     const turn = Math.abs(Math.atan2(Math.sin(angle - target.angle), Math.cos(angle - target.angle)));
-    if (!best || turn < best.turn - 1e-9) best = { port, angle, turn };
+    const off = length(port.local);
+    if (!best || turn < best.turn - 1e-9 || (turn < best.turn + 1e-9 && off < best.off - 1e-9)) best = { port, angle, turn, off };
   }
   // Same orientation, but within half a turn of the target's angle (so 0°, not 360°).
   const angle = target.angle + Math.atan2(Math.sin(best!.angle - target.angle), Math.cos(best!.angle - target.angle));

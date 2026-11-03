@@ -364,7 +364,7 @@ function BodyInspector({ bodies }: { bodies: Body[] }) {
           <JointsSection body={one} />
           {one.injector && <InjectorSection body={one} />}
           <ContentsSection body={one} />
-          <LinksSection body={one} />
+          <LinksSection key={one.id} body={one} />
         </>
       ) : (
         <Section id="assembly" title="Assembly">
@@ -561,7 +561,8 @@ function LinksSection({ body }: { body: Body }) {
   // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
   void version.value;
   const sb = sandbox.value!;
-  const [channel, setChannel] = useState("main");
+  // An injector's own channel is the one it listens to, so offer that first.
+  const [channel, setChannel] = useState(body.injector?.channel ?? "main");
   const feeds = sb.world.links.filter((l) => l.kind === "feed" && (l.from === body.id || l.to === body.id));
   const controls = controlInputs(sb.world, body.id);
   const keyFor = (ch: string) => Object.entries(bindings.value).find(([, c]) => c === ch)?.[0];

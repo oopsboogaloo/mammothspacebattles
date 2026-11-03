@@ -1,6 +1,6 @@
 // Built-in ship parts (M4, W3): a hull, a propellant tank, and an engine assembly whose
 // geometry matches RS-08 (scenarios/rs08-chemical-rocket.json). No DOM.
-import type { BodyInput } from "../core/index.ts";
+import type { BodyInput, World } from "../core/index.ts";
 import type { Prefab } from "./ports.ts";
 
 /** A prefab with the body that welds onto whatever it is attached to. */
@@ -345,3 +345,42 @@ export const ENGINE: MountedPrefab = {
     },
   ],
 };
+
+/** A control channel no injector in the world uses yet: main, main-2, main-3, … (SBX-025). */
+export function freeChannel(world: World): string {
+  const used = new Set(world.bodies.map((b) => b.injector?.channel).filter(Boolean));
+  if (!used.has("main")) return "main";
+  for (let k = 2; ; k++) if (!used.has(`main-${k}`)) return `main-${k}`;
+}
+
+/** The engine prefab with its injector on a fresh channel, so each new engine can have its own key. */
+export function engineFor(world: World): MountedPrefab {
+  const p = structuredClone(ENGINE);
+  const head = p.bodies.find((b) => b.id === p.mount)!;
+  head.injector = { ...head.injector!, channel: freeChannel(world) };
+  return p;
+}
+
+/**
+ * Copies of bodies with every injector moved to a fresh channel (one per original channel, so a
+ * copied twin-engine assembly keeps two distinct channels) and its run state reset (SBX-025).
+ */
+export function withFreshChannels<T extends Pick<BodyInput, "injector">>(world: World, bodies: T[]): T[] {
+  const taken = new Set(world.bodies.map((b) => b.injector?.channel).filter(Boolean) as string[]);
+  const map = new Map<string, string>();
+  const next = () => {
+    if (!taken.has("main")) return "main";
+    for (let k = 2; ; k++) if (!taken.has(`main-${k}`)) return `main-${k}`;
+  };
+  return bodies.map((b) => {
+    if (!b.injector) return b;
+    const old = b.injector.channel;
+    let ch = map.get(old);
+    if (!ch) {
+      ch = next();
+      taken.add(ch);
+      map.set(old, ch);
+    }
+    return { ...b, injector: { ...b.injector, channel: ch, credit: 0, count: 0, firing: false } };
+  });
+}

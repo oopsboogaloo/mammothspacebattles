@@ -23,7 +23,7 @@ import {
 import { panBy, toScreen, toWorld, zoomAt } from "./camera.ts";
 import { fmt } from "./format.ts";
 import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
-import { ENGINE, HULL, TANK } from "./parts.ts";
+import { ENGINE, engineFor, HULL, TANK, withFreshChannels } from "./parts.ts";
 import { COLORS, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, type PortMarker, type Preview, type RulerView } from "./render.ts";
 import {
   achieved,
@@ -470,7 +470,7 @@ export function View() {
           return;
         }
         if (isEngine(k)) {
-          const { commands, mountId } = attachPrefabCommands(sb.world, ENGINE, pl, freshId);
+          const { commands, mountId } = attachPrefabCommands(sb.world, engineFor(sb.world), pl, freshId);
           if (edit(commands, `Attach engine to ${pl.target}`)) selection.value = [mountId];
           showAttach(p, ghostPart());
           return;
@@ -631,12 +631,12 @@ export function View() {
       case "spawn": {
         const k = spawnKind.value;
         if (isEngine(k)) {
-          edit(prefabCommands(ENGINE, g.start, freshId), "Spawn engine");
+          edit(prefabCommands(engineFor(sb.world), g.start, freshId), "Spawn engine");
           return;
         }
         if (isPrefab(k)) {
           const pf = prefabs.value[Number(k.slice(7))];
-          if (pf) edit(prefabCommands(pf, g.start, freshId), `Spawn ${pf.name}`);
+          if (pf) edit(prefabCommands({ ...pf, bodies: withFreshChannels(sb.world, pf.bodies) }, g.start, freshId), `Spawn ${pf.name}`);
           return;
         }
         const id = freshId(k);

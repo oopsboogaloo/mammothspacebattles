@@ -7,6 +7,7 @@ import { fitBounds, worldBounds, type Camera, type Viewport } from "./camera.ts"
 import { emptyScenario, Sandbox } from "./controller.ts";
 import { loadPrefs, savePrefs } from "./prefs.ts";
 import type { Prefab } from "./ports.ts";
+import { withFreshChannels } from "./parts.ts";
 import type { OverlayId } from "./render.ts";
 
 export type ToolId = "select" | "move" | "spawn" | "attach" | "impulse" | "link" | "gas" | "probe" | "ruler";
@@ -258,10 +259,10 @@ export function duplicateSelection(): void {
   if (!sb) return;
   const cmds: Command[] = [];
   const ids: string[] = [];
-  for (const id of selection.value) {
-    const b = sb.world.bodies.find((x) => x.id === id);
-    if (!b) continue;
-    const nid = freshId(id.replace(/-\d+$/, ""));
+  // Copied engines get their own channels, so they don't answer the original's key (SBX-025).
+  const copies = withFreshChannels(sb.world, selection.value.map((id) => sb.world.bodies.find((x) => x.id === id)).filter((b): b is NonNullable<typeof b> => !!b));
+  for (const b of copies) {
+    const nid = freshId(b.id.replace(/-\d+$/, ""));
     ids.push(nid);
     cmds.push({ type: "body.add", body: { ...structuredClone(b), id: nid, position: { x: b.position.x + 0.5, y: b.position.y + 0.5 } } });
   }

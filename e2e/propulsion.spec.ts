@@ -79,3 +79,65 @@ test("INS-006 PRP-009 the injector's status gives the reason it is not firing", 
   for (let i = 0; i < 12; i++) await page.getByTestId("step10").click();
   await expect(page.getByTestId("injector-status")).toContainText("No feed: nothing links o2 to it");
 });
+
+test("UXV-001 W9 SBX-024 SBX-025 build a twin-engine ship on a wing, give each engine its own key, and steer by firing one in ≤ 28 actions", async ({ page }, info) => {
+  await page.goto("./");
+  const b = new Budget(page, 28);
+  await b.click(page.getByTestId("pick-empty"));
+  await b.press("s");
+  await b.click(page.getByTestId("spawn-hull"));
+  await b.clickWorld(0, 2);
+  await b.press("a");
+  await b.click(page.getByTestId("spawn-tank"));
+  await moveWorld(page, 0, 1.45);
+  await expect(page.getByTestId("attach-readout")).toContainText("Valid: hull-1");
+  await b.clickWorld(0, 1.45);
+  // A 3 m plank under the tank is the wing; its underside has ports at −1, 0 and +1 m.
+  await b.click(page.getByTestId("spawn-plank"));
+  await moveWorld(page, 0, 0.95);
+  await expect(page.getByTestId("attach-readout")).toContainText("Valid: tank-");
+  await b.clickWorld(0, 0.95);
+  await b.click(page.getByTestId("spawn-engine"));
+  for (const x of [-1, 1]) {
+    await moveWorld(page, x, 0.75);
+    await expect(page.getByTestId("attach-readout")).toContainText("Valid: plank-");
+    await b.clickWorld(x, 0.75);
+  }
+  // Feed both engines from the tank.
+  await b.press("l");
+  await b.dragWorld([0, 1.25], [-1, 0.7]);
+  await b.dragWorld([0, 1.25], [1, 0.7]);
+  // Each engine has its own channel: give each a control link and a key.
+  await b.press("Escape");
+  const keys: [number, string, string][] = [
+    [-1, "main", "q"],
+    [1, "main-2", "e"],
+  ];
+  for (const [x, channel, key] of keys) {
+    await b.clickWorld(x, 0.7);
+    await expect(page.getByTestId("injector-status")).toContainText(`No control link for channel "${channel}"`);
+    await b.click(page.getByTestId("add-control"));
+    await b.click(page.getByTestId(`bind-${channel}`));
+    await b.press(key);
+  }
+  await expect(page.getByTestId("key-legend")).toContainText("Q → main");
+  await expect(page.getByTestId("key-legend")).toContainText("E → main-2");
+  // Fly: both engines to climb, then only the left one to turn.
+  await b.press("f");
+  await b.press("Space");
+  b.count += 2;
+  await page.keyboard.down("q");
+  await page.keyboard.down("e");
+  await waitForTick(page, 120, 60_000);
+  await page.keyboard.up("e");
+  await waitForTick(page, 240, 60_000);
+  await page.keyboard.up("q");
+  b.done();
+  await page.keyboard.press("Space");
+  await shot(page, info, "w9-twin-engine");
+  const w = await world(page);
+  const hull = w.bodies.find((x) => x.id === "hull-1")! as (typeof w.bodies)[number] & { angularVelocity: number };
+  expect(hull.velocity.y).toBeGreaterThan(0.5); // it climbed
+  expect(hull.angularVelocity).toBeLessThan(-0.2); // left engine alone: nose turns right
+  expect(w.ledger.violations).toBe(0);
+});
