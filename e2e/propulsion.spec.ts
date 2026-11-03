@@ -129,8 +129,10 @@ test("UXV-001 W9 SBX-024 SBX-025 build a twin-engine ship on a wing, give each e
   await page.keyboard.down("q");
   await page.keyboard.down("e");
   await waitForTick(page, 120, 60_000);
+  // The left-only phase is timed from the release, so a slow machine can't shorten it.
+  const released = (await world(page)).tick;
   await page.keyboard.up("e");
-  await waitForTick(page, 240, 60_000);
+  await waitForTick(page, released + 120, 60_000);
   await page.keyboard.up("q");
   b.done();
   await page.keyboard.press("Space");

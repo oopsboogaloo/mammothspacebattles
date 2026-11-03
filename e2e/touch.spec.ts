@@ -7,6 +7,19 @@ async function tapWorld(page: Page, x: number, y: number) {
   await page.mouse.click(p.x, p.y);
 }
 
+const tickNow = async (page: Page) => (await world(page)).tick;
+
+/**
+ * Runs the simulation for at least `ticks` steps from now, then pauses. Buttons are pressed and
+ * released while paused, so each phase lasts its full length however fast the machine is.
+ */
+async function runFor(page: Page, ticks: number) {
+  const from = await tickNow(page);
+  await page.getByTestId("play").click();
+  await waitForTick(page, from + ticks, 60_000);
+  await page.getByTestId("play").click();
+}
+
 /** Holds an on-screen button with a touch-type pointer, as a thumb would; returns a release function. */
 async function hold(page: Page, testid: string, pointerId: number): Promise<() => Promise<void>> {
   const el = page.getByTestId(testid);
@@ -52,13 +65,11 @@ for (const [name, viewport] of [
       await page.getByRole("button", { name: "Close", exact: true }).click();
       await expect(page.getByTestId("fly-main")).toBeVisible();
       await page.getByTestId("mobile-follow").click();
-      await page.getByTestId("play").click();
       const release = await hold(page, "fly-main", 1);
       await expect(page.getByTestId("fly-main")).toHaveAttribute("aria-pressed", "true");
-      await waitForTick(page, 200, 60_000);
+      await runFor(page, 200);
       await release();
       await expect(page.getByTestId("fly-main")).toHaveAttribute("aria-pressed", "false");
-      await page.getByTestId("play").click();
       await shot(page, info, `w3-${name}`);
       const w = await world(page);
       const hull = w.bodies.find((b) => b.id === "hull-1")!;
@@ -97,17 +108,15 @@ test.describe("tablet (820 px), two thumbs", () => {
     }
     await expect(page.getByTestId("fly-main")).toBeVisible();
     await expect(page.getByTestId("fly-main-2")).toBeVisible();
-    await page.getByTestId("play").click();
     // Both thumbs down: climb. Then lift the right one: the left engine alone turns the nose right.
     const left = await hold(page, "fly-main", 1);
     const right = await hold(page, "fly-main-2", 2);
-    await waitForTick(page, 120, 60_000);
     await expect(page.getByTestId("fly-main")).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByTestId("fly-main-2")).toHaveAttribute("aria-pressed", "true");
+    await runFor(page, 120);
     await right();
-    await waitForTick(page, 240, 60_000);
+    await runFor(page, 120);
     await left();
-    await page.getByTestId("play").click();
     const w = await world(page);
     const hull = w.bodies.find((b) => b.id === "hull-1")! as (typeof w.bodies)[number] & { angularVelocity: number };
     expect(hull.velocity.y).toBeGreaterThan(0.5);
@@ -126,11 +135,9 @@ test.describe("tablet (820 px), ready-made ship", () => {
     await expect(page.getByTestId("fly-right")).toBeVisible();
     await expect(page.getByTestId("fly-left")).toContainText("Q");
     await expect(page.getByTestId("fly-right")).toContainText("E");
-    await page.getByTestId("play").click();
     const left = await hold(page, "fly-left", 1);
-    await waitForTick(page, 120, 60_000);
+    await runFor(page, 120);
     await left();
-    await page.getByTestId("play").click();
     const w = await world(page);
     const hull = w.bodies.find((b) => b.id === "hull")! as (typeof w.bodies)[number] & { angularVelocity: number };
     expect(hull.angularVelocity).toBeLessThan(-0.2); // left engine alone: nose turns right
