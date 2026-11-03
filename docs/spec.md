@@ -26,7 +26,7 @@ Game rules (economy, AI, missions, progression) are deferred to a later spec (§
 | Wording that can't be tested ("plausible", "sufficiently") | Replaced with numeric tolerances from the simulation profile (§5.4). |
 | Simulation and UI not separated | The simulation core is headless and has no DOM dependency (§5). |
 | Game and sandbox mixed together | Game rules deferred (§13). The sandbox is the product for now. |
-| Blocking decisions left open | Proposed defaults given (§14). Please confirm or override. |
+| Blocking decisions left open | Decided in §14. |
 | Prototype UI was hard to use | §8 now designs the UI around workflows, with a mockup gate, action budgets and usability tests. |
 
 ## 2. Principles
@@ -319,6 +319,7 @@ Right-click on any entity opens a context menu with the common actions for that 
 
 - **UXV-001** `[M · M1 · E]` Each workflow W1–W8 shall have a Playwright test that performs it through the UI within its action budget, as soon as its milestone is reached.
 - **UXV-002** `[M · M0 · R]` Before building M1's UI, a clickable HTML mockup of the layout and workflows W1–W3 shall be reviewed and approved by you.
+  *Status:* mockup v1 in review — https://claude.ai/artifact/D9BPSqnT6GdytJLs4U9ixa (private to the owner).
 - **UXV-003** `[M · M1 · R]` At the end of each milestone, you shall try the new workflows unaided. Every friction point gets an issue labelled `ux`, and `ux` issues shall be triaged before the next milestone starts.
 - **UXV-004** `[S · M1 · E]` The E2E suite shall capture a screenshot of every panel in its main states (empty, selected, error) for each milestone review.
 
@@ -510,7 +511,7 @@ These are deliberately out of scope until the sandbox reaches M7. v0.1 of the sp
 
 ## 14. Decisions
 
-Proposed defaults. **Please confirm or change each.**
+**Confirmed 2026-11-03.** Change a decision by editing this table in a PR.
 
 | ID | Decision | Proposed default | Why |
 |---|---|---|---|
