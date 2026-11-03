@@ -110,7 +110,11 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
 const GOLDEN = 0.6180339887498949;
 
 /** Body as written in scenarios and commands: material fields are optional. */
-export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction"> & Partial<Pick<Body, "fixed" | "restitution" | "friction">>;
+export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector"> &
+  Partial<Pick<Body, "fixed" | "restitution" | "friction">> & { injector?: InjectorInput };
+
+/** An injector as written in scenarios: everything but the channel has a default. */
+export type InjectorInput = Pick<Injector, "channel"> & Partial<Omit<Injector, "channel">>;
 
 export interface JointLimits {
   tension: number; // N
@@ -234,8 +238,9 @@ export type Command =
   | { type: "debug.kick"; id: string; dv: Vec2 };
 
 export function normalizeBody(input: BodyInput): Body {
-  const body: Body = { ...BODY_DEFAULTS, ...structuredClone(input) };
-  if (body.injector) body.injector = { ...INJECTOR_DEFAULTS, ...body.injector };
+  const { injector, ...rest } = structuredClone(input);
+  const body: Body = { ...BODY_DEFAULTS, ...rest };
+  if (injector) body.injector = { ...INJECTOR_DEFAULTS, ...injector };
   if (body.shape.kind === "polygon") {
     const { vertices, centroid } = normalizePolygon(body.shape.vertices);
     body.shape = { kind: "polygon", vertices };

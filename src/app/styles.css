@@ -186,3 +186,7 @@ button { cursor: pointer; }
 }
 .flyout select { width: 100%; background: transparent; border: 0; padding: 4px 0; }
 .flyout select option { background: var(--panel, #121829); }
+/* Component status (INS-006) */
+.section .status { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; }
+.section .status.ok { color: var(--text); border-color: #5aa9ff; }
+.section .status.idle { color: var(--muted); border-style: dashed; }

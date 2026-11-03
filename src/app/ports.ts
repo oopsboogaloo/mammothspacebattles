@@ -175,4 +175,25 @@ export function prefabCommands(prefab: Prefab, at: Vec2, fresh: (base: string) =
   return cmds;
 }
 
+/**
+ * Commands that attach a whole prefab at `pl`, a placement worked out for its mount body: every
+ * body keeps its offset from the mount, turned with it, and moves with the target. Returns the
+ * mount's new id.
+ */
+export function attachPrefabCommands(world: World, prefab: Prefab & { mount: string }, pl: Placement, fresh: (base: string) => string): { commands: Command[]; mountId: string } {
+  const target = world.bodies.find((b) => b.id === pl.target)!;
+  const mount = prefab.bodies.find((b) => b.id === prefab.mount)!;
+  const q = sinCos(pl.angle);
+  const ids = new Map(prefab.bodies.map((b) => [b.id, fresh(b.id.replace(/-\d+$/, ""))]));
+  const commands: Command[] = prefab.bodies.map((b) => {
+    const position = add(pl.position, rotate(q, sub(b.position, mount.position)));
+    const r = sub(position, target.position);
+    const velocity = add(target.velocity, { x: -target.angularVelocity * r.y, y: target.angularVelocity * r.x });
+    return { type: "body.add", body: { ...structuredClone(b), id: ids.get(b.id)!, position, angle: pl.angle + b.angle, velocity, angularVelocity: target.angularVelocity } };
+  });
+  for (const j of prefab.joints) commands.push({ type: "joint.add", joint: { id: fresh("joint"), a: ids.get(j.a)!, b: ids.get(j.b)!, anchorA: j.anchorA, anchorB: j.anchorB, limits: j.limits } });
+  commands.push({ type: "joint.add", joint: { id: fresh("joint"), a: pl.target, b: ids.get(prefab.mount)!, anchorA: pl.anchorTarget, anchorB: pl.anchorPart } });
+  return { commands, mountId: ids.get(prefab.mount)! };
+}
+
 export { cross, dot, normalizeBody };

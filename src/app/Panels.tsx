@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, length, massProps, mixture, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
+import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, length, massProps, mixture, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
 import { assemblyIds, makePrefab } from "./ports.ts";
 import { deg, fmt, rad } from "./format.ts";
 import { NumberField } from "./NumberField.tsx";
@@ -34,7 +34,7 @@ import {
   version,
   violationsOpen,
   visibleSeries,
-  type SpawnKind,
+  type PartChoice,
 } from "./state.ts";
 
 const shortcut = (id: string) => ACTIONS.find((a) => a.id === id)?.keys;
@@ -131,7 +131,10 @@ export function ToolRail() {
   );
 }
 
-const PALETTE: { kind: SpawnKind; label: string; detail: string }[] = [
+const PALETTE: { kind: PartChoice; label: string; detail: string }[] = [
+  { kind: "hull", label: "Hull", detail: "1.2 × 1 m · 8 kg" },
+  { kind: "tank", label: "Tank (H₂ + O₂)", detail: "0.2 kg H₂ + 1.6 kg O₂ · 2 kg dry" },
+  { kind: "engine", label: "Engine", detail: "chamber, nozzle, injector · attach by its top" },
   { kind: "disc", label: "Disc", detail: "0.5 m radius · 1 kg" },
   { kind: "box", label: "Box", detail: "1 × 1 m · 1 kg" },
   { kind: "plank", label: "Plank", detail: "3 × 0.2 m · 2 kg" },
@@ -193,7 +196,7 @@ export function SpawnPalette() {
           </div>
         ))}
       <div class="muted" style={{ fontSize: "12px" }}>
-        Components with functions (tanks, thrusters, cannons) arrive in M4–M6.
+        Ship: attach a tank under a hull, an engine under the tank, then link tank → engine (L) and give the engine a control link and a key.
       </div>
     </aside>
   );
@@ -359,6 +362,7 @@ function BodyInspector({ bodies }: { bodies: Body[] }) {
         <>
           <AssemblySection body={one} />
           <JointsSection body={one} />
+          {one.injector && <InjectorSection body={one} />}
           <ContentsSection body={one} />
           <LinksSection body={one} />
         </>
@@ -527,6 +531,32 @@ function ContentsSection({ body }: { body: Body }) {
   );
 }
 
+/** An injector's settings and why it is or isn't firing (PRP-002, INS-006). */
+function InjectorSection({ body }: { body: Body }) {
+  void version.value;
+  const sb = sandbox.value!;
+  const inj = body.injector!;
+  const status = injectorStatus(sb.world, body);
+  const set = (patch: Partial<typeof inj>, label: string) => edit([{ type: "body.set", id: body.id, patch: { injector: { ...inj, ...patch } } }], label);
+  return (
+    <Section id="injector" title="Injector">
+      <div class={`status ${status.firing ? "ok" : "idle"}`} role="status" data-testid="injector-status">
+        <span aria-hidden="true">{status.firing ? "●" : "○"}</span> {status.reason}
+      </div>
+      <Row k="Channel" v={inj.channel} title="Commanded through a control link on this channel (0–1)." />
+      <NumberField id="injector-rate" label="Flow at full command" unit="kg/s" step={0.05} value={inj.rate} validate={(v) => (v >= 0 && v <= 20 ? null : "Must be between 0 and 20 kg/s")} onCommit={(v) => set({ rate: v }, "Set injector flow")} />
+      <Row k="Mixture" v={Object.entries(inj.mixture).map(([k, y]) => `${k} ${(y * 100).toFixed(0)}%`).join(" · ")} title="Mass fractions drawn from the injector's own stores." />
+      <label class="row">
+        <span class="muted">Igniter</span>
+        <input type="checkbox" checked={inj.igniter} onChange={(e) => set({ igniter: (e.currentTarget as HTMLInputElement).checked }, "Toggle igniter")} data-testid="injector-igniter" />
+      </label>
+      <span class="muted" style={{ fontSize: "12px" }}>
+        Thrust comes only from the gas pushing on the chamber and nozzle walls.
+      </span>
+    </Section>
+  );
+}
+
 function LinksSection({ body }: { body: Body }) {
   // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
   void version.value;
@@ -593,7 +623,7 @@ function LinksSection({ body }: { body: Body }) {
         </button>
       </div>
       <span class="muted" style={{ fontSize: "12px" }}>
-        Drag between stores with the Link tool (L) to add a feed link. Control values have no actuator to drive until thrusters arrive in M4.
+        Drag between stores with the Link tool (L) to add feed links. An injector fires while its control channel is above 0.
       </span>
     </Section>
   );
