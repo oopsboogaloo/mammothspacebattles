@@ -62,3 +62,36 @@ describe("ports and attaching", () => {
     expect(copy.position).toEqual({ x: -1.5, y: 0 });
   });
 });
+
+describe("ports along long faces and engine channels (M4b)", () => {
+  it("SBX-024 a 3 m wing has ports at −1, 0 and +1 m on each long face; short faces keep one", async () => {
+    const { ports } = await import("../../src/app/ports.ts");
+    const ps = ports({ kind: "box", width: 3, height: 0.2 });
+    const bottom = ps.filter((p) => p.normal.y < -0.5).map((p) => Math.round(p.local.x * 1e6) / 1e6).sort((a, b) => a - b);
+    expect(bottom).toEqual([-1, 0, 1]);
+    expect(ps.filter((p) => p.normal.x > 0.5)).toHaveLength(1); // the 0.2 m end
+    expect(ports({ kind: "box", width: 2, height: 1 }).filter((p) => p.normal.y > 0.5)).toHaveLength(1); // ±1 would sit on the corners
+    expect(ps.map((p) => p.index)).toEqual(ps.map((_, i) => i));
+  });
+
+  it("SBX-024 a wing attached under a body hangs centred, by its middle port", async () => {
+    const { place, ports } = await import("../../src/app/ports.ts");
+    const { createWorld } = await import("../../src/core/index.ts");
+    const w = createWorld(1, [box("tank", 1, 0.5)]);
+    const tank = w.bodies[0];
+    const under = ports(tank.shape).find((p) => p.normal.y < -0.5)!;
+    const pl = place(w, { id: "wing", shape: { kind: "box", width: 3, height: 0.2 } }, tank, under, 0.0025);
+    expect(pl.position.x).toBeCloseTo(0, 9);
+    expect(pl.position.y).toBeCloseTo(-0.35, 9);
+  });
+
+  it("SBX-025 each new engine gets a channel no other injector uses", async () => {
+    const { engineFor, freeChannel } = await import("../../src/app/parts.ts");
+    const { createWorld } = await import("../../src/core/index.ts");
+    const w = createWorld(1);
+    expect(freeChannel(w)).toBe("main");
+    const e1 = engineFor(w);
+    w.bodies.push({ ...(e1.bodies.find((b) => b.id === e1.mount) as object), id: "engine-1" } as (typeof w.bodies)[number]);
+    expect(engineFor(w).bodies.find((b) => b.id === "engine")!.injector!.channel).toBe("main-2");
+  });
+});

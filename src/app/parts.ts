@@ -1,6 +1,6 @@
 // Built-in ship parts (M4, W3): a hull, a propellant tank, and an engine assembly whose
 // geometry matches RS-08 (scenarios/rs08-chemical-rocket.json). No DOM.
-import type { BodyInput } from "../core/index.ts";
+import type { BodyInput, World } from "../core/index.ts";
 import type { Prefab } from "./ports.ts";
 
 /** A prefab with the body that welds onto whatever it is attached to. */
@@ -345,3 +345,18 @@ export const ENGINE: MountedPrefab = {
     },
   ],
 };
+
+/** A control channel no injector in the world uses yet: main, main-2, main-3, … (SBX-025). */
+export function freeChannel(world: World): string {
+  const used = new Set(world.bodies.map((b) => b.injector?.channel).filter(Boolean));
+  if (!used.has("main")) return "main";
+  for (let k = 2; ; k++) if (!used.has(`main-${k}`)) return `main-${k}`;
+}
+
+/** The engine prefab with its injector on a fresh channel, so each new engine can have its own key. */
+export function engineFor(world: World): MountedPrefab {
+  const p = structuredClone(ENGINE);
+  const head = p.bodies.find((b) => b.id === p.mount)!;
+  head.injector = { ...head.injector!, channel: freeChannel(world) };
+  return p;
+}

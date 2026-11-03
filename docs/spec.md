@@ -207,6 +207,7 @@ The UI is designed and tested around these tasks. The click counts are budgets: 
 | W6 | Save the experiment as a scenario, reload it, and get the same result | ≤ 4 actions |
 | W7 | A conservation violation appears: find the step and the entity responsible | ≤ 3 actions from the warning |
 | W8 | Pause, scrub back 5 s, change a value, and resume from there (branching the run) | ≤ 5 actions |
+| W9 | Build a twin-engine ship (hull, tank, wing, two engines), link both engines, give each its own key, and fly it, steering by throttling one engine | ≤ 28 actions |
 
 ### 8.4 Layout
 
@@ -274,6 +275,8 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **SBX-019** `[M · M1 · E]` The sandbox shall provide undo and redo for every edit, with at least 200 levels.
 - **SBX-020** `[M · M2 · E]` The sandbox shall allow binding keys to control channels, and shall show the current bindings in an on-screen legend while flying.
 - **SBX-021** `[S · M2 · E]` The sandbox shall allow saving an assembly as a prefab and spawning copies of it.
+- **SBX-024** `[M · M4b · E]` Long faces shall offer attachment ports about every metre (the centre, then every 1 m out to 0.25 m from the corners), so one wing can carry several parts.
+- **SBX-025** `[M · M4b · E]` A newly placed engine shall get a control channel no other injector uses (`main`, then `main-2`, …), so each engine can have its own key.
 - **SBX-022** `[S · M1 · E]` The sandbox shall show a right-click context menu per entity with its common actions.
 
 ### 8.8 Requirements — inspector
@@ -389,6 +392,15 @@ Thrust must come from gas pushing on engine geometry. No component applies a dir
 - **Joints feel the gas.** The impulse a weld must pass on, because gas pushes its assembly as one rigid body, is added to its load one step later.
 - **Far field:** `bounds.farField` removes exhaust that has flown farther than that from every body, and the ledger records it at the boundary.
 
+### 9.5b Flight trials (M4b)
+
+Ships built from the M4 parts, flown by hand. Steering here comes from throttling engines differently: there is no attitude-control component yet.
+
+- **FLT-001** `[M · M4b · S]` With two engines either side of the centre of mass at equal throttle, a ship shall accelerate along its axis with spin no more than jet noise (RS-16).
+- **FLT-002** `[M · M4b · S]` Firing only one of two engines shall turn the ship's nose toward the idle engine's side, with the torque coming only from gas on the firing engine's walls (RS-16).
+- **FLT-003** `[M · M4b · P]` A ship coasting with no engine firing and nothing touching it shall keep its spin and its angular momentum about its centre of mass (RS-16).
+- **FLT-004** `[S · M4b · S]` Unequal thrust shall load the welds between the engines and the hull, and the joint-load overlay shall show it (RS-16).
+
 ### 9.6 Damage (M5)
 
 - **DMG-001** `[M · M5 · U]` Every component, joint and link shall have an integrity between 0 and 1.
@@ -490,6 +502,7 @@ The simplest possible rocket has no fuel, no chemistry, no injector and no contr
 | RS-08 | M4 | Single-engine chemical rocket, full burn | ORC-007, ORC-008 |
 | RS-09 | M4 | Off-axis thruster spins a ship | PRP-006 |
 | RS-10 | M4 | Engine attachment too weak for full thrust | ASM-004, PRP-005 |
+| RS-16 | M4b | Twin-engine ship: both engines, then the left one only, then coasting | FLT-001…FLT-004 |
 | RS-11 | M5 | Ram an armoured vs an unarmoured tank | DMG-002, DMG-005 |
 | RS-12 | M6 | Off-centre cannon fires | WPN-002, WPN-003 |
 | RS-13 | M6 | Magazine chain reaction | WPN-007 |
@@ -506,6 +519,7 @@ Each milestone ends with: all its `M` requirements passing their stated verifica
 | **M2 Assemblies** | Compound bodies, joints with limits, splitting, links, attach/detach/link tools, scrub-back and branching, optional gravity | RS-05 passes. W4 and W8 E2E tests pass. |
 | **M3 Gas** | Gas parcels, pressure, wall interaction, boundary accounting, parcel rendering | RS-06, RS-07, RS-07b pass (SC-02 and SC-03 built in). GAS-008 benchmark met. |
 | **M4 Propulsion** | Tanks, feeds, injectors, reactions, chambers, nozzles, key bindings, component status reasons | RS-08…RS-10 pass. W3 E2E test passes. A ship can be flown by hand in the sandbox. |
+| **M4b Flight trials** | Ships of increasing complexity built from the M4 parts and flown by hand. First: a twin-engine ship steered by throttling one engine. Ports along long faces, a control channel per engine. | RS-16 passes. W9 E2E test passes. |
 | **M5 Damage** | Integrity, damage rules, leaks, armour | RS-11 passes. |
 | **M6 Weapons** | Gas-driven cannon, shells, fuzes, explosions | RS-12, RS-13 pass. |
 | **M7 Asteroids** | Aggregate asteroid generator and fracture | RS-14 passes. |

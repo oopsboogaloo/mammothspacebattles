@@ -18,7 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "test:slow": "vitest run --config vitest.slow.config.ts",
     "test:e2e": "playwright test",
-    "req:check": "node scripts/req-trace.ts --milestone M4",
+    "req:check": "node scripts/req-trace.ts --milestone M4b",
     "req:report": "node scripts/req-trace.ts",
     "sim": "node src/cli/sim.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm req:check",
