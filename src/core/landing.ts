@@ -47,6 +47,8 @@ export interface LandingStatus {
   score?: number;
   /** Time the ship has been at rest on the pad since, s (cleared when it moves). */
   restSince?: number;
+  /** Last time the ship touched the pad, s. */
+  padAt?: number;
 }
 
 export interface Challenge {
@@ -54,11 +56,13 @@ export interface Challenge {
   status: LandingStatus;
 }
 
-/** Slower than this, in m/s and rad/s, counts as at rest. */
-export const REST_SPEED = 0.15;
-export const REST_SPIN = 0.15;
+/** Slower than this, in m/s and rad/s, counts as at rest: a ship bobbing gently on its legs still settles. */
+export const REST_SPEED = 0.3;
+export const REST_SPIN = 0.3;
 /** How long the ship must stay at rest on the pad for the verdict, s. */
-export const SETTLE_TIME = 0.25;
+export const SETTLE_TIME = 0.5;
+/** A bounce off the pad shorter than this doesn't interrupt settling, s. */
+export const BOUNCE_TIME = 0.1;
 
 const degrees = (a: number) => {
   let d = (a * 180) / Math.PI;
@@ -151,12 +155,13 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
       const body = world.bodies.find((x) => x.id === other);
       return crash(body?.fixed ? `Touched the ground off the pad, at ${fmt(speed)} m/s.` : `Hit ${other}.`);
     }
-    if (speed > goal.maxSpeed) return crash(`Hit the pad at ${fmt(speed)} m/s: land slower than ${fmt(goal.maxSpeed)} m/s.`);
+    if (speed > goal.maxSpeed) return crash(`Hit the pad at ${fmt(speed, 2)} m/s: land slower than ${fmt(goal.maxSpeed)} m/s.`);
     if (s.touchdown === undefined) s.touchdown = speed;
   }
 
   // At rest on the pad: landed, or tipped over.
-  const onPad = world.contacts.some((k) => (k.a === goal.pad && t.members.has(k.b)) || (k.b === goal.pad && t.members.has(k.a)));
+  if (world.contacts.some((k) => (k.a === goal.pad && t.members.has(k.b)) || (k.b === goal.pad && t.members.has(k.a)))) s.padAt = world.time;
+  const onPad = s.padAt !== undefined && world.time - s.padAt <= BOUNCE_TIME + 1e-9;
   const speed = Math.sqrt(t.vx * t.vx + t.vy * t.vy);
   if (!(onPad && speed < REST_SPEED && Math.abs(t.spin) < REST_SPIN)) {
     s.restSince = undefined;

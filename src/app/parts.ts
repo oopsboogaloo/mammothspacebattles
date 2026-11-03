@@ -100,6 +100,8 @@ export const ENGINE: MountedPrefab = {
         },
         width: 0.6,
         speed: 10,
+        // Outlet to nozzle exit, chamber wall to wall: closed out of the plane (GAS-009).
+        chamber: { width: 1.0, length: 1.45 },
         parcelMass: 0.001,
         radius: 0.035,
         igniter: true,

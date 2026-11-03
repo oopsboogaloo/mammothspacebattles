@@ -142,7 +142,11 @@
           "speed": 10,
           "parcelMass": 0.001,
           "radius": 0.035,
-          "igniter": true
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          }
         }
       },
       {
@@ -196,7 +200,11 @@
           "speed": 10,
           "parcelMass": 0.001,
           "radius": 0.035,
-          "igniter": true
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          }
         }
       },
       {
@@ -1306,7 +1314,8 @@
         "x": 60,
         "y": 60
       },
-      "farField": 10
+      "farField": 10,
+      "depth": 2
     },
     "gravity": {
       "x": 0,

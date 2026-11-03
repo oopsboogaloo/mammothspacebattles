@@ -1,15 +1,18 @@
 // Landing challenge (FLT-005…FLT-008): the judge, on the LAND scenario and on small worlds.
+// Also GAS-009 on the LAND ship: exhaust spreads out of the plane, but not out of the engines.
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createWorld, getProfile, initialWorld, parseScenario, stepInPlace, type Command, type World } from "../../src/core/index.ts";
+import { assemblyTotals, createWorld, getProfile, initialWorld, parseScenario, stepInPlace, type Command, type World } from "../../src/core/index.ts";
 import { readJson, ROOT } from "../helpers.ts";
 
-const raw = () => readJson(join(ROOT, "scenarios", "land-twin-engine.json")) as { world: { bodies: { id: string; position: { x: number; y: number }; velocity: { x: number; y: number } }[] } };
+type Raw = { world: { bodies: { id: string; position: { x: number; y: number }; velocity: { x: number; y: number } }[]; bounds: { depth?: number } } };
+const raw = () => readJson(join(ROOT, "scenarios", "land-twin-engine.json")) as Raw;
 const profile = getProfile("sandbox");
 
 /** The LAND world with the ship moved by (dx, dy) and given velocity v. */
-function landWorld(dx = 0, dy = 0, v?: { x: number; y: number }): World {
+function landWorld(dx = 0, dy = 0, v?: { x: number; y: number }, edit?: (d: Raw) => void): World {
   const d = raw();
+  edit?.(d);
   const ship = new Set(["hull", "tank", "wing", "engine-l", "engine-r", "leg-left", "leg-right"].concat(d.world.bodies.map((b) => b.id).filter((id) => /^(chamber|throat|nozzle)-/.test(id))));
   for (const b of d.world.bodies) {
     if (!ship.has(b.id)) continue;
@@ -136,4 +139,33 @@ describe("landing challenge", () => {
     }
     expect(errors.map((x) => x.path).sort()).toEqual(["$.world.challenge.maxSpeed", "$.world.challenge.pad", "$.world.challenge.ship"]);
   });
+
+  it("GAS-009 after the engines cut out the exhaust under the ship spreads out of the plane, so it no longer holds the ship up", () => {
+    // 0.6 m above the pad, fire both engines for 0.25 s, then cut them, and watch the push of the gas
+    // over a window while the ship is still in the air: gravity alone should then set its fall.
+    const w = landWorld(22, 0.6 - 13.65, { x: 0, y: 0 });
+    for (let i = 0; i < 60; i++) stepInPlace(w, set(1, 1), profile);
+    for (let i = 0; i < 84; i++) stepInPlace(w, set(0, 0), profile); // to 0.35 s after the cut
+    const a = assemblyTotals(w, "hull")!;
+    for (let i = 0; i < 96; i++) stepInPlace(w, set(0, 0), profile); // to 0.75 s after
+    const b = assemblyTotals(w, "hull")!;
+    expect(w.challenge!.status.phase).toBe("flying");
+    const push = b.mass * ((b.velocity.y - a.velocity.y) / (96 * profile.timestep) + 1.6);
+    expect(Math.abs(push)).toBeLessThan(0.03 * b.mass * 1.6); // under 3% of its weight (it was about 7%)
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("GAS-009 gas inside the engines doesn't spread out of the plane: thrust in open space is unchanged", () => {
+    const climb = (depth: boolean) => {
+      const w = landWorld(22, 20 - 13.65, { x: 0, y: 0 }, (d) => {
+        if (!depth) delete d.world.bounds.depth;
+      });
+      for (let i = 0; i < 120; i++) stepInPlace(w, set(1, 1), profile);
+      expect(w.ledger.violations).toBe(0);
+      return assemblyTotals(w, "hull")!.velocity.y;
+    };
+    const flat = climb(false);
+    expect(flat).toBeGreaterThan(0.5);
+    expect(Math.abs(climb(true) - flat)).toBeLessThan(0.03 * flat);
+  }, 300_000);
 });

@@ -182,6 +182,8 @@ export interface Parcel {
   thermal: number;
   /** Size of the parcel, m. Its smoothing length is SMOOTHING × radius. */
   radius: number;
+  /** Seconds since the parcel was made; kept only in worlds with `bounds.depth`. */
+  age?: number;
 }
 
 export interface RemovedGas {
@@ -765,7 +767,41 @@ export interface Bounds {
    * Keeps the parcel count to what can still hit something. Off when absent.
    */
   farField?: number;
+  /**
+   * Depth of the world out of the plane, m (GAS-009). When set, gas that has left its engine
+   * (older than DEPTH_DELAY) also spreads out of the plane: each step a parcel loses the share
+   * x/(1 + x) of its mass, x = c·dt/depth with c its sound speed, as a 3D cloud in vacuum would.
+   * What leaves is recorded at the boundary. Off when absent: a 2D slab that never thins.
+   */
+  depth?: number;
 }
+
+/** Gas younger than this has only just been made and doesn't spread out of the plane yet, s. */
+export const DEPTH_DELAY = 0.1;
+/**
+ * A region closed out of the plane (an engine's interior, GAS-009): from (x, y) along the unit
+ * vector (ux, uy) for `length`, and `halfWidth` either side. Gas in it never spreads out of the plane.
+ */
+export interface ClosedRegion {
+  x: number;
+  y: number;
+  ux: number;
+  uy: number;
+  halfWidth: number;
+  length: number;
+}
+const inClosed = (rs: readonly ClosedRegion[], px: number, py: number): boolean => {
+  for (const r of rs) {
+    const dx = px - r.x;
+    const dy = py - r.y;
+    const along = dx * r.ux + dy * r.uy;
+    const across = dx * r.uy - dy * r.ux;
+    if (along >= 0 && along <= r.length && across <= r.halfWidth && across >= -r.halfWidth) return true;
+  }
+  return false;
+};
+/** A parcel spreading out of the plane is removed once it holds less than this, kg (a microgram). */
+export const DEPTH_MIN_MASS = 1e-6;
 
 const W_C2 = 7 / Math.PI;
 /** Parcel index multiplier in sort keys: allows 2^17 parcels with keys below 2^49. */
@@ -833,6 +869,7 @@ export function stepGas(
   dt: number,
   bounds: Bounds,
   gravity: Vec2 = { x: 0, y: 0 },
+  closed: readonly ClosedRegion[] = [],
 ): GasAccount {
   const acc: GasAccount = {
     externalImpulse: { x: 0, y: 0 },
@@ -1613,6 +1650,20 @@ export function stepGas(
   };
 
   // Write back parcels, removing those outside the world boundary.
+  const scale = gas.scale ?? 1;
+  /** Records the share `f` of parcel i (and of its chemical energy `chem`) as gone through the boundary. */
+  const leave = (i: number, f: number, chem: number) => {
+    const r = acc.removed;
+    const dm = f * m[i];
+    r.mass += dm;
+    r.momentum.x += dm * vx[i];
+    r.momentum.y += dm * vy[i];
+    r.angularMomentum += dm * (x[i] * vy[i] - y[i] * vx[i]);
+    const pe = -dm * (gravity.x * x[i] + gravity.y * y[i]);
+    r.energy += 0.5 * dm * (vx[i] * vx[i] + vy[i] * vy[i]) + f * E[i] + f * chem + pe;
+    acc.removedPotential += pe;
+  };
+  const depth = bounds.depth;
   const kept: Parcel[] = [];
   for (let i = 0; i < n; i++) {
     const p = ps[i];
@@ -1620,16 +1671,30 @@ export function stepGas(
     p.velocity = { x: vx[i], y: vy[i] };
     p.thermal = E[i];
     if (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y || far(x[i], y[i])) {
-      const r = acc.removed;
-      r.count += 1;
-      r.mass += m[i];
-      r.momentum.x += m[i] * vx[i];
-      r.momentum.y += m[i] * vy[i];
-      r.angularMomentum += m[i] * (x[i] * vy[i] - y[i] * vx[i]);
-      const pe = -m[i] * (gravity.x * x[i] + gravity.y * y[i]);
-      r.energy += 0.5 * m[i] * (vx[i] * vx[i] + vy[i] * vy[i]) + E[i] + pe;
-      acc.removedPotential += pe;
+      acc.removed.count += 1;
+      leave(i, 1, parcelChemical(p, scale));
       continue;
+    }
+    if (depth) {
+      // Out of the plane (GAS-009): the share x/(1 + x) leaves, x = c·dt/depth. Temperature and
+      // composition are unchanged; mass, momentum and energy shrink together.
+      p.age = (p.age ?? 0) + dt;
+      if (p.age > DEPTH_DELAY && !inClosed(closed, x[i], y[i])) {
+        const c = Math.sqrt(gam[i] * g1[i] * Math.max(0, E[i] / m[i]));
+        const xs = (c * dt) / depth;
+        const chem = parcelChemical(p, scale);
+        if (m[i] * (1 - xs / (1 + xs)) < DEPTH_MIN_MASS) {
+          acc.removed.count += 1;
+          leave(i, 1, chem);
+          continue;
+        }
+        const f = xs / (1 + xs);
+        if (f > 0) {
+          leave(i, f, chem);
+          p.mass = m[i] * (1 - f);
+          p.thermal = E[i] * (1 - f);
+        }
+      }
     }
     kept.push(p);
   }

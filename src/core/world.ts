@@ -10,7 +10,7 @@ import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./mat
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, rigid, solveContacts } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
-import { burn, emptyGas, igniteAndBurn, makeFill, mixture, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type GasFill, type GasState, type Parcel } from "./gas.ts";
+import { burn, emptyGas, igniteAndBurn, makeFill, mixture, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 
@@ -67,6 +67,12 @@ export interface Injector {
   parcelMass: number;
   radius: number;
   igniter: boolean;
+  /**
+   * The engine's interior downstream of the outlet (chamber, throat, nozzle), m: `width` across
+   * the outlet direction, `length` along it. It is closed out of the plane, so gas in it never
+   * spreads out of the plane in a world with `bounds.depth` (GAS-009). Absent: no interior.
+   */
+  chamber?: { width: number; length: number };
   /** State: mass allowed by the command but not yet emitted, kg; parcels emitted so far; firing now. */
   credit: number;
   count: number;
@@ -391,6 +397,22 @@ function fillGas(world: World, fill: GasFill, profile?: Profile): void {
  * store's thermal and chemical energy, less any kinetic energy the injection gained, so energy
  * is unchanged too. Returns the parcels made.
  */
+/** Each injector's declared interior as a rectangle in the world, at the bodies' current pose (GAS-009). */
+function engineInteriors(world: World): ClosedRegion[] {
+  const out: ClosedRegion[] = [];
+  for (const b of world.bodies) {
+    const ch = b.injector?.chamber;
+    if (!ch) continue;
+    const q = sinCos(b.angle);
+    const o = add(b.position, rotate(q, b.injector!.outlet));
+    const d = rotate(q, b.injector!.direction);
+    const len = length(d);
+    if (!(len > 0)) continue;
+    out.push({ x: o.x, y: o.y, ux: d.x / len, uy: d.y / len, halfWidth: ch.width / 2, length: ch.length });
+  }
+  return out;
+}
+
 function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
   const made: Parcel[] = [];
   const gs = world.gas.scale ?? 1;
@@ -727,7 +749,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // angular momentum and energy by construction. Fixed bodies are external; so is the boundary.
   if (world.gas.parcels.length) {
     before = after;
-    const gas = stepGas(world.gas, wallBodies(world.bodies), world.joints, dt, world.bounds, world.gravity);
+    const gas = stepGas(world.gas, wallBodies(world.bodies), world.joints, dt, world.bounds, world.gravity, world.bounds.depth ? engineInteriors(world) : []);
     gasJointImpulse = gas.jointImpulse;
     after = computeTotals(world);
     sources.contact.momentumX += gas.externalImpulse.x;
