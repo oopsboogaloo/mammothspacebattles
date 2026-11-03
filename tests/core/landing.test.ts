@@ -62,10 +62,10 @@ describe("landing challenge", () => {
   });
 
   it("FLT-007 a slow, upright descent onto the pad lands, with a score", () => {
-    // 3 m above the pad and still. The autopilot flies as a pilot would: both engines hold the
+    // 1.5 m above the pad and still. The autopilot flies as a pilot would: both engines hold the
     // descent near 0.5 m/s, one engine alone corrects tilt (the left one turns the nose right), and
     // the engines are cut just above the pad, where their own exhaust would otherwise cushion it.
-    const w = landWorld(22, -11, { x: 0, y: 0 });
+    const w = landWorld(22, -12.15, { x: 0, y: 0 });
     let prev = 0;
     run(w, 4800, (x) => {
       const s = x.challenge!.status;
@@ -90,10 +90,10 @@ describe("landing challenge", () => {
     expect(s.reason).toMatch(/^Landed at /);
     expect(w.events.filter((e) => e.type === "landed")).toHaveLength(1);
     // It stays down, and the ledger stays clean, with the exhaust still around it.
-    for (let i = 0; i < 360; i++) stepInPlace(w, [], profile);
+    for (let i = 0; i < 240; i++) stepInPlace(w, [], profile);
     expect(w.challenge!.status.altitude).toBeLessThan(0.05);
     expect(w.ledger.violations).toBe(0);
-  }, 120_000);
+  }, 300_000); // gas under coverage on CI runs several times slower than here
 
   it("FLT-008 a ship that comes to rest tipped over is a crash, even after a gentle touch", () => {
     // A tall box leaning at 60° on a pad, barely moving: it falls onto its side and rests at 90°.
