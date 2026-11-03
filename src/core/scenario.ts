@@ -1,11 +1,12 @@
-// Scenario files: schema, validation with JSON paths, migration, and running
-// with probes and assertions (SCN-001, SCN-002, SCN-003, SCN-007).
+// Scenario files: schema, validation with JSON paths, parameters, migration,
+// and running with probes and assertions (SCN-001…SCN-003, SCN-007, SCN-008).
 
 import { hashValue } from "./canonical.ts";
 import { evaluateFormula } from "./formula.ts";
 import { resolvePath } from "./path.ts";
 import { PROFILES, getProfile } from "./profile.ts";
-import { createWorld, stepInPlace, type Body, type Command, type World } from "./world.ts";
+import { polygonProblem } from "./shapes.ts";
+import { createWorld, stepInPlace, type BodyInput, type Command, type Vec2, type World } from "./world.ts";
 
 export const SCENARIO_SCHEMA = 1;
 
@@ -14,24 +15,49 @@ export interface Probe {
   path: string;
 }
 
+export interface Parameter {
+  id: string;
+  label: string;
+  unit?: string;
+  min: number;
+  max: number;
+  step?: number;
+  default: number;
+}
+
+/** Sandbox hints: what to switch on when the scenario opens (SCN-010). */
+export interface ScenarioUi {
+  lookFor?: string;
+  overlays?: string[];
+  graphs?: string[];
+  camera?: { x: number; y: number; zoom: number };
+}
+
+export type LedgerQuantity = "mass" | "momentum" | "angularMomentum" | "energy";
+
 export type Assertion =
   | { kind: "valueAt"; probe: string; step: number | "end"; equals: number; tol: number }
   | { kind: "rangeOver"; probe: string; from: number; to: number | "end"; min?: number; max?: number }
   | { kind: "event"; type: string; occurred: boolean; from?: number; to?: number | "end" }
   | { kind: "formula"; at: number | "end"; left: string; right: string; tol: number; relative?: boolean }
-  | { kind: "ledgerResidual"; quantity: string; maxAbs: number };
+  | { kind: "ledgerResidual"; quantity: LedgerQuantity; maxAbs: number };
 
 export interface Scenario {
   schema: number;
   name: string;
+  title?: string;
   description?: string;
   profile: string;
   seed: number;
-  world: { bodies: Body[] };
+  parameters?: Parameter[];
+  /** Parameter values this instance was built with (defaults unless overridden). */
+  values: Record<string, number>;
+  world: { bodies: BodyInput[]; gravity?: Vec2 };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
   assertions: Assertion[];
+  ui?: ScenarioUi;
 }
 
 export interface ValidationError {
@@ -71,18 +97,39 @@ export function migrateScenario(raw: unknown, migrations: Readonly<Record<number
   return obj;
 }
 
+// ---------- Parameters (SCN-008) ----------
+
+const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
+
+/** Replaces every {"$param": id} in `value` with its number, reporting unknown ids. */
+function substitute(value: unknown, values: Record<string, number>, path: string, errors: ValidationError[]): unknown {
+  if (Array.isArray(value)) return value.map((v, i) => substitute(v, values, `${path}[${i}]`, errors));
+  if (!isObj(value)) return value;
+  if ("$param" in value) {
+    const id = value.$param;
+    if (typeof id !== "string" || !(id in values)) {
+      errors.push({ path, message: `unknown parameter ${JSON.stringify(id)}` });
+      return NaN;
+    }
+    return values[id];
+  }
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) out[k] = substitute(v, values, `${path}.${k}`, errors);
+  return out;
+}
+
 // ---------- Validation (SCN-002) ----------
 
 type V = { errors: ValidationError[] };
-const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
 
 function err(v: V, path: string, message: string): void {
   v.errors.push({ path, message });
 }
-function num(v: V, x: unknown, path: string, opts: { int?: boolean; min?: number; positive?: boolean } = {}): boolean {
+function num(v: V, x: unknown, path: string, opts: { int?: boolean; min?: number; max?: number; positive?: boolean } = {}): boolean {
   if (typeof x !== "number" || !Number.isFinite(x)) return err(v, path, "must be a finite number"), false;
   if (opts.int && !Number.isInteger(x)) return err(v, path, "must be an integer"), false;
   if (opts.min !== undefined && x < opts.min) return err(v, path, `must be ≥ ${opts.min}`), false;
+  if (opts.max !== undefined && x > opts.max) return err(v, path, `must be ≤ ${opts.max}`), false;
   if (opts.positive && !(x > 0)) return err(v, path, "must be > 0"), false;
   return true;
 }
@@ -99,19 +146,44 @@ function vec(v: V, x: unknown, path: string): void {
   num(v, x.y, `${path}.y`);
 }
 
+function validateShape(v: V, s: unknown, path: string): void {
+  if (!isObj(s)) return err(v, path, 'must be an object with "kind"');
+  switch (s.kind) {
+    case "disc":
+      num(v, s.radius, `${path}.radius`, { positive: true });
+      return;
+    case "box":
+      num(v, s.width, `${path}.width`, { positive: true });
+      num(v, s.height, `${path}.height`, { positive: true });
+      return;
+    case "polygon": {
+      if (!Array.isArray(s.vertices)) return err(v, `${path}.vertices`, "must be an array of {x, y}");
+      const before = v.errors.length;
+      s.vertices.forEach((p, i) => vec(v, p, `${path}.vertices[${i}]`));
+      if (v.errors.length === before) {
+        const problem = polygonProblem(s.vertices as Vec2[]);
+        if (problem) err(v, `${path}.vertices`, problem);
+      }
+      return;
+    }
+    default:
+      err(v, `${path}.kind`, `must be "disc", "box" or "polygon", got ${JSON.stringify(s.kind)}`);
+  }
+}
+
 function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (!isObj(b)) return err(v, path, "must be an object");
   const has = (k: string) => !partial || b[k] !== undefined;
   if (!partial) str(v, b.id, `${path}.id`);
-  if (has("shape")) {
-    if (!isObj(b.shape) || b.shape.kind !== "disc") err(v, `${path}.shape`, 'must be {"kind": "disc", "radius": number}');
-    else num(v, b.shape.radius, `${path}.shape.radius`, { positive: true });
-  }
+  if (has("shape")) validateShape(v, b.shape, `${path}.shape`);
   if (has("mass")) num(v, b.mass, `${path}.mass`, { positive: true });
   if (has("position")) vec(v, b.position, `${path}.position`);
   if (has("velocity")) vec(v, b.velocity, `${path}.velocity`);
   if (has("angle")) num(v, b.angle, `${path}.angle`);
   if (has("angularVelocity")) num(v, b.angularVelocity, `${path}.angularVelocity`);
+  if (b.fixed !== undefined && typeof b.fixed !== "boolean") err(v, `${path}.fixed`, "must be true or false");
+  if (b.restitution !== undefined) num(v, b.restitution, `${path}.restitution`, { min: 0, max: 1 });
+  if (b.friction !== undefined) num(v, b.friction, `${path}.friction`, { min: 0 });
 }
 
 function validateCommand(v: V, c: unknown, path: string): void {
@@ -120,21 +192,42 @@ function validateCommand(v: V, c: unknown, path: string): void {
     case "body.add":
       return validateBody(v, c.body, `${path}.body`);
     case "body.remove":
+    case "drag.clear":
       str(v, c.id, `${path}.id`);
       return;
     case "body.set":
       str(v, c.id, `${path}.id`);
       if (isObj(c.patch) && "id" in c.patch) err(v, `${path}.patch.id`, "cannot change a body's id");
       return validateBody(v, c.patch, `${path}.patch`, true);
+    case "body.impulse":
+      str(v, c.id, `${path}.id`);
+      vec(v, c.impulse, `${path}.impulse`);
+      vec(v, c.point, `${path}.point`);
+      return;
+    case "drag.set":
+      str(v, c.id, `${path}.id`);
+      vec(v, c.anchor, `${path}.anchor`);
+      vec(v, c.target, `${path}.target`);
+      if (c.stiffness !== undefined) num(v, c.stiffness, `${path}.stiffness`, { positive: true });
+      if (c.maxAcceleration !== undefined) num(v, c.maxAcceleration, `${path}.maxAcceleration`, { positive: true });
+      return;
+    case "world.set":
+      if (!isObj(c.patch)) return err(v, `${path}.patch`, "must be an object");
+      if (c.patch.gravity !== undefined) vec(v, c.patch.gravity, `${path}.patch.gravity`);
+      return;
     case "rng.sample":
       str(v, c.label, `${path}.label`);
+      return;
+    case "debug.kick":
+      str(v, c.id, `${path}.id`);
+      vec(v, c.dv, `${path}.dv`);
       return;
     default:
       err(v, `${path}.type`, `unknown command type ${JSON.stringify(c.type)}`);
   }
 }
 
-function validateAssertion(v: V, a: unknown, path: string, probeIds: Set<string>): void {
+function validateAssertion(v: V, a: unknown, path: string, names: Set<string>, probeIds: Set<string>): void {
   if (!isObj(a)) return err(v, path, "must be an object");
   const probe = (k: string) => {
     if (str(v, a[k], `${path}.${k}`) && !probeIds.has(a[k] as string)) err(v, `${path}.${k}`, `unknown probe "${a[k]}"`);
@@ -143,7 +236,7 @@ function validateAssertion(v: V, a: unknown, path: string, probeIds: Set<string>
     if (!str(v, a[k], `${path}.${k}`)) return;
     try {
       evaluateFormula(a[k] as string, (id) => {
-        if (!probeIds.has(id)) throw new Error(`unknown probe "${id}"`);
+        if (!names.has(id)) throw new Error(`unknown probe or parameter "${id}"`);
         return 1;
       });
     } catch (e) {
@@ -179,7 +272,9 @@ function validateAssertion(v: V, a: unknown, path: string, probeIds: Set<string>
       if (a.relative !== undefined && typeof a.relative !== "boolean") err(v, `${path}.relative`, "must be true or false");
       return;
     case "ledgerResidual":
-      str(v, a.quantity, `${path}.quantity`);
+      if (!["mass", "momentum", "angularMomentum", "energy"].includes(a.quantity as string)) {
+        err(v, `${path}.quantity`, 'must be "mass", "momentum", "angularMomentum" or "energy"');
+      }
       num(v, a.maxAbs, `${path}.maxAbs`, { min: 0 });
       return;
     default:
@@ -187,13 +282,55 @@ function validateAssertion(v: V, a: unknown, path: string, probeIds: Set<string>
   }
 }
 
-/** Migrates and validates untrusted input. Throws ScenarioError listing every problem. */
-export function parseScenario(raw: unknown): Scenario {
-  const data = migrateScenario(raw);
+function validateParameters(v: V, raw: unknown): Parameter[] {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) return err(v, "$.parameters", "must be an array"), [];
+  const ids = new Set<string>();
+  raw.forEach((p, i) => {
+    const path = `$.parameters[${i}]`;
+    if (!isObj(p)) return err(v, path, "must be an object");
+    if (str(v, p.id, `${path}.id`)) {
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(p.id as string)) err(v, `${path}.id`, "must be a plain identifier (letters, digits, _)");
+      if (ids.has(p.id as string)) err(v, `${path}.id`, `duplicate parameter "${p.id}"`);
+      ids.add(p.id as string);
+    }
+    str(v, p.label, `${path}.label`);
+    if (p.unit !== undefined && typeof p.unit !== "string") err(v, `${path}.unit`, "must be a string");
+    const okMin = num(v, p.min, `${path}.min`);
+    const okMax = num(v, p.max, `${path}.max`);
+    if (okMin && okMax && (p.min as number) > (p.max as number)) err(v, `${path}.max`, "must be ≥ min");
+    if (p.step !== undefined) num(v, p.step, `${path}.step`, { positive: true });
+    if (num(v, p.default, `${path}.default`) && okMin && okMax) {
+      if ((p.default as number) < (p.min as number) || (p.default as number) > (p.max as number)) err(v, `${path}.default`, "must be within min..max");
+    }
+  });
+  return raw as Parameter[];
+}
+
+/**
+ * Migrates, substitutes parameters and validates untrusted input.
+ * `values` overrides parameter defaults. Throws ScenarioError listing every problem.
+ */
+export function parseScenario(raw: unknown, values: Record<string, number> = {}): Scenario {
+  const migrated = migrateScenario(raw);
   const v: V = { errors: [] };
-  if (!isObj(data)) throw new ScenarioError([{ path: "$", message: "must be a JSON object" }]);
+  if (!isObj(migrated)) throw new ScenarioError([{ path: "$", message: "must be a JSON object" }]);
+
+  const params = validateParameters(v, migrated.parameters);
+  const resolved: Record<string, number> = {};
+  for (const p of params) if (isObj(p) && typeof p.id === "string") resolved[p.id] = typeof p.default === "number" ? p.default : NaN;
+  for (const [k, val] of Object.entries(values)) {
+    const p = params.find((q) => q.id === k);
+    if (!p) err(v, `values.${k}`, `unknown parameter "${k}"`);
+    else if (!(val >= p.min && val <= p.max)) err(v, `values.${k}`, `must be within ${p.min}..${p.max}`);
+    else resolved[k] = val;
+  }
+  const data: Record<string, unknown> = { ...migrated };
+  for (const key of ["world", "timeline", "end", "assertions"]) data[key] = substitute(migrated[key], resolved, `$.${key}`, v.errors);
+
   num(v, data.schema, "$.schema", { int: true });
   str(v, data.name, "$.name");
+  if (data.title !== undefined && typeof data.title !== "string") err(v, "$.title", "must be a string");
   if (data.description !== undefined && typeof data.description !== "string") err(v, "$.description", "must be a string");
   if (str(v, data.profile, "$.profile") && !PROFILES[data.profile as string]) {
     err(v, "$.profile", `unknown profile "${data.profile}" (known: ${Object.keys(PROFILES).join(", ")})`);
@@ -202,7 +339,7 @@ export function parseScenario(raw: unknown): Scenario {
 
   const ids = new Set<string>();
   if (!isObj(data.world) || !Array.isArray(data.world.bodies)) err(v, "$.world.bodies", "must be an array");
-  else
+  else {
     data.world.bodies.forEach((b, i) => {
       validateBody(v, b, `$.world.bodies[${i}]`);
       if (isObj(b) && typeof b.id === "string") {
@@ -210,6 +347,8 @@ export function parseScenario(raw: unknown): Scenario {
         ids.add(b.id);
       }
     });
+    if (data.world.gravity !== undefined) vec(v, data.world.gravity, "$.world.gravity");
+  }
 
   let endSteps = Infinity;
   if (!isObj(data.end)) err(v, "$.end", "must be an object {steps}");
@@ -235,6 +374,7 @@ export function parseScenario(raw: unknown): Scenario {
       if (!isObj(p)) return err(v, path, "must be an object {id, path}");
       if (str(v, p.id, `${path}.id`)) {
         if (probeIds.has(p.id as string)) err(v, `${path}.id`, `duplicate probe id "${p.id}"`);
+        if ((p.id as string) in resolved) err(v, `${path}.id`, `"${p.id}" is already a parameter name`);
         probeIds.add(p.id as string);
       }
       if (str(v, p.path, `${path}.path`)) {
@@ -246,11 +386,39 @@ export function parseScenario(raw: unknown): Scenario {
       }
     });
 
+  const names = new Set([...probeIds, ...Object.keys(resolved)]);
   if (!Array.isArray(data.assertions)) err(v, "$.assertions", "must be an array");
-  else data.assertions.forEach((a, i) => validateAssertion(v, a, `$.assertions[${i}]`, probeIds));
+  else data.assertions.forEach((a, i) => validateAssertion(v, a, `$.assertions[${i}]`, names, probeIds));
+
+  if (data.ui !== undefined) {
+    if (!isObj(data.ui)) err(v, "$.ui", "must be an object");
+    else {
+      if (data.ui.lookFor !== undefined && typeof data.ui.lookFor !== "string") err(v, "$.ui.lookFor", "must be a string");
+      for (const k of ["overlays", "graphs"]) {
+        const arr = data.ui[k];
+        if (arr !== undefined && (!Array.isArray(arr) || arr.some((x) => typeof x !== "string"))) err(v, `$.ui.${k}`, "must be an array of strings");
+      }
+      if (data.ui.camera !== undefined) {
+        const c = data.ui.camera;
+        if (!isObj(c)) err(v, "$.ui.camera", "must be an object {x, y, zoom}");
+        else {
+          num(v, c.x, "$.ui.camera.x");
+          num(v, c.y, "$.ui.camera.y");
+          num(v, c.zoom, "$.ui.camera.zoom", { positive: true });
+        }
+      }
+    }
+  }
 
   if (v.errors.length) throw new ScenarioError(v.errors);
-  return data as unknown as Scenario;
+  return { ...(data as unknown as Scenario), values: resolved };
+}
+
+/** The scenario as a file: parameter placeholders are not re-inserted, values are dropped. */
+export function scenarioToJson(scn: Scenario): Record<string, unknown> {
+  const { values: _values, ...rest } = scn;
+  void _values;
+  return structuredClone(rest) as unknown as Record<string, unknown>;
 }
 
 // ---------- Running ----------
@@ -275,11 +443,22 @@ export interface RunResult {
   passed: boolean;
 }
 
-export function runScenario(scn: Scenario, opts: { recordHashes?: boolean } = {}): RunResult {
-  const profile = getProfile(scn.profile);
-  const world = createWorld(scn.seed, scn.world.bodies);
+/** Builds the scenario's world at tick 0, with step-0 commands not yet applied. */
+export function initialWorld(scn: Scenario): World {
+  return createWorld(scn.seed, scn.world.bodies, scn.world.gravity);
+}
+
+export function timelineByStep(scn: Scenario): Map<number, Command[]> {
   const byStep = new Map<number, Command[]>();
   for (const e of scn.timeline) byStep.set(e.step, [...(byStep.get(e.step) ?? []), ...e.commands]);
+  return byStep;
+}
+
+export function runScenario(scn: Scenario, opts: { recordHashes?: boolean; steps?: number } = {}): RunResult {
+  const profile = getProfile(scn.profile);
+  const world = initialWorld(scn);
+  const byStep = timelineByStep(scn);
+  const steps = opts.steps ?? scn.end.steps;
 
   const probes: Record<string, number[]> = {};
   for (const p of scn.probes) probes[p.id] = [];
@@ -291,16 +470,16 @@ export function runScenario(scn: Scenario, opts: { recordHashes?: boolean } = {}
   };
   const hashes: string[] | undefined = opts.recordHashes ? [hashValue(world)] : undefined;
   sample();
-  for (let s = 0; s < scn.end.steps; s++) {
+  for (let s = 0; s < steps; s++) {
     stepInPlace(world, byStep.get(s) ?? [], profile);
     sample();
     hashes?.push(hashValue(world));
   }
 
-  const assertions = scn.assertions.map((a, index) => checkAssertion(a, index, probes, world, scn.end.steps));
+  const assertions = scn.assertions.map((a, index) => checkAssertion(a, index, probes, scn.values, world, steps));
   return {
     scenario: scn.name,
-    steps: scn.end.steps,
+    steps,
     world,
     finalHash: hashes ? hashes[hashes.length - 1] : hashValue(world),
     hashes,
@@ -310,7 +489,14 @@ export function runScenario(scn: Scenario, opts: { recordHashes?: boolean } = {}
   };
 }
 
-function checkAssertion(a: Assertion, index: number, probes: Record<string, number[]>, world: World, last: number): AssertionResult {
+function checkAssertion(
+  a: Assertion,
+  index: number,
+  probes: Record<string, number[]>,
+  params: Record<string, number>,
+  world: World,
+  last: number,
+): AssertionResult {
   const tick = (s: number | "end") => (s === "end" ? last : s);
   const fmt = (x: number) => (Number.isFinite(x) ? x.toPrecision(6) : String(x));
   const res = (pass: boolean, message: string): AssertionResult => ({ index, kind: a.kind, pass, message });
@@ -345,14 +531,18 @@ function checkAssertion(a: Assertion, index: number, probes: Record<string, numb
     case "formula": {
       const at = tick(a.at);
       if (outOfRange(at)) return res(false, `step ${at} is outside 0..${last}`);
-      const lookup = (id: string, ref: number | "here" | "end") => probes[id][ref === "here" ? at : ref === "end" ? last : ref] ?? NaN;
+      const lookup = (id: string, ref: number | "here" | "end") =>
+        id in probes ? (probes[id][ref === "here" ? at : ref === "end" ? last : ref] ?? NaN) : (params[id] ?? NaN);
       const l = evaluateFormula(a.left, lookup);
       const r = evaluateFormula(a.right, lookup);
       const diff = Math.abs(l - r);
       const limit = a.relative ? a.tol * Math.abs(r) : a.tol;
       return res(diff <= limit, `at ${at}: ${a.left} = ${fmt(l)}, ${a.right} = ${fmt(r)}, |diff| ${fmt(diff)} vs ${a.relative ? "relative " : ""}tol ${a.tol}`);
     }
-    case "ledgerResidual":
-      return res(false, "the conservation ledger arrives in M1; this assertion cannot pass yet");
+    case "ledgerResidual": {
+      const m = world.ledger.maxResidual;
+      const value = a.quantity === "momentum" ? Math.max(m.momentumX, m.momentumY) : m[a.quantity];
+      return res(value <= a.maxAbs, `largest ${a.quantity} residual ${fmt(value)} vs limit ${a.maxAbs}`);
+    }
   }
 }

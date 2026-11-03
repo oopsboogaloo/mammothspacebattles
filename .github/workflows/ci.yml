@@ -34,6 +34,12 @@ jobs:
       - name: Requirement gate (TST-006)
         run: pnpm req:check
       - run: pnpm exec vite build
+      - name: Benchmark (NFR-001)
+        run: pnpm bench --json bench.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ github.sha }}
+          path: bench.json
 
   e2e:
     runs-on: ubuntu-latest

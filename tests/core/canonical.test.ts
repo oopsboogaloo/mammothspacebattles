@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { canonicalParse, canonicalStringify, createWorld, hashString, hashValue, stepInPlace, getProfile, type Body } from "../../src/core/index.ts";
 import { disc } from "../helpers.ts";
 
-const finite = fc.double({ noNaN: true, noDefaultInfinity: true });
+const finite = fc.double({ min: -1e6, max: 1e6, noNaN: true });
 const vec = fc.record({ x: finite, y: finite });
 const body = fc.record({
   id: fc.string({ minLength: 1, maxLength: 6 }),

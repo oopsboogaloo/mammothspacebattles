@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "name": "rs02-off-centre-impact",
+  "title": "Rod hit off-centre",
+  "description": "RS-02. A 0.5 kg ball hits a resting 2 kg rod (2 m \u00d7 0.2 m) a distance d from its centre. The rod must gain both linear and angular velocity, matching the impulse equations.",
+  "profile": "test",
+  "seed": 1,
+  "parameters": [
+    {
+      "id": "d",
+      "label": "Impact offset",
+      "unit": "m",
+      "min": 0,
+      "max": 0.9,
+      "step": 0.05,
+      "default": 0.6
+    },
+    {
+      "id": "e",
+      "label": "Restitution",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "default": 1
+    },
+    {
+      "id": "v",
+      "label": "Ball speed",
+      "unit": "m/s",
+      "min": 1,
+      "max": 10,
+      "step": 0.5,
+      "default": 4
+    }
+  ],
+  "world": {
+    "bodies": [
+      {
+        "id": "ball",
+        "shape": {
+          "kind": "disc",
+          "radius": 0.1
+        },
+        "mass": 0.5,
+        "restitution": {
+          "$param": "e"
+        },
+        "friction": 0,
+        "position": {
+          "x": {
+            "$param": "d"
+          },
+          "y": -1
+        },
+        "velocity": {
+          "x": 0,
+          "y": {
+            "$param": "v"
+          }
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "rod",
+        "shape": {
+          "kind": "box",
+          "width": 2,
+          "height": 0.2
+        },
+        "mass": 2,
+        "restitution": {
+          "$param": "e"
+        },
+        "friction": 0,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      }
+    ]
+  },
+  "timeline": [],
+  "end": {
+    "steps": 300
+  },
+  "probes": [
+    {
+      "id": "ballVy",
+      "path": "bodies[id=ball].velocity.y"
+    },
+    {
+      "id": "rodVy",
+      "path": "bodies[id=rod].velocity.y"
+    },
+    {
+      "id": "rodW",
+      "path": "bodies[id=rod].angularVelocity"
+    },
+    {
+      "id": "L",
+      "path": "ledger.totals.angularMomentum"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "event",
+      "type": "collision",
+      "occurred": true
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "rodVy",
+      "right": "(1 + e) * v / (1 / 0.5 + 1 / 2 + d^2 / (2 * 4.04 / 12)) / 2",
+      "tol": 1e-06,
+      "relative": true
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "ballVy",
+      "right": "v - (1 + e) * v / (1 / 0.5 + 1 / 2 + d^2 / (2 * 4.04 / 12)) / 0.5",
+      "tol": 1e-06
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "rodW",
+      "right": "(1 + e) * v / (1 / 0.5 + 1 / 2 + d^2 / (2 * 4.04 / 12)) * d / (2 * 4.04 / 12)",
+      "tol": 1e-06
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "L@end - L@0",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "angularMomentum",
+      "maxAbs": 1e-09
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "The ball strikes the rod off-centre. The rod moves up and spins; angular momentum about the origin stays constant in the graph. Move the offset to 0 and the rod moves without spinning.",
+    "overlays": [
+      "velocity",
+      "contacts",
+      "com"
+    ],
+    "graphs": [
+      "rodVy",
+      "rodW",
+      "L"
+    ],
+    "camera": {
+      "x": 0,
+      "y": -0.3,
+      "zoom": 160
+    }
+  }
+}

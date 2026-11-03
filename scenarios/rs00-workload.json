@@ -1,0 +1,4489 @@
+{
+ "schema": 1,
+ "name": "rs00-workload",
+ "title": "Performance workload",
+ "description": "RS-00. 200 discs, boxes and triangles bouncing inside a fixed arena with no gravity: continuous collisions for the frame-rate (SBX-040) and benchmark (NFR-001) checks.",
+ "profile": "sandbox",
+ "seed": 1,
+ "world": {
+  "bodies": [
+   {
+    "id": "wallB",
+    "shape": {
+     "kind": "box",
+     "width": 42,
+     "height": 1
+    },
+    "mass": 1,
+    "fixed": true,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 0,
+     "y": -12.5
+    },
+    "velocity": {
+     "x": 0,
+     "y": 0
+    },
+    "angle": 0,
+    "angularVelocity": 0
+   },
+   {
+    "id": "wallT",
+    "shape": {
+     "kind": "box",
+     "width": 42,
+     "height": 1
+    },
+    "mass": 1,
+    "fixed": true,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 0,
+     "y": 12.5
+    },
+    "velocity": {
+     "x": 0,
+     "y": 0
+    },
+    "angle": 0,
+    "angularVelocity": 0
+   },
+   {
+    "id": "wallL",
+    "shape": {
+     "kind": "box",
+     "width": 1,
+     "height": 24
+    },
+    "mass": 1,
+    "fixed": true,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -20.5,
+     "y": 0
+    },
+    "velocity": {
+     "x": 0,
+     "y": 0
+    },
+    "angle": 0,
+    "angularVelocity": 0
+   },
+   {
+    "id": "wallR",
+    "shape": {
+     "kind": "box",
+     "width": 1,
+     "height": 24
+    },
+    "mass": 1,
+    "fixed": true,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 20.5,
+     "y": 0
+    },
+    "velocity": {
+     "x": 0,
+     "y": 0
+    },
+    "angle": 0,
+    "angularVelocity": 0
+   },
+   {
+    "id": "b000",
+    "shape": {
+     "kind": "box",
+     "width": 0.585,
+     "height": 0.913
+    },
+    "mass": 1.479,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -18.938,
+     "y": -10.878
+    },
+    "velocity": {
+     "x": 0.82,
+     "y": -1.04
+    },
+    "angle": -0.73,
+    "angularVelocity": -0.503
+   },
+   {
+    "id": "b001",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.557
+    },
+    "mass": 2.079,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -16.87,
+     "y": -10.931
+    },
+    "velocity": {
+     "x": 3.902,
+     "y": 2.405
+    },
+    "angle": -0.107,
+    "angularVelocity": 0.156
+   },
+   {
+    "id": "b002",
+    "shape": {
+     "kind": "box",
+     "width": 1.073,
+     "height": 1.284
+    },
+    "mass": 1.158,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -14.95,
+     "y": -10.9
+    },
+    "velocity": {
+     "x": -0.436,
+     "y": 1.667
+    },
+    "angle": 0.72,
+    "angularVelocity": -1.309
+   },
+   {
+    "id": "b003",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.539
+    },
+    "mass": 0.991,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -13.194,
+     "y": -10.687
+    },
+    "velocity": {
+     "x": 0.452,
+     "y": 0.122
+    },
+    "angle": -0.308,
+    "angularVelocity": -1.27
+   },
+   {
+    "id": "b004",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.689
+    },
+    "mass": 2.169,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -10.942,
+     "y": -10.713
+    },
+    "velocity": {
+     "x": -0.879,
+     "y": 1.639
+    },
+    "angle": -1.123,
+    "angularVelocity": 0.431
+   },
+   {
+    "id": "b005",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.519,
+       "y": -0.3114
+      },
+      {
+       "x": 0.519,
+       "y": -0.3114
+      },
+      {
+       "x": 0,
+       "y": 0.519
+      }
+     ]
+    },
+    "mass": 2.165,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -8.98,
+     "y": -10.72
+    },
+    "velocity": {
+     "x": 0.948,
+     "y": -3.871
+    },
+    "angle": -0.375,
+    "angularVelocity": -1.562
+   },
+   {
+    "id": "b006",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.621
+    },
+    "mass": 0.644,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -6.976,
+     "y": -10.852
+    },
+    "velocity": {
+     "x": -3.314,
+     "y": -2.424
+    },
+    "angle": 1.195,
+    "angularVelocity": 0.197
+   },
+   {
+    "id": "b007",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.481
+    },
+    "mass": 1.117,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -5.004,
+     "y": -10.85
+    },
+    "velocity": {
+     "x": -0.983,
+     "y": -3.019
+    },
+    "angle": 1.336,
+    "angularVelocity": 1.168
+   },
+   {
+    "id": "b008",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.684
+    },
+    "mass": 0.819,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -3.026,
+     "y": -10.774
+    },
+    "velocity": {
+     "x": -1.208,
+     "y": 1.989
+    },
+    "angle": 0.66,
+    "angularVelocity": 1.328
+   },
+   {
+    "id": "b009",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.696
+    },
+    "mass": 0.561,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -1.127,
+     "y": -10.721
+    },
+    "velocity": {
+     "x": -2.717,
+     "y": 3.956
+    },
+    "angle": 0.53,
+    "angularVelocity": -1.843
+   },
+   {
+    "id": "b010",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.664
+    },
+    "mass": 1.378,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 0.897,
+     "y": -10.744
+    },
+    "velocity": {
+     "x": 2.898,
+     "y": -0.013
+    },
+    "angle": -1.01,
+    "angularVelocity": 1.124
+   },
+   {
+    "id": "b011",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.352
+    },
+    "mass": 0.936,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 2.801,
+     "y": -10.681
+    },
+    "velocity": {
+     "x": -0.402,
+     "y": -2.053
+    },
+    "angle": 0.724,
+    "angularVelocity": 0.856
+   },
+   {
+    "id": "b012",
+    "shape": {
+     "kind": "box",
+     "width": 0.98,
+     "height": 1.204
+    },
+    "mass": 0.929,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 4.913,
+     "y": -10.916
+    },
+    "velocity": {
+     "x": -2.932,
+     "y": 0.463
+    },
+    "angle": 1.463,
+    "angularVelocity": -0.274
+   },
+   {
+    "id": "b013",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.59
+    },
+    "mass": 0.945,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.951,
+     "y": -10.976
+    },
+    "velocity": {
+     "x": -1.185,
+     "y": -0.608
+    },
+    "angle": -0.361,
+    "angularVelocity": 1.155
+   },
+   {
+    "id": "b014",
+    "shape": {
+     "kind": "box",
+     "width": 0.956,
+     "height": 0.999
+    },
+    "mass": 1.998,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 9.165,
+     "y": -10.748
+    },
+    "velocity": {
+     "x": 3.213,
+     "y": -0.767
+    },
+    "angle": -0.446,
+    "angularVelocity": -1.801
+   },
+   {
+    "id": "b015",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.562
+    },
+    "mass": 2.344,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 10.975,
+     "y": -10.818
+    },
+    "velocity": {
+     "x": 2.319,
+     "y": 3.596
+    },
+    "angle": 1.265,
+    "angularVelocity": 1.73
+   },
+   {
+    "id": "b016",
+    "shape": {
+     "kind": "box",
+     "width": 1.276,
+     "height": 0.545
+    },
+    "mass": 0.557,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 13.064,
+     "y": -10.801
+    },
+    "velocity": {
+     "x": -1.462,
+     "y": 0.882
+    },
+    "angle": 0.451,
+    "angularVelocity": -1.529
+   },
+   {
+    "id": "b017",
+    "shape": {
+     "kind": "box",
+     "width": 1.224,
+     "height": 1.159
+    },
+    "mass": 1.061,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 15.039,
+     "y": -10.766
+    },
+    "velocity": {
+     "x": -3.161,
+     "y": 1.936
+    },
+    "angle": 1.267,
+    "angularVelocity": 0.361
+   },
+   {
+    "id": "b018",
+    "shape": {
+     "kind": "box",
+     "width": 1.004,
+     "height": 1.174
+    },
+    "mass": 1.173,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 17.163,
+     "y": -10.995
+    },
+    "velocity": {
+     "x": 2.423,
+     "y": -2.041
+    },
+    "angle": -1.458,
+    "angularVelocity": 1.574
+   },
+   {
+    "id": "b019",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.322
+    },
+    "mass": 0.56,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 19.072,
+     "y": -10.676
+    },
+    "velocity": {
+     "x": -1.806,
+     "y": 1.046
+    },
+    "angle": -1.265,
+    "angularVelocity": -0.176
+   },
+   {
+    "id": "b020",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.35
+    },
+    "mass": 2.041,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -18.836,
+     "y": -8.598
+    },
+    "velocity": {
+     "x": 3.411,
+     "y": 2.59
+    },
+    "angle": -0.076,
+    "angularVelocity": -0.87
+   },
+   {
+    "id": "b021",
+    "shape": {
+     "kind": "box",
+     "width": 1.276,
+     "height": 0.799
+    },
+    "mass": 1.976,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -16.895,
+     "y": -8.639
+    },
+    "velocity": {
+     "x": -0.826,
+     "y": 2.167
+    },
+    "angle": 0.544,
+    "angularVelocity": -0.274
+   },
+   {
+    "id": "b022",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.483,
+       "y": -0.2898
+      },
+      {
+       "x": 0.483,
+       "y": -0.2898
+      },
+      {
+       "x": 0,
+       "y": 0.483
+      }
+     ]
+    },
+    "mass": 0.94,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -15.162,
+     "y": -8.337
+    },
+    "velocity": {
+     "x": 2.35,
+     "y": -0.744
+    },
+    "angle": 0.398,
+    "angularVelocity": -1.44
+   },
+   {
+    "id": "b023",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.592
+    },
+    "mass": 1.121,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -12.825,
+     "y": -8.647
+    },
+    "velocity": {
+     "x": 2.867,
+     "y": -0.157
+    },
+    "angle": -0.616,
+    "angularVelocity": -1.411
+   },
+   {
+    "id": "b024",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.564
+    },
+    "mass": 0.532,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -10.909,
+     "y": -8.551
+    },
+    "velocity": {
+     "x": 2.914,
+     "y": 3.234
+    },
+    "angle": 0.365,
+    "angularVelocity": -1.488
+   },
+   {
+    "id": "b025",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.637
+    },
+    "mass": 2.295,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -8.885,
+     "y": -8.62
+    },
+    "velocity": {
+     "x": 1.915,
+     "y": 0.847
+    },
+    "angle": -0.291,
+    "angularVelocity": 0.629
+   },
+   {
+    "id": "b026",
+    "shape": {
+     "kind": "box",
+     "width": 1.18,
+     "height": 1.106
+    },
+    "mass": 1.553,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -6.818,
+     "y": -8.583
+    },
+    "velocity": {
+     "x": -2.535,
+     "y": 1.875
+    },
+    "angle": 0.032,
+    "angularVelocity": 1.861
+   },
+   {
+    "id": "b027",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.659
+    },
+    "mass": 0.53,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -5.049,
+     "y": -8.316
+    },
+    "velocity": {
+     "x": 3.765,
+     "y": -0.431
+    },
+    "angle": -1.315,
+    "angularVelocity": -0.285
+   },
+   {
+    "id": "b028",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.337
+    },
+    "mass": 0.775,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -3.156,
+     "y": -8.577
+    },
+    "velocity": {
+     "x": 1.597,
+     "y": -3.611
+    },
+    "angle": -0.642,
+    "angularVelocity": -0.422
+   },
+   {
+    "id": "b029",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.428
+    },
+    "mass": 1.779,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -0.882,
+     "y": -8.697
+    },
+    "velocity": {
+     "x": -2.506,
+     "y": 1.68
+    },
+    "angle": 0.145,
+    "angularVelocity": 0.102
+   },
+   {
+    "id": "b030",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.506
+    },
+    "mass": 1.494,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 1.029,
+     "y": -8.699
+    },
+    "velocity": {
+     "x": 2.598,
+     "y": -1.948
+    },
+    "angle": 1.329,
+    "angularVelocity": -1.321
+   },
+   {
+    "id": "b031",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.54
+    },
+    "mass": 1.821,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 2.912,
+     "y": -8.396
+    },
+    "velocity": {
+     "x": -1.303,
+     "y": -3.016
+    },
+    "angle": 1.204,
+    "angularVelocity": 1.127
+   },
+   {
+    "id": "b032",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.329
+    },
+    "mass": 2.102,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 4.993,
+     "y": -8.387
+    },
+    "velocity": {
+     "x": -2.724,
+     "y": 1.951
+    },
+    "angle": -1.449,
+    "angularVelocity": -0.941
+   },
+   {
+    "id": "b033",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.614
+    },
+    "mass": 2.355,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.948,
+     "y": -8.369
+    },
+    "velocity": {
+     "x": 0.616,
+     "y": -0.796
+    },
+    "angle": 1.018,
+    "angularVelocity": 1.196
+   },
+   {
+    "id": "b034",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.388
+    },
+    "mass": 0.669,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 9.199,
+     "y": -8.579
+    },
+    "velocity": {
+     "x": 0.859,
+     "y": 0.81
+    },
+    "angle": 0.246,
+    "angularVelocity": 1.439
+   },
+   {
+    "id": "b035",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.513
+    },
+    "mass": 1.106,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 10.986,
+     "y": -8.614
+    },
+    "velocity": {
+     "x": -2.12,
+     "y": 1.465
+    },
+    "angle": -0.742,
+    "angularVelocity": -0.589
+   },
+   {
+    "id": "b036",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.4
+    },
+    "mass": 0.917,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 12.886,
+     "y": -8.469
+    },
+    "velocity": {
+     "x": 0.731,
+     "y": -3.749
+    },
+    "angle": 1.022,
+    "angularVelocity": 1.348
+   },
+   {
+    "id": "b037",
+    "shape": {
+     "kind": "box",
+     "width": 0.616,
+     "height": 1.115
+    },
+    "mass": 0.556,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 14.917,
+     "y": -8.695
+    },
+    "velocity": {
+     "x": -3.934,
+     "y": -0.196
+    },
+    "angle": 0.707,
+    "angularVelocity": 0.918
+   },
+   {
+    "id": "b038",
+    "shape": {
+     "kind": "box",
+     "width": 1.214,
+     "height": 1.048
+    },
+    "mass": 1.755,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 17.07,
+     "y": -8.672
+    },
+    "velocity": {
+     "x": -0.324,
+     "y": -0.463
+    },
+    "angle": -0.424,
+    "angularVelocity": 0.118
+   },
+   {
+    "id": "b039",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.681
+    },
+    "mass": 1.764,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 19.189,
+     "y": -8.376
+    },
+    "velocity": {
+     "x": 0.88,
+     "y": 0.267
+    },
+    "angle": 0.267,
+    "angularVelocity": -1.65
+   },
+   {
+    "id": "b040",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.618
+    },
+    "mass": 1.129,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -19.165,
+     "y": -6.19
+    },
+    "velocity": {
+     "x": -2.814,
+     "y": 1.628
+    },
+    "angle": -0.987,
+    "angularVelocity": 0.464
+   },
+   {
+    "id": "b041",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.364
+    },
+    "mass": 2.012,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -17.106,
+     "y": -6.388
+    },
+    "velocity": {
+     "x": -0.291,
+     "y": -0.648
+    },
+    "angle": -0.837,
+    "angularVelocity": -0.941
+   },
+   {
+    "id": "b042",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.398
+    },
+    "mass": 0.933,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -14.927,
+     "y": -6.27
+    },
+    "velocity": {
+     "x": 0.576,
+     "y": 2.927
+    },
+    "angle": -0.105,
+    "angularVelocity": 0.187
+   },
+   {
+    "id": "b043",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.569,
+       "y": -0.3414
+      },
+      {
+       "x": 0.569,
+       "y": -0.3414
+      },
+      {
+       "x": 0,
+       "y": 0.569
+      }
+     ]
+    },
+    "mass": 2.477,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -12.897,
+     "y": -6.059
+    },
+    "velocity": {
+     "x": 1.981,
+     "y": 0.566
+    },
+    "angle": 0.27,
+    "angularVelocity": -0.207
+   },
+   {
+    "id": "b044",
+    "shape": {
+     "kind": "box",
+     "width": 0.576,
+     "height": 0.708
+    },
+    "mass": 1.236,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -10.842,
+     "y": -6.364
+    },
+    "velocity": {
+     "x": 1.333,
+     "y": -1.071
+    },
+    "angle": -0.292,
+    "angularVelocity": 0.864
+   },
+   {
+    "id": "b045",
+    "shape": {
+     "kind": "box",
+     "width": 0.689,
+     "height": 1.062
+    },
+    "mass": 1.089,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -8.881,
+     "y": -6.316
+    },
+    "velocity": {
+     "x": 2.067,
+     "y": 2.794
+    },
+    "angle": 1.098,
+    "angularVelocity": 0.97
+   },
+   {
+    "id": "b046",
+    "shape": {
+     "kind": "box",
+     "width": 0.68,
+     "height": 1.024
+    },
+    "mass": 0.76,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -6.939,
+     "y": -6.373
+    },
+    "velocity": {
+     "x": -3.978,
+     "y": 2.143
+    },
+    "angle": -0.781,
+    "angularVelocity": 0.247
+   },
+   {
+    "id": "b047",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.617
+    },
+    "mass": 0.775,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -4.824,
+     "y": -6.354
+    },
+    "velocity": {
+     "x": 3.806,
+     "y": 3.412
+    },
+    "angle": 1.158,
+    "angularVelocity": -1.004
+   },
+   {
+    "id": "b048",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.622
+    },
+    "mass": 2.489,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -3.189,
+     "y": -6.22
+    },
+    "velocity": {
+     "x": -2.475,
+     "y": 1.823
+    },
+    "angle": -0.807,
+    "angularVelocity": 0.589
+   },
+   {
+    "id": "b049",
+    "shape": {
+     "kind": "box",
+     "width": 0.572,
+     "height": 1.196
+    },
+    "mass": 1.915,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -0.833,
+     "y": -6.137
+    },
+    "velocity": {
+     "x": 0.358,
+     "y": -2.77
+    },
+    "angle": -0.001,
+    "angularVelocity": -0.553
+   },
+   {
+    "id": "b050",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.369
+    },
+    "mass": 1.299,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 1.002,
+     "y": -6.303
+    },
+    "velocity": {
+     "x": -0.023,
+     "y": -1.125
+    },
+    "angle": -1.393,
+    "angularVelocity": 0.365
+   },
+   {
+    "id": "b051",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.644
+    },
+    "mass": 0.555,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 3.037,
+     "y": -6.38
+    },
+    "velocity": {
+     "x": -1.878,
+     "y": 1.635
+    },
+    "angle": 1.324,
+    "angularVelocity": -0.951
+   },
+   {
+    "id": "b052",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.504
+    },
+    "mass": 2.227,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 4.887,
+     "y": -6.016
+    },
+    "velocity": {
+     "x": 1.95,
+     "y": 3.42
+    },
+    "angle": 0.199,
+    "angularVelocity": 0.759
+   },
+   {
+    "id": "b053",
+    "shape": {
+     "kind": "box",
+     "width": 1.165,
+     "height": 0.888
+    },
+    "mass": 1.258,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.8,
+     "y": -6.355
+    },
+    "velocity": {
+     "x": 0.592,
+     "y": 3.654
+    },
+    "angle": -0.995,
+    "angularVelocity": -0.632
+   },
+   {
+    "id": "b054",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.481
+    },
+    "mass": 0.627,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 8.857,
+     "y": -6.038
+    },
+    "velocity": {
+     "x": 0.297,
+     "y": -0.285
+    },
+    "angle": 0.891,
+    "angularVelocity": -1.012
+   },
+   {
+    "id": "b055",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.638
+    },
+    "mass": 1.127,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 11.112,
+     "y": -6.226
+    },
+    "velocity": {
+     "x": -2.002,
+     "y": -3.39
+    },
+    "angle": 1.052,
+    "angularVelocity": 1.568
+   },
+   {
+    "id": "b056",
+    "shape": {
+     "kind": "box",
+     "width": 1.099,
+     "height": 1.031
+    },
+    "mass": 2.226,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 13.112,
+     "y": -6.371
+    },
+    "velocity": {
+     "x": -3.308,
+     "y": -3.47
+    },
+    "angle": 1.331,
+    "angularVelocity": 0.633
+   },
+   {
+    "id": "b057",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.443
+    },
+    "mass": 1.391,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 14.907,
+     "y": -6.01
+    },
+    "velocity": {
+     "x": -3.634,
+     "y": -2.093
+    },
+    "angle": 0.918,
+    "angularVelocity": 1.431
+   },
+   {
+    "id": "b058",
+    "shape": {
+     "kind": "box",
+     "width": 0.831,
+     "height": 1.215
+    },
+    "mass": 1.387,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 17.103,
+     "y": -6.019
+    },
+    "velocity": {
+     "x": 3.995,
+     "y": 3.371
+    },
+    "angle": -0.476,
+    "angularVelocity": -1.983
+   },
+   {
+    "id": "b059",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.313
+    },
+    "mass": 1.798,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 19.029,
+     "y": -6.206
+    },
+    "velocity": {
+     "x": -0.642,
+     "y": -2.765
+    },
+    "angle": 0.005,
+    "angularVelocity": -0.285
+   },
+   {
+    "id": "b060",
+    "shape": {
+     "kind": "box",
+     "width": 0.573,
+     "height": 0.634
+    },
+    "mass": 1.316,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -18.982,
+     "y": -3.864
+    },
+    "velocity": {
+     "x": 2.925,
+     "y": -1.986
+    },
+    "angle": 0.413,
+    "angularVelocity": -1.862
+   },
+   {
+    "id": "b061",
+    "shape": {
+     "kind": "box",
+     "width": 0.944,
+     "height": 1.043
+    },
+    "mass": 2.405,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -16.91,
+     "y": -3.917
+    },
+    "velocity": {
+     "x": -3.209,
+     "y": -0.192
+    },
+    "angle": 0.205,
+    "angularVelocity": -0.314
+   },
+   {
+    "id": "b062",
+    "shape": {
+     "kind": "box",
+     "width": 1.248,
+     "height": 0.554
+    },
+    "mass": 0.975,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -15.196,
+     "y": -3.846
+    },
+    "velocity": {
+     "x": -1.149,
+     "y": 2.556
+    },
+    "angle": -0.252,
+    "angularVelocity": -0.068
+   },
+   {
+    "id": "b063",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.601
+    },
+    "mass": 1.725,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -13.033,
+     "y": -3.838
+    },
+    "velocity": {
+     "x": -2.824,
+     "y": -0.231
+    },
+    "angle": 0.975,
+    "angularVelocity": 0.285
+   },
+   {
+    "id": "b064",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.625
+    },
+    "mass": 2.36,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -11.178,
+     "y": -3.78
+    },
+    "velocity": {
+     "x": 3.949,
+     "y": -2.088
+    },
+    "angle": 0.281,
+    "angularVelocity": 1.461
+   },
+   {
+    "id": "b065",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.688
+    },
+    "mass": 2.449,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -8.913,
+     "y": -3.954
+    },
+    "velocity": {
+     "x": 3.977,
+     "y": -3.89
+    },
+    "angle": 0.904,
+    "angularVelocity": -1.599
+   },
+   {
+    "id": "b066",
+    "shape": {
+     "kind": "box",
+     "width": 1.122,
+     "height": 1.123
+    },
+    "mass": 1.309,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -6.802,
+     "y": -4.018
+    },
+    "velocity": {
+     "x": 0.883,
+     "y": 3.27
+    },
+    "angle": 1.138,
+    "angularVelocity": 0.72
+   },
+   {
+    "id": "b067",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.57
+    },
+    "mass": 0.52,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -5.195,
+     "y": -3.815
+    },
+    "velocity": {
+     "x": 2.821,
+     "y": -0.75
+    },
+    "angle": -0.76,
+    "angularVelocity": -0.141
+   },
+   {
+    "id": "b068",
+    "shape": {
+     "kind": "box",
+     "width": 0.896,
+     "height": 0.922
+    },
+    "mass": 1.229,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -2.806,
+     "y": -3.865
+    },
+    "velocity": {
+     "x": -0.238,
+     "y": 1.53
+    },
+    "angle": -1.43,
+    "angularVelocity": 0.797
+   },
+   {
+    "id": "b069",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.616,
+       "y": -0.3696
+      },
+      {
+       "x": 0.616,
+       "y": -0.3696
+      },
+      {
+       "x": 0,
+       "y": 0.616
+      }
+     ]
+    },
+    "mass": 1.748,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -0.978,
+     "y": -4.09
+    },
+    "velocity": {
+     "x": -2.466,
+     "y": -2.627
+    },
+    "angle": 0.168,
+    "angularVelocity": 0.21
+   },
+   {
+    "id": "b070",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.619
+    },
+    "mass": 1.687,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 1.031,
+     "y": -3.967
+    },
+    "velocity": {
+     "x": 2.156,
+     "y": -2.187
+    },
+    "angle": -0.26,
+    "angularVelocity": 0.333
+   },
+   {
+    "id": "b071",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.309
+    },
+    "mass": 1.697,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 3.026,
+     "y": -4.046
+    },
+    "velocity": {
+     "x": 2.808,
+     "y": -2.017
+    },
+    "angle": -0.787,
+    "angularVelocity": 0.529
+   },
+   {
+    "id": "b072",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.583
+    },
+    "mass": 1.462,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 4.901,
+     "y": -3.746
+    },
+    "velocity": {
+     "x": -2.913,
+     "y": 1.454
+    },
+    "angle": 0.716,
+    "angularVelocity": 0.197
+   },
+   {
+    "id": "b073",
+    "shape": {
+     "kind": "box",
+     "width": 1.137,
+     "height": 0.535
+    },
+    "mass": 0.621,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.901,
+     "y": -3.974
+    },
+    "velocity": {
+     "x": 1.335,
+     "y": -2.771
+    },
+    "angle": -0.374,
+    "angularVelocity": 0.061
+   },
+   {
+    "id": "b074",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.483
+    },
+    "mass": 1.588,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 9.147,
+     "y": -3.824
+    },
+    "velocity": {
+     "x": -0.735,
+     "y": -3.004
+    },
+    "angle": -0.649,
+    "angularVelocity": -1.926
+   },
+   {
+    "id": "b075",
+    "shape": {
+     "kind": "box",
+     "width": 1.282,
+     "height": 1.118
+    },
+    "mass": 1.884,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 11.097,
+     "y": -3.959
+    },
+    "velocity": {
+     "x": -0.536,
+     "y": 3.391
+    },
+    "angle": 0.155,
+    "angularVelocity": 0.53
+   },
+   {
+    "id": "b076",
+    "shape": {
+     "kind": "box",
+     "width": 0.759,
+     "height": 1.201
+    },
+    "mass": 1.412,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 12.825,
+     "y": -3.874
+    },
+    "velocity": {
+     "x": 3.601,
+     "y": -2.771
+    },
+    "angle": 0.846,
+    "angularVelocity": 1.126
+   },
+   {
+    "id": "b077",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.529
+    },
+    "mass": 0.699,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 15.116,
+     "y": -3.931
+    },
+    "velocity": {
+     "x": -2.305,
+     "y": 0.287
+    },
+    "angle": -0.761,
+    "angularVelocity": -0.729
+   },
+   {
+    "id": "b078",
+    "shape": {
+     "kind": "box",
+     "width": 0.861,
+     "height": 0.799
+    },
+    "mass": 1.958,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 16.814,
+     "y": -3.842
+    },
+    "velocity": {
+     "x": -1.186,
+     "y": 1.082
+    },
+    "angle": 0.58,
+    "angularVelocity": -1.438
+   },
+   {
+    "id": "b079",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.572
+    },
+    "mass": 1.059,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 19.164,
+     "y": -3.865
+    },
+    "velocity": {
+     "x": 3.575,
+     "y": 1.316
+    },
+    "angle": 0.392,
+    "angularVelocity": -0.395
+   },
+   {
+    "id": "b080",
+    "shape": {
+     "kind": "box",
+     "width": 0.81,
+     "height": 0.791
+    },
+    "mass": 1.58,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -18.825,
+     "y": -1.699
+    },
+    "velocity": {
+     "x": -0.216,
+     "y": 2.382
+    },
+    "angle": -0.41,
+    "angularVelocity": -1.14
+   },
+   {
+    "id": "b081",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.467,
+       "y": -0.2802
+      },
+      {
+       "x": 0.467,
+       "y": -0.2802
+      },
+      {
+       "x": 0,
+       "y": 0.467
+      }
+     ]
+    },
+    "mass": 0.951,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -16.825,
+     "y": -1.413
+    },
+    "velocity": {
+     "x": 1.863,
+     "y": 1.029
+    },
+    "angle": 0.686,
+    "angularVelocity": -0.56
+   },
+   {
+    "id": "b082",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.458
+    },
+    "mass": 0.997,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -15.044,
+     "y": -1.59
+    },
+    "velocity": {
+     "x": 1.897,
+     "y": -1.167
+    },
+    "angle": -0.707,
+    "angularVelocity": 0.422
+   },
+   {
+    "id": "b083",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.497
+    },
+    "mass": 0.795,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -12.943,
+     "y": -1.522
+    },
+    "velocity": {
+     "x": 2.437,
+     "y": 3.394
+    },
+    "angle": -1.381,
+    "angularVelocity": -1.833
+   },
+   {
+    "id": "b084",
+    "shape": {
+     "kind": "box",
+     "width": 1.191,
+     "height": 1.091
+    },
+    "mass": 0.508,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -10.832,
+     "y": -1.659
+    },
+    "velocity": {
+     "x": 2.809,
+     "y": -1.801
+    },
+    "angle": -0.263,
+    "angularVelocity": 1.436
+   },
+   {
+    "id": "b085",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.66,
+       "y": -0.396
+      },
+      {
+       "x": 0.66,
+       "y": -0.396
+      },
+      {
+       "x": 0,
+       "y": 0.66
+      }
+     ]
+    },
+    "mass": 1.638,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -9.154,
+     "y": -1.641
+    },
+    "velocity": {
+     "x": -3.293,
+     "y": -0.295
+    },
+    "angle": 1.01,
+    "angularVelocity": 1.466
+   },
+   {
+    "id": "b086",
+    "shape": {
+     "kind": "box",
+     "width": 0.584,
+     "height": 1.061
+    },
+    "mass": 1.363,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -6.955,
+     "y": -1.479
+    },
+    "velocity": {
+     "x": -1.211,
+     "y": -3.058
+    },
+    "angle": -0.19,
+    "angularVelocity": -0.535
+   },
+   {
+    "id": "b087",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.505,
+       "y": -0.303
+      },
+      {
+       "x": 0.505,
+       "y": -0.303
+      },
+      {
+       "x": 0,
+       "y": 0.505
+      }
+     ]
+    },
+    "mass": 1.017,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -4.847,
+     "y": -1.745
+    },
+    "velocity": {
+     "x": -2.689,
+     "y": -0.406
+    },
+    "angle": -0.034,
+    "angularVelocity": -0.833
+   },
+   {
+    "id": "b088",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.43,
+       "y": -0.258
+      },
+      {
+       "x": 0.43,
+       "y": -0.258
+      },
+      {
+       "x": 0,
+       "y": 0.43
+      }
+     ]
+    },
+    "mass": 1.456,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -2.848,
+     "y": -1.657
+    },
+    "velocity": {
+     "x": -1.193,
+     "y": 0.619
+    },
+    "angle": 0.72,
+    "angularVelocity": -1.16
+   },
+   {
+    "id": "b089",
+    "shape": {
+     "kind": "box",
+     "width": 0.527,
+     "height": 0.74
+    },
+    "mass": 1.734,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -0.821,
+     "y": -1.477
+    },
+    "velocity": {
+     "x": -1.224,
+     "y": -2.529
+    },
+    "angle": -1.164,
+    "angularVelocity": -0.079
+   },
+   {
+    "id": "b090",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.536
+    },
+    "mass": 0.816,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 0.968,
+     "y": -1.797
+    },
+    "velocity": {
+     "x": 3.402,
+     "y": -2.25
+    },
+    "angle": -0.855,
+    "angularVelocity": -0.358
+   },
+   {
+    "id": "b091",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.532
+    },
+    "mass": 2.27,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 3.139,
+     "y": -1.625
+    },
+    "velocity": {
+     "x": -2.827,
+     "y": 0.983
+    },
+    "angle": -0.831,
+    "angularVelocity": 0.901
+   },
+   {
+    "id": "b092",
+    "shape": {
+     "kind": "box",
+     "width": 0.882,
+     "height": 1.051
+    },
+    "mass": 1.494,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 5.019,
+     "y": -1.651
+    },
+    "velocity": {
+     "x": -0.503,
+     "y": -1.075
+    },
+    "angle": -0.446,
+    "angularVelocity": -1.434
+   },
+   {
+    "id": "b093",
+    "shape": {
+     "kind": "box",
+     "width": 0.535,
+     "height": 1.224
+    },
+    "mass": 0.973,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.96,
+     "y": -1.762
+    },
+    "velocity": {
+     "x": -3.798,
+     "y": -2.256
+    },
+    "angle": 0.194,
+    "angularVelocity": -0.048
+   },
+   {
+    "id": "b094",
+    "shape": {
+     "kind": "box",
+     "width": 0.603,
+     "height": 0.995
+    },
+    "mass": 2.421,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 9.157,
+     "y": -1.605
+    },
+    "velocity": {
+     "x": 2.888,
+     "y": 0.297
+    },
+    "angle": 0.246,
+    "angularVelocity": -1.805
+   },
+   {
+    "id": "b095",
+    "shape": {
+     "kind": "box",
+     "width": 0.586,
+     "height": 1.0
+    },
+    "mass": 1.261,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 10.888,
+     "y": -1.759
+    },
+    "velocity": {
+     "x": 2.94,
+     "y": -1.555
+    },
+    "angle": -0.088,
+    "angularVelocity": 1.273
+   },
+   {
+    "id": "b096",
+    "shape": {
+     "kind": "box",
+     "width": 1.244,
+     "height": 1.118
+    },
+    "mass": 2.336,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 13.115,
+     "y": -1.473
+    },
+    "velocity": {
+     "x": -2.781,
+     "y": -2.209
+    },
+    "angle": -0.352,
+    "angularVelocity": -1.634
+   },
+   {
+    "id": "b097",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.594
+    },
+    "mass": 2.338,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 14.855,
+     "y": -1.497
+    },
+    "velocity": {
+     "x": 1.118,
+     "y": -2.043
+    },
+    "angle": 0.188,
+    "angularVelocity": -0.589
+   },
+   {
+    "id": "b098",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.619
+    },
+    "mass": 0.907,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 16.941,
+     "y": -1.571
+    },
+    "velocity": {
+     "x": -1.934,
+     "y": 1.323
+    },
+    "angle": 0.619,
+    "angularVelocity": 1.083
+   },
+   {
+    "id": "b099",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.578
+    },
+    "mass": 0.694,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 18.804,
+     "y": -1.561
+    },
+    "velocity": {
+     "x": -2.574,
+     "y": 0.434
+    },
+    "angle": 0.387,
+    "angularVelocity": 1.352
+   },
+   {
+    "id": "b100",
+    "shape": {
+     "kind": "box",
+     "width": 1.249,
+     "height": 0.613
+    },
+    "mass": 0.763,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -19.003,
+     "y": 0.594
+    },
+    "velocity": {
+     "x": 0.041,
+     "y": 0.918
+    },
+    "angle": -1.125,
+    "angularVelocity": -0.776
+   },
+   {
+    "id": "b101",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.495
+    },
+    "mass": 1.888,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -17.059,
+     "y": 0.516
+    },
+    "velocity": {
+     "x": 3.932,
+     "y": -3.961
+    },
+    "angle": -0.325,
+    "angularVelocity": 1.836
+   },
+   {
+    "id": "b102",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.438
+    },
+    "mass": 1.723,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -15.105,
+     "y": 0.511
+    },
+    "velocity": {
+     "x": -1.318,
+     "y": 0.646
+    },
+    "angle": 0.413,
+    "angularVelocity": -1.037
+   },
+   {
+    "id": "b103",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.666,
+       "y": -0.3996
+      },
+      {
+       "x": 0.666,
+       "y": -0.3996
+      },
+      {
+       "x": 0,
+       "y": 0.666
+      }
+     ]
+    },
+    "mass": 1.997,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -12.859,
+     "y": 0.709
+    },
+    "velocity": {
+     "x": 3.504,
+     "y": 2.938
+    },
+    "angle": 1.156,
+    "angularVelocity": -0.419
+   },
+   {
+    "id": "b104",
+    "shape": {
+     "kind": "box",
+     "width": 0.828,
+     "height": 0.5
+    },
+    "mass": 1.674,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -11.193,
+     "y": 0.641
+    },
+    "velocity": {
+     "x": -2.388,
+     "y": 3.223
+    },
+    "angle": 1.252,
+    "angularVelocity": 1.049
+   },
+   {
+    "id": "b105",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.559
+    },
+    "mass": 1.274,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -8.925,
+     "y": 0.7
+    },
+    "velocity": {
+     "x": -1.881,
+     "y": 3.717
+    },
+    "angle": 0.426,
+    "angularVelocity": -1.472
+   },
+   {
+    "id": "b106",
+    "shape": {
+     "kind": "box",
+     "width": 1.016,
+     "height": 0.948
+    },
+    "mass": 1.888,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -7.172,
+     "y": 0.838
+    },
+    "velocity": {
+     "x": 0.724,
+     "y": 1.975
+    },
+    "angle": -0.704,
+    "angularVelocity": 1.089
+   },
+   {
+    "id": "b107",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.547,
+       "y": -0.3282
+      },
+      {
+       "x": 0.547,
+       "y": -0.3282
+      },
+      {
+       "x": 0,
+       "y": 0.547
+      }
+     ]
+    },
+    "mass": 2.016,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -5.168,
+     "y": 0.86
+    },
+    "velocity": {
+     "x": -3.386,
+     "y": 3.544
+    },
+    "angle": 0.941,
+    "angularVelocity": -1.995
+   },
+   {
+    "id": "b108",
+    "shape": {
+     "kind": "box",
+     "width": 0.985,
+     "height": 0.88
+    },
+    "mass": 1.787,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -3.045,
+     "y": 0.534
+    },
+    "velocity": {
+     "x": 3.435,
+     "y": 3.152
+    },
+    "angle": -1.156,
+    "angularVelocity": 0.183
+   },
+   {
+    "id": "b109",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.679
+    },
+    "mass": 2.306,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -0.991,
+     "y": 0.518
+    },
+    "velocity": {
+     "x": -3.763,
+     "y": -2.34
+    },
+    "angle": -1.149,
+    "angularVelocity": 0.196
+   },
+   {
+    "id": "b110",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.685
+    },
+    "mass": 0.824,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 1.179,
+     "y": 0.587
+    },
+    "velocity": {
+     "x": -3.033,
+     "y": -3.321
+    },
+    "angle": -0.141,
+    "angularVelocity": -1.882
+   },
+   {
+    "id": "b111",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.54
+    },
+    "mass": 1.958,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 3.123,
+     "y": 0.767
+    },
+    "velocity": {
+     "x": -3.543,
+     "y": -1.083
+    },
+    "angle": -1.147,
+    "angularVelocity": -1.461
+   },
+   {
+    "id": "b112",
+    "shape": {
+     "kind": "box",
+     "width": 0.733,
+     "height": 0.604
+    },
+    "mass": 2.476,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 5.16,
+     "y": 0.631
+    },
+    "velocity": {
+     "x": 2.275,
+     "y": 1.029
+    },
+    "angle": 0.64,
+    "angularVelocity": -1.411
+   },
+   {
+    "id": "b113",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.615
+    },
+    "mass": 1.218,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.995,
+     "y": 0.617
+    },
+    "velocity": {
+     "x": -3.459,
+     "y": -1.162
+    },
+    "angle": -0.134,
+    "angularVelocity": -0.99
+   },
+   {
+    "id": "b114",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.426
+    },
+    "mass": 1.959,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 8.861,
+     "y": 0.517
+    },
+    "velocity": {
+     "x": -3.051,
+     "y": 1.133
+    },
+    "angle": 0.7,
+    "angularVelocity": 1.306
+   },
+   {
+    "id": "b115",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.468
+    },
+    "mass": 1.16,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 10.911,
+     "y": 0.812
+    },
+    "velocity": {
+     "x": 1.138,
+     "y": -1.935
+    },
+    "angle": -0.721,
+    "angularVelocity": -0.509
+   },
+   {
+    "id": "b116",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.579
+    },
+    "mass": 1.871,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 13.039,
+     "y": 0.871
+    },
+    "velocity": {
+     "x": -3.751,
+     "y": 1.854
+    },
+    "angle": 0.028,
+    "angularVelocity": -0.705
+   },
+   {
+    "id": "b117",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.665
+    },
+    "mass": 2.165,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 15.193,
+     "y": 0.513
+    },
+    "velocity": {
+     "x": -3.424,
+     "y": -2.047
+    },
+    "angle": 0.291,
+    "angularVelocity": 0.431
+   },
+   {
+    "id": "b118",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.428,
+       "y": -0.2568
+      },
+      {
+       "x": 0.428,
+       "y": -0.2568
+      },
+      {
+       "x": 0,
+       "y": 0.428
+      }
+     ]
+    },
+    "mass": 1.995,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 17.078,
+     "y": 0.673
+    },
+    "velocity": {
+     "x": -1.623,
+     "y": -1.711
+    },
+    "angle": 1.275,
+    "angularVelocity": -1.796
+   },
+   {
+    "id": "b119",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.632
+    },
+    "mass": 1.942,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 19.036,
+     "y": 0.86
+    },
+    "velocity": {
+     "x": 2.447,
+     "y": -0.868
+    },
+    "angle": 0.229,
+    "angularVelocity": 1.33
+   },
+   {
+    "id": "b120",
+    "shape": {
+     "kind": "box",
+     "width": 0.855,
+     "height": 0.738
+    },
+    "mass": 2.132,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -19.061,
+     "y": 2.81
+    },
+    "velocity": {
+     "x": 2.512,
+     "y": -1.997
+    },
+    "angle": 0.655,
+    "angularVelocity": 0.906
+   },
+   {
+    "id": "b121",
+    "shape": {
+     "kind": "box",
+     "width": 1.095,
+     "height": 0.92
+    },
+    "mass": 1.159,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -17.031,
+     "y": 2.874
+    },
+    "velocity": {
+     "x": 1.301,
+     "y": 1.701
+    },
+    "angle": -1.413,
+    "angularVelocity": 1.027
+   },
+   {
+    "id": "b122",
+    "shape": {
+     "kind": "box",
+     "width": 1.244,
+     "height": 1.173
+    },
+    "mass": 2.302,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -14.948,
+     "y": 2.889
+    },
+    "velocity": {
+     "x": -1.769,
+     "y": 1.733
+    },
+    "angle": -0.626,
+    "angularVelocity": 1.735
+   },
+   {
+    "id": "b123",
+    "shape": {
+     "kind": "box",
+     "width": 0.643,
+     "height": 0.787
+    },
+    "mass": 1.351,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -12.982,
+     "y": 3.055
+    },
+    "velocity": {
+     "x": -3.491,
+     "y": 1.65
+    },
+    "angle": -1.232,
+    "angularVelocity": 0.005
+   },
+   {
+    "id": "b124",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.483
+    },
+    "mass": 0.708,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -10.811,
+     "y": 2.841
+    },
+    "velocity": {
+     "x": -0.759,
+     "y": -3.909
+    },
+    "angle": -1.101,
+    "angularVelocity": -0.348
+   },
+   {
+    "id": "b125",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.609
+    },
+    "mass": 0.881,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -8.81,
+     "y": 3.071
+    },
+    "velocity": {
+     "x": -3.402,
+     "y": -2.483
+    },
+    "angle": 1.281,
+    "angularVelocity": -0.864
+   },
+   {
+    "id": "b126",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.447,
+       "y": -0.2682
+      },
+      {
+       "x": 0.447,
+       "y": -0.2682
+      },
+      {
+       "x": 0,
+       "y": 0.447
+      }
+     ]
+    },
+    "mass": 1.604,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -7.057,
+     "y": 3.198
+    },
+    "velocity": {
+     "x": -2.162,
+     "y": 3.528
+    },
+    "angle": 0.128,
+    "angularVelocity": 0.226
+   },
+   {
+    "id": "b127",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.5
+    },
+    "mass": 2.385,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -4.905,
+     "y": 2.878
+    },
+    "velocity": {
+     "x": -0.022,
+     "y": -0.192
+    },
+    "angle": 1.34,
+    "angularVelocity": 0.954
+   },
+   {
+    "id": "b128",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.626,
+       "y": -0.3756
+      },
+      {
+       "x": 0.626,
+       "y": -0.3756
+      },
+      {
+       "x": 0,
+       "y": 0.626
+      }
+     ]
+    },
+    "mass": 1.0,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -2.863,
+     "y": 2.846
+    },
+    "velocity": {
+     "x": 0.805,
+     "y": -2.684
+    },
+    "angle": -1.379,
+    "angularVelocity": 1.612
+   },
+   {
+    "id": "b129",
+    "shape": {
+     "kind": "box",
+     "width": 0.769,
+     "height": 0.638
+    },
+    "mass": 1.06,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -0.825,
+     "y": 3.101
+    },
+    "velocity": {
+     "x": -1.708,
+     "y": 3.094
+    },
+    "angle": 0.02,
+    "angularVelocity": 1.372
+   },
+   {
+    "id": "b130",
+    "shape": {
+     "kind": "box",
+     "width": 0.606,
+     "height": 1.109
+    },
+    "mass": 1.47,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 0.927,
+     "y": 2.85
+    },
+    "velocity": {
+     "x": -1.977,
+     "y": 1.25
+    },
+    "angle": -0.58,
+    "angularVelocity": 1.317
+   },
+   {
+    "id": "b131",
+    "shape": {
+     "kind": "box",
+     "width": 0.603,
+     "height": 0.692
+    },
+    "mass": 2.419,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 3.08,
+     "y": 3.02
+    },
+    "velocity": {
+     "x": 1.593,
+     "y": -3.865
+    },
+    "angle": 0.476,
+    "angularVelocity": -0.256
+   },
+   {
+    "id": "b132",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.438
+    },
+    "mass": 2.125,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 5.048,
+     "y": 2.968
+    },
+    "velocity": {
+     "x": 3.745,
+     "y": 0.755
+    },
+    "angle": 0.698,
+    "angularVelocity": -0.349
+   },
+   {
+    "id": "b133",
+    "shape": {
+     "kind": "box",
+     "width": 0.666,
+     "height": 1.243
+    },
+    "mass": 2.148,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.977,
+     "y": 2.909
+    },
+    "velocity": {
+     "x": -1.879,
+     "y": 3.716
+    },
+    "angle": 1.336,
+    "angularVelocity": 1.267
+   },
+   {
+    "id": "b134",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.69
+    },
+    "mass": 1.407,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 8.855,
+     "y": 3.168
+    },
+    "velocity": {
+     "x": 0.264,
+     "y": -0.781
+    },
+    "angle": 1.481,
+    "angularVelocity": 1.387
+   },
+   {
+    "id": "b135",
+    "shape": {
+     "kind": "box",
+     "width": 1.222,
+     "height": 0.62
+    },
+    "mass": 2.386,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 10.828,
+     "y": 2.911
+    },
+    "velocity": {
+     "x": -0.532,
+     "y": -0.666
+    },
+    "angle": 0.986,
+    "angularVelocity": -0.245
+   },
+   {
+    "id": "b136",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.365
+    },
+    "mass": 1.68,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 13.169,
+     "y": 3.148
+    },
+    "velocity": {
+     "x": -3.231,
+     "y": 2.355
+    },
+    "angle": 0.826,
+    "angularVelocity": 0.256
+   },
+   {
+    "id": "b137",
+    "shape": {
+     "kind": "box",
+     "width": 0.702,
+     "height": 0.896
+    },
+    "mass": 1.913,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 15.04,
+     "y": 3.165
+    },
+    "velocity": {
+     "x": 1.337,
+     "y": 2.768
+    },
+    "angle": 0.129,
+    "angularVelocity": 1.517
+   },
+   {
+    "id": "b138",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.523
+    },
+    "mass": 1.118,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 16.93,
+     "y": 2.972
+    },
+    "velocity": {
+     "x": -3.538,
+     "y": -0.431
+    },
+    "angle": 0.736,
+    "angularVelocity": -0.743
+   },
+   {
+    "id": "b139",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.334
+    },
+    "mass": 2.24,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 19.048,
+     "y": 3.0
+    },
+    "velocity": {
+     "x": -1.489,
+     "y": 3.458
+    },
+    "angle": 0.955,
+    "angularVelocity": -0.261
+   },
+   {
+    "id": "b140",
+    "shape": {
+     "kind": "box",
+     "width": 0.626,
+     "height": 0.701
+    },
+    "mass": 1.035,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -19.044,
+     "y": 5.328
+    },
+    "velocity": {
+     "x": 0.118,
+     "y": 0.982
+    },
+    "angle": -0.768,
+    "angularVelocity": -1.293
+   },
+   {
+    "id": "b141",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.661
+    },
+    "mass": 2.047,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -16.862,
+     "y": 5.18
+    },
+    "velocity": {
+     "x": -0.398,
+     "y": 2.205
+    },
+    "angle": -0.142,
+    "angularVelocity": -1.539
+   },
+   {
+    "id": "b142",
+    "shape": {
+     "kind": "box",
+     "width": 0.973,
+     "height": 0.871
+    },
+    "mass": 0.696,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -15.099,
+     "y": 5.266
+    },
+    "velocity": {
+     "x": -1.127,
+     "y": 3.668
+    },
+    "angle": -0.004,
+    "angularVelocity": -1.374
+   },
+   {
+    "id": "b143",
+    "shape": {
+     "kind": "box",
+     "width": 1.004,
+     "height": 0.994
+    },
+    "mass": 2.259,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -13.024,
+     "y": 5.259
+    },
+    "velocity": {
+     "x": -1.001,
+     "y": 2.428
+    },
+    "angle": 0.838,
+    "angularVelocity": 0.964
+   },
+   {
+    "id": "b144",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.369
+    },
+    "mass": 1.033,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -10.866,
+     "y": 5.448
+    },
+    "velocity": {
+     "x": -2.554,
+     "y": 2.055
+    },
+    "angle": 1.041,
+    "angularVelocity": 1.181
+   },
+   {
+    "id": "b145",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.533
+    },
+    "mass": 1.753,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -9.178,
+     "y": 5.354
+    },
+    "velocity": {
+     "x": -3.661,
+     "y": -3.594
+    },
+    "angle": -0.616,
+    "angularVelocity": 0.719
+   },
+   {
+    "id": "b146",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.683
+    },
+    "mass": 0.525,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -7.164,
+     "y": 5.434
+    },
+    "velocity": {
+     "x": -3.148,
+     "y": 2.673
+    },
+    "angle": 1.212,
+    "angularVelocity": 0.469
+   },
+   {
+    "id": "b147",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.418
+    },
+    "mass": 1.241,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -4.971,
+     "y": 5.232
+    },
+    "velocity": {
+     "x": 1.123,
+     "y": 2.638
+    },
+    "angle": -0.902,
+    "angularVelocity": 1.132
+   },
+   {
+    "id": "b148",
+    "shape": {
+     "kind": "box",
+     "width": 1.189,
+     "height": 0.542
+    },
+    "mass": 1.803,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -2.951,
+     "y": 5.44
+    },
+    "velocity": {
+     "x": 0.662,
+     "y": 1.115
+    },
+    "angle": 1.017,
+    "angularVelocity": -0.524
+   },
+   {
+    "id": "b149",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.574
+    },
+    "mass": 1.027,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -1.025,
+     "y": 5.176
+    },
+    "velocity": {
+     "x": -2.348,
+     "y": 2.021
+    },
+    "angle": 0.741,
+    "angularVelocity": 1.767
+   },
+   {
+    "id": "b150",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.636
+    },
+    "mass": 0.868,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 0.948,
+     "y": 5.325
+    },
+    "velocity": {
+     "x": -0.153,
+     "y": -1.683
+    },
+    "angle": 0.763,
+    "angularVelocity": 0.035
+   },
+   {
+    "id": "b151",
+    "shape": {
+     "kind": "box",
+     "width": 0.923,
+     "height": 0.649
+    },
+    "mass": 2.392,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 3.053,
+     "y": 5.318
+    },
+    "velocity": {
+     "x": -3.809,
+     "y": -1.202
+    },
+    "angle": 0.458,
+    "angularVelocity": -1.581
+   },
+   {
+    "id": "b152",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.459
+    },
+    "mass": 1.065,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 4.945,
+     "y": 5.48
+    },
+    "velocity": {
+     "x": 1.765,
+     "y": -0.389
+    },
+    "angle": 0.064,
+    "angularVelocity": -0.104
+   },
+   {
+    "id": "b153",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.545
+    },
+    "mass": 2.171,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.913,
+     "y": 5.186
+    },
+    "velocity": {
+     "x": -2.679,
+     "y": 2.008
+    },
+    "angle": -1.037,
+    "angularVelocity": 0.91
+   },
+   {
+    "id": "b154",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.492
+    },
+    "mass": 1.0,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 9.052,
+     "y": 5.394
+    },
+    "velocity": {
+     "x": -0.724,
+     "y": 3.835
+    },
+    "angle": 1.44,
+    "angularVelocity": -1.123
+   },
+   {
+    "id": "b155",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.648
+    },
+    "mass": 2.35,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 11.081,
+     "y": 5.183
+    },
+    "velocity": {
+     "x": 1.096,
+     "y": -2.224
+    },
+    "angle": 1.451,
+    "angularVelocity": 1.745
+   },
+   {
+    "id": "b156",
+    "shape": {
+     "kind": "box",
+     "width": 0.953,
+     "height": 1.226
+    },
+    "mass": 2.486,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 12.863,
+     "y": 5.332
+    },
+    "velocity": {
+     "x": -3.732,
+     "y": 1.991
+    },
+    "angle": 0.016,
+    "angularVelocity": -0.549
+   },
+   {
+    "id": "b157",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.675
+    },
+    "mass": 2.338,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 15.135,
+     "y": 5.237
+    },
+    "velocity": {
+     "x": -3.176,
+     "y": 1.882
+    },
+    "angle": 0.977,
+    "angularVelocity": 1.101
+   },
+   {
+    "id": "b158",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.432
+    },
+    "mass": 2.143,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 17.113,
+     "y": 5.249
+    },
+    "velocity": {
+     "x": 2.116,
+     "y": 3.898
+    },
+    "angle": 0.963,
+    "angularVelocity": 0.362
+   },
+   {
+    "id": "b159",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.571
+    },
+    "mass": 1.974,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 19.066,
+     "y": 5.119
+    },
+    "velocity": {
+     "x": 3.325,
+     "y": 0.762
+    },
+    "angle": -1.007,
+    "angularVelocity": -0.628
+   },
+   {
+    "id": "b160",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.377
+    },
+    "mass": 0.569,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -18.806,
+     "y": 7.794
+    },
+    "velocity": {
+     "x": 0.967,
+     "y": -3.951
+    },
+    "angle": -0.051,
+    "angularVelocity": -0.933
+   },
+   {
+    "id": "b161",
+    "shape": {
+     "kind": "box",
+     "width": 0.747,
+     "height": 0.767
+    },
+    "mass": 2.494,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -16.864,
+     "y": 7.529
+    },
+    "velocity": {
+     "x": -3.944,
+     "y": 2.964
+    },
+    "angle": -0.106,
+    "angularVelocity": -0.117
+   },
+   {
+    "id": "b162",
+    "shape": {
+     "kind": "box",
+     "width": 0.939,
+     "height": 0.734
+    },
+    "mass": 1.972,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -15.075,
+     "y": 7.52
+    },
+    "velocity": {
+     "x": 2.782,
+     "y": 2.288
+    },
+    "angle": 0.87,
+    "angularVelocity": -1.592
+   },
+   {
+    "id": "b163",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.551
+    },
+    "mass": 0.882,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -12.87,
+     "y": 7.652
+    },
+    "velocity": {
+     "x": 2.156,
+     "y": -1.282
+    },
+    "angle": -1.045,
+    "angularVelocity": -0.41
+   },
+   {
+    "id": "b164",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.468,
+       "y": -0.2808
+      },
+      {
+       "x": 0.468,
+       "y": -0.2808
+      },
+      {
+       "x": 0,
+       "y": 0.468
+      }
+     ]
+    },
+    "mass": 2.077,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -10.93,
+     "y": 7.48
+    },
+    "velocity": {
+     "x": -3.05,
+     "y": 3.265
+    },
+    "angle": 1.182,
+    "angularVelocity": -0.606
+   },
+   {
+    "id": "b165",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.487,
+       "y": -0.29219999999999996
+      },
+      {
+       "x": 0.487,
+       "y": -0.29219999999999996
+      },
+      {
+       "x": 0,
+       "y": 0.487
+      }
+     ]
+    },
+    "mass": 1.625,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -8.979,
+     "y": 7.418
+    },
+    "velocity": {
+     "x": -0.69,
+     "y": 0.946
+    },
+    "angle": -0.859,
+    "angularVelocity": 1.875
+   },
+   {
+    "id": "b166",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.453,
+       "y": -0.2718
+      },
+      {
+       "x": 0.453,
+       "y": -0.2718
+      },
+      {
+       "x": 0,
+       "y": 0.453
+      }
+     ]
+    },
+    "mass": 1.955,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -7.071,
+     "y": 7.617
+    },
+    "velocity": {
+     "x": 1.86,
+     "y": -2.025
+    },
+    "angle": -0.565,
+    "angularVelocity": -1.974
+   },
+   {
+    "id": "b167",
+    "shape": {
+     "kind": "box",
+     "width": 0.687,
+     "height": 1.216
+    },
+    "mass": 0.992,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -5.153,
+     "y": 7.536
+    },
+    "velocity": {
+     "x": -0.75,
+     "y": 1.511
+    },
+    "angle": -0.74,
+    "angularVelocity": -0.533
+   },
+   {
+    "id": "b168",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.342
+    },
+    "mass": 1.045,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -2.927,
+     "y": 7.73
+    },
+    "velocity": {
+     "x": -0.881,
+     "y": -1.337
+    },
+    "angle": -0.346,
+    "angularVelocity": -0.696
+   },
+   {
+    "id": "b169",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.619,
+       "y": -0.3714
+      },
+      {
+       "x": 0.619,
+       "y": -0.3714
+      },
+      {
+       "x": 0,
+       "y": 0.619
+      }
+     ]
+    },
+    "mass": 1.609,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -0.816,
+     "y": 7.768
+    },
+    "velocity": {
+     "x": -3.252,
+     "y": -3.292
+    },
+    "angle": 1.07,
+    "angularVelocity": 0.402
+   },
+   {
+    "id": "b170",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.67
+    },
+    "mass": 1.648,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 1.022,
+     "y": 7.506
+    },
+    "velocity": {
+     "x": 3.331,
+     "y": -2.767
+    },
+    "angle": -1.448,
+    "angularVelocity": 0.737
+   },
+   {
+    "id": "b171",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.476
+    },
+    "mass": 1.281,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 3.036,
+     "y": 7.776
+    },
+    "velocity": {
+     "x": 2.41,
+     "y": -0.213
+    },
+    "angle": -1.14,
+    "angularVelocity": 0.018
+   },
+   {
+    "id": "b172",
+    "shape": {
+     "kind": "box",
+     "width": 0.766,
+     "height": 0.902
+    },
+    "mass": 2.067,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 4.811,
+     "y": 7.429
+    },
+    "velocity": {
+     "x": 2.906,
+     "y": -2.597
+    },
+    "angle": -0.887,
+    "angularVelocity": 1.606
+   },
+   {
+    "id": "b173",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.624,
+       "y": -0.3744
+      },
+      {
+       "x": 0.624,
+       "y": -0.3744
+      },
+      {
+       "x": 0,
+       "y": 0.624
+      }
+     ]
+    },
+    "mass": 1.238,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 7.078,
+     "y": 7.78
+    },
+    "velocity": {
+     "x": 3.264,
+     "y": -0.04
+    },
+    "angle": 1.214,
+    "angularVelocity": 0.855
+   },
+   {
+    "id": "b174",
+    "shape": {
+     "kind": "box",
+     "width": 0.644,
+     "height": 0.937
+    },
+    "mass": 0.954,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 9.124,
+     "y": 7.649
+    },
+    "velocity": {
+     "x": 3.939,
+     "y": 1.226
+    },
+    "angle": 0.489,
+    "angularVelocity": -1.72
+   },
+   {
+    "id": "b175",
+    "shape": {
+     "kind": "box",
+     "width": 0.713,
+     "height": 1.279
+    },
+    "mass": 1.098,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 10.997,
+     "y": 7.777
+    },
+    "velocity": {
+     "x": -2.582,
+     "y": -3.307
+    },
+    "angle": 1.357,
+    "angularVelocity": 1.153
+   },
+   {
+    "id": "b176",
+    "shape": {
+     "kind": "box",
+     "width": 1.206,
+     "height": 0.911
+    },
+    "mass": 1.258,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 12.859,
+     "y": 7.649
+    },
+    "velocity": {
+     "x": -0.672,
+     "y": -3.211
+    },
+    "angle": -0.414,
+    "angularVelocity": -0.296
+   },
+   {
+    "id": "b177",
+    "shape": {
+     "kind": "box",
+     "width": 0.626,
+     "height": 1.091
+    },
+    "mass": 1.784,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 14.876,
+     "y": 7.413
+    },
+    "velocity": {
+     "x": 3.349,
+     "y": -1.674
+    },
+    "angle": 1.105,
+    "angularVelocity": -1.606
+   },
+   {
+    "id": "b178",
+    "shape": {
+     "kind": "box",
+     "width": 0.567,
+     "height": 0.512
+    },
+    "mass": 0.573,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 16.982,
+     "y": 7.472
+    },
+    "velocity": {
+     "x": 1.564,
+     "y": 2.765
+    },
+    "angle": -0.202,
+    "angularVelocity": -1.33
+   },
+   {
+    "id": "b179",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.62
+    },
+    "mass": 1.315,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 19.1,
+     "y": 7.75
+    },
+    "velocity": {
+     "x": 0.287,
+     "y": -1.743
+    },
+    "angle": 0.309,
+    "angularVelocity": -1.724
+   },
+   {
+    "id": "b180",
+    "shape": {
+     "kind": "box",
+     "width": 1.092,
+     "height": 0.798
+    },
+    "mass": 0.756,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -18.996,
+     "y": 10.015
+    },
+    "velocity": {
+     "x": 3.142,
+     "y": -2.032
+    },
+    "angle": -0.987,
+    "angularVelocity": -0.067
+   },
+   {
+    "id": "b181",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.503
+    },
+    "mass": 2.326,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -16.901,
+     "y": 9.97
+    },
+    "velocity": {
+     "x": -1.741,
+     "y": 1.846
+    },
+    "angle": -0.174,
+    "angularVelocity": 1.911
+   },
+   {
+    "id": "b182",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.671
+    },
+    "mass": 1.865,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -14.977,
+     "y": 9.835
+    },
+    "velocity": {
+     "x": -2.837,
+     "y": 0.196
+    },
+    "angle": -1.052,
+    "angularVelocity": -1.611
+   },
+   {
+    "id": "b183",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.517,
+       "y": -0.3102
+      },
+      {
+       "x": 0.517,
+       "y": -0.3102
+      },
+      {
+       "x": 0,
+       "y": 0.517
+      }
+     ]
+    },
+    "mass": 0.927,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -12.849,
+     "y": 9.792
+    },
+    "velocity": {
+     "x": -1.542,
+     "y": 1.432
+    },
+    "angle": -0.791,
+    "angularVelocity": 1.67
+   },
+   {
+    "id": "b184",
+    "shape": {
+     "kind": "box",
+     "width": 1.071,
+     "height": 1.287
+    },
+    "mass": 2.112,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -10.993,
+     "y": 9.723
+    },
+    "velocity": {
+     "x": 3.169,
+     "y": -2.107
+    },
+    "angle": -1.422,
+    "angularVelocity": -1.403
+   },
+   {
+    "id": "b185",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.429
+    },
+    "mass": 1.698,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -9.032,
+     "y": 10.066
+    },
+    "velocity": {
+     "x": -2.967,
+     "y": 0.582
+    },
+    "angle": 0.426,
+    "angularVelocity": -0.119
+   },
+   {
+    "id": "b186",
+    "shape": {
+     "kind": "box",
+     "width": 1.271,
+     "height": 0.881
+    },
+    "mass": 2.107,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -7.012,
+     "y": 9.867
+    },
+    "velocity": {
+     "x": 1.044,
+     "y": -1.742
+    },
+    "angle": 0.487,
+    "angularVelocity": -1.918
+   },
+   {
+    "id": "b187",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.362
+    },
+    "mass": 2.455,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -5.013,
+     "y": 9.73
+    },
+    "velocity": {
+     "x": 0.95,
+     "y": -3.523
+    },
+    "angle": -1.1,
+    "angularVelocity": -0.918
+   },
+   {
+    "id": "b188",
+    "shape": {
+     "kind": "box",
+     "width": 1.187,
+     "height": 1.027
+    },
+    "mass": 1.531,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -2.906,
+     "y": 9.726
+    },
+    "velocity": {
+     "x": -2.424,
+     "y": 3.184
+    },
+    "angle": 0.231,
+    "angularVelocity": 1.688
+   },
+   {
+    "id": "b189",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.523
+    },
+    "mass": 0.612,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": -0.869,
+     "y": 9.973
+    },
+    "velocity": {
+     "x": 3.921,
+     "y": -3.459
+    },
+    "angle": -0.777,
+    "angularVelocity": 1.644
+   },
+   {
+    "id": "b190",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.696
+    },
+    "mass": 2.495,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 0.951,
+     "y": 10.046
+    },
+    "velocity": {
+     "x": -1.007,
+     "y": -3.387
+    },
+    "angle": 0.566,
+    "angularVelocity": -1.735
+   },
+   {
+    "id": "b191",
+    "shape": {
+     "kind": "box",
+     "width": 0.93,
+     "height": 0.59
+    },
+    "mass": 1.285,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 2.947,
+     "y": 10.037
+    },
+    "velocity": {
+     "x": 1.192,
+     "y": -3.14
+    },
+    "angle": 0.698,
+    "angularVelocity": -1.007
+   },
+   {
+    "id": "b192",
+    "shape": {
+     "kind": "polygon",
+     "vertices": [
+      {
+       "x": -0.628,
+       "y": -0.37679999999999997
+      },
+      {
+       "x": 0.628,
+       "y": -0.37679999999999997
+      },
+      {
+       "x": 0,
+       "y": 0.628
+      }
+     ]
+    },
+    "mass": 0.97,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 5.061,
+     "y": 9.75
+    },
+    "velocity": {
+     "x": 0.081,
+     "y": 0.765
+    },
+    "angle": 1.402,
+    "angularVelocity": 0.411
+   },
+   {
+    "id": "b193",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.674
+    },
+    "mass": 1.96,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 6.91,
+     "y": 9.777
+    },
+    "velocity": {
+     "x": -0.164,
+     "y": 2.649
+    },
+    "angle": -0.753,
+    "angularVelocity": 1.948
+   },
+   {
+    "id": "b194",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.634
+    },
+    "mass": 0.716,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 9.188,
+     "y": 10.011
+    },
+    "velocity": {
+     "x": 0.32,
+     "y": -3.418
+    },
+    "angle": 0.297,
+    "angularVelocity": 0.68
+   },
+   {
+    "id": "b195",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.536
+    },
+    "mass": 1.855,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 10.86,
+     "y": 9.905
+    },
+    "velocity": {
+     "x": 0.223,
+     "y": -3.864
+    },
+    "angle": 1.403,
+    "angularVelocity": -1.887
+   },
+   {
+    "id": "b196",
+    "shape": {
+     "kind": "box",
+     "width": 0.577,
+     "height": 0.654
+    },
+    "mass": 1.143,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 13.06,
+     "y": 9.974
+    },
+    "velocity": {
+     "x": 2.677,
+     "y": 1.071
+    },
+    "angle": 0.67,
+    "angularVelocity": -0.419
+   },
+   {
+    "id": "b197",
+    "shape": {
+     "kind": "box",
+     "width": 1.097,
+     "height": 0.831
+    },
+    "mass": 2.221,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 15.073,
+     "y": 9.971
+    },
+    "velocity": {
+     "x": -0.683,
+     "y": 3.121
+    },
+    "angle": -0.505,
+    "angularVelocity": -0.109
+   },
+   {
+    "id": "b198",
+    "shape": {
+     "kind": "box",
+     "width": 0.983,
+     "height": 0.795
+    },
+    "mass": 2.401,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 16.853,
+     "y": 9.716
+    },
+    "velocity": {
+     "x": -0.831,
+     "y": -2.315
+    },
+    "angle": 0.925,
+    "angularVelocity": -1.267
+   },
+   {
+    "id": "b199",
+    "shape": {
+     "kind": "disc",
+     "radius": 0.642
+    },
+    "mass": 1.063,
+    "restitution": 0.9,
+    "friction": 0.2,
+    "position": {
+     "x": 18.996,
+     "y": 9.884
+    },
+    "velocity": {
+     "x": -2.509,
+     "y": 3.441
+    },
+    "angle": 0.034,
+    "angularVelocity": -1.138
+   }
+  ]
+ },
+ "timeline": [],
+ "end": {
+  "steps": 240
+ },
+ "probes": [
+  {
+   "id": "ke",
+   "path": "ledger.totals.energy.kinetic"
+  },
+  {
+   "id": "heat",
+   "path": "ledger.thermal"
+  },
+  {
+   "id": "contacts",
+   "path": "contacts.length"
+  }
+ ],
+ "assertions": [
+  {
+   "kind": "event",
+   "type": "violation",
+   "occurred": false
+  },
+  {
+   "kind": "ledgerResidual",
+   "quantity": "momentum",
+   "maxAbs": 1e-06
+  },
+  {
+   "kind": "ledgerResidual",
+   "quantity": "energy",
+   "maxAbs": 0.001
+  },
+  {
+   "kind": "rangeOver",
+   "probe": "heat",
+   "from": 0,
+   "to": "end",
+   "min": 0
+  }
+ ],
+ "ui": {
+  "lookFor": "A busy arena for checking performance. Watch the achieved speed in the top bar; it should stay at 1\u00d7.",
+  "overlays": [],
+  "graphs": [
+   "ke",
+   "heat"
+  ],
+  "camera": {
+   "x": 0,
+   "y": 0,
+   "zoom": 20
+  }
+ }
+}

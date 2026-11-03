@@ -21,7 +21,8 @@
     "req:check": "node scripts/req-trace.ts --milestone M0",
     "req:report": "node scripts/req-trace.ts",
     "sim": "node src/cli/sim.ts",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm req:check"
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm req:check",
+    "bench": "node scripts/bench.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

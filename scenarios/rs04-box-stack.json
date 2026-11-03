@@ -1,0 +1,273 @@
+{
+  "schema": 1,
+  "name": "rs04-box-stack",
+  "title": "Box stack settles",
+  "description": "RS-04. Five 1 m boxes stacked on fixed ground under gravity. They must settle with less than tol.penetration (5 mm) overlap and no jitter.",
+  "profile": "test",
+  "seed": 1,
+  "world": {
+    "bodies": [
+      {
+        "id": "ground",
+        "shape": {
+          "kind": "box",
+          "width": 20,
+          "height": 1
+        },
+        "mass": 1,
+        "fixed": true,
+        "restitution": 0,
+        "friction": 0.6,
+        "position": {
+          "x": 0,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "box0",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 1,
+        "restitution": 0,
+        "friction": 0.6,
+        "position": {
+          "x": 0,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "box1",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 1,
+        "restitution": 0,
+        "friction": 0.6,
+        "position": {
+          "x": 0,
+          "y": 1.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "box2",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 1,
+        "restitution": 0,
+        "friction": 0.6,
+        "position": {
+          "x": 0,
+          "y": 2.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "box3",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 1,
+        "restitution": 0,
+        "friction": 0.6,
+        "position": {
+          "x": 0,
+          "y": 3.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "box4",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 1,
+        "restitution": 0,
+        "friction": 0.6,
+        "position": {
+          "x": 0,
+          "y": 4.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      }
+    ],
+    "gravity": {
+      "x": 0,
+      "y": -9.81
+    }
+  },
+  "timeline": [],
+  "end": {
+    "steps": 960
+  },
+  "probes": [
+    {
+      "id": "y0",
+      "path": "bodies[id=box0].position.y"
+    },
+    {
+      "id": "y1",
+      "path": "bodies[id=box1].position.y"
+    },
+    {
+      "id": "y2",
+      "path": "bodies[id=box2].position.y"
+    },
+    {
+      "id": "y3",
+      "path": "bodies[id=box3].position.y"
+    },
+    {
+      "id": "y4",
+      "path": "bodies[id=box4].position.y"
+    },
+    {
+      "id": "topX",
+      "path": "bodies[id=box4].position.x"
+    },
+    {
+      "id": "topVy",
+      "path": "bodies[id=box4].velocity.y"
+    },
+    {
+      "id": "topAngle",
+      "path": "bodies[id=box4].angle"
+    },
+    {
+      "id": "heat",
+      "path": "ledger.thermal"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "y0",
+      "right": "0.5",
+      "tol": 0.005
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "y1 - y0",
+      "right": "1",
+      "tol": 0.005
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "y2 - y1",
+      "right": "1",
+      "tol": 0.005
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "y3 - y2",
+      "right": "1",
+      "tol": 0.005
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "y4 - y3",
+      "right": "1",
+      "tol": 0.005
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "topVy",
+      "from": 480,
+      "to": "end",
+      "min": -0.05,
+      "max": 0.05
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "topX",
+      "from": 0,
+      "to": "end",
+      "min": -0.001,
+      "max": 0.001
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "topAngle",
+      "from": 0,
+      "to": "end",
+      "min": -0.001,
+      "max": 0.001
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "y4@end - y4@720",
+      "right": "0",
+      "tol": 0.0005
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "The stack settles and stays still. Use the impulse tool (I) on the top box to knock it, or drag a box out while it runs.",
+    "overlays": [
+      "contacts"
+    ],
+    "graphs": [
+      "topVy",
+      "heat"
+    ],
+    "camera": {
+      "x": 0,
+      "y": 2.5,
+      "zoom": 60
+    }
+  }
+}

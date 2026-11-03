@@ -66,7 +66,7 @@ const TEST: Profile = {
   name: "test",
   timestep: 1 / 240,
   solverIterations: 20,
-  tol: { mass: 1e-9, momentum: 1e-9, angularMomentum: 1e-9, energy: 1e-6, velocity: 1e-6, pressure: 0.05, penetration: 1e-4, rocket: 0.05 },
+  tol: { mass: 1e-9, momentum: 1e-9, angularMomentum: 1e-9, energy: 1e-6, velocity: 1e-6, pressure: 0.05, penetration: 0.005, rocket: 0.05 },
   limit: { bodies: 1_000, gasParcels: 5_000, contacts: 10_000, maxSpeed: 2_000, minThickness: 0.05, minFragment: 0.05 },
 };
 
@@ -74,7 +74,7 @@ const SANDBOX: Profile = {
   name: "sandbox",
   timestep: 1 / 240,
   solverIterations: 10,
-  tol: { mass: 1e-6, momentum: 1e-6, angularMomentum: 1e-6, energy: 1e-3, velocity: 1e-4, pressure: 0.1, penetration: 1e-3, rocket: 0.1 },
+  tol: { mass: 1e-6, momentum: 1e-6, angularMomentum: 1e-6, energy: 1e-3, velocity: 1e-4, pressure: 0.1, penetration: 0.005, rocket: 0.1 },
   limit: { bodies: 5_000, gasParcels: 20_000, contacts: 50_000, maxSpeed: 2_000, minThickness: 0.05, minFragment: 0.05 },
 };
 

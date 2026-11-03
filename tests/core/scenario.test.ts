@@ -29,7 +29,7 @@ describe("scenario format", () => {
       timeline: [{ step: 2, commands: [{ type: "rng.sample", label: "x" }] }],
       assertions: [{ kind: "valueAt", probe: "tick", step: "end", equals: 10, tol: 0 }],
     });
-    expect(Object.keys(scn).sort()).toEqual(["assertions", "end", "name", "probes", "profile", "schema", "seed", "timeline", "world"]);
+    expect(Object.keys(scn).sort()).toEqual(["assertions", "end", "name", "probes", "profile", "schema", "seed", "timeline", "values", "world"]);
     expect(runScenario(scn).passed).toBe(true);
   });
 
@@ -51,7 +51,8 @@ describe("scenario format", () => {
         "$.name",
         "$.profile",
         "$.seed",
-        "$.world.bodies[0].shape",
+        "$.world.bodies[0].shape.width",
+        "$.world.bodies[0].shape.height",
         "$.world.bodies[0].mass",
         "$.world.bodies[0].position.y",
         "$.timeline[0].step",
@@ -63,7 +64,7 @@ describe("scenario format", () => {
         "$.assertions[1].right",
       ]),
     );
-    expect(errs.length).toBeGreaterThanOrEqual(13);
+    expect(errs.length).toBeGreaterThanOrEqual(14);
   });
 
   it("SCN-002 rejects duplicate body and probe ids and non-objects", () => {
@@ -155,10 +156,16 @@ describe("assertions", () => {
     expect(results.map((r) => r.pass)).toEqual([true, true, true, false]);
   });
 
-  it("SCN-003 ledgerResidual fails with an explanation until the ledger exists (M1)", () => {
-    const [r] = run([{ kind: "ledgerResidual", quantity: "momentum", maxAbs: 1 }]);
-    expect(r.pass).toBe(false);
-    expect(r.message).toMatch(/M1/);
+  it("SCN-003 LED-003 ledgerResidual passes for clean physics and fails when the ledger is bypassed", () => {
+    const bodies = [disc("a", { velocity: { x: 1, y: 0 } })];
+    const [clean] = run([{ kind: "ledgerResidual", quantity: "momentum", maxAbs: 1e-9 }], { world: { bodies } });
+    expect(clean.pass).toBe(true);
+    const [kicked] = run([{ kind: "ledgerResidual", quantity: "momentum", maxAbs: 1e-9 }], {
+      world: { bodies },
+      timeline: [{ step: 2, commands: [{ type: "debug.kick", id: "a", dv: { x: 0.5, y: 0 } }] }],
+    });
+    expect(kicked.pass).toBe(false);
+    expect(kicked.message).toMatch(/largest momentum residual 0\.5/);
   });
 
   it("SCN-003 a probe that does not resolve to a number records NaN and fails its assertion", () => {

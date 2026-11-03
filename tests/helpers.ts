@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Body } from "../src/core/index.ts";
+import type { BodyInput } from "../src/core/index.ts";
 
 export const ROOT = new URL("..", import.meta.url).pathname;
 
@@ -16,7 +16,7 @@ export function readJson(file: string): unknown {
   return JSON.parse(readFileSync(file, "utf8"));
 }
 
-export function disc(id: string, over: Partial<Body> = {}): Body {
+export function disc(id: string, over: Partial<BodyInput> = {}): BodyInput {
   return {
     id,
     shape: { kind: "disc", radius: 0.5 },
@@ -42,4 +42,8 @@ export function baseScenario(): Record<string, unknown> {
     probes: [{ id: "tick", path: "tick" }],
     assertions: [],
   };
+}
+
+export function box(id: string, width: number, height: number, over: Partial<BodyInput> = {}): BodyInput {
+  return { ...disc(id), shape: { kind: "box", width, height }, ...over };
 }
