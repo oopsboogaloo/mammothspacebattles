@@ -8,7 +8,7 @@ A 2D physics sandbox for spacecraft, gas-driven propulsion, weapons and damage. 
 |---|---|
 | `src/core/` | Headless simulation core. Pure TypeScript, no DOM, deterministic. |
 | `src/cli/sim.ts` | Command-line scenario runner. |
-| `src/main.ts` | Browser UI (placeholder until M1). |
+| `src/app/` | Sandbox UI (Preact): controller, renderer, panels. `controller.ts` and `render.ts` have no DOM shell and are unit-tested. |
 | `scenarios/` | Scenario files. Each is both a test and a sandbox starting point. |
 | `tests/` | Unit, property, scenario and determinism tests (Vitest). |
 | `e2e/` | Browser tests (Playwright). |
@@ -27,7 +27,8 @@ pnpm typecheck
 pnpm req:report      # which requirements are traced to tests
 pnpm check           # typecheck + lint + test + milestone gate
 pnpm sim run scenarios/empty.json --out result.json --hashes
-pnpm dev             # browser UI
+pnpm bench           # steps per second per scenario
+pnpm dev             # browser UI at http://localhost:5173/mammothspacebattles/
 ```
 
 Requires Node ≥ 22.18. The CLI and scripts run TypeScript directly with Node's built-in type stripping.

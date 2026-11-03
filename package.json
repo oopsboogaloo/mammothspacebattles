@@ -18,7 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "test:slow": "vitest run --config vitest.slow.config.ts",
     "test:e2e": "playwright test",
-    "req:check": "node scripts/req-trace.ts --milestone M0",
+    "req:check": "node scripts/req-trace.ts --milestone M1",
     "req:report": "node scripts/req-trace.ts",
     "sim": "node src/cli/sim.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm req:check",
@@ -35,5 +35,9 @@
     "typescript-eslint": "8.72.0",
     "vite": "8.1.0",
     "vitest": "4.1.12"
+  },
+  "dependencies": {
+    "@preact/signals": "2.11.3",
+    "preact": "^10.29.8"
   }
 }

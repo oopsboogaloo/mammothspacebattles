@@ -6,7 +6,7 @@ export default defineConfig(
   { ignores: ["dist/**", "coverage/**", "playwright-report/**", "test-results/**", "node_modules/**"] },
   ...tseslint.configs.recommended,
   { languageOptions: { globals: { ...globals.node } } },
-  { files: ["src/app/**/*.ts", "src/main.ts"], languageOptions: { globals: { ...globals.browser } } },
+  { files: ["src/app/**/*.ts", "src/app/**/*.tsx"], languageOptions: { globals: { ...globals.browser } } },
   {
     // ARC-001: the core must not touch the DOM, timers, wall-clock time or Node APIs.
     // ARC-004: all randomness comes from the world PRNG.

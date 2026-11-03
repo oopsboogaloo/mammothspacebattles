@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "name": "broken",
+  "profile": "nope",
+  "seed": 1.5,
+  "world": { "bodies": [{ "id": "a", "shape": { "kind": "disc", "radius": -1 }, "mass": 1, "position": { "x": 0, "y": 0 }, "velocity": { "x": 0, "y": 0 }, "angle": 0, "angularVelocity": 0 }] },
+  "timeline": [],
+  "end": { "steps": 10 },
+  "probes": [],
+  "assertions": []
+}

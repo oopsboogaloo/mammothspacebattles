@@ -65,3 +65,9 @@ jobs:
         with:
           name: playwright-report-${{ matrix.browser }}
           path: playwright-report
+      - name: Screenshots for milestone review (TST-010, UXV-004)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screens-${{ matrix.browser }}-${{ github.sha }}
+          path: test-results/screens
