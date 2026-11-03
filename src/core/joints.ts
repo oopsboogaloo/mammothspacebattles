@@ -225,8 +225,9 @@ function sideOf(world: World, start: string, skip: string): Set<string> {
 /**
  * Works out each joint's load from this step's impulses and breaks joints past a limit
  * (ASM-003, ASM-004). The load is the solver's impulse plus, for free assemblies, the
- * centripetal impulse the rigid rotation gave every part on b's side of the joint
- * (exact for tree-shaped assemblies; a joint in a loop counts only the solver's share).
+ * centripetal impulse the rigid rotation gave every part on b's side of the joint, plus what
+ * it passed on from gas last step (recordGasLoads). Exact for tree-shaped assemblies; a joint in
+ * a loop counts only the solver's share.
  */
 export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<string, Vec2>, rigid: (b: Body) => JointBody): ConstraintAccount {
   const acc = emptyAccount();
@@ -250,6 +251,12 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
           T += cross(sub(body.position, pB), J);
         }
       }
+    }
+    // Gas pushing the assembly last step (one step behind, so a break is evaluated, and its excess
+    // impulse taken back, against this step's solver state).
+    if (j.gasImpulse) {
+      P = add(P, j.gasImpulse);
+      T += j.gasImpulse.angular;
     }
     const F = scale(P, 1 / dt); // force on b
     const axis = rotate(sinCos(A.angle), j.axis);
@@ -278,6 +285,36 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
   }
   if (broken.size) world.joints = world.joints.filter((j) => !broken.has(j.id));
   return acc;
+}
+
+/**
+ * Gas pushes a free assembly as one rigid body, so each joint must pass on the difference between
+ * what the parts on b's side received from that rigid motion and what the gas pushed on them
+ * directly. Stored on the joint for the next step's evaluation (ASM-004 under thrust, RS-10).
+ */
+export function recordGasLoads(world: World, supplied: Map<string, { x: number; y: number; angular: number }>): void {
+  const byId = new Map(world.bodies.map((b) => [b.id, b]));
+  for (const j of world.joints) {
+    j.gasImpulse = undefined;
+    if (!supplied.size || !supplied.has(j.b)) continue;
+    const B = byId.get(j.b);
+    if (!B) continue;
+    const side = sideOf(world, j.b, j.id);
+    if (side.has(j.a)) continue; // a loop: the solver shares it
+    const pB = add(B.position, rotate(sinCos(B.angle), j.anchorB));
+    let x = 0;
+    let y = 0;
+    let angular = 0;
+    for (const id of side) {
+      const J = supplied.get(id);
+      const body = byId.get(id);
+      if (!J || !body) continue;
+      x += J.x;
+      y += J.y;
+      angular += cross(sub(body.position, pB), J) + J.angular;
+    }
+    j.gasImpulse = { x, y, angular };
+  }
 }
 
 const JOINT_BAUMGARTE = 0.5;

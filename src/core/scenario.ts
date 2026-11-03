@@ -206,6 +206,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.fixed !== undefined && typeof b.fixed !== "boolean") err(v, `${path}.fixed`, "must be true or false");
   if (b.restitution !== undefined) num(v, b.restitution, `${path}.restitution`, { min: 0, max: 1 });
   if (b.friction !== undefined) num(v, b.friction, `${path}.friction`, { min: 0 });
+  if (b.injector !== undefined) validateInjector(v, b.injector, `${path}.injector`);
   if (b.contents !== undefined) {
     if (!Array.isArray(b.contents)) return err(v, `${path}.contents`, "must be an array of stores");
     b.contents.forEach((s, i) => {
@@ -216,6 +217,25 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       const okC = num(v, s.capacity, `${sp}.capacity`, { min: 0 });
       if (okM && okC && (s.mass as number) > (s.capacity as number)) err(v, `${sp}.mass`, "must not exceed capacity");
     });
+  }
+}
+
+function validateInjector(v: V, i: unknown, path: string): void {
+  if (!isObj(i)) return err(v, path, "must be an object {channel, …}");
+  str(v, i.channel, `${path}.channel`);
+  if (i.rate !== undefined) num(v, i.rate, `${path}.rate`, { min: 0 });
+  for (const k of ["width", "speed"]) if (i[k] !== undefined) num(v, i[k], `${path}.${k}`, { min: 0 });
+  for (const k of ["parcelMass", "radius"]) if (i[k] !== undefined) num(v, i[k], `${path}.${k}`, { positive: true });
+  for (const k of ["outlet", "direction"]) if (i[k] !== undefined) vec(v, i[k], `${path}.${k}`);
+  if (i.igniter !== undefined && typeof i.igniter !== "boolean") err(v, `${path}.igniter`, "must be true or false");
+  if (i.mixture !== undefined) {
+    if (!isObj(i.mixture) || !Object.keys(i.mixture).length) return err(v, `${path}.mixture`, "must be an object of species mass fractions");
+    let sum = 0;
+    for (const [k, y] of Object.entries(i.mixture)) {
+      if (!SPECIES[k]) err(v, `${path}.mixture.${k}`, `unknown species (known: ${Object.keys(SPECIES).join(", ")})`);
+      if (num(v, y, `${path}.mixture.${k}`, { min: 0, max: 1 })) sum += y as number;
+    }
+    if (Math.abs(sum - 1) > 1e-9) err(v, `${path}.mixture`, `mass fractions must sum to 1, got ${sum}`);
   }
 }
 
@@ -279,6 +299,7 @@ function validateFill(v: V, f: unknown, path: string): void {
 function validateBounds(v: V, b: unknown, path: string): void {
   if (!isObj(b)) return err(v, path, "must be an object {min, max}");
   validateRect(v, b.min, b.max, path);
+  if (b.farField !== undefined) num(v, b.farField, `${path}.farField`, { positive: true });
 }
 
 function validateCommand(v: V, c: unknown, path: string): void {

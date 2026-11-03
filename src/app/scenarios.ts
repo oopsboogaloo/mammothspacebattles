@@ -20,6 +20,9 @@ const ORDER: [string, string][] = [
   ["rs05-weak-joint", "RS-05"],
   ["rs05b-spinning-assembly", "RS-05b"],
   ["rs07-gas-burst", "RS-07"],
+  ["rs08-chemical-rocket", "RS-08"],
+  ["rs09-off-axis-thruster", "RS-09"],
+  ["rs10-weak-engine-mount", "RS-10"],
   ["rs00-workload", "RS-00"],
 ];
 

@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, localVertices, massProps, mixture, rotate, scale, sinCos, SPECIES, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "grid";
@@ -113,7 +113,7 @@ function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "tempera
     let key: string;
     if (mode === "composition") key = compositionColour(p);
     else {
-      const T = p.thermal / (p.mass * mixture(p.composition).cv);
+      const T = temperatureOf(p, world.gas.scale ?? 1);
       key = temperatureColour(T_MIN * Math.pow(T_MAX / T_MIN, Math.round(temperatureFraction(T) * (BUCKETS - 1)) / (BUCKETS - 1)));
     }
     const g = groups.get(key);

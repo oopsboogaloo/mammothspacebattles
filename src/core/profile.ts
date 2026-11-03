@@ -5,6 +5,8 @@ export interface Profile {
   /** Fixed step, seconds. */
   timestep: number;
   solverIterations: number;
+  /** Gas dynamic scale (DEC-13): 1 is real gas; N makes sound and exhaust √N times slower. Default 1. */
+  gasScale?: number;
   tol: {
     mass: number; // kg
     momentum: number; // kg·m/s
@@ -54,6 +56,7 @@ export function parseProfile(raw: unknown): Profile {
   if (typeof obj.name !== "string") missing.push("name");
   checkPositive("timestep", obj.timestep);
   checkPositive("solverIterations", obj.solverIterations);
+  if (obj.gasScale !== undefined) checkPositive("gasScale", obj.gasScale);
   const tol = (obj.tol ?? {}) as Record<string, unknown>;
   const limit = (obj.limit ?? {}) as Record<string, unknown>;
   for (const k of TOL_KEYS) checkPositive(`tol.${k}`, tol[k]);
@@ -74,6 +77,8 @@ const SANDBOX: Profile = {
   name: "sandbox",
   timestep: 1 / 240,
   solverIterations: 10,
+  // Heavy gas: sound and exhaust 10× slower, so engines run in real time in the browser (DEC-13).
+  gasScale: 100,
   tol: { mass: 1e-6, momentum: 1e-6, angularMomentum: 1e-6, energy: 1e-3, velocity: 1e-4, pressure: 0.1, penetration: 0.005, rocket: 0.1 },
   limit: { bodies: 5_000, gasParcels: 20_000, contacts: 50_000, maxSpeed: 2_000, minThickness: 0.05, minFragment: 0.05 },
 };

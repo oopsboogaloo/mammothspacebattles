@@ -381,6 +381,14 @@ Thrust must come from gas pushing on engine geometry. No component applies a dir
 - **PRP-009** `[M · M4 · S]` If a feed link is broken or a reactant runs out, then no new reaction gas shall be produced from that feed.
 - **PRP-010** `[S · M4 · B]` A reference single-engine ship shall sustain thrust in real time within the parcel budget of GAS-008.
 
+*Model as built (M4).*
+- **Tanks** are stores. Propellant in a store counts toward its body's mass, and carries thermal energy (at 300 K) and chemical energy in the ledger.
+- **An injector** is a component on a body. It is commanded through a control link on its channel and draws its mixture from its own stores, which feed links top up. At its outlet it emits parcels at up to `rate` × command kg/s. The injector recoils, so momentum is unchanged, and the parcel's thermal energy absorbs any kinetic energy the injection adds, so energy is unchanged.
+- **The reaction is declared:** H₂ + 8 O₂ → H₂O releases 3.4×10⁷ J per kg of H₂, about 3,000 K in the products. (The real lower heating value is 1.2×10⁸ J/kg; the declared figure stands in for dissociation.) It burns completely in a step, in a parcel holding both reactants, if the parcel or any parcel within its smoothing length is at 800 K or more. With an igniter on, what an injector emits burns at once.
+- **Thrust** is only gas on the chamber and nozzle walls.
+- **Joints feel the gas.** The impulse a weld must pass on, because gas pushes its assembly as one rigid body, is added to its load one step later.
+- **Far field:** `bounds.farField` removes exhaust that has flown farther than that from every body, and the ledger records it at the boundary.
+
 ### 9.6 Damage (M5)
 
 - **DMG-001** `[M · M5 · U]` Every component, joint and link shall have an integrity between 0 and 1.
@@ -531,6 +539,7 @@ These are deliberately out of scope until the sandbox reaches M7. v0.1 of the sp
 | DEC-09 | Reference hardware | A 2020-era mid-range laptop (4-core CPU, integrated GPU), Chromium. | Needed to make SBX-040 and GAS-008 testable. |
 | DEC-11 | UI framework | **Preact + signals** for panels, plain Canvas 2D for the world view, CSS custom properties for theming. Testing with Playwright and Testing Library. | Panels need real components (inspector, palette, menus). Preact is small and React-compatible. Signals update fine-grained live values without re-rendering the whole UI each frame. |
 | DEC-12 | Theme | Dark by default, light optional. | Physics overlays read better on dark. Light mode helps for screenshots and in daylight. |
+| DEC-13 | Gas speed in the sandbox | The `sandbox` profile's gas is 100× "heavier" (`gasScale` 100): specific energies at a given temperature are 1/100, so sound and exhaust are 10× slower. All conservation laws, the rocket equation and thrust-from-gas still hold. The `test` profile keeps real gas, so the oracles check real physics. | Real gas needs about 20 substeps per step and runs at about 0.1× real time in the browser; heavy gas lets a ship's engine run at about real time. Chosen 2026-11-03. |
 | DEC-10 | Cross-browser determinism | Same-runtime bit-exactness is a must. Cross-browser is a should (DET-003). | Cross-browser requires a custom trig library. Worth it before replays or multiplayer, not before. |
 
 ## 15. References

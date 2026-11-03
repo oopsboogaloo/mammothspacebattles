@@ -14,7 +14,7 @@ import {
   scale,
   sinCos,
   sub,
-  mixture,
+  temperatureOf,
   type Body,
   type Parcel,
   type BodyInput,
@@ -22,7 +22,8 @@ import {
 } from "../core/index.ts";
 import { panBy, toScreen, toWorld, zoomAt } from "./camera.ts";
 import { fmt } from "./format.ts";
-import { assemblyIds, attachCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
+import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
+import { ENGINE, HULL, TANK } from "./parts.ts";
 import { COLORS, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, type PortMarker, type Preview, type RulerView } from "./render.ts";
 import {
   achieved,
@@ -73,6 +74,10 @@ export function spawnBody(kind: SpawnKind, id: string, at: Vec2, velocity: Vec2)
     }
     case "wall":
       return { ...base, velocity: { x: 0, y: 0 }, shape: { kind: "box", width: 4, height: 0.4 }, mass: 1, fixed: true };
+    case "hull":
+      return { ...structuredClone(HULL), ...base };
+    case "tank":
+      return { ...structuredClone(TANK), ...base };
   }
 }
 
@@ -102,6 +107,8 @@ export function gasRect(a: Vec2, b: Vec2): { min: Vec2; max: Vec2; area: number;
 }
 
 const isPrefab = (c: PartChoice): c is `prefab:${number}` => c.startsWith("prefab:");
+/** The engine is an assembly; Attach welds it by its mount body (SBX-014, W3). */
+const isEngine = (c: PartChoice): c is "engine" => c === "engine";
 
 interface Anchor {
   id?: string;
@@ -342,6 +349,7 @@ export function View() {
   const ghostPart = (): { id: string; shape: Body["shape"] } | null => {
     const k = spawnKind.value;
     if (isPrefab(k)) return null;
+    if (isEngine(k)) return { id: "new part", shape: ENGINE.bodies.find((b) => b.id === ENGINE.mount)!.shape };
     const b = spawnBody(k, "new part", { x: 0, y: 0 }, { x: 0, y: 0 });
     return { id: b.id, shape: normalizeBody(b).shape };
   };
@@ -461,6 +469,12 @@ export function View() {
           showToast(pl.reason);
           return;
         }
+        if (isEngine(k)) {
+          const { commands, mountId } = attachPrefabCommands(sb.world, ENGINE, pl, freshId);
+          if (edit(commands, `Attach engine to ${pl.target}`)) selection.value = [mountId];
+          showAttach(p, ghostPart());
+          return;
+        }
         const id = freshId(k);
         if (edit(attachCommands(sb.world, spawnBody(k, id, pl.position, { x: 0, y: 0 }), pl, freshId("joint"), true), `Attach ${id} to ${pl.target}`)) selection.value = [id];
         showAttach(p, ghostPart());
@@ -545,7 +559,7 @@ export function View() {
         g.now = p;
         const v = scale(sub(p, g.start), 2);
         const k = spawnKind.value;
-        preview.current = { kind: "arrow", from: g.start, to: p, label: `v ${fmt(length(v), "m/s")}`, body: isPrefab(k) ? undefined : normalizeBody(spawnBody(k, "preview", g.start, v)) };
+        preview.current = { kind: "arrow", from: g.start, to: p, label: `v ${fmt(length(v), "m/s")}`, body: isPrefab(k) || isEngine(k) ? undefined : normalizeBody(spawnBody(k, "preview", g.start, v)) };
         return;
       }
       case "impulse": {
@@ -616,6 +630,10 @@ export function View() {
       }
       case "spawn": {
         const k = spawnKind.value;
+        if (isEngine(k)) {
+          edit(prefabCommands(ENGINE, g.start, freshId), "Spawn engine");
+          return;
+        }
         if (isPrefab(k)) {
           const pf = prefabs.value[Number(k.slice(7))];
           if (pf) edit(prefabCommands(pf, g.start, freshId), `Spawn ${pf.name}`);
@@ -649,8 +667,20 @@ export function View() {
           showToast(`Feed links need a matching store at both ends; ${to.id} has none.`);
           return;
         }
-        const resource = from.contents!.find((s) => to.contents?.some((d) => d.resource === s.resource))!.resource;
-        edit([{ type: "link.add", link: { id: freshId("feed"), kind: "feed", from: from.id, to: to.id, resource, rate: 1 } }], `Link ${from.id} → ${to.id}`);
+        // One feed link per resource both ends can hold (a tank's H₂ and O₂ to an engine in one drag).
+        const resources = from.contents!.filter((st) => to.contents?.some((d) => d.resource === st.resource)).map((st) => st.resource);
+        const have = new Set(sb.world.links.filter((l) => l.kind === "feed" && l.from === from.id && l.to === to.id).map((l) => (l as { resource: string }).resource));
+        const fresh = resources.filter((r) => !have.has(r));
+        if (!fresh.length) {
+          showToast(`${from.id} already feeds ${to.id} with ${resources.join(" and ")}.`);
+          return;
+        }
+        // Rate: enough for the receiving injector's full flow (with margin), else 1 kg/s.
+        const inj = to.injector;
+        edit(
+          fresh.map((resource) => ({ type: "link.add" as const, link: { id: freshId("feed"), kind: "feed" as const, from: from.id, to: to.id, resource, rate: inj ? 2 * inj.rate * (inj.mixture[resource] ?? 0) || 1 : 1 } })),
+          `Link ${from.id} → ${to.id} (${fresh.join(", ")})`,
+        );
         return;
       }
       case "gas": {
@@ -771,7 +801,7 @@ export function View() {
       )}
       {!hb && hoverParcel && hoverPos && (
         <div class="hovercard" data-testid="hovercard" style={{ left: `${hoverPos.x + 14}px`, top: `${hoverPos.y + 14}px` }}>
-          gas parcel #{hoverParcel.id} · {Object.keys(hoverParcel.composition).join("+")} · {fmt(hoverParcel.thermal / (hoverParcel.mass * mixture(hoverParcel.composition).cv), "K")} · {fmt(hoverParcel.mass, "kg")} ·{" "}
+          gas parcel #{hoverParcel.id} · {Object.keys(hoverParcel.composition).join("+")} · {fmt(temperatureOf(hoverParcel, sb?.world.gas.scale ?? 1), "K")} · {fmt(hoverParcel.mass, "kg")} ·{" "}
           {fmt(length(hoverParcel.velocity), "m/s")}
         </div>
       )}

@@ -23,9 +23,9 @@ export const TOOLS: { id: ToolId; label: string; key: string; hint: string; disa
   { id: "ruler", label: "Ruler", key: "R", hint: "Drag between two points to measure distance, relative velocity and closing speed." },
 ];
 
-export type SpawnKind = "disc" | "box" | "plank" | "triangle" | "hexagon" | "wall";
-/** What Spawn/Attach places: a primitive, or a saved prefab by index (SBX-021). */
-export type PartChoice = SpawnKind | `prefab:${number}`;
+export type SpawnKind = "disc" | "box" | "plank" | "triangle" | "hexagon" | "wall" | "hull" | "tank";
+/** What Spawn/Attach places: a primitive, the built-in engine assembly, or a saved prefab by index (SBX-021). */
+export type PartChoice = SpawnKind | "engine" | `prefab:${number}`;
 
 export interface DialogState {
   kind: "error" | "confirm" | "info";

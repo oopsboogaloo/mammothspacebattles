@@ -282,7 +282,8 @@ export function emptyScenario(): Record<string, unknown> {
     description: "Nothing here yet.",
     profile: "sandbox",
     seed: 1,
-    world: { bodies: [] },
+    // Exhaust that flies more than 30 m from every body leaves the world (GAS-007).
+    world: { bodies: [], bounds: { min: { x: -1000, y: -1000 }, max: { x: 1000, y: 1000 }, farField: 30 } },
     timeline: [],
     end: { steps: 0 },
     probes: [],
