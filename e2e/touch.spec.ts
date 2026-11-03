@@ -2,6 +2,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { dragWorld, shot, toPage, waitForTick, world } from "./helpers.ts";
 
+// These fly gas engines in the browser; WebKit on CI runs them at about 7 steps a second at tablet
+// size, so 200 steps can take longer than the default 30 s. The checks are unchanged.
+test.describe.configure({ timeout: 90_000 });
+
 async function tapWorld(page: Page, x: number, y: number) {
   const p = await toPage(page, x, y);
   await page.mouse.click(p.x, p.y);
