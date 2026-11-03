@@ -1,3 +1,6 @@
 node_modules/
 dist/
 /docs/design.local-backup.md
+coverage/
+playwright-report/
+test-results/

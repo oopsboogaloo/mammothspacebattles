@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "name": "empty",
+  "description": "An empty world stepped for 240 ticks (1 s). M0 exit check: runs headless and hashes identically twice.",
+  "profile": "test",
+  "seed": 1,
+  "world": { "bodies": [] },
+  "timeline": [],
+  "end": { "steps": 240 },
+  "probes": [
+    { "id": "tick", "path": "tick" },
+    { "id": "time", "path": "time" }
+  ],
+  "assertions": [
+    { "kind": "valueAt", "probe": "tick", "step": "end", "equals": 240, "tol": 0 },
+    { "kind": "formula", "at": "end", "left": "time", "right": "tick / 240", "tol": 1e-12 }
+  ]
+}
