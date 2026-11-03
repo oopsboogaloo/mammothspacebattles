@@ -25,7 +25,7 @@ describe("scenario files", () => {
         const b = runScenario(scn, { recordHashes: true });
         expect(a.hashes!.length).toBe(scn.end.steps + 1);
         expect(b.hashes).toEqual(a.hashes);
-      });
+      }, 30_000); // RS-00 hashes a 200-body world every step, twice: slow on CI runners under coverage
     });
   }
 });
