@@ -1,0 +1,398 @@
+{
+  "schema": 1,
+  "name": "sc02-gas-in-a-box",
+  "title": "SC-02 Gas in a box",
+  "description": "RS-06. A free 10 kg box, 2 m inside, holds 0.5 kg of air at 300 K. Filled evenly, the box stays still and the gas stays spread out. Filled into the left half only, the gas rushes across and the box rocks, but box plus gas momentum stays zero. Try deleting a wall while it runs.",
+  "profile": "test",
+  "seed": 2,
+  "parameters": [
+    {
+      "id": "count",
+      "label": "Parcels",
+      "min": 50,
+      "max": 2000,
+      "step": 10,
+      "default": 500
+    },
+    {
+      "id": "gasMass",
+      "label": "Gas mass",
+      "unit": "kg",
+      "min": 0.05,
+      "max": 5,
+      "step": 0.05,
+      "default": 0.5
+    },
+    {
+      "id": "T",
+      "label": "Temperature",
+      "unit": "K",
+      "min": 50,
+      "max": 3000,
+      "step": 10,
+      "default": 300
+    },
+    {
+      "id": "boxMass",
+      "label": "Box mass",
+      "unit": "kg",
+      "min": 1,
+      "max": 100,
+      "step": 1,
+      "default": 10
+    },
+    {
+      "id": "fill",
+      "label": "Filled width",
+      "unit": "fraction",
+      "min": 0.25,
+      "max": 1,
+      "step": 0.05,
+      "default": 1
+    }
+  ],
+  "world": {
+    "bodies": [
+      {
+        "id": "bottom",
+        "shape": {
+          "kind": "box",
+          "width": 2.2,
+          "height": 0.1
+        },
+        "mass": {
+          "$expr": "boxMass * 0.22 / (0.84)"
+        },
+        "position": {
+          "x": 0,
+          "y": -1.05
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      },
+      {
+        "id": "left",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 2.0
+        },
+        "mass": {
+          "$expr": "boxMass * 0.2 / (0.84)"
+        },
+        "position": {
+          "x": -1.05,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      },
+      {
+        "id": "right",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 2.0
+        },
+        "mass": {
+          "$expr": "boxMass * 0.2 / (0.84)"
+        },
+        "position": {
+          "x": 1.05,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      },
+      {
+        "id": "top",
+        "shape": {
+          "kind": "box",
+          "width": 2.2,
+          "height": 0.1
+        },
+        "mass": {
+          "$expr": "boxMass * 0.22 / (0.84)"
+        },
+        "position": {
+          "x": 0,
+          "y": 1.05
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      }
+    ],
+    "joints": [
+      {
+        "id": "j-left-top",
+        "a": "left",
+        "b": "top",
+        "anchorA": {
+          "x": 0,
+          "y": 1
+        },
+        "anchorB": {
+          "x": -1.05,
+          "y": -0.05
+        },
+        "limits": {
+          "tension": 1000000000.0,
+          "compression": 1000000000.0,
+          "shear": 1000000000.0,
+          "torque": 1000000000.0
+        }
+      },
+      {
+        "id": "j-left-bottom",
+        "a": "left",
+        "b": "bottom",
+        "anchorA": {
+          "x": 0,
+          "y": -1
+        },
+        "anchorB": {
+          "x": -1.05,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000.0,
+          "compression": 1000000000.0,
+          "shear": 1000000000.0,
+          "torque": 1000000000.0
+        }
+      },
+      {
+        "id": "j-right-top",
+        "a": "right",
+        "b": "top",
+        "anchorA": {
+          "x": 0,
+          "y": 1
+        },
+        "anchorB": {
+          "x": 1.05,
+          "y": -0.05
+        },
+        "limits": {
+          "tension": 1000000000.0,
+          "compression": 1000000000.0,
+          "shear": 1000000000.0,
+          "torque": 1000000000.0
+        }
+      },
+      {
+        "id": "j-right-bottom",
+        "a": "right",
+        "b": "bottom",
+        "anchorA": {
+          "x": 0,
+          "y": -1
+        },
+        "anchorB": {
+          "x": 1.05,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000.0,
+          "compression": 1000000000.0,
+          "shear": 1000000000.0,
+          "torque": 1000000000.0
+        }
+      }
+    ],
+    "gas": [
+      {
+        "min": {
+          "x": -1,
+          "y": -1
+        },
+        "max": {
+          "x": {
+            "$expr": "-1 + 2 * fill"
+          },
+          "y": 1
+        },
+        "count": {
+          "$param": "count"
+        },
+        "mass": {
+          "$param": "gasMass"
+        },
+        "temperature": {
+          "$param": "T"
+        },
+        "composition": {
+          "air": 1
+        },
+        "jitter": 5,
+        "symmetric": true
+      }
+    ]
+  },
+  "timeline": [],
+  "end": {
+    "steps": 240
+  },
+  "probes": [
+    {
+      "id": "boxPx",
+      "path": "assembly[id=top].momentum.x"
+    },
+    {
+      "id": "boxPy",
+      "path": "assembly[id=top].momentum.y"
+    },
+    {
+      "id": "boxVx",
+      "path": "assembly[id=top].velocity.x"
+    },
+    {
+      "id": "boxVy",
+      "path": "assembly[id=top].velocity.y"
+    },
+    {
+      "id": "boxSpin",
+      "path": "assembly[id=top].angularVelocity"
+    },
+    {
+      "id": "gasPx",
+      "path": "gas.momentum.x"
+    },
+    {
+      "id": "gasPy",
+      "path": "gas.momentum.y"
+    },
+    {
+      "id": "wall",
+      "path": "gas.wallImpulse"
+    },
+    {
+      "id": "thermal",
+      "path": "gas.thermal"
+    },
+    {
+      "id": "temp",
+      "path": "gas.temperature"
+    },
+    {
+      "id": "spread",
+      "path": "gas.spread"
+    },
+    {
+      "id": "gasX",
+      "path": "gas.centre.x"
+    },
+    {
+      "id": "energy",
+      "path": "ledger.totals.energy.total"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "rangeOver",
+      "probe": "boxVx",
+      "from": 0,
+      "to": "end",
+      "min": -0.0003,
+      "max": 0.0003
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "boxVy",
+      "from": 0,
+      "to": "end",
+      "min": -0.0003,
+      "max": 0.0003
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "boxPx + gasPx",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "boxPy + gasPy",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "(wall@end - wall@120) / ((240 - 120) / 240 * 8)",
+      "right": "0.4 * thermal@end / 4",
+      "tol": 0.05,
+      "relative": true
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "spread",
+      "from": 0,
+      "to": "end",
+      "min": 0.8,
+      "max": 0.83
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "momentum",
+      "maxAbs": 1e-09
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "angularMomentum",
+      "maxAbs": 1e-09
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "energy",
+      "maxAbs": 1e-06
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "Box and gas momentum stay equal and opposite. Filled evenly, the box stays still.",
+    "overlays": [
+      "velocity"
+    ],
+    "graphs": [
+      "boxPx",
+      "gasPx",
+      "temp"
+    ],
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "zoom": 180
+    }
+  }
+}

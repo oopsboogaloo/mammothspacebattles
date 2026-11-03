@@ -14,7 +14,8 @@ describe("benchmark command", () => {
     expect(rows).toHaveLength(scenarioFiles().length);
     for (const row of rows) {
       expect(row.stepsPerSecond).toBeGreaterThan(0);
-      expect(Object.keys(row.subsystemsMs)).toEqual(["commands", "forces", "contacts", "integrate", "ledger"]);
+      expect(Object.keys(row.subsystemsMs)).toEqual(["commands", "forces", "contacts", "integrate", "gas", "ledger"]);
+      expect(row.parcels).toBeGreaterThanOrEqual(0);
     }
     expect(r.stdout).toMatch(/rs00-workload/);
   });

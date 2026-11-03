@@ -18,6 +18,9 @@ const files = args.length ? args : readdirSync(join(root, "scenarios")).filter((
 interface Row {
   scenario: string;
   bodies: number;
+  parcels: number;
+  /** Gas substeps in the last step. */
+  substeps: number;
   steps: number;
   ms: number;
   stepsPerSecond: number;
@@ -43,6 +46,8 @@ for (const file of files) {
   rows.push({
     scenario: scn.name,
     bodies: world.bodies.length,
+    parcels: world.gas.parcels.length,
+    substeps: world.gas.substeps,
     steps,
     ms: Math.round(ms * 10) / 10,
     stepsPerSecond: Math.round(sps),
@@ -52,6 +57,9 @@ for (const file of files) {
 }
 
 const pad = (s: string | number, n: number) => String(s).padStart(n);
-console.log(`${"scenario".padEnd(26)}${pad("bodies", 7)}${pad("steps", 7)}${pad("ms", 9)}${pad("steps/s", 10)}${pad("× real time", 13)}`);
-for (const r of rows) console.log(`${r.scenario.padEnd(26)}${pad(r.bodies, 7)}${pad(r.steps, 7)}${pad(r.ms, 9)}${pad(r.stepsPerSecond, 10)}${pad(r.realTimeFactor, 13)}`);
+console.log(`${"scenario".padEnd(26)}${pad("bodies", 7)}${pad("parcels", 8)}${pad("substeps", 9)}${pad("steps", 7)}${pad("ms", 9)}${pad("steps/s", 10)}${pad("× real time", 13)}`);
+for (const r of rows)
+  console.log(
+    `${r.scenario.padEnd(26)}${pad(r.bodies, 7)}${pad(r.parcels, 8)}${pad(r.substeps, 9)}${pad(r.steps, 7)}${pad(r.ms, 9)}${pad(r.stepsPerSecond, 10)}${pad(r.realTimeFactor, 13)}`,
+  );
 if (jsonOut) writeFileSync(jsonOut, JSON.stringify({ node: process.version, rows }, null, 2) + "\n");

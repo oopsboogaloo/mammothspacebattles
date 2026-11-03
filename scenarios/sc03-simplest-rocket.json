@@ -1,0 +1,438 @@
+{
+  "schema": 1,
+  "name": "sc03-simplest-rocket",
+  "title": "SC-03 Simplest rocket",
+  "description": "RS-07b. The SC-02 box pre-filled with 1 kg of air at 1,000 K, with a 0.4 m hole in its left wall. Gas jets out of the hole and the box accelerates to the right. Its momentum is always minus the momentum of the gas. A centred hole gives no spin; move the hole off-centre and the box spins, with angular momentum conserved.",
+  "profile": "test",
+  "seed": 3,
+  "parameters": [
+    {
+      "id": "hole",
+      "label": "Hole width",
+      "unit": "m",
+      "min": 0.1,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.4
+    },
+    {
+      "id": "holeY",
+      "label": "Hole position",
+      "unit": "m",
+      "min": -0.45,
+      "max": 0.45,
+      "step": 0.05,
+      "default": 0
+    },
+    {
+      "id": "count",
+      "label": "Parcels",
+      "min": 100,
+      "max": 2000,
+      "step": 10,
+      "default": 1000
+    },
+    {
+      "id": "gasMass",
+      "label": "Gas mass",
+      "unit": "kg",
+      "min": 0.1,
+      "max": 5,
+      "step": 0.1,
+      "default": 1
+    },
+    {
+      "id": "T",
+      "label": "Temperature",
+      "unit": "K",
+      "min": 100,
+      "max": 3000,
+      "step": 50,
+      "default": 1000
+    },
+    {
+      "id": "boxMass",
+      "label": "Box mass",
+      "unit": "kg",
+      "min": 1,
+      "max": 100,
+      "step": 1,
+      "default": 10
+    }
+  ],
+  "world": {
+    "bodies": [
+      {
+        "id": "bottom",
+        "shape": {
+          "kind": "box",
+          "width": 2.2,
+          "height": 0.1
+        },
+        "mass": {
+          "$expr": "boxMass * 0.22 / (0.84 - 0.1 * hole)"
+        },
+        "position": {
+          "x": 0,
+          "y": -1.05
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      },
+      {
+        "id": "left-high",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": {
+            "$expr": "1 - holeY - hole / 2"
+          }
+        },
+        "mass": {
+          "$expr": "boxMass * 0.1 * (1 - holeY - hole / 2) / (0.84 - 0.1 * hole)"
+        },
+        "position": {
+          "x": -1.05,
+          "y": {
+            "$expr": "(1 + holeY + hole / 2) / 2"
+          }
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      },
+      {
+        "id": "left-low",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": {
+            "$expr": "1 + holeY - hole / 2"
+          }
+        },
+        "mass": {
+          "$expr": "boxMass * 0.1 * (1 + holeY - hole / 2) / (0.84 - 0.1 * hole)"
+        },
+        "position": {
+          "x": -1.05,
+          "y": {
+            "$expr": "(-1 + holeY - hole / 2) / 2"
+          }
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      },
+      {
+        "id": "right",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 2.0
+        },
+        "mass": {
+          "$expr": "boxMass * 0.2 / (0.84 - 0.1 * hole)"
+        },
+        "position": {
+          "x": 1.05,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      },
+      {
+        "id": "top",
+        "shape": {
+          "kind": "box",
+          "width": 2.2,
+          "height": 0.1
+        },
+        "mass": {
+          "$expr": "boxMass * 0.22 / (0.84 - 0.1 * hole)"
+        },
+        "position": {
+          "x": 0,
+          "y": 1.05
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0
+      }
+    ],
+    "joints": [
+      {
+        "id": "j-high-top",
+        "a": "left-high",
+        "b": "top",
+        "anchorA": {
+          "x": 0,
+          "y": {
+            "$expr": "(1 - holeY - hole / 2) / 2"
+          }
+        },
+        "anchorB": {
+          "x": -1.05,
+          "y": -0.05
+        },
+        "limits": {
+          "tension": 1000000000.0,
+          "compression": 1000000000.0,
+          "shear": 1000000000.0,
+          "torque": 1000000000.0
+        }
+      },
+      {
+        "id": "j-low-bottom",
+        "a": "left-low",
+        "b": "bottom",
+        "anchorA": {
+          "x": 0,
+          "y": {
+            "$expr": "-(1 + holeY - hole / 2) / 2"
+          }
+        },
+        "anchorB": {
+          "x": -1.05,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000.0,
+          "compression": 1000000000.0,
+          "shear": 1000000000.0,
+          "torque": 1000000000.0
+        }
+      },
+      {
+        "id": "j-right-top",
+        "a": "right",
+        "b": "top",
+        "anchorA": {
+          "x": 0,
+          "y": 1
+        },
+        "anchorB": {
+          "x": 1.05,
+          "y": -0.05
+        },
+        "limits": {
+          "tension": 1000000000.0,
+          "compression": 1000000000.0,
+          "shear": 1000000000.0,
+          "torque": 1000000000.0
+        }
+      },
+      {
+        "id": "j-right-bottom",
+        "a": "right",
+        "b": "bottom",
+        "anchorA": {
+          "x": 0,
+          "y": -1
+        },
+        "anchorB": {
+          "x": 1.05,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000.0,
+          "compression": 1000000000.0,
+          "shear": 1000000000.0,
+          "torque": 1000000000.0
+        }
+      }
+    ],
+    "bounds": {
+      "min": {
+        "x": -60,
+        "y": -60
+      },
+      "max": {
+        "x": 60,
+        "y": 60
+      }
+    },
+    "gas": [
+      {
+        "min": {
+          "x": -1,
+          "y": -1
+        },
+        "max": {
+          "x": 1,
+          "y": 1
+        },
+        "count": {
+          "$param": "count"
+        },
+        "mass": {
+          "$param": "gasMass"
+        },
+        "temperature": {
+          "$param": "T"
+        },
+        "composition": {
+          "air": 1
+        }
+      }
+    ]
+  },
+  "timeline": [],
+  "end": {
+    "steps": 120
+  },
+  "probes": [
+    {
+      "id": "boxPx",
+      "path": "assembly[id=top].momentum.x"
+    },
+    {
+      "id": "boxPy",
+      "path": "assembly[id=top].momentum.y"
+    },
+    {
+      "id": "boxVx",
+      "path": "assembly[id=top].velocity.x"
+    },
+    {
+      "id": "boxSpin",
+      "path": "assembly[id=top].angularVelocity"
+    },
+    {
+      "id": "boxL",
+      "path": "assembly[id=top].angularMomentum"
+    },
+    {
+      "id": "gasPx",
+      "path": "gas.momentum.x"
+    },
+    {
+      "id": "gasPy",
+      "path": "gas.momentum.y"
+    },
+    {
+      "id": "gasL",
+      "path": "gas.angularMomentum"
+    },
+    {
+      "id": "leftPx",
+      "path": "gas.removed.momentum.x"
+    },
+    {
+      "id": "leftPy",
+      "path": "gas.removed.momentum.y"
+    },
+    {
+      "id": "leftL",
+      "path": "gas.removed.angularMomentum"
+    },
+    {
+      "id": "leftMass",
+      "path": "gas.removed.mass"
+    },
+    {
+      "id": "gasMassNow",
+      "path": "gas.mass"
+    },
+    {
+      "id": "boxMassNow",
+      "path": "assembly[id=top].mass"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "boxPx + gasPx + leftPx",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "boxPy + gasPy + leftPy",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "boxL + gasL + leftL",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "boxVx",
+      "from": "end",
+      "to": "end",
+      "min": 40
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "boxSpin",
+      "from": 0,
+      "to": "end",
+      "min": -0.5,
+      "max": 0.5
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "gasMassNow",
+      "from": "end",
+      "to": "end",
+      "max": 0.1
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "energy",
+      "maxAbs": 1e-06
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "Gas jets left out of the hole; the box speeds up to the right.",
+    "overlays": [
+      "velocity"
+    ],
+    "graphs": [
+      "boxVx",
+      "gasMassNow"
+    ],
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "zoom": 120
+    }
+  }
+}

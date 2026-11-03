@@ -3,10 +3,12 @@
 
 import { hashValue } from "./canonical.ts";
 import { evaluateFormula } from "./formula.ts";
+import { SPECIES } from "./gas.ts";
 import { resolvePath } from "./path.ts";
+import { resolveProbe } from "./probes.ts";
 import { PROFILES, getProfile } from "./profile.ts";
 import { polygonProblem } from "./shapes.ts";
-import { createWorld, stepInPlace, type BodyInput, type Command, type JointInput, type Link, type Vec2, type World } from "./world.ts";
+import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type GasFill, type JointInput, type Link, type Vec2, type World } from "./world.ts";
 
 export const SCENARIO_SCHEMA = 1;
 
@@ -52,7 +54,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: Link[] };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -101,7 +103,10 @@ export function migrateScenario(raw: unknown, migrations: Readonly<Record<number
 
 const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
 
-/** Replaces every {"$param": id} in `value` with its number, reporting unknown ids. */
+/**
+ * Replaces every {"$param": id} in `value` with its number, and every {"$expr": "formula"}
+ * with the formula evaluated over the parameters (e.g. "boxMass * 0.25"), reporting unknown ids.
+ */
 function substitute(value: unknown, values: Record<string, number>, path: string, errors: ValidationError[]): unknown {
   if (Array.isArray(value)) return value.map((v, i) => substitute(v, values, `${path}[${i}]`, errors));
   if (!isObj(value)) return value;
@@ -112,6 +117,21 @@ function substitute(value: unknown, values: Record<string, number>, path: string
       return NaN;
     }
     return values[id];
+  }
+  if ("$expr" in value) {
+    if (typeof value.$expr !== "string") {
+      errors.push({ path, message: "$expr must be a formula string" });
+      return NaN;
+    }
+    try {
+      return evaluateFormula(value.$expr, (id) => {
+        if (!(id in values)) throw new Error(`unknown parameter "${id}"`);
+        return values[id];
+      });
+    } catch (e) {
+      errors.push({ path, message: (e as Error).message });
+      return NaN;
+    }
   }
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value)) out[k] = substitute(v, values, `${path}.${k}`, errors);
@@ -226,6 +246,39 @@ function validateLink(v: V, l: unknown, path: string): void {
   else err(v, `${path}.kind`, 'must be "feed" or "control"');
 }
 
+function validateRect(v: V, min: unknown, max: unknown, path: string, minKey = "min", maxKey = "max"): void {
+  vec(v, min, `${path}.${minKey}`);
+  vec(v, max, `${path}.${maxKey}`);
+  if (isObj(min) && isObj(max) && typeof min.x === "number" && typeof max.x === "number" && typeof min.y === "number" && typeof max.y === "number") {
+    if (!(max.x > min.x) || !(max.y > min.y)) err(v, `${path}.${maxKey}`, `must be above and right of ${minKey}`);
+  }
+}
+
+function validateFill(v: V, f: unknown, path: string): void {
+  if (!isObj(f)) return err(v, path, "must be an object {min, max, count, mass, temperature}");
+  validateRect(v, f.min, f.max, path);
+  num(v, f.count, `${path}.count`, { int: true, min: 1 });
+  num(v, f.mass, `${path}.mass`, { positive: true });
+  num(v, f.temperature, `${path}.temperature`, { positive: true });
+  if (f.velocity !== undefined) vec(v, f.velocity, `${path}.velocity`);
+  if (f.jitter !== undefined) num(v, f.jitter, `${path}.jitter`, { min: 0 });
+  if (f.symmetric !== undefined && typeof f.symmetric !== "boolean") err(v, `${path}.symmetric`, "must be true or false");
+  if (f.composition !== undefined) {
+    if (!isObj(f.composition) || Object.keys(f.composition).length === 0) return err(v, `${path}.composition`, "must be an object of species mass fractions");
+    let sum = 0;
+    for (const [k, y] of Object.entries(f.composition)) {
+      if (!SPECIES[k]) err(v, `${path}.composition.${k}`, `unknown species (known: ${Object.keys(SPECIES).join(", ")})`);
+      if (num(v, y, `${path}.composition.${k}`, { min: 0, max: 1 })) sum += y as number;
+    }
+    if (Math.abs(sum - 1) > 1e-9) err(v, `${path}.composition`, `mass fractions must sum to 1, got ${sum}`);
+  }
+}
+
+function validateBounds(v: V, b: unknown, path: string): void {
+  if (!isObj(b)) return err(v, path, "must be an object {min, max}");
+  validateRect(v, b.min, b.max, path);
+}
+
 function validateCommand(v: V, c: unknown, path: string): void {
   if (!isObj(c)) return err(v, path, "must be an object");
   switch (c.type) {
@@ -254,7 +307,12 @@ function validateCommand(v: V, c: unknown, path: string): void {
     case "world.set":
       if (!isObj(c.patch)) return err(v, `${path}.patch`, "must be an object");
       if (c.patch.gravity !== undefined) vec(v, c.patch.gravity, `${path}.patch.gravity`);
+      if (c.patch.bounds !== undefined) validateBounds(v, c.patch.bounds, `${path}.patch.bounds`);
       return;
+    case "gas.fill":
+      return validateFill(v, c.fill, `${path}.fill`);
+    case "gas.remove":
+      return validateRect(v, c.min, c.max, path);
     case "joint.add":
       return validateJoint(v, c.joint, `${path}.joint`);
     case "joint.remove":
@@ -412,6 +470,11 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
       if (!Array.isArray(data.world.links)) err(v, "$.world.links", "must be an array");
       else data.world.links.forEach((l, i) => validateLink(v, l, `$.world.links[${i}]`));
     }
+    if (data.world.gas !== undefined) {
+      if (!Array.isArray(data.world.gas)) err(v, "$.world.gas", "must be an array of fills");
+      else data.world.gas.forEach((f, i) => validateFill(v, f, `$.world.gas[${i}]`));
+    }
+    if (data.world.bounds !== undefined) validateBounds(v, data.world.bounds, "$.world.bounds");
   }
 
   let endSteps = Infinity;
@@ -509,7 +572,13 @@ export interface RunResult {
 
 /** Builds the scenario's world at tick 0, with step-0 commands not yet applied. */
 export function initialWorld(scn: Scenario): World {
-  return createWorld(scn.seed, scn.world.bodies, scn.world.gravity, { joints: scn.world.joints, links: scn.world.links });
+  return createWorld(
+    scn.seed,
+    scn.world.bodies,
+    scn.world.gravity,
+    { joints: scn.world.joints, links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds },
+    getProfile(scn.profile),
+  );
 }
 
 export function timelineByStep(scn: Scenario): Map<number, Command[]> {
@@ -528,7 +597,7 @@ export function runScenario(scn: Scenario, opts: { recordHashes?: boolean; steps
   for (const p of scn.probes) probes[p.id] = [];
   const sample = () => {
     for (const p of scn.probes) {
-      const v = resolvePath(world, p.path);
+      const v = resolveProbe(world, p.path);
       probes[p.id].push(typeof v === "number" ? v : typeof v === "boolean" ? Number(v) : NaN);
     }
   };

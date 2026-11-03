@@ -16,7 +16,7 @@ export interface Totals {
   energy: {
     kinetic: number; // J
     potential: number; // J, gravitational
-    thermal: number; // J, heat from contacts
+    thermal: number; // J, heat from contacts plus the gas's thermal energy
     chemical: number; // J
     total: number; // J
   };
@@ -31,8 +31,9 @@ export interface Delta {
   energy: number;
 }
 
-export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction";
-export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction"];
+/** `boundary` is what gas carried out of the world boundary (GAS-007). */
+export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction" | "boundary";
+export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction", "boundary"];
 
 export interface StepLedger {
   tick: number;
@@ -91,6 +92,17 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
     L += m * cross(b.position, v) + inertia * b.angularVelocity;
     ke += 0.5 * m * dot(v, v) + 0.5 * inertia * b.angularVelocity * b.angularVelocity;
     pe -= m * dot(g, b.position);
+  }
+  // Gas parcels are point masses with thermal energy.
+  for (const p of world.gas.parcels) {
+    const v = p.velocity;
+    mass += p.mass;
+    px += p.mass * v.x;
+    py += p.mass * v.y;
+    L += p.mass * cross(p.position, v);
+    ke += 0.5 * p.mass * dot(v, v);
+    pe -= p.mass * dot(g, p.position);
+    thermal += p.thermal;
   }
   return {
     mass,

@@ -8,7 +8,7 @@ import {
   getProfile,
   initialWorld,
   parseScenario,
-  resolvePath,
+  resolveProbe,
   stepInPlace,
   timelineByStep,
   type Command,
@@ -110,7 +110,7 @@ export class Sandbox {
   private sample(): void {
     const t = this.world.tick;
     for (const s of this.series) {
-      const v = resolvePath(this.world, s.path);
+      const v = resolveProbe(this.world, s.path);
       const arr = (this.history[s.id] ??= []);
       arr[t] = typeof v === "number" ? v : NaN;
       arr.length = Math.max(arr.length, t + 1);
@@ -125,7 +125,7 @@ export class Sandbox {
       const t = this.world.tick;
       if (t % SNAPSHOT_EVERY === 0) this.saveSnapshot(t);
       const pending = this.editsAt(t);
-      if (pending.length) applyCommands(this.world, pending);
+      if (pending.length) applyCommands(this.world, pending, this.profile);
       this.sample();
       this.maxTick = Math.max(this.maxTick, t);
     }
@@ -152,7 +152,7 @@ export class Sandbox {
     const keepMax = this.maxTick;
     this.world = structuredClone(this.snapshots.get(start)!);
     const pending = this.editsAt(start);
-    if (pending.length) applyCommands(this.world, pending);
+    if (pending.length) applyCommands(this.world, pending, this.profile);
     while (this.world.tick < target) this.step(1);
     this.maxTick = Math.max(keepMax, target);
     this.sample();
@@ -172,7 +172,7 @@ export class Sandbox {
     const t = this.world.tick;
     const before = structuredClone(this.world);
     try {
-      applyCommands(this.world, commands);
+      applyCommands(this.world, commands, this.profile);
     } catch (e) {
       this.world = before; // invalid for this world: nothing is recorded or changed
       throw e;
