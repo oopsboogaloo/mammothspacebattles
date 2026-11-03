@@ -32,6 +32,7 @@ import {
   contextMenu,
   edit,
   follow,
+  followId,
   freshId,
   gasColour,
   gasOptions,
@@ -82,7 +83,7 @@ export function spawnBody(kind: SpawnKind, id: string, at: Vec2, velocity: Vec2)
 }
 
 type Gesture =
-  | { kind: "pan"; last: Vec2 }
+  | { kind: "pan"; last: Vec2; start: Vec2; moved: boolean }
   | { kind: "box"; start: Vec2; now: Vec2 }
   | { kind: "move"; id: string; grab: Vec2; original: Vec2; running: false }
   | { kind: "drag"; id: string; anchor: Vec2; group: number; running: true }
@@ -96,6 +97,8 @@ type Gesture =
 
 /** Frame budget for simulation steps, ms: heavy scenes run in slow motion instead of freezing the page. */
 const STEP_BUDGET_MS = 12;
+/** How far a press must move before it counts as a pan rather than a tap. */
+const PAN_SLOP_PX = 8;
 
 /** The fill (or clear) a gas-tool rectangle makes, from the tool settings. */
 export function gasRect(a: Vec2, b: Vec2): { min: Vec2; max: Vec2; area: number; count: number; mass: number } {
@@ -204,8 +207,8 @@ export function View() {
         stepper.accumulator = 0;
         smoothed = timeScale.value;
       }
-      if (follow.value && selection.value.length) {
-        const b = sb.world.bodies.find((x) => x.id === selection.value[0]);
+      if (follow.value && followId.value) {
+        const b = sb.world.bodies.find((x) => x.id === followId.value);
         if (b) camera.value = { ...camera.value, x: b.position.x, y: b.position.y };
       }
       const dpr = window.devicePixelRatio || 1;
@@ -384,7 +387,7 @@ export function View() {
     const body = hit(p);
     const t = tool.value;
     if (e.button === 1 || (t === "select" && !body && !e.shiftKey)) {
-      gesture.current = { kind: "pan", last: s };
+      gesture.current = { kind: "pan", last: s, start: s, moved: false };
       if (t === "select" && e.button === 0) selection.value = [];
       bump();
       return;
@@ -408,7 +411,7 @@ export function View() {
           return;
         }
         if (!body) {
-          gesture.current = { kind: "pan", last: s };
+          gesture.current = { kind: "pan", last: s, start: s, moved: false };
           return;
         }
         selection.value = [body.id];
@@ -531,6 +534,9 @@ export function View() {
     setHoverPos(null);
     switch (g.kind) {
       case "pan":
+        // A finger wobbles when it taps: only a real drag pans (and so stops following).
+        if (!g.moved && length(sub(s, g.start)) < PAN_SLOP_PX) return;
+        g.moved = true;
         camera.value = panBy(camera.value, s.x - g.last.x, s.y - g.last.y);
         g.last = s;
         follow.value = false;
@@ -778,7 +784,7 @@ export function View() {
         <div class="empty-hint">
           <div>
             <div style={{ fontSize: "18px", color: "var(--text)" }}>Empty world</div>
-            Press <b>S</b> or pick Spawn in the tool rail, choose a body, then click here.
+            Pick Spawn in the tools (or press <b>S</b>), choose a body, then click or tap here.
           </div>
         </div>
       )}
@@ -810,6 +816,7 @@ export function View() {
           {attachText}
         </div>
       )}
+      {sb && <FlightPad />}
       {Object.keys(bindings.value).length > 0 && sb && (
         <div class="keylegend" aria-label="Key bindings" data-testid="key-legend">
           <strong>Keys</strong>
@@ -880,6 +887,92 @@ function GasScale() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+let padGroup = 7_000_000;
+
+/**
+ * Hold-to-fire buttons, one per control channel that reaches a component (SBX-047), so ships can
+ * be flown by touch with no keyboard. Each button tracks its own pointer, so two thumbs can hold
+ * two engines at once. A bound key's letter is shown on its button.
+ */
+function FlightPad() {
+  void version.value;
+  const sb = sandbox.value!;
+  const channels = [...new Set(sb.world.links.filter((l) => l.kind === "control").map((l) => (l as { channel: string }).channel))].sort();
+  const held = useRef(new Map<string, { pointer: number; group: number }>());
+  const releaseChannel = (ch: string) => {
+    const h = held.current.get(ch);
+    if (!h) return;
+    held.current.delete(ch);
+    edit([{ type: "control.set", channel: ch, value: 0 }], `Fire ${ch}`, h.group);
+  };
+  // A pointer released anywhere ends its hold, even if it slid off its button and could not be
+  // captured; a channel whose control link went away while held is let go too.
+  useEffect(() => {
+    const up = (e: PointerEvent) => {
+      for (const [ch, h] of held.current) if (h.pointer === e.pointerId) releaseChannel(ch);
+    };
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, []);
+  const key = channels.join("\u0000");
+  useEffect(() => {
+    for (const ch of [...held.current.keys()]) if (!channels.includes(ch)) releaseChannel(ch);
+  }, [key]);
+  if (!channels.length) return null;
+  const keyFor = (ch: string) => Object.entries(bindings.value).find(([, c]) => c === ch)?.[0];
+  const press = (ch: string, e: PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      // Keep this button's pointer even if the thumb slides off it; some pointers can't be captured.
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* not capturable: release still arrives on the button */
+    }
+    if (held.current.has(ch)) return;
+    const group = ++padGroup;
+    held.current.set(ch, { pointer: e.pointerId, group });
+    edit([{ type: "control.set", channel: ch, value: 1 }], `Fire ${ch}`, group);
+  };
+  const release = (ch: string, e: PointerEvent) => {
+    e.stopPropagation();
+    const h = held.current.get(ch);
+    if (!h || h.pointer !== e.pointerId) return;
+    releaseChannel(ch);
+  };
+  // Flight pointers never reach the world's gesture handlers.
+  const stop = (e: Event) => e.stopPropagation();
+  return (
+    <div class="flightpad" role="group" aria-label="Flight controls" data-testid="flight-pad" onPointerDown={stop} onPointerMove={stop} onPointerUp={stop} onPointerCancel={stop}>
+      {channels.map((ch) => {
+        const key = keyFor(ch);
+        const on = (sb.world.controls[ch] ?? 0) > 0;
+        return (
+          <button
+            key={ch}
+            class={`padbtn ${on ? "on" : ""}`}
+            aria-pressed={on}
+            aria-label={`Fire ${ch} (hold)`}
+            title={key ? `Hold to fire ${ch} (or hold ${key.toUpperCase()})` : `Hold to fire ${ch}`}
+            onPointerDown={(e) => press(ch, e)}
+            onPointerUp={(e) => release(ch, e)}
+            onPointerCancel={(e) => release(ch, e)}
+            onContextMenu={(e) => e.preventDefault()}
+            data-testid={`fly-${ch}`}
+          >
+            {key && <span class="kbd">{key.toUpperCase()}</span>}
+            <span>{ch}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

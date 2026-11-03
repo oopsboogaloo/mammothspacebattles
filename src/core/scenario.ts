@@ -35,6 +35,8 @@ export interface ScenarioUi {
   camera?: { x: number; y: number; zoom: number };
   /** Body to select and follow with the camera. */
   follow?: string;
+  /** Suggested key bindings, key → control channel (SBX-020), added when the scenario opens. */
+  keys?: Record<string, string>;
 }
 
 export type LedgerQuantity = "mass" | "momentum" | "angularMomentum" | "energy";
@@ -545,6 +547,10 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     else {
       if (data.ui.lookFor !== undefined && typeof data.ui.lookFor !== "string") err(v, "$.ui.lookFor", "must be a string");
       if (data.ui.follow !== undefined && !(typeof data.ui.follow === "string" && ids.has(data.ui.follow))) err(v, "$.ui.follow", "must be the id of a body in the world");
+      if (data.ui.keys !== undefined) {
+        if (!isObj(data.ui.keys)) err(v, "$.ui.keys", "must be an object of key → channel");
+        else for (const [k, ch] of Object.entries(data.ui.keys)) if (!/^[a-z0-9]$/.test(k) || typeof ch !== "string" || !ch) err(v, `$.ui.keys.${k}`, "must map one lower-case letter or digit to a channel name");
+      }
       for (const k of ["overlays", "graphs"]) {
         const arr = data.ui[k];
         if (arr !== undefined && (!Array.isArray(arr) || arr.some((x) => typeof x !== "string"))) err(v, `$.ui.${k}`, "must be an array of strings");

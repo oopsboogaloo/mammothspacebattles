@@ -252,7 +252,7 @@ test.describe("onboarding and discoverability", () => {
   test("UX-001 the picker lists the starters first, then references, then an empty world", async ({ page }, info) => {
     await page.goto("./");
     const ids = await page.locator(".card .id").allTextContents();
-    expect(ids).toEqual(["SC-01", "SC-02", "SC-03", "RS-02", "RS-03", "RS-04", "RS-05", "RS-05b", "RS-07", "RS-08", "RS-09", "RS-10", "RS-16", "RS-00", "NEW"]);
+    expect(ids).toEqual(["SC-01", "SC-02", "SC-03", "FLY", "RS-02", "RS-03", "RS-04", "RS-05", "RS-05b", "RS-07", "RS-08", "RS-09", "RS-10", "RS-16", "RS-00", "NEW"]);
     await shot(page, info, "picker");
   });
 
@@ -359,10 +359,14 @@ test.describe("quality and accessibility", () => {
     await waitForTick(page, 30);
   });
 
-  test("SBX-045 below 900 px the sandbox switches to a view-and-run layout with sheets", async ({ page }, info) => {
+  test("SBX-045 SBX-047 below 900 px the sandbox switches to a compact layout: sheets, and the tools as a strip under the world", async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openStarter(page, "sc01-elastic-collision");
-    await expect(page.getByLabel("Tools")).toBeHidden();
+    // The tools stay, as a horizontal strip below the world (SBX-047), not a column beside it.
+    const tools = await page.getByLabel("Tools").boundingBox();
+    const view = await page.getByTestId("view").boundingBox();
+    expect(tools!.y).toBeGreaterThan(view!.y + view!.height - 1);
+    expect(tools!.width).toBeGreaterThan(tools!.height);
     await expect(page.getByTestId("play")).toBeVisible();
     await expect(page.getByTestId("scrub")).toBeVisible();
     await page.getByRole("button", { name: "Inspector" }).click();

@@ -73,6 +73,22 @@ export const prefabs = signal<Prefab[]>(prefs.prefabs ?? []);
 export const camera = signal<Camera>({ x: 0, y: 0, zoom: 60 });
 export const viewport = signal<Viewport>({ width: 800, height: 500 });
 export const follow = signal(false);
+/**
+ * The body the camera follows while `follow` is on. It is kept apart from the selection, so tapping
+ * empty space or another part doesn't lose the ship you're flying.
+ */
+export const followId = signal<string | null>(null);
+
+/** Turns following on (for `id`, else the selection, else the last body followed) or off. */
+export function setFollow(on: boolean, id: string | null = selection.value[0] ?? followId.value): void {
+  if (on && !id) {
+    follow.value = false;
+    return;
+  }
+  if (on) followId.value = id;
+  follow.value = on;
+}
+export const toggleFollow = (id?: string): void => setFollow(!follow.value, id);
 export const dialog = signal<DialogState | null>(null);
 export const cmdkOpen = signal(false);
 export const shortcutsOpen = signal(false);
@@ -141,13 +157,19 @@ export function openScenario(raw: unknown, key: string, values: Record<string, n
   playing.value = false;
   selection.value = [];
   follow.value = false;
+  followId.value = null;
   const ui = sb.scenario.ui;
   if (ui?.overlays && !opts.keepOverlays) overlays.value = new Set([...(ui.overlays as OverlayId[]), "grid"]);
   visibleSeries.value = ui?.graphs?.length ? ui.graphs.filter((g) => sb.series.some((s) => s.id === g)) : ["ledger.px", "ledger.ke"];
   camera.value = ui?.camera ?? fitBounds(worldBounds(sb.world), viewport.value);
+  if (ui?.keys) {
+    // The scenario's suggested keys win for their channels; other bindings stay.
+    const channels = new Set(Object.values(ui.keys));
+    bindings.value = { ...Object.fromEntries(Object.entries(bindings.value).filter(([k, c]) => !channels.has(c) && !(k in ui.keys!))), ...ui.keys };
+  }
   if (ui?.follow) {
     selection.value = [ui.follow];
-    follow.value = true;
+    setFollow(true, ui.follow);
   }
   screen.value = "sandbox";
   bump();
@@ -225,6 +247,8 @@ export function jumpTo(tick: number, select?: string[]): void {
 export function fitView(): void {
   const sb = sandbox.value;
   if (!sb) return;
+  // Fitting the whole world means no longer following one body.
+  follow.value = false;
   camera.value = fitBounds(worldBounds(sb.world), viewport.value);
 }
 
@@ -297,7 +321,7 @@ export const ACTIONS: Action[] = [
   { id: "redo", label: "Redo", keys: "Ctrl+Shift+Z", run: () => { sandbox.value?.redo(); bump(); }, enabled: () => !!sandbox.value?.canRedo },
   { id: "duplicate", label: "Duplicate selection", keys: "Ctrl+D", run: duplicateSelection, enabled: hasSelection },
   { id: "delete", label: "Delete selection", keys: "Delete", run: deleteSelection, enabled: hasSelection },
-  { id: "follow", label: "Follow selection", keys: "F", run: () => (follow.value = !follow.value), enabled: hasSelection },
+  { id: "follow", label: "Follow selection", keys: "F", run: () => toggleFollow(), enabled: () => hasSelection() || follow.value },
   { id: "fit", label: "Zoom to fit", keys: "Z", run: fitView, enabled: inSandbox },
   { id: "save", label: "Save scenario file", keys: "Ctrl+S", run: downloadScenario, enabled: inSandbox },
   { id: "open", label: "Open scenario file…", keys: "Ctrl+O", run: openFile },

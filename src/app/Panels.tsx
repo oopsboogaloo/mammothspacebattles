@@ -10,6 +10,8 @@ import {
   action,
   bindingFor,
   bindings,
+  follow,
+  toggleFollow,
   freshId,
   gasOptions,
   prefabs,
@@ -928,6 +930,16 @@ export function MobileBar() {
       </button>
       <button class="btn" onClick={() => action("fit").run()}>
         Fit
+      </button>
+      <button
+        class={`btn ${follow.value ? "on" : ""}`}
+        aria-pressed={follow.value}
+        disabled={!selection.value.length}
+        title={follow.value ? "Stop following" : selection.value.length ? "Keep the selection in view" : "Select something to follow it"}
+        onClick={() => toggleFollow()}
+        data-testid="mobile-follow"
+      >
+        Follow
       </button>
     </div>
   );

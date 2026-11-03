@@ -81,6 +81,8 @@ test("INS-006 PRP-009 the injector's status gives the reason it is not firing", 
 });
 
 test("UXV-001 W9 SBX-024 SBX-025 build a twin-engine ship on a wing, give each engine its own key, and steer by firing one in ≤ 28 actions", async ({ page }, info) => {
+  // Two gas engines for 240+ steps: slow in Firefox and WebKit on CI, so allow more than the default 30 s.
+  test.setTimeout(120_000);
   await page.goto("./");
   const b = new Budget(page, 28);
   await b.click(page.getByTestId("pick-empty"));
@@ -129,8 +131,10 @@ test("UXV-001 W9 SBX-024 SBX-025 build a twin-engine ship on a wing, give each e
   await page.keyboard.down("q");
   await page.keyboard.down("e");
   await waitForTick(page, 120, 60_000);
+  // The left-only phase is timed from the release, so a slow machine can't shorten it.
+  const released = (await world(page)).tick;
   await page.keyboard.up("e");
-  await waitForTick(page, 240, 60_000);
+  await waitForTick(page, released + 120, 60_000);
   await page.keyboard.up("q");
   b.done();
   await page.keyboard.press("Space");
