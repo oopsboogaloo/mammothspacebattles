@@ -12,11 +12,14 @@ export interface BuiltIn {
 /** Display order and short ids. Test-only scenarios (empty, m0-commands) are not listed. */
 const ORDER: [string, string][] = [
   ["sc01-elastic-collision", "SC-01"],
+  ["sc02-gas-in-a-box", "SC-02"],
+  ["sc03-simplest-rocket", "SC-03"],
   ["rs02-off-centre-impact", "RS-02"],
   ["rs03-bullet-thin-wall", "RS-03"],
   ["rs04-box-stack", "RS-04"],
   ["rs05-weak-joint", "RS-05"],
   ["rs05b-spinning-assembly", "RS-05b"],
+  ["rs07-gas-burst", "RS-07"],
   ["rs00-workload", "RS-00"],
 ];
 
@@ -25,6 +28,6 @@ export const BUILT_INS: BuiltIn[] = ORDER.flatMap(([name, id]) => {
   if (!entry) return [];
   const raw = entry[1];
   const description = String(raw.description ?? "");
-  const blurb = description.replace(/^(Starter SC-\d+|RS-\d+)\.\s*/, "");
+  const blurb = description.replace(/^(Starter SC-\d+|RS-\d+b?)\.\s*/, "");
   return [{ file: name, id, title: String(raw.title ?? name), blurb, raw }];
 });

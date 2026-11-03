@@ -3,7 +3,7 @@ import { render } from "preact";
 import { useEffect } from "preact/hooks";
 import "./styles.css";
 import { CommandPalette, ContextMenu, Dialog, Picker, ProbeMenu, Shortcuts, Toast, ViolationsPopover } from "./Overlays.tsx";
-import { Drawer, Inspector, MobileBar, SpawnPalette, StatusBar, ToolRail, TopBar } from "./Panels.tsx";
+import { Drawer, GasPalette, Inspector, MobileBar, SpawnPalette, StatusBar, ToolRail, TopBar } from "./Panels.tsx";
 import {
   action,
   bindingFor,
@@ -108,6 +108,7 @@ function App() {
           <div class="body">
             <ToolRail />
             {(tool.value === "spawn" || tool.value === "attach") && <SpawnPalette />}
+            {tool.value === "gas" && <GasPalette />}
             <div class="center">
               <View />
               <Drawer />

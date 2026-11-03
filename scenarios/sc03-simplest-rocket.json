@@ -432,7 +432,8 @@
     "camera": {
       "x": 0,
       "y": 0,
-      "zoom": 120
-    }
+      "zoom": 45
+    },
+    "follow": "top"
   }
 }

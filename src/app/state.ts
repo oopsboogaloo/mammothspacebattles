@@ -9,7 +9,7 @@ import { loadPrefs, savePrefs } from "./prefs.ts";
 import type { Prefab } from "./ports.ts";
 import type { OverlayId } from "./render.ts";
 
-export type ToolId = "select" | "move" | "spawn" | "attach" | "impulse" | "link" | "probe" | "ruler";
+export type ToolId = "select" | "move" | "spawn" | "attach" | "impulse" | "link" | "gas" | "probe" | "ruler";
 
 export const TOOLS: { id: ToolId; label: string; key: string; hint: string; disabled?: string }[] = [
   { id: "select", label: "Select", key: "V", hint: "Click an object to select it. Shift-click adds to the selection. Drag empty space to pan." },
@@ -18,6 +18,7 @@ export const TOOLS: { id: ToolId; label: string; key: string; hint: string; disa
   { id: "attach", label: "Attach", key: "A", hint: "Pick a part, then point at a body: its nearest port glows. Click to weld the part there (blue = valid, orange dashed = blocked, with the reason). While paused you can also drag a free body onto a port." },
   { id: "impulse", label: "Impulse", key: "I", hint: "Drag from a point on a body. The preview shows the impulse, Δv and Δω; release to apply." },
   { id: "link", label: "Link", key: "L", hint: "Drag from a body with a store to another store: a feed link pumps the resource between them. Only compatible bodies light up." },
+  { id: "gas", label: "Gas", key: "G", hint: "Drag a rectangle to fill it with gas at the temperature and density set in the panel. Switch to Clear to remove the gas in a rectangle." },
   { id: "probe", label: "Probe", key: "P", hint: "Click an object and choose a quantity. It is added to the graphs." },
   { id: "ruler", label: "Ruler", key: "R", hint: "Drag between two points to measure distance, relative velocity and closing speed." },
 ];
@@ -53,6 +54,16 @@ export const drawerOpen = signal(prefs.drawerOpen ?? true);
 export const graphWindow = signal<number | "all">(prefs.graphWindow ?? 10);
 export const visibleSeries = signal<string[]>([]);
 export const spawnKind = signal<PartChoice>("disc");
+/** Gas tool settings: fill or clear, and what a fill contains (GAS-001). */
+export const gasOptions = signal<{ mode: "fill" | "clear"; temperature: number; density: number; spacing: number; species: string }>({
+  mode: "fill",
+  temperature: 300,
+  density: 0.125, // kg/m²: 0.5 kg in a 2 m box, as in SC-02
+  spacing: 0.1, // m between parcels
+  species: "air",
+});
+/** How parcels are coloured (SBX-035). */
+export const gasColour = signal<"temperature" | "composition">("temperature");
 /** Keyboard key (lower case) → control channel (SBX-020). */
 export const bindings = signal<Record<string, string>>(prefs.bindings ?? {});
 /** Key waiting to be captured for a channel, while the user presses "Bind key". */
@@ -133,6 +144,10 @@ export function openScenario(raw: unknown, key: string, values: Record<string, n
   if (ui?.overlays && !opts.keepOverlays) overlays.value = new Set([...(ui.overlays as OverlayId[]), "grid"]);
   visibleSeries.value = ui?.graphs?.length ? ui.graphs.filter((g) => sb.series.some((s) => s.id === g)) : ["ledger.px", "ledger.ke"];
   camera.value = ui?.camera ?? fitBounds(worldBounds(sb.world), viewport.value);
+  if (ui?.follow) {
+    selection.value = [ui.follow];
+    follow.value = true;
+  }
   screen.value = "sandbox";
   bump();
   return true;

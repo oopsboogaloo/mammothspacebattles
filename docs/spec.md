@@ -166,6 +166,8 @@ Tests shall use independent oracles. Comparing the simulation with itself does n
 - **SCN-006** `[S · M1 · E]` The sandbox shall export the current experiment, including commands recorded while playing, as a scenario. You can then add assertions to turn it into a test.
 - **SCN-007** `[M · M0 · U]` If a scenario has an older schema version, then the system shall migrate it explicitly or reject it with a clear message.
 
+*Format notes (M3).* A number in `world`, `timeline`, `end` or `assertions` can be `{"$param": "id"}` or `{"$expr": "formula over parameters"}` (e.g. `"boxMass * 0.22 / 0.84"`). `world.gas` lists rectangle fills (count, mass, temperature, composition, bulk velocity, jitter); `world.bounds` sets the world boundary for gas. Besides plain paths into the world, probes can read `gas.<field>` (totals over all parcels: `mass`, `momentum.x`, `temperature`, `removed.mass`, `wallImpulse`, …) and `assembly[id=X].<field>` (the assembly X belongs to, as one rigid body: `mass`, `momentum.x`, `velocity.x`, `angularVelocity`, `angularMomentum`, …). `ui.follow` names a body to select and follow.
+
 ## 8. Sandbox UI Design
 
 Usability was the weakest part of the earlier prototype, so this section designs the UI rather than just listing features. The physics is only useful if experiments are quick to set up, easy to see, and safe to undo.
@@ -362,6 +364,8 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **GAS-007** `[M · M3 · P]` When parcels leave the world boundary or are merged, the ledger shall record the mass, momentum and energy removed or combined.
 - **GAS-008** `[S · M3 · B]` The `sandbox` profile shall support at least 2,000 active parcels in real time on the reference hardware.
 
+*Model as built (M3, DEC-04).* SPH with a Wendland C2 kernel (support h = 3 parcel spacings) and an ideal-gas equation of state per species, P = (γ − 1)·ρ·u in 2D (ρ in kg/m², P in N/m). Each step runs CFL-limited substeps. In each substep all impulses come from the state at its start, and each impulse's work, taken at the mean of the old and new velocities, is moved between kinetic and thermal energy. So momentum and angular momentum are conserved exactly and energy to rounding. Artificial viscosity (Monaghan α = 1, β = 2) is capped at the impulse that stops a pair closing. **Wall model (GAS-004):** a body surface is a mirror. Each parcel within h of a surface gets a ghost image, which the parcels on that face see. A ghost's impulse acts on the parcel and, equal and opposite along the same line, on the body, or on its free assembly as one rigid unit. At rest this presses on walls at the equation-of-state pressure, to within about 1% in SC-02. Parcels on opposite faces of a thin wall don't interact.
+
 ### 9.5 Gas-driven propulsion (M4)
 
 Thrust must come from gas pushing on engine geometry. No component applies a direct force.
@@ -436,7 +440,7 @@ Three scenarios are built into the sandbox and appear first in the scenario pick
 
 | | |
 |---|---|
-| **Setup** | A free square box, 2 m inside, walls 0.1 m thick, mass 10 kg. Inside: 500 gas parcels with 0.5 kg of gas in total, at 300 K. Velocities are random (seeded) with net momentum zeroed. |
+| **Setup** | A free square box, 2 m inside, walls 0.1 m thick, mass 10 kg. Inside: about 500 gas parcels (a 22 × 22 lattice) with 0.5 kg of gas in total, at 300 K. Velocities are random (seeded) and mirror-symmetric, so net momentum is zero. |
 | **Parameters** | Parcel count (50–2,000), gas mass, temperature (50–3,000 K), box mass, initial layout (uniform, or all packed in the left half). |
 | **Expected** | Uniform start: the box stays still (speed < `tol.velocity`), the gas stays spread evenly, and total momentum and energy are conserved. Left-half start: the gas expands to fill the box, the box rocks as gas hits the far wall, and box-plus-gas momentum stays zero. Wall pressure matches the gas model's equation of state to within `tol.pressure` once settled. |
 | **Try** | Delete a wall while it runs. The gas escapes and the box recoils away from the gap. This is SC-03 discovered by hand. |
@@ -520,7 +524,7 @@ These are deliberately out of scope until the sandbox reaches M7. v0.1 of the sp
 | DEC-02 | Physics engine | **Custom core in TypeScript**, not a library. | Gas-driven thrust needs tight control of gas–wall impulses and the ledger. Rapier is cross-platform deterministic in WASM, but makes per-parcel accounting harder. Revisit if M1 collision work stalls. |
 | DEC-03 | Structure model | Rigid components joined by breakable joints (not deformable bodies). | Much simpler. It still allows bending-by-breaking and splitting. |
 | DEC-04 | Gas model | Soft-sphere particles with pairwise pressure forces (DEM/SPH-like), with each parcel's thermal energy setting its pressure. | Pairwise forces give exact momentum conservation (GAS-002). It scales with a spatial grid. |
-| DEC-05 | Timestep | 1/240 s fixed for `sandbox`, with substeps for gas if needed. | Gas parcels move fast. A small step keeps nozzle contact stable. Tune in M3. |
+| DEC-05 | Timestep | 1/240 s fixed for `sandbox`. Gas takes CFL-limited substeps (Δt ≤ 0.25·h ÷ (sound speed + parcel speed)), halved and retried if a parcel's thermal energy would go negative. | Gas moves at the speed of sound: 300 K air needs about 22 substeps per step at 500 parcels in a 2 m box. *Tuned in M3.* |
 | DEC-06 | World scale | Ships 5–30 m, gas parcels 0.05–0.2 m radius, max speed 2 km/s. | Keeps parcels much smaller than engines while staying within budget. Tune in M3–M4. |
 | DEC-07 | Test tools | Vitest (unit, property, scenario), fast-check (property), Playwright (E2E: Chromium on every PR, Firefox and WebKit on every PR or nightly if too slow). | Standard, fast, TypeScript-native. |
 | DEC-08 | Rendering | Canvas 2D first. Move to WebGL only if parcel rendering misses 60 fps. | Simplest path. Rendering stays behind an interface (TST-011). |

@@ -753,6 +753,7 @@ export function stepGas(
   const A = new Float64Array(n); // P/ρ²
   const cs = new Float64Array(n);
   const inv = 1 / hmax;
+  const hmax2 = hmax * hmax;
   const s = { d: 0, nx: 0, ny: 0 };
   let wallImpulse = 0;
 
@@ -1019,12 +1020,13 @@ export function stepGas(
           const eyA = ey[e];
           for (let b = st === 0 ? a + 1 : b0; b < b1; b++) {
             const f = idx[b];
-            const eg = e >= n;
-            const fg = f >= n;
-            if (eg && fg) continue;
             const dx = exA - ex[f];
             const dy = eyA - ey[f];
             const r2 = dx * dx + dy * dy;
+            if (r2 >= hmax2) continue; // most candidates are rejected here
+            const eg = e >= n;
+            const fg = f >= n;
+            if (eg && fg) continue;
             const i = eg ? f : e; // the parcel
             const o = eg ? e : f; // the other entry
             const j = o >= n ? cP[gContact[o]] : o; // its parcel

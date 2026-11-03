@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, localVertices, massProps, rotate, scale, sinCos, type Body, type Vec2, type World } from "../core/index.ts";
+import { add, localVertices, massProps, mixture, rotate, scale, sinCos, SPECIES, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "grid";
@@ -55,6 +55,86 @@ export interface PortMarker {
   state: "idle" | "valid" | "invalid";
 }
 
+// ---------- Gas colours (SBX-035) ----------
+
+/** Temperature scale: logarithmic from T_MIN to T_MAX, so 300 K and 3,000 K gas both read. */
+export const T_MIN = 50;
+export const T_MAX = 3000;
+/**
+ * Stops of a perceptually ordered, colour-blind-safe ramp (after matplotlib's "inferno",
+ * lifted off black so cold gas shows on the dark background).
+ */
+export const T_RAMP = ["#3b0f70", "#8c2981", "#de4968", "#fe9f6d", "#fcfdbf"] as const;
+
+function hex(c: string): [number, number, number] {
+  return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
+}
+const RAMP_RGB = T_RAMP.map(hex);
+
+/** Position of a temperature on the scale, 0–1. */
+export function temperatureFraction(T: number): number {
+  if (!(T > T_MIN)) return 0;
+  if (T >= T_MAX) return 1;
+  return Math.log(T / T_MIN) / Math.log(T_MAX / T_MIN);
+}
+
+export function temperatureColour(T: number): string {
+  const f = temperatureFraction(T) * (RAMP_RGB.length - 1);
+  const i = Math.min(RAMP_RGB.length - 2, Math.floor(f));
+  const t = f - i;
+  const a = RAMP_RGB[i];
+  const b = RAMP_RGB[i + 1];
+  const c = a.map((v, k) => Math.round(v + (b[k] - v) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/** The species with the largest mass fraction gives a parcel's colour in composition view. */
+export function compositionColour(p: Parcel): string {
+  let best = "";
+  let y = -1;
+  for (const [k, v] of Object.entries(p.composition)) if (v > y) [best, y] = [k, v];
+  return SPECIES[best]?.colour ?? COLORS.label;
+}
+
+export const SPECIES_LIST = Object.entries(SPECIES).map(([id, sp]) => ({ id, colour: sp.colour }));
+
+const BUCKETS = 32;
+
+function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition"): void {
+  const parcels = world.gas.parcels;
+  if (!parcels.length) return;
+  // Batch parcels by colour so each colour is one path (2,000 parcels per frame stay cheap).
+  const groups = new Map<string, Parcel[]>();
+  const left = -20;
+  const right = vp.width + 20;
+  for (const p of parcels) {
+    const s = toScreen(c, vp, p.position);
+    if (s.x < left || s.x > right || s.y < -20 || s.y > vp.height + 20) continue;
+    let key: string;
+    if (mode === "composition") key = compositionColour(p);
+    else {
+      const T = p.thermal / (p.mass * mixture(p.composition).cv);
+      key = temperatureColour(T_MIN * Math.pow(T_MAX / T_MIN, Math.round(temperatureFraction(T) * (BUCKETS - 1)) / (BUCKETS - 1)));
+    }
+    const g = groups.get(key);
+    if (g) g.push(p);
+    else groups.set(key, [p]);
+  }
+  ctx.globalAlpha = 0.85;
+  for (const [colour, ps] of groups) {
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    for (const p of ps) {
+      const s = toScreen(c, vp, p.position);
+      const r = Math.max(1.5, p.radius * c.zoom);
+      ctx.moveTo(s.x + r, s.y);
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 export interface RenderOptions {
   overlays: ReadonlySet<OverlayId>;
   selection: ReadonlySet<string>;
@@ -68,6 +148,8 @@ export interface RenderOptions {
   labels?: boolean;
   /** Scale for velocity arrows, seconds: an arrow shows where the body will be after this long. */
   velocityScale?: number;
+  /** How to colour gas parcels (default temperature). */
+  gasColour?: "temperature" | "composition";
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -181,6 +263,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
   if (opts.overlays.has("grid")) drawGrid(ctx, c, vp);
+  // Gas under bodies, so walls stay crisp.
+  drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature");
 
   for (const b of world.bodies) {
     const selected = opts.selection.has(b.id);

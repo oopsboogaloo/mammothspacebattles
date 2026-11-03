@@ -17,7 +17,7 @@ describe("scenario files", () => {
         const result = runScenario(parseScenario(readJson(file)));
         const failed = result.assertions.filter((a) => !a.pass).map((a) => `#${a.index} ${a.kind}: ${a.message}`);
         expect(failed).toEqual([]);
-      });
+      }, 60_000); // gas scenarios run ~4× slower under coverage instrumentation
 
       it("DET-001 two runs give identical hashes after every step", () => {
         const scn = parseScenario(readJson(file));

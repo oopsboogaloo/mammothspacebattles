@@ -33,6 +33,8 @@ export interface ScenarioUi {
   overlays?: string[];
   graphs?: string[];
   camera?: { x: number; y: number; zoom: number };
+  /** Body to select and follow with the camera. */
+  follow?: string;
 }
 
 export type LedgerQuantity = "mass" | "momentum" | "angularMomentum" | "energy";
@@ -521,6 +523,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     if (!isObj(data.ui)) err(v, "$.ui", "must be an object");
     else {
       if (data.ui.lookFor !== undefined && typeof data.ui.lookFor !== "string") err(v, "$.ui.lookFor", "must be a string");
+      if (data.ui.follow !== undefined && !(typeof data.ui.follow === "string" && ids.has(data.ui.follow))) err(v, "$.ui.follow", "must be the id of a body in the world");
       for (const k of ["overlays", "graphs"]) {
         const arr = data.ui[k];
         if (arr !== undefined && (!Array.isArray(arr) || arr.some((x) => typeof x !== "string"))) err(v, `$.ui.${k}`, "must be an array of strings");

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { assemblyProps, bodyMass, controlInputs, cross, dot, length, massProps, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
+import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, length, massProps, mixture, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
 import { assemblyIds, makePrefab } from "./ports.ts";
 import { deg, fmt, rad } from "./format.ts";
 import { NumberField } from "./NumberField.tsx";
@@ -11,6 +11,7 @@ import {
   bindingFor,
   bindings,
   freshId,
+  gasOptions,
   prefabs,
   showToast,
   collapsed,
@@ -194,6 +195,60 @@ export function SpawnPalette() {
       <div class="muted" style={{ fontSize: "12px" }}>
         Components with functions (tanks, thrusters, cannons) arrive in M4–M6.
       </div>
+    </aside>
+  );
+}
+
+const GAS_SPECIES = ["air", "helium", "co2", "h2o", "h2", "o2"];
+
+/** Gas tool settings (GAS-001): what a dragged rectangle fills with, or Clear. */
+export function GasPalette() {
+  const o = gasOptions.value;
+  const set = (patch: Partial<typeof o>) => (gasOptions.value = { ...o, ...patch });
+  const T = o.temperature;
+  const cv = mixture({ [o.species]: 1 }).cv;
+  const g = mixture({ [o.species]: 1 }).gamma;
+  return (
+    <aside class="flyout" aria-label="Gas tool" data-testid="gas-palette">
+      <div class="muted" style={{ fontSize: "12px", letterSpacing: "0.08em" }}>
+        GAS
+      </div>
+      <div style={{ display: "flex", gap: "4px" }} role="group" aria-label="Gas tool mode">
+        <button class="btn small" aria-pressed={o.mode === "fill"} onClick={() => set({ mode: "fill" })} data-testid="gas-mode-fill">
+          Fill
+        </button>
+        <button class="btn small" aria-pressed={o.mode === "clear"} onClick={() => set({ mode: "clear" })} data-testid="gas-mode-clear">
+          Clear
+        </button>
+      </div>
+      {o.mode === "fill" ? (
+        <>
+          <NumberField id="gas-temperature" label="Temperature" unit="K" step={10} value={T} validate={(v) => (v >= 1 && v <= 10000 ? null : "Must be between 1 and 10,000 K")} onCommit={(v) => set({ temperature: v })} />
+          <NumberField id="gas-density" label="Density" unit="kg/m²" step={0.005} value={o.density} validate={(v) => (v > 0 && v <= 100 ? null : "Must be above 0 and at most 100")} onCommit={(v) => set({ density: v })} />
+          <NumberField id="gas-spacing" label="Parcel spacing" unit="m" step={0.01} value={o.spacing} validate={(v) => (v >= 0.02 && v <= 1 ? null : "Must be between 0.02 and 1 m")} onCommit={(v) => set({ spacing: v })} />
+          <div class="field">
+            <label for="gas-species">Species</label>
+            <div class="input">
+            <select id="gas-species" value={o.species} onChange={(e) => set({ species: (e.currentTarget as HTMLSelectElement).value })} onKeyDown={(e) => e.stopPropagation()} data-testid="gas-species">
+              {GAS_SPECIES.map((sp) => (
+                <option key={sp} value={sp}>
+                  {sp}
+                </option>
+              ))}
+            </select>
+            </div>
+          </div>
+          <Row k="Pressure" v={fmt((g - 1) * o.density * cv * T, "N/m")} title="Ideal gas in 2D: P = (γ − 1)·ρ·cv·T, per metre of wall." />
+          <Row k="Sound speed" v={fmt(Math.sqrt(g * (g - 1) * cv * T), "m/s")} title="c = √(γ(γ − 1)·cv·T). Hot, light gas needs more substeps." />
+          <div class="muted" style={{ fontSize: "12px" }}>
+            Drag a rectangle in the world. Parcels are not placed inside bodies.
+          </div>
+        </>
+      ) : (
+        <div class="muted" style={{ fontSize: "12px" }}>
+          Drag a rectangle: the gas inside it is removed.
+        </div>
+      )}
     </aside>
   );
 }
@@ -586,6 +641,7 @@ function ScenarioPanel() {
         <NumberField id="gy" label="Gravity y" unit="m/s²" value={sb.world.gravity.y} onCommit={(v) => edit([{ type: "world.set", patch: { gravity: { x: sb.world.gravity.x, y: v } } }], "Set gravity")} />
         <Row k="Bodies" v={String(sb.world.bodies.length)} />
       </Section>
+      {(sb.world.gas.parcels.length > 0 || sb.world.gas.removed.count > 0) && <GasSection />}
       <Section id="ledger" title="Ledger">
         <Row k="Mass" v={fmt(t.mass, "kg")} />
         <Row k="Momentum" v={`${fmt(t.momentum.x, "kg·m/s")}, ${fmt(t.momentum.y, "")}`} />
@@ -597,6 +653,26 @@ function ScenarioPanel() {
         {res && <Row k="Last residual (p, E)" v={`${Math.hypot(res.momentumX, res.momentumY).toExponential(1)}, ${res.energy.toExponential(1)}`} title="What the ledger could not attribute to any source in the last step." />}
       </Section>
     </>
+  );
+}
+
+function GasSection() {
+  void version.value;
+  const sb = sandbox.value!;
+  const g = gasTotals(sb.world.gas);
+  return (
+    <Section id="gas" title="Gas">
+      <Row k="Parcels" v={String(g.count)} />
+      <Row k="Mass" v={fmt(g.mass, "kg")} />
+      <Row k="Mean temperature" v={fmt(g.temperature, "K")} title="Mass-weighted mean of the parcels' temperatures." />
+      <Row k="Momentum" v={`${fmt(g.momentum.x, "kg·m/s")}, ${fmt(g.momentum.y, "")}`} />
+      <Row k="Thermal energy" v={fmt(g.thermal, "J")} />
+      <Row k="Substeps last step" v={String(g.substeps)} title="Gas moves at the speed of sound, so it takes several substeps per step (CFL condition)." />
+      {g.removed.count > 0 && <Row k="Left the world" v={`${g.removed.count} · ${fmt(g.removed.mass, "kg")}`} title="Gas past the world boundary is removed; the ledger records what it carried (GAS-007)." />}
+      <span class="muted" style={{ fontSize: "12px" }}>
+        Fill or clear gas with the Gas tool (G). Hover a parcel to read it.
+      </span>
+    </Section>
   );
 }
 
