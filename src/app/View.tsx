@@ -176,6 +176,8 @@ export function View() {
     const stepper = createStepper();
     let last = performance.now();
     let lastBump = 0;
+    // When the run last fell behind; the "slow" mark stays on a second after, so it doesn't flicker.
+    let behindAt = -Infinity;
     let smoothed = 1;
     let raf = 0;
     const frame = (now: number) => {
@@ -208,7 +210,8 @@ export function View() {
         const scaleNow = realDt > 0 ? (done * sb.profile.timestep) / realDt : 0;
         smoothed = smoothed * 0.9 + scaleNow * 0.1;
         if (now - lastBump > 100) {
-          achieved.value = { scale: smoothed, behind: r.fellBehind || cut || smoothed < timeScale.value * 0.95 };
+          if (r.fellBehind || cut || smoothed < timeScale.value * 0.95) behindAt = now;
+          achieved.value = { scale: smoothed, behind: now - behindAt < 1000 };
           bump();
           lastBump = now;
         }

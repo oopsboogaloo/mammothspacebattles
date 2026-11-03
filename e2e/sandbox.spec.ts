@@ -43,6 +43,28 @@ test.describe("time control", () => {
     expect((await world(page)).tick - slow).toBeGreaterThan(400);
     await expect(page.getByTestId("achieved")).toHaveText("paused");
   });
+
+  test("SBX-005 when it can't keep up it says slow, without moving the layout", async ({ page }) => {
+    // A gas engine at 8× is more than any machine here steps in real time.
+    await openStarter(page, "rs08-chemical-rocket");
+    const achieved = page.getByTestId("achieved");
+    await page.getByTestId("scale-8").click();
+    await page.getByTestId("play").click();
+    await expect(achieved).toHaveClass(/behind/, { timeout: 15_000 });
+    await expect(achieved).toContainText("slow"); // for screen readers; on screen it is the colour
+    // While running, falling behind and catching up change nothing in the layout.
+    const sample = async () => {
+      const s = (await achieved.boundingBox())!;
+      const v = (await page.getByTestId("view").boundingBox())!;
+      return `${s.width.toFixed(0)} ${v.y.toFixed(0)} ${v.height.toFixed(0)}`;
+    };
+    const first = await sample();
+    for (let i = 0; i < 10; i++) {
+      await page.waitForTimeout(150);
+      expect(await sample()).toBe(first);
+    }
+    await page.getByTestId("play").click();
+  });
 });
 
 test.describe("creating and editing", () => {

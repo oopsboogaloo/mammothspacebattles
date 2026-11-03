@@ -55,6 +55,7 @@ button { cursor: pointer; }
 .clock { display: flex; gap: 14px; font-family: var(--mono); font-size: 13px; color: var(--muted); flex-wrap: wrap; }
 .clock b { color: var(--text); font-weight: 500; }
 .clock .behind { color: var(--warn); }
+/* Falling behind changes only the colour (the words are for screen readers), so the top bar never re-flows. */
 .spacer { flex: 1; }
 .badge { border-radius: 999px; padding: 4px 12px; min-height: 32px; border: 1px solid var(--border); background: transparent; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
 .badge.alert { border-color: var(--warn); color: var(--warn); background: var(--warn-bg); }
