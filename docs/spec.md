@@ -317,7 +317,8 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **SBX-042** `[M · M1 · E]` Every interactive control shall expose a stable `data-testid` and an accessible name.
 - **SBX-043** `[M · M1 · E]` Every action shall be reachable by keyboard, with a visible focus indicator.
 - **SBX-044** `[M · M1 · R]` Text and controls shall meet WCAG 2.2 AA contrast in the default dark theme.
-- **SBX-045** `[S · M1 · E]` At widths below 900 px, the sandbox shall switch to a view-and-run layout: the world, time controls and scrub bar, with panels as bottom sheets.
+- **SBX-045** `[S · M1 · E]` At widths below 900 px, the sandbox shall switch to a compact layout: the world, time controls and scrub bar, with panels as bottom sheets.
+- **SBX-047** `[M · M4b · E]` On phones and tablets the sandbox shall support the whole build-and-fly workflow by touch alone. The tools are a strip along the bottom and the parts palette a strip above it. Tap to place or attach, drag to link, and on-screen hold-to-fire buttons for every control channel, several at once. W3 and W9 run at phone (390 px) and tablet (820 px) widths.
 - **SBX-046** `[S · M1 · E]` UI animations shall respect `prefers-reduced-motion`. This does not affect the simulation.
 
 ### 8.12 Usability verification

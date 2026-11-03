@@ -288,6 +288,6 @@ export function emptyScenario(): Record<string, unknown> {
     end: { steps: 0 },
     probes: [],
     assertions: [],
-    ui: { lookFor: "Press S (Spawn), pick a body, then click in the world. Drag while placing to give it a velocity.", overlays: ["velocity", "grid"], graphs: ["ledger.ke"] },
+    ui: { lookFor: "Pick Spawn in the tools (or press S), choose a body, then click or tap in the world. Drag while placing to give it a velocity.", overlays: ["velocity", "grid"], graphs: ["ledger.ke"] },
   };
 }

@@ -359,10 +359,14 @@ test.describe("quality and accessibility", () => {
     await waitForTick(page, 30);
   });
 
-  test("SBX-045 below 900 px the sandbox switches to a view-and-run layout with sheets", async ({ page }, info) => {
+  test("SBX-045 SBX-047 below 900 px the sandbox switches to a compact layout: sheets, and the tools as a strip under the world", async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openStarter(page, "sc01-elastic-collision");
-    await expect(page.getByLabel("Tools")).toBeHidden();
+    // The tools stay, as a horizontal strip below the world (SBX-047), not a column beside it.
+    const tools = await page.getByLabel("Tools").boundingBox();
+    const view = await page.getByTestId("view").boundingBox();
+    expect(tools!.y).toBeGreaterThan(view!.y + view!.height - 1);
+    expect(tools!.width).toBeGreaterThan(tools!.height);
     await expect(page.getByTestId("play")).toBeVisible();
     await expect(page.getByTestId("scrub")).toBeVisible();
     await page.getByRole("button", { name: "Inspector" }).click();

@@ -810,6 +810,7 @@ export function View() {
           {attachText}
         </div>
       )}
+      {sb && <FlightPad />}
       {Object.keys(bindings.value).length > 0 && sb && (
         <div class="keylegend" aria-label="Key bindings" data-testid="key-legend">
           <strong>Keys</strong>
@@ -880,6 +881,68 @@ function GasScale() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+let padGroup = 7_000_000;
+
+/**
+ * Hold-to-fire buttons, one per control channel that reaches a component (SBX-047), so ships can
+ * be flown by touch with no keyboard. Each button tracks its own pointer, so two thumbs can hold
+ * two engines at once. A bound key's letter is shown on its button.
+ */
+function FlightPad() {
+  void version.value;
+  const sb = sandbox.value!;
+  const channels = [...new Set(sb.world.links.filter((l) => l.kind === "control").map((l) => (l as { channel: string }).channel))].sort();
+  const held = useRef(new Map<string, { pointer: number; group: number }>());
+  if (!channels.length) return null;
+  const keyFor = (ch: string) => Object.entries(bindings.value).find(([, c]) => c === ch)?.[0];
+  const press = (ch: string, e: PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      // Keep this button's pointer even if the thumb slides off it; some pointers can't be captured.
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* not capturable: release still arrives on the button */
+    }
+    if (held.current.has(ch)) return;
+    const group = ++padGroup;
+    held.current.set(ch, { pointer: e.pointerId, group });
+    edit([{ type: "control.set", channel: ch, value: 1 }], `Fire ${ch}`, group);
+  };
+  const release = (ch: string, e: PointerEvent) => {
+    e.stopPropagation();
+    const h = held.current.get(ch);
+    if (!h || h.pointer !== e.pointerId) return;
+    held.current.delete(ch);
+    edit([{ type: "control.set", channel: ch, value: 0 }], `Fire ${ch}`, h.group);
+  };
+  return (
+    <div class="flightpad" role="group" aria-label="Flight controls" data-testid="flight-pad" onPointerDown={(e) => e.stopPropagation()}>
+      {channels.map((ch) => {
+        const key = keyFor(ch);
+        const on = (sb.world.controls[ch] ?? 0) > 0;
+        return (
+          <button
+            key={ch}
+            class={`padbtn ${on ? "on" : ""}`}
+            aria-pressed={on}
+            aria-label={`Fire ${ch} (hold)`}
+            title={key ? `Hold to fire ${ch} (or hold ${key.toUpperCase()})` : `Hold to fire ${ch}`}
+            onPointerDown={(e) => press(ch, e)}
+            onPointerUp={(e) => release(ch, e)}
+            onPointerCancel={(e) => release(ch, e)}
+            onContextMenu={(e) => e.preventDefault()}
+            data-testid={`fly-${ch}`}
+          >
+            {key && <span class="kbd">{key.toUpperCase()}</span>}
+            <span>{ch}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

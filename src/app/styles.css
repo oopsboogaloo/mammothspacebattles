@@ -157,9 +157,20 @@ button { cursor: pointer; }
 
 .mobilebar, .sheet { display: none; }
 
-/* View-and-run layout on narrow screens (SBX-045). */
+/* Compact layout on narrow screens (SBX-045), with the build tools kept for touch (SBX-047):
+   the world on top, then the parts palette as a horizontal strip, then the tool strip. */
 @media (max-width: 900px) {
-  .rail, .flyout, .inspector, .drawer .graphs, .statusbar .shortcuts, .topbar .wide { display: none; }
+  .inspector, .drawer .graphs, .statusbar .shortcuts, .topbar .wide { display: none; }
+  .body { flex-direction: column; }
+  .center { order: 1; flex: 1 1 auto; min-height: 0; }
+  .flyout { order: 2; width: auto; flex: 0 0 auto; flex-direction: row; align-items: stretch; overflow-x: auto; overflow-y: hidden; max-height: 92px; padding: 8px; gap: 6px; border-right: none; border-top: 1px solid var(--border); }
+  .flyout > .muted, .flyout input[type="search"] { display: none; }
+  .flyout .palette-item { flex: 0 0 auto; min-height: 44px; }
+  .flyout .palette-item small { display: none; }
+  .flyout[aria-label="Gas tool"] { flex-wrap: wrap; overflow-y: auto; max-height: 34vh; }
+  .flyout[aria-label="Gas tool"] .field { flex: 1 1 140px; }
+  .rail { order: 3; flex-direction: row; overflow-x: auto; padding: 6px 8px; border-right: none; border-top: 1px solid var(--border); }
+  .rail button { flex: 0 0 auto; }
   .mobilebar { display: flex; gap: 8px; padding: 8px 12px; background: var(--panel); border-top: 1px solid var(--border); }
   .mobilebar .btn { flex: 1; justify-content: center; min-height: 44px; }
   .sheet { display: flex; position: fixed; left: 0; right: 0; bottom: 0; max-height: 70vh; overflow: auto; z-index: 15; background: var(--panel); border-top: 1px solid var(--border); border-radius: 12px 12px 0 0; flex-direction: column; }
@@ -190,3 +201,24 @@ button { cursor: pointer; }
 .section .status { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; }
 .section .status.ok { color: var(--text); border-color: #5aa9ff; }
 .section .status.idle { color: var(--muted); border-style: dashed; }
+
+/* Hold-to-fire buttons for control channels (SBX-047). */
+.view .flightpad { position: absolute; right: 12px; bottom: 96px; display: flex; flex-direction: column; gap: 10px; z-index: 4; touch-action: none; }
+.view .padbtn { min-width: 76px; min-height: 64px; border-radius: 14px; border: 1px solid var(--border); background: rgba(18, 24, 41, 0.9); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 13px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; }
+.view .padbtn.on { border-color: var(--accent); background: var(--accent-soft); }
+@media (max-width: 900px) {
+  .view .flightpad { bottom: 64px; }
+  .view .padbtn { min-width: 84px; min-height: 72px; }
+}
+
+/* Phones: give the world the room (SBX-047). The Graphs sheet still has every series. */
+@media (max-width: 900px) {
+  .center .drawer .chips, .center .drawer .seg { display: none; }
+}
+@media (max-width: 600px) {
+  .statusbar [data-testid="status-hint"] { display: none; }
+  .view .lookfor { max-height: 22%; }
+  .view .gas-scale .muted { display: none; }
+  .view .gas-scale { width: 150px; padding: 6px 8px; }
+  .mobilebar { gap: 6px; padding: 6px 8px; }
+}
