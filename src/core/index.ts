@@ -2,6 +2,7 @@
 export * from "./canonical.ts";
 export * from "./collide.ts";
 export * from "./formula.ts";
+export * from "./gas.ts";
 export * from "./joints.ts";
 export * from "./bodies.ts";
 export * from "./ledger.ts";
@@ -9,6 +10,7 @@ export * from "./math.ts";
 export * from "./path.ts";
 export * from "./physics.ts";
 export * from "./prng.ts";
+export * from "./probes.ts";
 export * from "./profile.ts";
 export * from "./scenario.ts";
 export * from "./shapes.ts";

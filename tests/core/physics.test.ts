@@ -291,7 +291,7 @@ describe("ledger", () => {
     let t = 0;
     const out: Record<string, number> = {};
     stepInPlace(w, [], test, { clock: () => (t += 1), out });
-    expect(Object.keys(out)).toEqual(["commands", "forces", "contacts", "integrate", "ledger"]);
+    expect(Object.keys(out)).toEqual(["commands", "forces", "contacts", "integrate", "gas", "ledger"]);
     expect(Object.values(out).every((x) => x === 1)).toBe(true);
   });
 });

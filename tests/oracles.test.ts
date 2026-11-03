@@ -4,7 +4,7 @@
 import fc from "fast-check";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseScenario, runScenario } from "../src/core/index.ts";
+import { assemblyTotals, gasTotals, getProfile, initialWorld, invRotate, parseScenario, runScenario, sinCos, stepInPlace } from "../src/core/index.ts";
 import { readJson, ROOT } from "./helpers.ts";
 
 const load = (name: string) => readJson(join(ROOT, "scenarios", `${name}.json`));
@@ -105,4 +105,68 @@ describe("parameters", () => {
       for (const g of scn.ui!.graphs!) expect(scn.probes.map((p) => p.id), `${name} graph ${g}`).toContain(g);
     }
   });
+});
+
+describe("SC-03 simplest rocket: a box of hot gas with a hole", () => {
+  /**
+   * Runs SC-03 and measures, independently of the scenario's own probes, each parcel's
+   * velocity relative to the box at the moment it leaves the box (box-local frame).
+   */
+  function burn(values: Record<string, number>, steps = 120) {
+    const scn = parseScenario(load("sc03-simplest-rocket"), values);
+    const profile = getProfile(scn.profile);
+    const w = initialWorld(scn);
+    const m0 = assemblyTotals(w, "top")!.mass + gasTotals(w.gas).mass;
+    const inside = new Set(w.gas.parcels.map((p) => p.id));
+    let mOut = 0;
+    let exhaust = 0; // Σ m·(exhaust speed relative to the box, along −x of the box)
+    let exhaustMomentum = { x: 0, y: 0 }; // in the world frame, at the moment of leaving
+    for (let s = 0; s < steps; s++) {
+      stepInPlace(w, [], profile);
+      const b = assemblyTotals(w, "top")!;
+      const q = sinCos(w.bodies.find((x) => x.id === "top")!.angle);
+      const alive = new Set(w.gas.parcels.map((p) => p.id));
+      for (const p of w.gas.parcels) {
+        if (!inside.has(p.id)) continue;
+        const local = invRotate(q, { x: p.position.x - b.centre.x, y: p.position.y - b.centre.y });
+        if (Math.abs(local.x) <= 1.1 && Math.abs(local.y) <= 1.1) continue;
+        inside.delete(p.id);
+        const rel = invRotate(q, { x: p.velocity.x - b.velocity.x, y: p.velocity.y - b.velocity.y });
+        mOut += p.mass;
+        exhaust -= p.mass * rel.x;
+        exhaustMomentum = { x: exhaustMomentum.x + p.mass * p.velocity.x, y: exhaustMomentum.y + p.mass * p.velocity.y };
+      }
+      for (const id of [...inside]) if (!alive.has(id)) inside.delete(id);
+    }
+    const b = assemblyTotals(w, "top")!;
+    const mIn = w.gas.parcels.filter((p) => inside.has(p.id)).reduce((a, p) => a + p.mass, 0);
+    return { w, b, m0, m1: b.mass + mIn, ve: exhaust / mOut, mOut, profile, exhaustMomentum };
+  }
+
+  it("ORC-007 the box's Δv matches the rocket equation with the measured mean exhaust velocity", () => {
+    const { b, m0, m1, ve, mOut, profile, w } = burn({});
+    expect(mOut).toBeGreaterThan(0.85); // most of the gas is out; the cold remainder leaks slowly
+    const predicted = ve * Math.log(m0 / m1);
+    expect(Math.abs(b.velocity.x - predicted) / predicted).toBeLessThan(profile.tol.rocket);
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("ORC-008 the impulse on the box equals minus the momentum the exhaust carried away", () => {
+    const { b, w, exhaustMomentum } = burn({ count: 400 });
+    // All the gas momentum, inside the box, outside it, and already past the world boundary.
+    const gas = gasTotals(w.gas);
+    expect(b.momentum.x + gas.momentum.x + w.gas.removed.momentum.x).toBeCloseTo(0, 9);
+    expect(b.momentum.y + gas.momentum.y + w.gas.removed.momentum.y).toBeCloseTo(0, 9);
+    // Most of it was carried by gas as it left through the hole.
+    expect(-exhaustMomentum.x / b.momentum.x).toBeGreaterThan(0.9);
+  }, 60_000);
+
+  it("PRP-006 an off-centre hole spins the box; angular momentum is still conserved", () => {
+    const centred = burn({ count: 400 });
+    const offset = burn({ count: 400, holeY: 0.3 });
+    expect(Math.abs(offset.b.angularVelocity)).toBeGreaterThan(10 * Math.abs(centred.b.angularVelocity));
+    const L = offset.b.angularMomentum + gasTotals(offset.w.gas).angularMomentum + offset.w.gas.removed.angularMomentum;
+    expect(L).toBeCloseTo(0, 9);
+    expect(offset.w.ledger.violations).toBe(0);
+  }, 60_000);
 });

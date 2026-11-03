@@ -14,14 +14,16 @@ import {
   scale,
   sinCos,
   sub,
+  mixture,
   type Body,
+  type Parcel,
   type BodyInput,
   type Vec2,
 } from "../core/index.ts";
 import { panBy, toScreen, toWorld, zoomAt } from "./camera.ts";
 import { fmt } from "./format.ts";
 import { assemblyIds, attachCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
-import { COLORS, OVERLAYS, renderFrame, type PortMarker, type Preview, type RulerView } from "./render.ts";
+import { COLORS, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, type PortMarker, type Preview, type RulerView } from "./render.ts";
 import {
   achieved,
   bump,
@@ -30,6 +32,8 @@ import {
   edit,
   follow,
   freshId,
+  gasColour,
+  gasOptions,
   hover,
   overlays,
   playing,
@@ -82,7 +86,20 @@ type Gesture =
   | { kind: "impulse"; id: string; point: Vec2; now: Vec2 }
   | { kind: "ruler"; a: Anchor; now: Vec2 }
   | { kind: "attachDrag"; id: string; grab: Vec2; original: Vec2; originalAngle: number }
-  | { kind: "link"; from: string; now: Vec2 };
+  | { kind: "link"; from: string; now: Vec2 }
+  | { kind: "gas"; start: Vec2; now: Vec2 };
+
+/** Frame budget for simulation steps, ms: heavy scenes run in slow motion instead of freezing the page. */
+const STEP_BUDGET_MS = 12;
+
+/** The fill (or clear) a gas-tool rectangle makes, from the tool settings. */
+export function gasRect(a: Vec2, b: Vec2): { min: Vec2; max: Vec2; area: number; count: number; mass: number } {
+  const min = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y) };
+  const max = { x: Math.max(a.x, b.x), y: Math.max(a.y, b.y) };
+  const area = (max.x - min.x) * (max.y - min.y);
+  const o = gasOptions.value;
+  return { min, max, area, count: Math.max(1, Math.round(area / (o.spacing * o.spacing))), mass: o.density * area };
+}
 
 const isPrefab = (c: PartChoice): c is `prefab:${number}` => c.startsWith("prefab:");
 
@@ -125,6 +142,7 @@ export function View() {
   const highlight = useRef<Set<string> | null>(null);
   const attach = useRef<Placement | null>(null);
   const [attachText, setAttachText] = useState<string | null>(null);
+  const [hoverParcel, setHoverParcel] = useState<Parcel | null>(null);
   void version.value;
 
   // Resize the canvas to its box at device pixel ratio.
@@ -157,10 +175,21 @@ export function View() {
       last = now;
       if (playing.value) {
         const r = advanceStepper(stepper, realDt, { timestep: sb.profile.timestep, timeScale: timeScale.value, maxStepsPerFrame: 64 });
-        if (r.steps) sb.step(r.steps);
-        smoothed = smoothed * 0.9 + r.achievedScale * 0.1;
+        // Step within the frame budget, at least one step a frame. What doesn't fit is dropped,
+        // so a heavy scene (gas) runs in smooth slow motion rather than stalling the page.
+        const t0 = performance.now();
+        let done = 0;
+        while (done < r.steps) {
+          sb.step(1);
+          done++;
+          if (performance.now() - t0 > STEP_BUDGET_MS) break;
+        }
+        const cut = done < r.steps;
+        if (cut) stepper.accumulator = 0;
+        const scaleNow = realDt > 0 ? (done * sb.profile.timestep) / realDt : 0;
+        smoothed = smoothed * 0.9 + scaleNow * 0.1;
         if (now - lastBump > 100) {
-          achieved.value = { scale: smoothed, behind: r.fellBehind || smoothed < timeScale.value * 0.95 };
+          achieved.value = { scale: smoothed, behind: r.fellBehind || cut || smoothed < timeScale.value * 0.95 };
           bump();
           lastBump = now;
         }
@@ -201,6 +230,7 @@ export function View() {
         preview: preview.current,
         ports: portMarkers.current,
         highlight: highlight.current ?? undefined,
+        gasColour: gasColour.value,
       });
       // Rotate handle for a single selected body with the Move tool.
       const handle = rotateHandle();
@@ -213,13 +243,23 @@ export function View() {
         ctx.fill();
         ctx.stroke();
       }
-      if (g?.kind === "box") {
+      if (g?.kind === "box" || g?.kind === "gas") {
         const a = toScreen(camera.value, viewport.value, g.start);
         const b = toScreen(camera.value, viewport.value, g.now);
-        ctx.strokeStyle = COLORS.hover;
-        ctx.setLineDash([4, 3]);
+        const clear = g.kind === "gas" && gasOptions.value.mode === "clear";
+        ctx.strokeStyle = g.kind === "gas" ? (clear ? COLORS.contact : COLORS.preview) : COLORS.hover;
+        ctx.lineWidth = g.kind === "gas" ? 2 : 1;
+        ctx.setLineDash(clear ? [6, 4] : [4, 3]);
         ctx.strokeRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(a.x - b.x), Math.abs(a.y - b.y));
         ctx.setLineDash([]);
+        if (g.kind === "gas") {
+          const f = gasRect(g.start, g.now);
+          ctx.fillStyle = ctx.strokeStyle;
+          ctx.font = "12px 'IBM Plex Mono', monospace";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "bottom";
+          ctx.fillText(clear ? "clear gas" : `≈ ${f.count} parcels · ${fmt(f.mass, "kg")} · ${gasOptions.value.temperature} K`, Math.max(a.x, b.x) + 8, Math.min(a.y, b.y) - 4);
+        }
       }
     };
     raf = requestAnimationFrame(frame);
@@ -234,6 +274,20 @@ export function View() {
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
   const worldAt = (s: Vec2) => toWorld(camera.value, viewport.value, s);
+
+  /** The parcel under the pointer, if any (for the hover readout, SBX-036). */
+  const parcelAt = (p: Vec2): Parcel | null => {
+    const sb = sandbox.value;
+    if (!sb) return null;
+    const minR = 4 / camera.value.zoom;
+    let best: Parcel | null = null;
+    let bestD = Infinity;
+    for (const q of sb.world.gas.parcels) {
+      const d = Math.hypot(q.position.x - p.x, q.position.y - p.y);
+      if (d < Math.max(q.radius, minR) && d < bestD) [best, bestD] = [q, d];
+    }
+    return best;
+  };
 
   const hit = (p: Vec2): Body | null => {
     const sb = sandbox.value;
@@ -368,6 +422,9 @@ export function View() {
       case "spawn":
         gesture.current = { kind: "spawn", start: p, now: p };
         return;
+      case "gas":
+        gesture.current = { kind: "gas", start: p, now: p };
+        return;
       case "impulse":
         if (!body) return;
         if (body.fixed) {
@@ -451,7 +508,9 @@ export function View() {
     if (!g) {
       const b = hit(p);
       if ((b?.id ?? null) !== hover.value) hover.value = b?.id ?? null;
-      setHoverPos(b ? s : null);
+      const parcel = b ? null : parcelAt(p);
+      setHoverParcel(parcel);
+      setHoverPos(b || parcel ? s : null);
       if (tool.value === "attach") showAttach(p, ghostPart());
       return;
     }
@@ -463,6 +522,7 @@ export function View() {
         follow.value = false;
         return;
       case "box":
+      case "gas":
         g.now = p;
         return;
       case "move": {
@@ -593,6 +653,23 @@ export function View() {
         edit([{ type: "link.add", link: { id: freshId("feed"), kind: "feed", from: from.id, to: to.id, resource, rate: 1 } }], `Link ${from.id} → ${to.id}`);
         return;
       }
+      case "gas": {
+        const f = gasRect(g.start, p);
+        if (f.area < 1e-4) return;
+        const o = gasOptions.value;
+        if (o.mode === "clear") {
+          const before = sb.world.gas.parcels.length;
+          edit([{ type: "gas.remove", min: f.min, max: f.max }], "Clear gas");
+          showToast(`Removed ${before - sb.world.gas.parcels.length} parcels`);
+          return;
+        }
+        const events = sb.world.events.length;
+        edit([{ type: "gas.fill", fill: { min: f.min, max: f.max, count: f.count, mass: f.mass, temperature: o.temperature, composition: { [o.species]: 1 } } }], "Fill gas");
+        const e = sb.world.events.slice(events).find((x) => x.type === "limit.refused" || x.type === "gas.fill");
+        if (e?.type === "limit.refused") showToast(`Refused: ${e.data.requested} more parcels would pass the limit of ${e.data.limit}.`);
+        else if (e) showToast(`Added ${e.data.created} parcels`);
+        return;
+      }
       case "impulse": {
         const b = sb.world.bodies.find((x) => x.id === g.id);
         if (!b) return;
@@ -692,6 +769,12 @@ export function View() {
           {hb.fixed ? " (fixed)" : ""} · {fmt(hb.mass, "kg")} · {fmt(length(hb.velocity), "m/s")} · {hb.angularVelocity.toFixed(2)} rad/s
         </div>
       )}
+      {!hb && hoverParcel && hoverPos && (
+        <div class="hovercard" data-testid="hovercard" style={{ left: `${hoverPos.x + 14}px`, top: `${hoverPos.y + 14}px` }}>
+          gas parcel #{hoverParcel.id} · {Object.keys(hoverParcel.composition).join("+")} · {fmt(hoverParcel.thermal / (hoverParcel.mass * mixture(hoverParcel.composition).cv), "K")} · {fmt(hoverParcel.mass, "kg")} ·{" "}
+          {fmt(length(hoverParcel.velocity), "m/s")}
+        </div>
+      )}
       {attachText && tool.value === "attach" && (
         <div class="hovercard readout" role="status" data-testid="attach-readout">
           {attachText}
@@ -721,6 +804,7 @@ export function View() {
           ))}
         </div>
       )}
+      {sb && (sb.world.gas.parcels.length > 0 || tool.value === "gas") && <GasScale />}
       <div class="overlay-bar" role="group" aria-label="Overlays" onPointerDown={(e) => e.stopPropagation()}>
         {OVERLAYS.map((o) => (
           <button key={o.id} class={`btn small ${overlays.value.has(o.id) ? "on" : ""}`} aria-pressed={overlays.value.has(o.id)} data-testid={`overlay-${o.id}`} onClick={() => toggleOverlay(o.id)}>
@@ -728,6 +812,44 @@ export function View() {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Colour scale for gas parcels, with the temperature / composition switch (SBX-035). */
+function GasScale() {
+  const mode = gasColour.value;
+  const ticks = [50, 100, 300, 1000, 3000];
+  return (
+    <div class="gas-scale" aria-label="Gas colour scale" data-testid="gas-scale" onPointerDown={(e) => e.stopPropagation()}>
+      <div class="gas-scale-head">
+        <span>GAS</span>
+        <button class="btn small" onClick={() => (gasColour.value = mode === "temperature" ? "composition" : "temperature")} data-testid="gas-colour" title="Colour parcels by temperature or by composition">
+          {mode === "temperature" ? "Temperature" : "Composition"}
+        </button>
+      </div>
+      {mode === "temperature" ? (
+        <>
+          <div class="gas-ramp" style={{ background: `linear-gradient(to right, ${T_RAMP.join(", ")})` }} />
+          <div class="gas-ticks">
+            {ticks.map((t) => (
+              <span key={t} style={{ left: `${(Math.log(t / T_MIN) / Math.log(T_MAX / T_MIN)) * 100}%` }}>
+                {t >= 1000 ? `${t / 1000}k` : t}
+              </span>
+            ))}
+          </div>
+          <div class="muted">kelvin, log scale · darker is colder</div>
+        </>
+      ) : (
+        <div class="gas-species">
+          {SPECIES_LIST.map((sp) => (
+            <span key={sp.id}>
+              <i style={{ background: sp.colour }} />
+              {sp.id}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

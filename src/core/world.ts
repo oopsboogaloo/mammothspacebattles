@@ -9,6 +9,7 @@ import { evaluateJoints } from "./joints.ts";
 import { add, length, rotate, scale, sinCos, type Vec2 } from "./math.ts";
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, rigid, solveContacts } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
+import { emptyGas, makeFill, stepGas, wallBodies, type Bounds, type GasFill, type GasState } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 
@@ -16,8 +17,11 @@ export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
 export type { Store } from "./bodies.ts";
 export { bodyMass } from "./bodies.ts";
+export type { Bounds, GasFill, GasState, Parcel } from "./gas.ts";
 
-export const WORLD_SCHEMA = 3;
+export const WORLD_SCHEMA = 4;
+/** Default world boundary: gas beyond it is removed (GAS-007), m. */
+export const DEFAULT_BOUNDS: Bounds = { min: { x: -1000, y: -1000 }, max: { x: 1000, y: 1000 } };
 const MAX_EVENTS = 10_000;
 
 export interface Body {
@@ -116,7 +120,10 @@ export interface World {
   rng: RngState;
   /** Uniform gravitational field, m/s². */
   gravity: Vec2;
+  /** Gas outside this rectangle leaves the world. */
+  bounds: Bounds;
   bodies: Body[];
+  gas: GasState;
   joints: Joint[];
   links: Link[];
   /** Current value of each control channel. */
@@ -139,7 +146,11 @@ export type Command =
   | { type: "body.impulse"; id: string; impulse: Vec2; point: Vec2 }
   | { type: "drag.set"; id: string; anchor: Vec2; target: Vec2; stiffness?: number; maxAcceleration?: number }
   | { type: "drag.clear"; id: string }
-  | { type: "world.set"; patch: { gravity?: Vec2 } }
+  | { type: "world.set"; patch: { gravity?: Vec2; bounds?: Bounds } }
+  /** Fills a rectangle with gas parcels (GAS-001). Refused if it would exceed limit.gasParcels (PRF-003). */
+  | { type: "gas.fill"; fill: GasFill }
+  /** Removes every parcel inside the rectangle. */
+  | { type: "gas.remove"; min: Vec2; max: Vec2 }
   | { type: "joint.add"; joint: JointInput }
   | { type: "joint.remove"; id: string }
   | { type: "joint.set"; id: string; limits: Partial<JointLimits> }
@@ -171,7 +182,8 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: Link[] } = {},
+  extra: { joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds } = {},
+  profile?: Profile,
 ): World {
   const world: World = {
     schema: WORLD_SCHEMA,
@@ -179,7 +191,9 @@ export function createWorld(
     time: 0,
     rng: createRng(seed),
     gravity: { ...gravity },
+    bounds: structuredClone(extra.bounds ?? DEFAULT_BOUNDS),
     bodies: [],
+    gas: emptyGas(),
     joints: [],
     links: [],
     controls: {},
@@ -193,6 +207,8 @@ export function createWorld(
   for (const body of bodies) addBody(world, body);
   for (const j of extra.joints ?? []) addJoint(world, j);
   for (const l of extra.links ?? []) addLink(world, l);
+  for (const f of extra.gas ?? []) fillGas(world, f, profile);
+  world.events = [];
   world.ledger.totals = computeTotals(world);
   return world;
 }
@@ -275,6 +291,19 @@ function runFeeds(world: World, dt: number): boolean {
   return touchedFixed;
 }
 
+/** Adds parcels for a fill, or refuses it if the parcel limit would be exceeded (PRF-003). */
+function fillGas(world: World, fill: GasFill, profile?: Profile): void {
+  const limit = profile?.limit.gasParcels ?? Infinity;
+  const parcels = makeFill(fill, world.rng, wallBodies(world.bodies), world.gas.nextId, limit - world.gas.parcels.length);
+  if (!parcels) {
+    pushEvent(world, { tick: world.tick, type: "limit.refused", data: { entity: "gasParcels", requested: fill.count, existing: world.gas.parcels.length, limit } });
+    return;
+  }
+  world.gas.parcels.push(...parcels);
+  world.gas.nextId += parcels.length;
+  pushEvent(world, { tick: world.tick, type: "gas.fill", data: { requested: fill.count, created: parcels.length } });
+}
+
 function findBody(world: World, id: string): Body {
   const body = world.bodies.find((b) => b.id === id);
   if (!body) throw new Error(`No body with id "${id}"`);
@@ -286,7 +315,7 @@ function pushEvent(world: World, e: WorldEvent): void {
   if (world.events.length > MAX_EVENTS) world.events.splice(0, world.events.length - MAX_EVENTS);
 }
 
-function applyOne(world: World, cmd: Command): void {
+function applyOne(world: World, cmd: Command, profile?: Profile): void {
   switch (cmd.type) {
     case "body.add":
       addBody(world, cmd.body);
@@ -360,7 +389,16 @@ function applyOne(world: World, cmd: Command): void {
       break;
     case "world.set":
       if (cmd.patch.gravity) world.gravity = { ...cmd.patch.gravity };
+      if (cmd.patch.bounds) world.bounds = structuredClone(cmd.patch.bounds);
       break;
+    case "gas.fill":
+      fillGas(world, cmd.fill, profile);
+      break;
+    case "gas.remove": {
+      const { min, max } = cmd;
+      world.gas.parcels = world.gas.parcels.filter((p) => p.position.x < min.x || p.position.x > max.x || p.position.y < min.y || p.position.y > max.y);
+      break;
+    }
     case "rng.sample":
       pushEvent(world, { tick: world.tick, type: "rng.sample", data: { label: cmd.label, value: nextFloat(world.rng) } });
       break;
@@ -376,10 +414,10 @@ function applyOne(world: World, cmd: Command): void {
  * Applies commands now. The change to conserved totals is attributed to the
  * user at the next step — except debug.kick, which is deliberately not.
  */
-export function applyCommands(world: World, commands: readonly Command[]): void {
+export function applyCommands(world: World, commands: readonly Command[], profile?: Profile): void {
   for (const cmd of commands) {
     const before = computeTotals(world);
-    applyOne(world, cmd);
+    applyOne(world, cmd, profile);
     if (cmd.type === "debug.kick") {
       world.pendingDebug.push(cmd.id);
       continue;
@@ -410,7 +448,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     t0 = t;
   };
 
-  applyCommands(world, commands);
+  applyCommands(world, commands, profile);
   mark("commands");
   const start = world.ledger.totals;
   const sources: Record<Source, Delta> = {
@@ -420,6 +458,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     joint: zeroDelta(),
     transfer: zeroDelta(),
     correction: zeroDelta(),
+    boundary: zeroDelta(),
   };
 
   // Feed links move resources between stores. Mass and momentum must not change; angular momentum may,
@@ -436,6 +475,16 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   // External field.
   const field = applyField(rbs, world.gravity, dt);
+  const g = world.gravity;
+  if ((g.x !== 0 || g.y !== 0) && world.gas.parcels.length) {
+    for (const p of world.gas.parcels) {
+      p.velocity = { x: p.velocity.x + g.x * dt, y: p.velocity.y + g.y * dt };
+      const J = { x: p.mass * g.x * dt, y: p.mass * g.y * dt };
+      field.impulse.x += J.x;
+      field.impulse.y += J.y;
+      field.angular += p.position.x * J.y - p.position.y * J.x;
+    }
+  }
   let after = computeTotals(world);
   sources.field.momentumX = field.impulse.x;
   sources.field.momentumY = field.impulse.y;
@@ -494,6 +543,25 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   sources.correction.angularMomentum = after.angularMomentum - before.angularMomentum;
   sources.correction.energy = after.energy.total - before.energy.total;
   mark("integrate");
+
+  // Gas: parcels exchange impulses with each other and with bodies, conserving momentum,
+  // angular momentum and energy by construction. Fixed bodies are external; so is the boundary.
+  if (world.gas.parcels.length) {
+    before = after;
+    const gas = stepGas(world.gas, wallBodies(world.bodies), world.joints, dt, world.bounds, world.gravity);
+    after = computeTotals(world);
+    sources.contact.momentumX += gas.externalImpulse.x;
+    sources.contact.momentumY += gas.externalImpulse.y;
+    sources.contact.angularMomentum += gas.angular;
+    const r = gas.removed;
+    sources.boundary = { mass: -r.mass, momentumX: -r.momentum.x, momentumY: -r.momentum.y, angularMomentum: -r.angularMomentum, energy: -r.energy };
+    // Parcels drift during the gas phase, so their potential energy changes there (including
+    // parcels that then left, up to where they left).
+    sources.field.energy += after.energy.potential - before.energy.potential + gas.removedPotential;
+    for (const id of gas.involved) account.involved.add(id);
+    if (r.count) pushEvent(world, { tick: world.tick + 1, type: "gas.left", data: { count: r.count, mass: r.mass } });
+  } else world.gas.substeps = 0;
+  mark("gas");
 
   for (const d of world.drags) {
     if (!world.bodies.some((b) => b.id === d.id)) world.drags = world.drags.filter((x) => x.id !== d.id);

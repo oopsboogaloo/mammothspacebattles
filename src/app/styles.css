@@ -170,3 +170,19 @@ button { cursor: pointer; }
   .view .overlay-bar { flex-wrap: nowrap; overflow-x: auto; max-width: calc(100% - 24px); justify-content: flex-start; }
   .view .overlay-bar .btn { flex: 0 0 auto; }
 }
+
+/* Gas colour scale (SBX-035) */
+.view .gas-scale { position: absolute; left: 12px; bottom: 56px; width: 220px; background: rgba(18, 24, 41, 0.94); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--muted); }
+.view .gas-scale-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; letter-spacing: 0.08em; }
+.view .gas-ramp { height: 10px; border-radius: 3px; }
+.view .gas-ticks { position: relative; height: 16px; font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+.view .gas-ticks span { position: absolute; transform: translateX(-50%); top: 2px; }
+.view .gas-ticks span:first-child { transform: none; }
+.view .gas-ticks span:last-child { transform: translateX(-100%); }
+.view .gas-species { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+.view .gas-species i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+@media (max-width: 720px) {
+  .view .gas-scale { bottom: 64px; width: 180px; }
+}
+.flyout select { width: 100%; background: transparent; border: 0; padding: 4px 0; }
+.flyout select option { background: var(--panel, #121829); }
