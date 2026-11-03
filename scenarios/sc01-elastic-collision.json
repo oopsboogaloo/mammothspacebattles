@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "name": "sc01-elastic-collision",
+  "title": "Elastic collision of two discs",
+  "description": "Starter SC-01. Disc A (1 kg) and disc B (3 kg), both 0.5 m radius, meet head-on. With restitution 1 they leave at −2.5 and +0.5 m/s; momentum and energy are unchanged.",
+  "profile": "test",
+  "seed": 1,
+  "parameters": [
+    { "id": "mA", "label": "Mass A", "unit": "kg", "min": 0.1, "max": 100, "step": 0.1, "default": 1 },
+    { "id": "mB", "label": "Mass B", "unit": "kg", "min": 0.1, "max": 100, "step": 0.1, "default": 3 },
+    { "id": "vA", "label": "Velocity A", "unit": "m/s", "min": -20, "max": 20, "step": 0.1, "default": 2 },
+    { "id": "vB", "label": "Velocity B", "unit": "m/s", "min": -20, "max": 20, "step": 0.1, "default": -1 },
+    { "id": "e", "label": "Restitution", "min": 0, "max": 1, "step": 0.05, "default": 1 },
+    { "id": "offset", "label": "Impact offset", "unit": "m", "min": 0, "max": 0.9, "step": 0.05, "default": 0 }
+  ],
+  "world": {
+    "bodies": [
+      { "id": "a", "shape": { "kind": "disc", "radius": 0.5 }, "mass": { "$param": "mA" }, "restitution": { "$param": "e" }, "friction": 0,
+        "position": { "x": -3, "y": 0 }, "velocity": { "x": { "$param": "vA" }, "y": 0 }, "angle": 0, "angularVelocity": 0 },
+      { "id": "b", "shape": { "kind": "disc", "radius": 0.5 }, "mass": { "$param": "mB" }, "restitution": { "$param": "e" }, "friction": 0,
+        "position": { "x": 3, "y": { "$param": "offset" } }, "velocity": { "x": { "$param": "vB" }, "y": 0 }, "angle": 0, "angularVelocity": 0 }
+    ]
+  },
+  "timeline": [],
+  "end": { "steps": 2400 },
+  "probes": [
+    { "id": "vax", "path": "bodies[id=a].velocity.x" },
+    { "id": "vay", "path": "bodies[id=a].velocity.y" },
+    { "id": "vbx", "path": "bodies[id=b].velocity.x" },
+    { "id": "vby", "path": "bodies[id=b].velocity.y" },
+    { "id": "px", "path": "ledger.totals.momentum.x" },
+    { "id": "py", "path": "ledger.totals.momentum.y" },
+    { "id": "ke", "path": "ledger.totals.energy.kinetic" },
+    { "id": "heat", "path": "ledger.thermal" }
+  ],
+  "assertions": [
+    { "kind": "event", "type": "collision", "occurred": true },
+    { "kind": "formula", "at": "end", "left": "(vax - (vA + (1 + e) * (vB - vA) * (1 - offset^2) * mB / (mA + mB))) / (vA - vB)", "right": "0", "tol": 1e-6 },
+    { "kind": "formula", "at": "end", "left": "(vbx - (vB - (1 + e) * (vB - vA) * (1 - offset^2) * mA / (mA + mB))) / (vA - vB)", "right": "0", "tol": 1e-6 },
+    { "kind": "formula", "at": "end", "left": "(vay - (1 + e) * (vB - vA) * sqrt(1 - offset^2) * offset * mB / (mA + mB)) / (vA - vB)", "right": "0", "tol": 1e-6 },
+    { "kind": "formula", "at": "end", "left": "(vby + (1 + e) * (vB - vA) * sqrt(1 - offset^2) * offset * mA / (mA + mB)) / (vA - vB)", "right": "0", "tol": 1e-6 },
+    { "kind": "formula", "at": "end", "left": "px@end - px@0", "right": "0", "tol": 1e-9 },
+    { "kind": "formula", "at": "end", "left": "py@end - py@0", "right": "0", "tol": 1e-9 },
+    { "kind": "formula", "at": "end", "left": "ke@end + heat@end", "right": "ke@0", "tol": 1e-6, "relative": true },
+    { "kind": "ledgerResidual", "quantity": "momentum", "maxAbs": 1e-9 },
+    { "kind": "ledgerResidual", "quantity": "energy", "maxAbs": 1e-6 },
+    { "kind": "event", "type": "violation", "occurred": false }
+  ],
+  "ui": {
+    "lookFor": "Press play. After contact A moves at −2.50 m/s and B at +0.50 m/s. Total momentum (−1 kg·m/s) and kinetic energy (3.5 J) stay flat in the graphs. Lower the restitution and kinetic energy drops at contact, turning into heat, while momentum stays flat. Add an impact offset and the discs leave at an angle.",
+    "overlays": ["velocity", "contacts"],
+    "graphs": ["vax", "vbx", "px", "ke", "heat"],
+    "camera": { "x": 0, "y": 0, "zoom": 60 }
+  }
+}

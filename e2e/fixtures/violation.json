@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "name": "violation-fixture",
+  "title": "Violation fixture",
+  "description": "Test fixture: at step 30 a debug.kick changes disc b's velocity without telling the ledger, which must report a violation.",
+  "profile": "test",
+  "seed": 1,
+  "world": {
+    "bodies": [
+      { "id": "a", "shape": { "kind": "disc", "radius": 0.5 }, "mass": 1, "position": { "x": -2, "y": 0 }, "velocity": { "x": 0, "y": 0 }, "angle": 0, "angularVelocity": 0 },
+      { "id": "b", "shape": { "kind": "disc", "radius": 0.5 }, "mass": 1, "position": { "x": 2, "y": 0 }, "velocity": { "x": 0, "y": 0 }, "angle": 0, "angularVelocity": 0 }
+    ]
+  },
+  "timeline": [{ "step": 30, "commands": [{ "type": "debug.kick", "id": "b", "dv": { "x": 0.5, "y": 0 } }] }],
+  "end": { "steps": 120 },
+  "probes": [],
+  "assertions": []
+}

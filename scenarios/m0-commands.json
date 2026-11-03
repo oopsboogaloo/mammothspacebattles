@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "name": "m0-commands",
+  "description": "Exercises the M0 command set, probes and every assertion kind except ledgerResidual. No physics runs in M0, so bodies only change through commands.",
+  "profile": "test",
+  "seed": 42,
+  "world": {
+    "bodies": [
+      { "id": "b", "shape": { "kind": "disc", "radius": 0.5 }, "mass": 3, "position": { "x": 3, "y": 0 }, "velocity": { "x": -1, "y": 0 }, "angle": 0, "angularVelocity": 0 }
+    ]
+  },
+  "timeline": [
+    { "step": 0, "commands": [
+      { "type": "body.add", "body": { "id": "a", "shape": { "kind": "disc", "radius": 0.5 }, "mass": 1, "position": { "x": -3, "y": 0 }, "velocity": { "x": 2, "y": 0 }, "angle": 0, "angularVelocity": 0 } },
+      { "type": "rng.sample", "label": "first" }
+    ] },
+    { "step": 10, "commands": [ { "type": "body.set", "id": "a", "patch": { "mass": 2 } } ] },
+    { "step": 20, "commands": [ { "type": "body.remove", "id": "b" } ] }
+  ],
+  "end": { "steps": 30 },
+  "probes": [
+    { "id": "count", "path": "bodies.length" },
+    { "id": "firstId", "path": "bodies[0].mass" },
+    { "id": "massA", "path": "bodies[id=a].mass" },
+    { "id": "sample", "path": "events[0].data.value" }
+  ],
+  "assertions": [
+    { "kind": "valueAt", "probe": "count", "step": 0, "equals": 1, "tol": 0 },
+    { "kind": "valueAt", "probe": "count", "step": 1, "equals": 2, "tol": 0 },
+    { "kind": "valueAt", "probe": "firstId", "step": 1, "equals": 1, "tol": 0 },
+    { "kind": "rangeOver", "probe": "massA", "from": 11, "to": "end", "min": 2, "max": 2 },
+    { "kind": "valueAt", "probe": "count", "step": "end", "equals": 1, "tol": 0 },
+    { "kind": "rangeOver", "probe": "sample", "from": 1, "to": "end", "min": 0, "max": 1 },
+    { "kind": "event", "type": "rng.sample", "occurred": true, "from": 0, "to": 0 },
+    { "kind": "event", "type": "rng.sample", "occurred": false, "from": 1 },
+    { "kind": "formula", "at": "end", "left": "massA@end - massA@1", "right": "1", "tol": 0 }
+  ]
+}

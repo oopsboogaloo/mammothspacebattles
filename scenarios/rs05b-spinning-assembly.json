@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "name": "rs05b-spinning-assembly",
+  "title": "Spinning assembly sheds a pod",
+  "description": "RS-05b. A 4 kg hull with two 1 kg pods welded to its ends drifts and spins at 0.8 rad/s. At t = 2 s the right pod is detached: it leaves along the tangent with the velocity it had, and the remaining assembly's mass, centre of mass and inertia update.",
+  "profile": "test",
+  "seed": 1,
+  "world": {
+    "bodies": [
+      {
+        "id": "hull",
+        "shape": {
+          "kind": "box",
+          "width": 2,
+          "height": 1
+        },
+        "mass": 4,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 1,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0.8
+      },
+      {
+        "id": "pod-left",
+        "shape": {
+          "kind": "box",
+          "width": 0.6,
+          "height": 0.6
+        },
+        "mass": 1,
+        "position": {
+          "x": -1.3,
+          "y": 0
+        },
+        "velocity": {
+          "x": 1,
+          "y": -1.04
+        },
+        "angle": 0,
+        "angularVelocity": 0.8
+      },
+      {
+        "id": "pod-right",
+        "shape": {
+          "kind": "box",
+          "width": 0.6,
+          "height": 0.6
+        },
+        "mass": 1,
+        "position": {
+          "x": 1.3,
+          "y": 0
+        },
+        "velocity": {
+          "x": 1,
+          "y": 1.04
+        },
+        "angle": 0,
+        "angularVelocity": 0.8
+      }
+    ],
+    "joints": [
+      {
+        "id": "jL",
+        "a": "hull",
+        "b": "pod-left",
+        "anchorA": {
+          "x": -1,
+          "y": 0
+        },
+        "anchorB": {
+          "x": 0.3,
+          "y": 0
+        }
+      },
+      {
+        "id": "jR",
+        "a": "hull",
+        "b": "pod-right",
+        "anchorA": {
+          "x": 1,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.3,
+          "y": 0
+        }
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "step": 480,
+      "commands": [
+        {
+          "type": "body.detach",
+          "id": "pod-right"
+        }
+      ]
+    }
+  ],
+  "end": {
+    "steps": 960
+  },
+  "probes": [
+    {
+      "id": "L",
+      "path": "ledger.totals.angularMomentum"
+    },
+    {
+      "id": "px",
+      "path": "ledger.totals.momentum.x"
+    },
+    {
+      "id": "ke",
+      "path": "ledger.totals.energy.kinetic"
+    },
+    {
+      "id": "wHull",
+      "path": "bodies[id=hull].angularVelocity"
+    },
+    {
+      "id": "wPod",
+      "path": "bodies[id=pod-right].angularVelocity"
+    },
+    {
+      "id": "joints",
+      "path": "joints.length"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "rangeOver",
+      "probe": "wHull",
+      "from": 0,
+      "to": "end",
+      "min": 0.7999999,
+      "max": 0.8000001
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "L@end - L@0",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "px@end - px@0",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "ke@end",
+      "right": "ke@0",
+      "tol": 1e-09,
+      "relative": true
+    },
+    {
+      "kind": "valueAt",
+      "probe": "joints",
+      "step": 481,
+      "equals": 1,
+      "tol": 0
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "angularMomentum",
+      "maxAbs": 1e-09
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "The assembly drifts and spins as one rigid body. At t = 2 s the right pod is let go and flies off along its tangent. Try detaching a pod yourself: select it and press Detach in the inspector, or right-click it. The hull's assembly panel shows the new mass and inertia.",
+    "overlays": [
+      "velocity",
+      "com",
+      "joints"
+    ],
+    "graphs": [
+      "L",
+      "ke",
+      "wHull"
+    ],
+    "camera": {
+      "x": 3,
+      "y": 0,
+      "zoom": 60
+    }
+  }
+}

@@ -1,0 +1,73 @@
+name: CI
+
+# TST-002: typecheck, lint, unit/property/scenario/determinism tests and the
+# requirement gate on every pull request. Branch protection on main should
+# require these jobs.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - name: Tests with coverage (TST-001, TST-004)
+        run: pnpm test:coverage
+      - name: Requirement gate (TST-006)
+        run: pnpm req:check
+      - run: pnpm exec vite build
+      - name: Benchmark (NFR-001)
+        run: pnpm bench --json bench.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ github.sha }}
+          path: bench.json
+
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+      - name: Browser tests (SBX-041)
+        run: pnpm test:e2e
+        env:
+          E2E_BROWSERS: ${{ matrix.browser }}
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report
+      - name: Screenshots for milestone review (TST-010, UXV-004)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screens-${{ matrix.browser }}-${{ github.sha }}
+          path: test-results/screens

@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "name": "rs03-bullet-thin-wall",
+  "title": "Bullet against a thin wall",
+  "description": "RS-03. A 10 g, 1 cm bullet at up to limit.maxSpeed (2,000 m/s) hits a fixed wall limit.minThickness (5 cm) thick. It travels 8 m per step but must never pass through.",
+  "profile": "test",
+  "seed": 1,
+  "parameters": [
+    {
+      "id": "speed",
+      "label": "Bullet speed",
+      "unit": "m/s",
+      "min": 10,
+      "max": 2000,
+      "step": 10,
+      "default": 2000
+    },
+    {
+      "id": "e",
+      "label": "Restitution",
+      "min": 0,
+      "max": 1,
+      "step": 0.1,
+      "default": 0
+    }
+  ],
+  "world": {
+    "bodies": [
+      {
+        "id": "bullet",
+        "shape": {
+          "kind": "disc",
+          "radius": 0.01
+        },
+        "mass": 0.01,
+        "restitution": {
+          "$param": "e"
+        },
+        "friction": 0,
+        "position": {
+          "x": -5,
+          "y": 0
+        },
+        "velocity": {
+          "x": {
+            "$param": "speed"
+          },
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "wall",
+        "shape": {
+          "kind": "box",
+          "width": 0.05,
+          "height": 2
+        },
+        "mass": 1,
+        "fixed": true,
+        "restitution": {
+          "$param": "e"
+        },
+        "friction": 0,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      }
+    ]
+  },
+  "timeline": [],
+  "end": {
+    "steps": 240
+  },
+  "probes": [
+    {
+      "id": "bx",
+      "path": "bodies[id=bullet].position.x"
+    },
+    {
+      "id": "vx",
+      "path": "bodies[id=bullet].velocity.x"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "rangeOver",
+      "probe": "bx",
+      "from": 0,
+      "to": "end",
+      "max": -0.03
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "(vx + e * speed) / speed",
+      "right": "0",
+      "tol": 1e-09
+    },
+    {
+      "kind": "event",
+      "type": "collision",
+      "occurred": true
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "Press step (.) a few times. The bullet covers 8 m per step yet stops exactly at the wall's face, because contacts are generated ahead of time (speculative contacts).",
+    "overlays": [
+      "velocity",
+      "contacts"
+    ],
+    "graphs": [
+      "bx",
+      "vx"
+    ],
+    "camera": {
+      "x": -2.5,
+      "y": 0,
+      "zoom": 80
+    }
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "schema": 1,
+  "name": "rs05-weak-joint",
+  "title": "Weak joint pulled apart",
+  "description": "RS-05. Two 1 kg boxes welded face to face with a weak joint (20 N tension limit). An impulse on the right box pulls them apart: the joint breaks, carrying only its limit, and the two parts fly off separately with total momentum conserved.",
+  "profile": "test",
+  "seed": 1,
+  "parameters": [
+    {
+      "id": "J",
+      "label": "Impulse",
+      "unit": "N\u00b7s",
+      "min": 0.5,
+      "max": 10,
+      "step": 0.5,
+      "default": 2
+    },
+    {
+      "id": "limit",
+      "label": "Tension limit",
+      "unit": "N",
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "default": 20
+    }
+  ],
+  "world": {
+    "bodies": [
+      {
+        "id": "left",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 1,
+        "position": {
+          "x": -0.5,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "right",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 1,
+        "position": {
+          "x": 0.5,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      }
+    ],
+    "joints": [
+      {
+        "id": "weld",
+        "a": "left",
+        "b": "right",
+        "anchorA": {
+          "x": 0.5,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": 0
+        },
+        "limits": {
+          "tension": {
+            "$param": "limit"
+          }
+        }
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "step": 60,
+      "commands": [
+        {
+          "type": "body.impulse",
+          "id": "right",
+          "impulse": {
+            "x": {
+              "$param": "J"
+            },
+            "y": 0
+          },
+          "point": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    }
+  ],
+  "end": {
+    "steps": 480
+  },
+  "probes": [
+    {
+      "id": "vl",
+      "path": "bodies[id=left].velocity.x"
+    },
+    {
+      "id": "vr",
+      "path": "bodies[id=right].velocity.x"
+    },
+    {
+      "id": "px",
+      "path": "ledger.totals.momentum.x"
+    },
+    {
+      "id": "joints",
+      "path": "joints.length"
+    },
+    {
+      "id": "heat",
+      "path": "ledger.thermal"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "event",
+      "type": "joint.break",
+      "occurred": true,
+      "from": 60,
+      "to": 61
+    },
+    {
+      "kind": "valueAt",
+      "probe": "joints",
+      "step": "end",
+      "equals": 0,
+      "tol": 0
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "px",
+      "right": "J",
+      "tol": 1e-09
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "vl",
+      "right": "limit / 240",
+      "tol": 1e-06
+    },
+    {
+      "kind": "formula",
+      "at": "end",
+      "left": "vr",
+      "right": "J - limit / 240",
+      "tol": 1e-06
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "momentum",
+      "maxAbs": 1e-09
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "angularMomentum",
+      "maxAbs": 1e-09
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "Press play. At t = 0.25 s an impulse hits the right box. The joint can only pull with 20 N for one step (\u2248 0.083 N\u00b7s), so it breaks and the boxes separate: the left one gets just that impulse, the right one keeps the rest. Raise the tension limit above 240 N and they stay together.",
+    "overlays": [
+      "velocity",
+      "joints"
+    ],
+    "graphs": [
+      "vl",
+      "vr",
+      "px"
+    ],
+    "camera": {
+      "x": 0.5,
+      "y": 0,
+      "zoom": 90
+    }
+  }
+}
