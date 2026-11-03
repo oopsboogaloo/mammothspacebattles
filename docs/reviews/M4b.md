@@ -53,7 +53,7 @@ Building and flying now works by touch alone:
 |---|---|---|
 | A free fall drifts onto the slope short of the pad | Crashed: "Touched the ground off the pad, at 6.4 m/s." No ledger violations for 1.5 s after the impact | `FLT-006` |
 | A free fall straight down onto the pad | Crashed: "Hit the pad at … m/s: land slower than 1.5 m/s." | `FLT-006` |
-| A descent from 3 m, flown by a test autopilot | Landed at 0.3 m/s, upright, score 761, no violations. The autopilot holds about 0.5 m/s down with both engines, corrects tilt with one, and cuts both just above the pad | `FLT-007` |
+| A descent from 1.5 m, flown by a test autopilot | Landed at 0.6 m/s, 6° from upright, score 730, no violations. The autopilot holds about 0.5 m/s down with both engines, corrects tilt with one, and cuts both just above the pad | `FLT-007` |
 | A tall box coming to rest on its side | Crashed: "Came to rest tilted 90°: land within 12° of upright." | `FLT-008` |
 | The verdict | Part of the world state: the same run reaches it at the same step, and it stays | `FLT-005` |
 | On screen | Height above pad, down and sideways speed, tilt, fuel %. Values outside the limits show in yellow with ▲. Verdict card with the reason, score and Try again. Desktop and 390 px | `e2e/landing.spec.ts` |
