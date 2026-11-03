@@ -20,11 +20,14 @@ async function runFor(page: Page, ticks: number) {
   await page.getByTestId("play").click();
 }
 
-/** Holds an on-screen button with a touch-type pointer, as a thumb would; returns a release function. */
+/**
+ * Holds an on-screen button with a touch-type pointer, as a thumb would; returns a release function.
+ * Use pointer ids from 11 up: 1 is the mouse, and a mouse click releases a hold with the same id.
+ */
 async function hold(page: Page, testid: string, pointerId: number): Promise<() => Promise<void>> {
   const el = page.getByTestId(testid);
   const box = (await el.boundingBox())!;
-  const opts = { pointerId, pointerType: "touch", isPrimary: pointerId === 1, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, bubbles: true };
+  const opts = { pointerId, pointerType: "touch", isPrimary: pointerId === 11, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, bubbles: true };
   await el.dispatchEvent("pointerdown", opts);
   return async () => {
     await el.dispatchEvent("pointerup", opts);
@@ -65,7 +68,7 @@ for (const [name, viewport] of [
       await page.getByRole("button", { name: "Close", exact: true }).click();
       await expect(page.getByTestId("fly-main")).toBeVisible();
       await page.getByTestId("mobile-follow").click();
-      const release = await hold(page, "fly-main", 1);
+      const release = await hold(page, "fly-main", 11);
       await expect(page.getByTestId("fly-main")).toHaveAttribute("aria-pressed", "true");
       await runFor(page, 200);
       await release();
@@ -79,51 +82,55 @@ for (const [name, viewport] of [
   });
 }
 
-test.describe("tablet (820 px), two thumbs", () => {
-  test.use({ viewport: { width: 820, height: 1180 } });
+for (const [name, viewport] of [
+  ["phone", { width: 390, height: 844 }],
+  ["tablet", { width: 820, height: 1180 }],
+] as const)
+  test.describe(`${name} (${viewport.width} px), two thumbs`, () => {
+    test.use({ viewport });
 
-  test("SBX-047 UXV-001 W9 on a tablet: a twin-engine ship flown with two on-screen buttons held at once", async ({ page }) => {
-    await page.goto("./");
-    await page.getByTestId("pick-empty").click();
-    await page.getByTestId("tool-spawn").click();
-    await page.getByTestId("spawn-hull").click();
-    await tapWorld(page, 0, 2);
-    await page.getByTestId("tool-attach").click();
-    await page.getByTestId("spawn-tank").click();
-    await tapWorld(page, 0, 1.45);
-    await page.getByTestId("spawn-plank").click();
-    await tapWorld(page, 0, 0.95);
-    await page.getByTestId("spawn-engine").click();
-    await tapWorld(page, -1, 0.75);
-    await tapWorld(page, 1, 0.75);
-    await page.getByTestId("tool-link").click();
-    await dragWorld(page, [0, 1.25], [-1, 0.7]);
-    await dragWorld(page, [0, 1.25], [1, 0.7]);
-    await page.getByTestId("tool-select").click();
-    for (const x of [-1, 1]) {
-      await tapWorld(page, x, 0.7);
-      await page.getByRole("button", { name: "Inspector", exact: true }).click();
-      await page.getByRole("dialog", { name: "Inspector" }).getByTestId("add-control").click();
-      await page.getByRole("button", { name: "Close", exact: true }).click();
-    }
-    await expect(page.getByTestId("fly-main")).toBeVisible();
-    await expect(page.getByTestId("fly-main-2")).toBeVisible();
-    // Both thumbs down: climb. Then lift the right one: the left engine alone turns the nose right.
-    const left = await hold(page, "fly-main", 1);
-    const right = await hold(page, "fly-main-2", 2);
-    await expect(page.getByTestId("fly-main")).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByTestId("fly-main-2")).toHaveAttribute("aria-pressed", "true");
-    await runFor(page, 120);
-    await right();
-    await runFor(page, 120);
-    await left();
-    const w = await world(page);
-    const hull = w.bodies.find((b) => b.id === "hull-1")! as (typeof w.bodies)[number] & { angularVelocity: number };
-    expect(hull.velocity.y).toBeGreaterThan(0.5);
-    expect(hull.angularVelocity).toBeLessThan(-0.2);
-    expect(w.ledger.violations).toBe(0);
+    test(`SBX-047 UXV-001 W9 on a ${name}: a twin-engine ship flown with two on-screen buttons held at once`, async ({ page }) => {
+      await page.goto("./");
+      await page.getByTestId("pick-empty").click();
+      await page.getByTestId("tool-spawn").click();
+      await page.getByTestId("spawn-hull").click();
+      await tapWorld(page, 0, 2);
+      await page.getByTestId("tool-attach").click();
+      await page.getByTestId("spawn-tank").click();
+      await tapWorld(page, 0, 1.45);
+      await page.getByTestId("spawn-plank").click();
+      await tapWorld(page, 0, 0.95);
+      await page.getByTestId("spawn-engine").click();
+      await tapWorld(page, -1, 0.75);
+      await tapWorld(page, 1, 0.75);
+      await page.getByTestId("tool-link").click();
+      await dragWorld(page, [0, 1.25], [-1, 0.7]);
+      await dragWorld(page, [0, 1.25], [1, 0.7]);
+      await page.getByTestId("tool-select").click();
+      for (const x of [-1, 1]) {
+        await tapWorld(page, x, 0.7);
+        await page.getByRole("button", { name: "Inspector", exact: true }).click();
+        await page.getByRole("dialog", { name: "Inspector" }).getByTestId("add-control").click();
+        await page.getByRole("button", { name: "Close", exact: true }).click();
+      }
+      await expect(page.getByTestId("fly-main")).toBeVisible();
+      await expect(page.getByTestId("fly-main-2")).toBeVisible();
+      // Both thumbs down: climb. Then lift the right one: the left engine alone turns the nose right.
+      const left = await hold(page, "fly-main", 11);
+      const right = await hold(page, "fly-main-2", 12);
+      await expect(page.getByTestId("fly-main")).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByTestId("fly-main-2")).toHaveAttribute("aria-pressed", "true");
+      await runFor(page, 120);
+      await right();
+      await runFor(page, 120);
+      await left();
+      const w = await world(page);
+      const hull = w.bodies.find((b) => b.id === "hull-1")! as (typeof w.bodies)[number] & { angularVelocity: number };
+      expect(hull.velocity.y).toBeGreaterThan(0.5);
+      expect(hull.angularVelocity).toBeLessThan(-0.2);
+      expect(w.ledger.violations).toBe(0);
+    });
   });
-});
 
 test.describe("tablet (820 px), ready-made ship", () => {
   test.use({ viewport: { width: 820, height: 1180 } });
@@ -135,12 +142,64 @@ test.describe("tablet (820 px), ready-made ship", () => {
     await expect(page.getByTestId("fly-right")).toBeVisible();
     await expect(page.getByTestId("fly-left")).toContainText("Q");
     await expect(page.getByTestId("fly-right")).toContainText("E");
-    const left = await hold(page, "fly-left", 1);
+    const left = await hold(page, "fly-left", 11);
     await runFor(page, 120);
     await left();
     const w = await world(page);
     const hull = w.bodies.find((b) => b.id === "hull")! as (typeof w.bodies)[number] & { angularVelocity: number };
     expect(hull.angularVelocity).toBeLessThan(-0.2); // left engine alone: nose turns right
     expect(w.ledger.violations).toBe(0);
+  });
+});
+
+test.describe("flight buttons (phone, 390 px)", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("SBX-047 a hold ends when the finger lifts anywhere, and when its control link is removed", async ({ page }) => {
+    await page.goto("./");
+    await page.getByTestId("pick-fly-twin-engine").click();
+    const btn = page.getByTestId("fly-left");
+    const box = (await btn.boundingBox())!;
+    // Press on the button, lift off it (over the world): the engine must stop.
+    await btn.dispatchEvent("pointerdown", { pointerId: 7, pointerType: "touch", clientX: box.x + 10, clientY: box.y + 10, bubbles: true });
+    await expect(btn).toHaveAttribute("aria-pressed", "true");
+    await page.evaluate(() =>
+      window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 7, pointerType: "touch", clientX: 50, clientY: 300, bubbles: true })),
+    );
+    await expect(btn).toHaveAttribute("aria-pressed", "false");
+    // Hold again, then remove its control link: the channel is let go, not left on.
+    await btn.dispatchEvent("pointerdown", { pointerId: 8, pointerType: "touch", clientX: box.x + 10, clientY: box.y + 10, bubbles: true });
+    await page.evaluate(() => {
+      const hook = (window as unknown as { __msb: { sandbox: () => { edit: (c: unknown[], l: string) => void } } }).__msb;
+      hook.sandbox().edit([{ type: "link.remove", id: "ctl-left" }], "Remove");
+    });
+    await page.getByTestId("step").click();
+    await expect(page.getByTestId("fly-left")).toHaveCount(0);
+    const controls = await page.evaluate(
+      () => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls,
+    );
+    expect(controls.left ?? 0).toBe(0);
+  });
+
+  test("SBX-047 with many channels every button stays on screen", async ({ page }) => {
+    await page.goto("./");
+    await page.getByTestId("pick-fly-twin-engine").click();
+    await page.evaluate(() => {
+      const hook = (window as unknown as { __msb: { sandbox: () => { edit: (c: unknown[], l: string) => void } } }).__msb;
+      hook.sandbox().edit(
+        Array.from({ length: 10 }, (_, i) => ({ type: "link.add", link: { id: `extra-${i}`, kind: "control", channel: `aux-${i}`, to: "hull" } })),
+        "Add channels",
+      );
+    });
+    await page.getByTestId("step").click();
+    const view = (await page.getByTestId("view").boundingBox())!;
+    const buttons = page.locator(".padbtn");
+    await expect(buttons).toHaveCount(12);
+    for (const b of await buttons.all()) {
+      const r = (await b.boundingBox())!;
+      expect(r.y).toBeGreaterThanOrEqual(view.y - 1);
+      expect(r.y + r.height).toBeLessThanOrEqual(view.y + view.height + 1);
+      expect(r.x).toBeGreaterThanOrEqual(view.x - 1);
+    }
   });
 });

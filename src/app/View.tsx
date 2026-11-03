@@ -778,7 +778,7 @@ export function View() {
         <div class="empty-hint">
           <div>
             <div style={{ fontSize: "18px", color: "var(--text)" }}>Empty world</div>
-            Press <b>S</b> or pick Spawn in the tool rail, choose a body, then click here.
+            Pick Spawn in the tools (or press <b>S</b>), choose a body, then click or tap here.
           </div>
         </div>
       )}
@@ -897,6 +897,29 @@ function FlightPad() {
   const sb = sandbox.value!;
   const channels = [...new Set(sb.world.links.filter((l) => l.kind === "control").map((l) => (l as { channel: string }).channel))].sort();
   const held = useRef(new Map<string, { pointer: number; group: number }>());
+  const releaseChannel = (ch: string) => {
+    const h = held.current.get(ch);
+    if (!h) return;
+    held.current.delete(ch);
+    edit([{ type: "control.set", channel: ch, value: 0 }], `Fire ${ch}`, h.group);
+  };
+  // A pointer released anywhere ends its hold, even if it slid off its button and could not be
+  // captured; a channel whose control link went away while held is let go too.
+  useEffect(() => {
+    const up = (e: PointerEvent) => {
+      for (const [ch, h] of held.current) if (h.pointer === e.pointerId) releaseChannel(ch);
+    };
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, []);
+  const key = channels.join("\u0000");
+  useEffect(() => {
+    for (const ch of [...held.current.keys()]) if (!channels.includes(ch)) releaseChannel(ch);
+  }, [key]);
   if (!channels.length) return null;
   const keyFor = (ch: string) => Object.entries(bindings.value).find(([, c]) => c === ch)?.[0];
   const press = (ch: string, e: PointerEvent) => {
@@ -917,11 +940,12 @@ function FlightPad() {
     e.stopPropagation();
     const h = held.current.get(ch);
     if (!h || h.pointer !== e.pointerId) return;
-    held.current.delete(ch);
-    edit([{ type: "control.set", channel: ch, value: 0 }], `Fire ${ch}`, h.group);
+    releaseChannel(ch);
   };
+  // Flight pointers never reach the world's gesture handlers.
+  const stop = (e: Event) => e.stopPropagation();
   return (
-    <div class="flightpad" role="group" aria-label="Flight controls" data-testid="flight-pad" onPointerDown={(e) => e.stopPropagation()}>
+    <div class="flightpad" role="group" aria-label="Flight controls" data-testid="flight-pad" onPointerDown={stop} onPointerMove={stop} onPointerUp={stop} onPointerCancel={stop}>
       {channels.map((ch) => {
         const key = keyFor(ch);
         const on = (sb.world.controls[ch] ?? 0) > 0;

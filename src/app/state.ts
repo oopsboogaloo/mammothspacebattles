@@ -230,6 +230,8 @@ export function jumpTo(tick: number, select?: string[]): void {
 export function fitView(): void {
   const sb = sandbox.value;
   if (!sb) return;
+  // Fitting the whole world means no longer following one body.
+  follow.value = false;
   camera.value = fitBounds(worldBounds(sb.world), viewport.value);
 }
 

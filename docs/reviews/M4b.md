@@ -40,8 +40,9 @@ All M4b must-have requirements are traced (`pnpm req:check` with `--milestone M4
 Building and flying now works by touch alone:
 - **Below 900 px:** the world fills the top, with the parts palette as a horizontal strip and the tools as a strip beneath it. The inspector and graphs open as sheets from the bottom bar, which also has **Follow**.
 - **Flight buttons:** every control channel that reaches a component gets a hold-to-fire button on the view. Each button tracks its own pointer, so two thumbs can hold two engines at once. A bound key's letter shows on its button, and keys still work.
-- **Phones (≤ 600 px):** the status hint and series chips are hidden, and the hint card and gas scale are smaller, so the world keeps its room.
-- **Tests** (`e2e/touch.spec.ts`): W3 at 390 px and 820 px (tap to build, hold the button to fly), and W9 at 820 px with both engine buttons held, then one released to turn. The SBX-045 test now checks the tools are a strip under the world.
+- **Below 900 px** the inline graphs were already hidden (SBX-045), so their series chips and time-window buttons are hidden too; the Graphs sheet has all of them. **Phones (≤ 600 px)** also lose the status hint, and get a smaller hint card and gas scale, so the world keeps its room.
+- **A hold ends** when its finger lifts anywhere, even off the button, and when its control link is removed. Flight-button pointers never reach the world's gestures, the buttons wrap into more columns rather than run off the view, and Fit turns Follow off.
+- **Tests** (`e2e/touch.spec.ts`): W3 and W9 at 390 px and 820 px (tap to build; hold one button, or both and then release one to turn), plus the release and many-buttons cases. Playwright can't hold real multi-touch, so holds are touch-type pointer events, which is what the app reads. The SBX-045 test now checks the tools are a strip under the world.
 
 ## Next flight trials (to agree)
 
