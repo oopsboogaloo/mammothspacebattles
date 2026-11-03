@@ -471,6 +471,7 @@ The simplest possible rocket has no fuel, no chemistry, no injector and no contr
 | RS-03 | M1 | Bullet vs thin wall at max speed | COL-004 |
 | RS-04 | M1 | Box stack settles | COL-005 |
 | RS-05 | M2 | Assembly with a weak joint, pulled apart by impulse | ASM-004, ASM-005 |
+| RS-05b | M2 | Spinning three-part assembly sheds a pod mid-flight | SBX-015, SBX-016, ASM-005 |
 | RS-06 | M3 | **SC-02** Gas in a box | ORC-006, GAS-005 |
 | RS-07 | M3 | Gas burst in vacuum | GAS-006 |
 | RS-07b | M3 | **SC-03** Simplest rocket: box of hot gas with a hole | ORC-007, ORC-008 |

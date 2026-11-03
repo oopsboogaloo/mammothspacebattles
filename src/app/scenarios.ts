@@ -15,6 +15,8 @@ const ORDER: [string, string][] = [
   ["rs02-off-centre-impact", "RS-02"],
   ["rs03-bullet-thin-wall", "RS-03"],
   ["rs04-box-stack", "RS-04"],
+  ["rs05-weak-joint", "RS-05"],
+  ["rs05b-spinning-assembly", "RS-05b"],
   ["rs00-workload", "RS-00"],
 ];
 

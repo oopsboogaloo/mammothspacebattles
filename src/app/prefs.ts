@@ -10,6 +10,8 @@ export interface Prefs {
   collapsed?: Record<string, boolean>;
   graphWindow?: number | "all";
   lastExperiment?: { title: string; json: string };
+  bindings?: Record<string, string>;
+  prefabs?: import("./ports.ts").Prefab[];
 }
 
 export function loadPrefs(): Prefs {

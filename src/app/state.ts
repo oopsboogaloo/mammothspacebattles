@@ -6,6 +6,7 @@ import { ScenarioError, type Command, type ValidationError } from "../core/index
 import { fitBounds, worldBounds, type Camera, type Viewport } from "./camera.ts";
 import { emptyScenario, Sandbox } from "./controller.ts";
 import { loadPrefs, savePrefs } from "./prefs.ts";
+import type { Prefab } from "./ports.ts";
 import type { OverlayId } from "./render.ts";
 
 export type ToolId = "select" | "move" | "spawn" | "attach" | "impulse" | "link" | "probe" | "ruler";
@@ -14,14 +15,16 @@ export const TOOLS: { id: ToolId; label: string; key: string; hint: string; disa
   { id: "select", label: "Select", key: "V", hint: "Click an object to select it. Shift-click adds to the selection. Drag empty space to pan." },
   { id: "move", label: "Move / rotate", key: "M", hint: "Drag a body to move it. Drag the round handle to rotate (Shift snaps to 15°). While running, dragging pulls with a spring." },
   { id: "spawn", label: "Spawn", key: "S", hint: "Pick a body from the palette, then click in the world. Drag while placing to give it a velocity." },
-  { id: "attach", label: "Attach", key: "A", hint: "Attaching components arrives in M2.", disabled: "Arrives in M2" },
+  { id: "attach", label: "Attach", key: "A", hint: "Pick a part, then point at a body: its nearest port glows. Click to weld the part there (blue = valid, orange dashed = blocked, with the reason). While paused you can also drag a free body onto a port." },
   { id: "impulse", label: "Impulse", key: "I", hint: "Drag from a point on a body. The preview shows the impulse, Δv and Δω; release to apply." },
-  { id: "link", label: "Link", key: "L", hint: "Linking components arrives in M2.", disabled: "Arrives in M2" },
+  { id: "link", label: "Link", key: "L", hint: "Drag from a body with a store to another store: a feed link pumps the resource between them. Only compatible bodies light up." },
   { id: "probe", label: "Probe", key: "P", hint: "Click an object and choose a quantity. It is added to the graphs." },
   { id: "ruler", label: "Ruler", key: "R", hint: "Drag between two points to measure distance, relative velocity and closing speed." },
 ];
 
 export type SpawnKind = "disc" | "box" | "plank" | "triangle" | "hexagon" | "wall";
+/** What Spawn/Attach places: a primitive, or a saved prefab by index (SBX-021). */
+export type PartChoice = SpawnKind | `prefab:${number}`;
 
 export interface DialogState {
   kind: "error" | "confirm" | "info";
@@ -49,7 +52,12 @@ export const overlays = signal<Set<OverlayId>>(new Set((prefs.overlays as Overla
 export const drawerOpen = signal(prefs.drawerOpen ?? true);
 export const graphWindow = signal<number | "all">(prefs.graphWindow ?? 10);
 export const visibleSeries = signal<string[]>([]);
-export const spawnKind = signal<SpawnKind>("disc");
+export const spawnKind = signal<PartChoice>("disc");
+/** Keyboard key (lower case) → control channel (SBX-020). */
+export const bindings = signal<Record<string, string>>(prefs.bindings ?? {});
+/** Key waiting to be captured for a channel, while the user presses "Bind key". */
+export const bindingFor = signal<string | null>(null);
+export const prefabs = signal<Prefab[]>(prefs.prefabs ?? []);
 export const camera = signal<Camera>({ x: 0, y: 0, zoom: 60 });
 export const viewport = signal<Viewport>({ width: 800, height: 500 });
 export const follow = signal(false);
@@ -73,7 +81,7 @@ export function showToast(text: string): void {
 }
 
 export function persist(): void {
-  savePrefs({ overlays: [...overlays.value], drawerOpen: drawerOpen.value, collapsed: collapsed.value, graphWindow: graphWindow.value });
+  savePrefs({ overlays: [...overlays.value], drawerOpen: drawerOpen.value, collapsed: collapsed.value, graphWindow: graphWindow.value, bindings: bindings.value, prefabs: prefabs.value });
   const sb = sandbox.value;
   if (sb && sb.dirty) savePrefs({ lastExperiment: { title: String(sb.scenario.title ?? sb.scenario.name), json: JSON.stringify(sb.exportScenario()) } });
 }
@@ -245,6 +253,14 @@ export function duplicateSelection(): void {
   if (cmds.length && edit(cmds, "Duplicate")) selection.value = ids;
 }
 
+export function detachSelection(): void {
+  const sb = sandbox.value;
+  if (!sb) return;
+  const ids = selection.value.filter((id) => sb.world.joints.some((j) => j.a === id || j.b === id));
+  if (!ids.length) return showToast("Nothing to detach: the selection has no joints.");
+  edit(ids.map((id) => ({ type: "body.detach", id })), ids.length > 1 ? `Detach ${ids.length} parts` : `Detach ${ids[0]}`);
+}
+
 export function deleteSelection(): void {
   const ids = selection.value;
   if (!ids.length) return;
@@ -276,6 +292,9 @@ export const ACTIONS: Action[] = [
   { id: "overlay.com", label: "Overlay: centres of mass", run: () => toggleOverlay("com"), enabled: inSandbox },
   { id: "overlay.contacts", label: "Overlay: contacts", run: () => toggleOverlay("contacts"), enabled: inSandbox },
   { id: "overlay.forces", label: "Overlay: forces", run: () => toggleOverlay("forces"), enabled: inSandbox },
+  { id: "overlay.joints", label: "Overlay: joint load", run: () => toggleOverlay("joints"), enabled: inSandbox },
+  { id: "overlay.links", label: "Overlay: links", run: () => toggleOverlay("links"), enabled: inSandbox },
+  { id: "detach", label: "Detach selection from its assembly", run: () => detachSelection(), enabled: hasSelection },
   { id: "overlay.grid", label: "Overlay: grid & axes", run: () => toggleOverlay("grid"), enabled: inSandbox },
   { id: "palette", label: "Command palette", keys: "Ctrl+K", run: () => (cmdkOpen.value = true) },
   { id: "shortcuts", label: "Keyboard shortcuts", keys: "?", run: () => (shortcutsOpen.value = true) },

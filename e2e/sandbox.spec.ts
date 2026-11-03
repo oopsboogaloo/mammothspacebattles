@@ -152,7 +152,7 @@ test.describe("inspector", () => {
     await openStarter(page, "sc01-elastic-collision");
     const p = await toPage(page, -3, 0);
     await page.mouse.click(p.x, p.y);
-    await expect(page.locator(".row[title*='Mass ÷ area']")).toContainText("kg/m²");
+    await expect(page.locator(".row[title*='÷ area']")).toContainText("kg/m²");
     await page.getByTestId("field-mass").fill("-1");
     await page.getByTestId("field-mass").press("Enter");
     await expect(page.getByTestId("error-mass")).toHaveText("Must be greater than 0");
@@ -252,7 +252,7 @@ test.describe("onboarding and discoverability", () => {
   test("UX-001 the picker lists the starters first, then references, then an empty world", async ({ page }, info) => {
     await page.goto("./");
     const ids = await page.locator(".card .id").allTextContents();
-    expect(ids).toEqual(["SC-01", "RS-02", "RS-03", "RS-04", "RS-00", "NEW"]);
+    expect(ids).toEqual(["SC-01", "RS-02", "RS-03", "RS-04", "RS-05", "RS-05b", "RS-00", "NEW"]);
     await shot(page, info, "picker");
   });
 

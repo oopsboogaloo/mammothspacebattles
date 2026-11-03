@@ -20,7 +20,8 @@ import {
 } from "../core/index.ts";
 import { panBy, toScreen, toWorld, zoomAt } from "./camera.ts";
 import { fmt } from "./format.ts";
-import { COLORS, OVERLAYS, renderFrame, type Preview, type RulerView } from "./render.ts";
+import { assemblyIds, attachCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
+import { COLORS, OVERLAYS, renderFrame, type PortMarker, type Preview, type RulerView } from "./render.ts";
 import {
   achieved,
   bump,
@@ -42,6 +43,9 @@ import {
   tool,
   version,
   viewport,
+  bindings,
+  prefabs,
+  type PartChoice,
   type SpawnKind,
 } from "./state.ts";
 
@@ -76,7 +80,11 @@ type Gesture =
   | { kind: "rotate"; id: string; centre: Vec2; startAngle: number; original: number }
   | { kind: "spawn"; start: Vec2; now: Vec2 }
   | { kind: "impulse"; id: string; point: Vec2; now: Vec2 }
-  | { kind: "ruler"; a: Anchor; now: Vec2 };
+  | { kind: "ruler"; a: Anchor; now: Vec2 }
+  | { kind: "attachDrag"; id: string; grab: Vec2; original: Vec2; originalAngle: number }
+  | { kind: "link"; from: string; now: Vec2 };
+
+const isPrefab = (c: PartChoice): c is `prefab:${number}` => c.startsWith("prefab:");
 
 interface Anchor {
   id?: string;
@@ -113,6 +121,10 @@ export function View() {
   const [rulerLabel, setRulerLabel] = useState<string | null>(null);
   const rulerLabelRef = useRef<string | null>(null);
   const preview = useRef<Preview | null>(null);
+  const portMarkers = useRef<PortMarker[]>([]);
+  const highlight = useRef<Set<string> | null>(null);
+  const attach = useRef<Placement | null>(null);
+  const [attachText, setAttachText] = useState<string | null>(null);
   void version.value;
 
   // Resize the canvas to its box at device pixel ratio.
@@ -187,6 +199,8 @@ export function View() {
         hover: hover.value,
         ruler: rulerView,
         preview: preview.current,
+        ports: portMarkers.current,
+        highlight: highlight.current ?? undefined,
       });
       // Rotate handle for a single selected body with the Move tool.
       const handle = rotateHandle();
@@ -242,6 +256,41 @@ export function View() {
     const s = toScreen(camera.value, viewport.value, b.position);
     return { x: s.x, y: s.y - r * camera.value.zoom - 22 };
   }
+
+  /** Updates the attach preview for a part at the pointer: nearest port, ghost, reason (SBX-014). */
+  const showAttach = (p: Vec2, part: { id: string; shape: Body["shape"] } | null, exclude?: string): Placement | null => {
+    const sb = sandbox.value;
+    portMarkers.current = [];
+    attach.current = null;
+    if (!sb || !part) {
+      preview.current = null;
+      setAttachText(null);
+      return null;
+    }
+    const near = nearestPort(sb.world, p, Math.max(0.6, 24 / camera.value.zoom), exclude);
+    if (!near) {
+      preview.current = null;
+      setAttachText("Point at a body: the nearest port lights up");
+      return null;
+    }
+    const pl = place(sb.world, part, near.body, near.port, sb.profile.tol.penetration / 2);
+    const used = usedPorts(sb.world, near.body.id);
+    portMarkers.current = ports(near.body.shape)
+      .filter((q) => !used.has(q.index))
+      .map((q) => ({ point: worldPort(near.body, q).point, state: q.index === near.port.index ? (pl.valid ? "valid" : "invalid") : "idle" }));
+    if (used.has(near.port.index)) portMarkers.current.push({ point: worldPort(near.body, near.port).point, state: "invalid" });
+    preview.current = { kind: "ghost", from: pl.position, to: pl.position, valid: pl.valid, body: { ...normalizeBody({ id: part.id, shape: part.shape, mass: 1, position: pl.position, velocity: { x: 0, y: 0 }, angle: pl.angle, angularVelocity: 0 }) } };
+    attach.current = pl;
+    setAttachText(pl.reason);
+    return pl;
+  };
+
+  const ghostPart = (): { id: string; shape: Body["shape"] } | null => {
+    const k = spawnKind.value;
+    if (isPrefab(k)) return null;
+    const b = spawnBody(k, "new part", { x: 0, y: 0 }, { x: 0, y: 0 });
+    return { id: b.id, shape: normalizeBody(b).shape };
+  };
 
   const impulseFor = (b: Body, point: Vec2, to: Vec2) => {
     const J = scale(sub(to, point), 2 * b.mass); // 2 m/s of Δv per metre dragged
@@ -331,6 +380,46 @@ export function View() {
       case "probe":
         if (body) probeMenu.value = { x: e.clientX, y: e.clientY, bodyId: body.id };
         return;
+      case "attach": {
+        const k = spawnKind.value;
+        if (body && !body.fixed && assemblyIds(sb.world, body.id).length === 1) {
+          if (playing.value) {
+            showToast("Pause to move an existing body onto a port. New parts can be attached while running.");
+            return;
+          }
+          gesture.current = { kind: "attachDrag", id: body.id, grab: sub(p, body.position), original: { ...body.position }, originalAngle: body.angle };
+          selection.value = [body.id];
+          return;
+        }
+        if (isPrefab(k)) {
+          showToast("Prefabs are placed with the Spawn tool.");
+          return;
+        }
+        const pl = attach.current ?? showAttach(p, ghostPart());
+        if (!pl) {
+          showToast("Point at a body: attach the part to one of its ports.");
+          return;
+        }
+        if (!pl.valid) {
+          showToast(pl.reason);
+          return;
+        }
+        const id = freshId(k);
+        if (edit(attachCommands(sb.world, spawnBody(k, id, pl.position, { x: 0, y: 0 }), pl, freshId("joint"), true), `Attach ${id} to ${pl.target}`)) selection.value = [id];
+        showAttach(p, ghostPart());
+        return;
+      }
+      case "link": {
+        if (!body) return;
+        if (!body.contents?.length) {
+          showToast("Start a feed link on a body with a store: add one in the inspector's Contents section.");
+          return;
+        }
+        const resources = new Set(body.contents.map((s) => s.resource));
+        highlight.current = new Set(sb.world.bodies.filter((b) => b.id !== body.id && b.contents?.some((s) => resources.has(s.resource))).map((b) => b.id));
+        gesture.current = { kind: "link", from: body.id, now: p };
+        return;
+      }
       case "ruler": {
         const a: Anchor = body ? { id: body.id, local: invRotate(sinCos(body.angle), sub(p, body.position)) } : { local: p };
         gesture.current = { kind: "ruler", a, now: p };
@@ -363,6 +452,7 @@ export function View() {
       const b = hit(p);
       if ((b?.id ?? null) !== hover.value) hover.value = b?.id ?? null;
       setHoverPos(b ? s : null);
+      if (tool.value === "attach") showAttach(p, ghostPart());
       return;
     }
     setHoverPos(null);
@@ -394,7 +484,8 @@ export function View() {
       case "spawn": {
         g.now = p;
         const v = scale(sub(p, g.start), 2);
-        preview.current = { kind: "arrow", from: g.start, to: p, label: `v ${fmt(length(v), "m/s")}`, body: normalizeBody(spawnBody(spawnKind.value, "preview", g.start, v)) };
+        const k = spawnKind.value;
+        preview.current = { kind: "arrow", from: g.start, to: p, label: `v ${fmt(length(v), "m/s")}`, body: isPrefab(k) ? undefined : normalizeBody(spawnBody(k, "preview", g.start, v)) };
         return;
       }
       case "impulse": {
@@ -408,6 +499,19 @@ export function View() {
       case "ruler":
         g.now = p;
         return;
+      case "attachDrag": {
+        const b = sb.world.bodies.find((x) => x.id === g.id);
+        if (!b) return;
+        b.position = sub(p, g.grab); // display only
+        showAttach(p, b, b.id);
+        return;
+      }
+      case "link": {
+        g.now = p;
+        const from = sb.world.bodies.find((x) => x.id === g.from);
+        if (from) preview.current = { kind: "line", from: from.position, to: p, label: "feed link" };
+        return;
+      }
     }
   };
 
@@ -451,9 +555,42 @@ export function View() {
         return;
       }
       case "spawn": {
-        const id = freshId(spawnKind.value);
+        const k = spawnKind.value;
+        if (isPrefab(k)) {
+          const pf = prefabs.value[Number(k.slice(7))];
+          if (pf) edit(prefabCommands(pf, g.start, freshId), `Spawn ${pf.name}`);
+          return;
+        }
+        const id = freshId(k);
         const v = scale(sub(g.now, g.start), 2);
-        if (edit([{ type: "body.add", body: spawnBody(spawnKind.value, id, g.start, v) }], `Spawn ${id}`)) selection.value = [id];
+        if (edit([{ type: "body.add", body: spawnBody(k, id, g.start, v) }], `Spawn ${id}`)) selection.value = [id];
+        return;
+      }
+      case "attachDrag": {
+        const b = sb.world.bodies.find((x) => x.id === g.id);
+        if (!b) return;
+        const pl = attach.current;
+        b.position = g.original; // restore; the attach is applied as recorded commands
+        b.angle = g.originalAngle;
+        attach.current = null;
+        portMarkers.current = [];
+        if (pl?.valid) edit(attachCommands(sb.world, b, pl, freshId("joint"), false), `Attach ${b.id} to ${pl.target}`);
+        else if (pl) showToast(pl.reason);
+        bump();
+        return;
+      }
+      case "link": {
+        const compatible = highlight.current;
+        highlight.current = null;
+        const to = hit(p);
+        const from = sb.world.bodies.find((x) => x.id === g.from);
+        if (!to || !from || to.id === from.id) return;
+        if (!compatible?.has(to.id)) {
+          showToast(`Feed links need a matching store at both ends; ${to.id} has none.`);
+          return;
+        }
+        const resource = from.contents!.find((s) => to.contents?.some((d) => d.resource === s.resource))!.resource;
+        edit([{ type: "link.add", link: { id: freshId("feed"), kind: "feed", from: from.id, to: to.id, resource, rate: 1 } }], `Link ${from.id} → ${to.id}`);
         return;
       }
       case "impulse": {
@@ -499,6 +636,12 @@ export function View() {
 
   useEffect(() => {
     if (tool.value !== "ruler") setRuler(null);
+    if (tool.value !== "attach") {
+      portMarkers.current = [];
+      attach.current = null;
+      setAttachText(null);
+      if (!gesture.current) preview.current = null;
+    }
   }, [tool.value]);
 
   const sb = sandbox.value;
@@ -549,8 +692,23 @@ export function View() {
           {hb.fixed ? " (fixed)" : ""} · {fmt(hb.mass, "kg")} · {fmt(length(hb.velocity), "m/s")} · {hb.angularVelocity.toFixed(2)} rad/s
         </div>
       )}
+      {attachText && tool.value === "attach" && (
+        <div class="hovercard readout" role="status" data-testid="attach-readout">
+          {attachText}
+        </div>
+      )}
+      {Object.keys(bindings.value).length > 0 && sb && (
+        <div class="keylegend" aria-label="Key bindings" data-testid="key-legend">
+          <strong>Keys</strong>
+          {Object.entries(bindings.value).map(([k, ch]) => (
+            <div key={k}>
+              <span class="kbd">{k.toUpperCase()}</span> → {ch} <span class="mono">{(sb.world.controls[ch] ?? 0).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {rulerLabel && (
-        <div class="hovercard" style={{ left: "12px", bottom: "12px" }} role="status" data-testid="ruler-readout">
+        <div class="hovercard readout" role="status" data-testid="ruler-readout">
           Ruler: {rulerLabel}
         </div>
       )}
@@ -569,12 +727,6 @@ export function View() {
             {o.label}
           </button>
         ))}
-        <button class="btn small" disabled title="Joint load overlay arrives in M2">
-          Joint load
-        </button>
-        <button class="btn small" disabled title="Link path overlay arrives in M2">
-          Links
-        </button>
       </div>
     </div>
   );

@@ -3,13 +3,15 @@
 import { add, localVertices, massProps, rotate, scale, sinCos, type Body, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
-export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "grid";
+export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "grid";
 
 export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: string }[] = [
   { id: "velocity", label: "Velocity", legend: "solid blue arrow" },
   { id: "com", label: "Centre of mass", legend: "white circled cross" },
   { id: "contacts", label: "Contacts", legend: "orange dot, dashed line ∝ impulse" },
   { id: "forces", label: "Forces", legend: "purple dotted line (drags), arrow (gravity)" },
+  { id: "joints", label: "Joint load", legend: "line thickens with load: blue < 50%, yellow < 80%, orange dashed ≥ 80% of the limit" },
+  { id: "links", label: "Links", legend: "feed: purple dashed arrow · control: dotted line to the channel name" },
   { id: "grid", label: "Grid & axes", legend: "1 m grid, origin axes" },
 ];
 
@@ -39,11 +41,18 @@ export interface RulerView {
 }
 
 export interface Preview {
-  kind: "arrow" | "ghost";
+  kind: "arrow" | "ghost" | "line";
   from: Vec2;
   to: Vec2;
   label?: string;
   body?: Body;
+  /** For attach ghosts: green-blue solid when valid, orange dashed when blocked. */
+  valid?: boolean;
+}
+
+export interface PortMarker {
+  point: Vec2;
+  state: "idle" | "valid" | "invalid";
 }
 
 export interface RenderOptions {
@@ -52,6 +61,9 @@ export interface RenderOptions {
   hover: string | null;
   ruler?: RulerView | null;
   preview?: Preview | null;
+  ports?: PortMarker[];
+  /** Bodies to outline as compatible link ends while dragging a link. */
+  highlight?: ReadonlySet<string>;
   /** Draw body ids (default true). */
   labels?: boolean;
   /** Scale for velocity arrows, seconds: an arrow shows where the body will be after this long. */
@@ -276,18 +288,111 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     }
   }
 
+  const byId = new Map(world.bodies.map((b) => [b.id, b]));
+  if (opts.overlays.has("joints")) {
+    for (const j of world.joints) {
+      const A = byId.get(j.a);
+      const B = byId.get(j.b);
+      if (!A || !B) continue;
+      const pa = toScreen(c, vp, A.position);
+      const pj = toScreen(c, vp, add(A.position, rotate(sinCos(A.angle), j.anchorA)));
+      const pb = toScreen(c, vp, B.position);
+      const f = j.load.fraction;
+      ctx.strokeStyle = f >= 0.8 ? COLORS.contact : f >= 0.5 ? COLORS.preview : COLORS.velocity;
+      ctx.lineWidth = 2 + 4 * Math.min(1, f);
+      ctx.setLineDash(f >= 0.8 ? [6, 3] : []);
+      ctx.beginPath();
+      ctx.moveTo(pa.x, pa.y);
+      ctx.lineTo(pj.x, pj.y);
+      ctx.lineTo(pb.x, pb.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.beginPath();
+      ctx.arc(pj.x, pj.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (opts.overlays.has("links")) {
+    for (const l of world.links) {
+      const to = byId.get(l.to);
+      if (!to) continue;
+      const pt = toScreen(c, vp, to.position);
+      if (l.kind === "feed") {
+        const from = byId.get(l.from);
+        if (!from) continue;
+        arrow(ctx, toScreen(c, vp, from.position), pt, COLORS.force, [6, 4]);
+      } else {
+        const tag = { x: pt.x + 26, y: pt.y - 26 };
+        ctx.strokeStyle = COLORS.force;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pt.x, pt.y);
+        ctx.lineTo(tag.x, tag.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = COLORS.force;
+        ctx.font = "11px 'IBM Plex Mono', monospace";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(`${l.channel} ${(world.controls[l.channel] ?? 0).toFixed(2)}`, tag.x + 2, tag.y);
+      }
+    }
+  }
+
+  if (opts.highlight) {
+    for (const id of opts.highlight) {
+      const b = byId.get(id);
+      if (!b) continue;
+      bodyPath(ctx, c, vp, b);
+      ctx.strokeStyle = COLORS.force;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+  }
+
+  for (const m of opts.ports ?? []) {
+    const s = toScreen(c, vp, m.point);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = m.state === "valid" ? COLORS.velocity : m.state === "invalid" ? COLORS.contact : COLORS.bodyStroke;
+    ctx.setLineDash(m.state === "invalid" ? [3, 2] : []);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, m.state === "idle" ? 4 : 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   const p = opts.preview;
   if (p) {
     if (p.body) {
       ctx.globalAlpha = 0.45;
       bodyPath(ctx, c, vp, p.body);
-      ctx.fillStyle = COLORS.preview;
+      ctx.fillStyle = p.valid === false ? COLORS.contact : p.valid === true ? COLORS.velocity : COLORS.preview;
       ctx.fill();
       ctx.globalAlpha = 1;
+      if (p.valid !== undefined) {
+        ctx.strokeStyle = p.valid ? COLORS.velocity : COLORS.contact;
+        ctx.lineWidth = 2;
+        ctx.setLineDash(p.valid ? [] : [6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
     }
     const a = toScreen(c, vp, p.from);
     const b = toScreen(c, vp, p.to);
     if (p.kind === "arrow") arrow(ctx, a, b, COLORS.preview);
+    if (p.kind === "line") {
+      ctx.strokeStyle = COLORS.force;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     if (p.label) {
       ctx.fillStyle = COLORS.preview;
       ctx.font = "12px 'IBM Plex Mono', monospace";

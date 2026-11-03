@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { cross, dot, length, massProps, type Body, type Shape } from "../core/index.ts";
+import { assemblyProps, bodyMass, controlInputs, cross, dot, length, massProps, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
+import { assemblyIds, makePrefab } from "./ports.ts";
 import { deg, fmt, rad } from "./format.ts";
 import { NumberField } from "./NumberField.tsx";
 import { Icon } from "./icons.tsx";
@@ -7,6 +8,11 @@ import {
   ACTIONS,
   achieved,
   action,
+  bindingFor,
+  bindings,
+  freshId,
+  prefabs,
+  showToast,
   collapsed,
   drawerOpen,
   edit,
@@ -151,8 +157,42 @@ export function SpawnPalette() {
         </button>
       ))}
       {items.length === 0 && <div class="muted">No bodies match "{q}".</div>}
+      <div class="muted" style={{ fontSize: "12px", letterSpacing: "0.08em", marginTop: "8px" }}>
+        PREFABS
+      </div>
+      {prefabs.value.length === 0 && (
+        <div class="muted" style={{ fontSize: "12px" }}>
+          None yet. Right-click an assembly and choose "Save as prefab".
+        </div>
+      )}
+      {prefabs.value
+        .map((pf, i) => ({ pf, i }))
+        .filter(({ pf }) => pf.name.toLowerCase().includes(q.toLowerCase()))
+        .map(({ pf, i }) => (
+          <div key={i} style={{ display: "flex", gap: "4px" }}>
+            <button class="palette-item" style={{ flex: 1 }} aria-pressed={spawnKind.value === `prefab:${i}`} onClick={() => (spawnKind.value = `prefab:${i}`)} data-testid={`prefab-${i}`}>
+              <span>
+                {pf.name}
+                <small>
+                  {pf.bodies.length} parts · {pf.joints.length} joints
+                </small>
+              </span>
+            </button>
+            <button
+              class="btn small ghost"
+              aria-label={`Delete prefab ${pf.name}`}
+              onClick={() => {
+                prefabs.value = prefabs.value.filter((_, k) => k !== i);
+                if (spawnKind.value === `prefab:${i}`) spawnKind.value = "disc";
+                persist();
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
       <div class="muted" style={{ fontSize: "12px" }}>
-        Components, gas emitters and prefabs arrive in later milestones.
+        Components with functions (tanks, thrusters, cannons) arrive in M4–M6.
       </div>
     </aside>
   );
@@ -198,12 +238,14 @@ const unit01 = (v: number) => (v >= 0 && v <= 1 ? null : "Must be between 0 and 
 const nonNegative = (v: number) => (v >= 0 ? null : "Must be 0 or more");
 
 function BodyInspector({ bodies }: { bodies: Body[] }) {
+  // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
+  void version.value;
   const one = bodies.length === 1 ? bodies[0] : null;
   const set = (label: string, patch: (b: Body, v: number) => Partial<Body>) => (v: number) =>
     edit(bodies.map((b) => ({ type: "body.set", id: b.id, patch: patch(b, v) })), bodies.length > 1 ? `${label} (${bodies.length} bodies)` : `${label} ${bodies[0].id}`);
   const kinds = new Set(bodies.map((b) => b.shape.kind));
   const kind = kinds.size === 1 ? bodies[0].shape.kind : null;
-  const mp = one ? massProps(one.shape, one.mass) : null;
+  const mp = one ? massProps(one.shape, bodyMass(one)) : null;
   const shapeSet = (field: "radius" | "width" | "height") => (v: number) =>
     edit(
       bodies.map((b) => ({ type: "body.set", id: b.id, patch: { shape: { ...b.shape, [field]: v } as Shape } })),
@@ -228,8 +270,9 @@ function BodyInspector({ bodies }: { bodies: Body[] }) {
         {mp && <Row k="Area (derived)" v={fmt(mp.area, "m²")} title="Derived from the shape's dimensions." />}
       </Section>
       <Section id="material" title="Material">
-        <NumberField id="mass" label="Mass" unit="kg" step={0.1} value={shared(bodies, (b) => b.mass)} validate={positive} onCommit={set("Set mass", (_b, v) => ({ mass: v }))} />
-        {one && mp && <Row k="Density (derived)" v={fmt(one.mass / mp.area, "kg/m²")} title="Mass ÷ area. Change the mass or the shape to change it." />}
+        <NumberField id="mass" label={bodies.some((b) => b.contents?.length) ? "Dry mass" : "Mass"} unit="kg" step={0.1} value={shared(bodies, (b) => b.mass)} validate={positive} onCommit={set("Set mass", (_b, v) => ({ mass: v }))} />
+        {one && one.contents?.length ? <Row k="Total mass (derived)" v={fmt(bodyMass(one), "kg")} title="Dry mass plus everything in its stores." /> : null}
+        {one && mp && <Row k="Density (derived)" v={fmt(bodyMass(one) / mp.area, "kg/m²")} title="Total mass ÷ area. Change the mass, contents or shape to change it." />}
         {one && mp && <Row k="Moment of inertia (derived)" v={fmt(mp.inertia, "kg·m²")} title="From mass and shape, assuming uniform density." />}
         <NumberField id="restitution" label="Restitution" step={0.05} value={shared(bodies, (b) => b.restitution)} validate={unit01} onCommit={set("Set restitution", (_b, v) => ({ restitution: v }))} />
         <NumberField id="friction" label="Friction" step={0.05} value={shared(bodies, (b) => b.friction)} validate={nonNegative} onCommit={set("Set friction", (_b, v) => ({ friction: v }))} />
@@ -257,21 +300,24 @@ function BodyInspector({ bodies }: { bodies: Body[] }) {
         <NumberField id="vy" label="Velocity y" unit="m/s" value={shared(bodies, (b) => b.velocity.y)} onCommit={set("Set velocity", (b, v) => ({ velocity: { x: b.velocity.x, y: v } }))} />
         <NumberField id="w" label="Spin" unit="rad/s" value={shared(bodies, (b) => b.angularVelocity)} onCommit={set("Set spin", (_b, v) => ({ angularVelocity: v }))} />
       </Section>
-      <Section id="contents" title="Contents">
-        <span class="muted">None. Stores and tanks arrive in M4.</span>
-      </Section>
-      <Section id="joints" title="Joints">
-        <span class="muted">None. Joints arrive in M2.</span>
-      </Section>
-      <Section id="links" title="Links">
-        <span class="muted">None. Control and feed links arrive in M2.</span>
-      </Section>
+      {one ? (
+        <>
+          <AssemblySection body={one} />
+          <JointsSection body={one} />
+          <ContentsSection body={one} />
+          <LinksSection body={one} />
+        </>
+      ) : (
+        <Section id="assembly" title="Assembly">
+          <span class="muted">Select one body to see its assembly, joints, contents and links.</span>
+        </Section>
+      )}
       {one && mp && (
         <Section id="live" title="Live values">
           <Row k="Speed" v={fmt(length(one.velocity), "m/s")} />
-          <Row k="Kinetic energy" v={fmt(0.5 * one.mass * dot(one.velocity, one.velocity) + 0.5 * mp.inertia * one.angularVelocity ** 2, "J")} />
-          <Row k="Momentum" v={fmt(one.mass * length(one.velocity), "kg·m/s")} />
-          <Row k="Angular momentum (origin)" v={fmt(one.mass * cross(one.position, one.velocity) + mp.inertia * one.angularVelocity, "kg·m²/s")} />
+          <Row k="Kinetic energy" v={fmt(0.5 * bodyMass(one) * dot(one.velocity, one.velocity) + 0.5 * mp.inertia * one.angularVelocity ** 2, "J")} />
+          <Row k="Momentum" v={fmt(bodyMass(one) * length(one.velocity), "kg·m/s")} />
+          <Row k="Angular momentum (origin)" v={fmt(bodyMass(one) * cross(one.position, one.velocity) + mp.inertia * one.angularVelocity, "kg·m²/s")} />
           <Row k="Contacts now" v={String(sb.world.contacts.filter((c) => (c.a === one.id || c.b === one.id) && c.normalImpulse > 0).length)} />
         </Section>
       )}
@@ -279,7 +325,228 @@ function BodyInspector({ bodies }: { bodies: Body[] }) {
   );
 }
 
+function AssemblySection({ body }: { body: Body }) {
+  // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
+  void version.value;
+  const sb = sandbox.value!;
+  const ids = assemblyIds(sb.world, body.id);
+  if (ids.length < 2)
+    return (
+      <Section id="assembly" title="Assembly">
+        <span class="muted">Not attached to anything. Use the Attach tool (A) to weld parts to it.</span>
+      </Section>
+    );
+  const members = ids.map((id) => sb.world.bodies.find((b) => b.id === id)!);
+  const fixed = members.some((b) => b.fixed);
+  const p = assemblyProps(members.map((b) => ({ mass: bodyMass(b), inertia: massProps(b.shape, bodyMass(b)).inertia, position: b.position })));
+  return (
+    <Section id="assembly" title="Assembly">
+      <Row k="Parts" v={String(p.count)} title={ids.join(", ")} />
+      <Row k="Total mass" v={fmt(p.mass, "kg")} />
+      <Row k="Centre of mass" v={`${p.centreOfMass.x.toFixed(3)}, ${p.centreOfMass.y.toFixed(3)} m`} />
+      <Row k="Moment of inertia" v={fmt(p.inertia, "kg·m²")} title="About the assembly's centre of mass: each part's own inertia plus mass × distance² (parallel axis theorem)." />
+      {fixed && <span class="muted">Anchored to a fixed body.</span>}
+      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+        <button class="btn small" onClick={() => edit([{ type: "body.detach", id: body.id }], `Detach ${body.id}`)} data-testid="detach">
+          Detach this part
+        </button>
+        <button class="btn small" onClick={() => savePrefab(body.id)} data-testid="save-prefab">
+          Save as prefab
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+export function savePrefab(id: string): void {
+  const sb = sandbox.value;
+  if (!sb) return;
+  const name = `Prefab ${prefabs.value.length + 1} (${assemblyIds(sb.world, id).length} parts)`;
+  prefabs.value = [...prefabs.value, makePrefab(sb.world, id, name)];
+  persist();
+  showToast(`Saved "${name}". Pick it in the Spawn palette (S) to place copies.`);
+}
+
+const LIMIT_FIELDS: { k: keyof Joint["limits"]; label: string; unit: string }[] = [
+  { k: "tension", label: "Tension limit", unit: "N" },
+  { k: "compression", label: "Compression limit", unit: "N" },
+  { k: "shear", label: "Shear limit", unit: "N" },
+  { k: "torque", label: "Torque limit", unit: "N·m" },
+];
+
+function JointsSection({ body }: { body: Body }) {
+  // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
+  void version.value;
+  const sb = sandbox.value!;
+  const joints = sb.world.joints.filter((j) => j.a === body.id || j.b === body.id);
+  return (
+    <Section id="joints" title={`Joints (${joints.length})`}>
+      {joints.length === 0 && <span class="muted">None.</span>}
+      {joints.map((j) => {
+        const other = j.a === body.id ? j.b : j.a;
+        const pct = Math.min(100, j.load.fraction * 100);
+        const worst = LIMIT_FIELDS.reduce((w, f) => (j.load[f.k] / j.limits[f.k] > j.load[w.k] / j.limits[w.k] ? f : w), LIMIT_FIELDS[0]);
+        return (
+          <div key={j.id} class="joint" data-testid={`joint-${j.id}`}>
+            <div class="row">
+              <span>
+                Weld to <b>{other}</b>
+              </span>
+              <span class="mono" data-testid={`joint-load-${j.id}`} title="Largest load as a share of its limit">
+                {pct.toFixed(0)}% {worst.k}
+              </span>
+            </div>
+            <div class="loadbar" role="meter" aria-label={`Load on ${j.id}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
+              <div style={{ width: `${pct}%`, background: pct >= 80 ? "var(--orange)" : pct >= 50 ? "#F2C94C" : "var(--accent)" }} />
+            </div>
+            {LIMIT_FIELDS.map((f) => (
+              <NumberField
+                key={f.k}
+                id={`${j.id}-${f.k}`}
+                label={f.label}
+                unit={f.unit}
+                step={10}
+                decimals={1}
+                value={j.limits[f.k]}
+                validate={positive}
+                onCommit={(v) => edit([{ type: "joint.set", id: j.id, limits: { [f.k]: v } }], `Set ${f.k} limit`)}
+              />
+            ))}
+            <button class="btn small ghost" onClick={() => edit([{ type: "joint.remove", id: j.id }], `Remove joint ${j.id}`)}>
+              Remove joint
+            </button>
+          </div>
+        );
+      })}
+    </Section>
+  );
+}
+
+function ContentsSection({ body }: { body: Body }) {
+  // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
+  void version.value;
+  const [resource, setResource] = useState("fuel");
+  const stores = body.contents ?? [];
+  const setStores = (next: Store[], label: string) => edit([{ type: "body.set", id: body.id, patch: { contents: next } }], label);
+  return (
+    <Section id="contents" title="Contents">
+      {stores.length === 0 && <span class="muted">No stores.</span>}
+      {stores.map((s, i) => (
+        <div key={s.resource} class="joint">
+          <div class="row">
+            <b>{s.resource}</b>
+            <button class="btn small ghost" onClick={() => setStores(stores.filter((_, k) => k !== i), `Remove ${s.resource} store`)}>
+              Remove
+            </button>
+          </div>
+          <NumberField
+            id={`store-${s.resource}-mass`}
+            label="Amount"
+            unit="kg"
+            value={s.mass}
+            validate={(v) => (v < 0 ? "Must be 0 or more" : v > s.capacity ? `Must not exceed capacity (${s.capacity} kg)` : null)}
+            onCommit={(v) => setStores(stores.map((x, k) => (k === i ? { ...x, mass: v } : x)), `Set ${s.resource}`)}
+          />
+          <NumberField
+            id={`store-${s.resource}-cap`}
+            label="Capacity"
+            unit="kg"
+            value={s.capacity}
+            validate={(v) => (v < s.mass ? `Must hold the current ${s.mass} kg` : null)}
+            onCommit={(v) => setStores(stores.map((x, k) => (k === i ? { ...x, capacity: v } : x)), `Set ${s.resource} capacity`)}
+          />
+        </div>
+      ))}
+      <div class="row">
+        <input class="textin" aria-label="New store resource" value={resource} onInput={(e) => setResource((e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => e.stopPropagation()} data-testid="new-store-resource" />
+        <button
+          class="btn small"
+          disabled={!resource.trim() || stores.some((s) => s.resource === resource.trim())}
+          onClick={() => setStores([...stores, { resource: resource.trim(), mass: 0, capacity: 10 }], `Add ${resource.trim()} store`)}
+          data-testid="add-store"
+        >
+          Add store
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+function LinksSection({ body }: { body: Body }) {
+  // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
+  void version.value;
+  const sb = sandbox.value!;
+  const [channel, setChannel] = useState("main");
+  const feeds = sb.world.links.filter((l) => l.kind === "feed" && (l.from === body.id || l.to === body.id));
+  const controls = controlInputs(sb.world, body.id);
+  const keyFor = (ch: string) => Object.entries(bindings.value).find(([, c]) => c === ch)?.[0];
+  return (
+    <Section id="links" title="Links">
+      {feeds.map((l) =>
+        l.kind === "feed" ? (
+          <div key={l.id} class="joint">
+            <div class="row">
+              <span>
+                {l.resource}: {l.from} → {l.to}
+              </span>
+              <button class="btn small ghost" onClick={() => edit([{ type: "link.remove", id: l.id }], `Remove link ${l.id}`)}>
+                Remove
+              </button>
+            </div>
+            <NumberField
+              id={`${l.id}-rate`}
+              label="Flow rate"
+              unit="kg/s"
+              value={l.rate}
+              validate={positive}
+              onCommit={(v) => edit([{ type: "link.remove", id: l.id }, { type: "link.add", link: { ...l, rate: v } }], `Set ${l.id} rate`)}
+            />
+          </div>
+        ) : null,
+      )}
+      {Object.entries(controls).map(([ch, value]) => {
+        const link = sb.world.links.find((l) => l.kind === "control" && l.to === body.id && l.channel === ch)!;
+        const key = keyFor(ch);
+        return (
+          <div key={ch} class="joint">
+            <div class="row">
+              <span>
+                Control in: <b>{ch}</b> = <span class="mono">{value.toFixed(2)}</span>
+              </span>
+              <button class="btn small ghost" onClick={() => edit([{ type: "link.remove", id: link.id }], `Remove control ${ch}`)}>
+                Remove
+              </button>
+            </div>
+            <div class="row">
+              <span class="muted">Key</span>
+              <button class={`btn small ${bindingFor.value === ch ? "on" : ""}`} onClick={() => (bindingFor.value = ch)} data-testid={`bind-${ch}`}>
+                {bindingFor.value === ch ? "Press a key…" : key ? `${key.toUpperCase()} (change)` : "Bind key"}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      <div class="row">
+        <input class="textin" aria-label="Control channel" value={channel} onInput={(e) => setChannel((e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => e.stopPropagation()} data-testid="new-channel" />
+        <button
+          class="btn small"
+          disabled={!channel.trim() || channel.trim() in controls}
+          onClick={() => edit([{ type: "link.add", link: { id: freshId("control"), kind: "control", channel: channel.trim(), to: body.id } }], `Add control ${channel.trim()}`)}
+          data-testid="add-control"
+        >
+          Add control link
+        </button>
+      </div>
+      <span class="muted" style={{ fontSize: "12px" }}>
+        Drag between stores with the Link tool (L) to add a feed link. Control values have no actuator to drive until thrusters arrive in M4.
+      </span>
+    </Section>
+  );
+}
+
 function ScenarioPanel() {
+  // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
+  void version.value;
   const sb = sandbox.value!;
   const scn = sb.scenario;
   const L = sb.world.ledger;

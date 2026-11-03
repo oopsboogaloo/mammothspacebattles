@@ -6,6 +6,10 @@ import { CommandPalette, ContextMenu, Dialog, Picker, ProbeMenu, Shortcuts, Toas
 import { Drawer, Inspector, MobileBar, SpawnPalette, StatusBar, ToolRail, TopBar } from "./Panels.tsx";
 import {
   action,
+  bindingFor,
+  bindings,
+  edit,
+  showToast,
   camera,
   cmdkOpen,
   contextMenu,
@@ -24,6 +28,9 @@ import { View } from "./View.tsx";
 import { toScreen } from "./camera.ts";
 import { hashValue } from "../core/index.ts";
 
+const pressGroups: Record<string, number> = {};
+let pressCounter = 5_000_000;
+
 function isTyping(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
   return !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
@@ -41,6 +48,26 @@ function App() {
         return;
       }
       if (cmdkOpen.value) return;
+      const key = e.key.toLowerCase();
+      if (bindingFor.value && !e.ctrlKey && !e.metaKey && key.length === 1) {
+        // Capture this key for the channel waiting to be bound (SBX-020).
+        e.preventDefault();
+        const channel = bindingFor.value;
+        bindings.value = { ...Object.fromEntries(Object.entries(bindings.value).filter(([, c]) => c !== channel)), [key]: channel };
+        bindingFor.value = null;
+        persist();
+        showToast(`${key.toUpperCase()} now drives "${channel}". Bound keys take priority over tool shortcuts.`);
+        return;
+      }
+      const channel = bindings.value[key];
+      if (channel && sandbox.value && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        if (!e.repeat) {
+          pressGroups[key] = ++pressCounter;
+          edit([{ type: "control.set", channel, value: 1 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
+        }
+        return;
+      }
       const id = keyToAction(e);
       if (!id) return;
       // Space always means play/pause (Enter still activates a focused button).
@@ -53,10 +80,20 @@ function App() {
       persist();
       if (sandbox.value?.dirty) e.preventDefault();
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      const channel = bindings.value[key];
+      if (channel && sandbox.value && pressGroups[key] !== undefined) {
+        edit([{ type: "control.set", channel, value: 0 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
+        delete pressGroups[key];
+      }
+    };
+    window.addEventListener("keyup", onKeyUp);
     window.addEventListener("keydown", onKey);
     window.addEventListener("beforeunload", onUnload);
     return () => {
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("beforeunload", onUnload);
     };
   }, []);
@@ -70,7 +107,7 @@ function App() {
           <TopBar />
           <div class="body">
             <ToolRail />
-            {tool.value === "spawn" && <SpawnPalette />}
+            {(tool.value === "spawn" || tool.value === "attach") && <SpawnPalette />}
             <div class="center">
               <View />
               <Drawer />

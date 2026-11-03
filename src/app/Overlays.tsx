@@ -3,6 +3,7 @@ import { parseScenario, initialWorld } from "../core/index.ts";
 import { fitBounds, worldBounds } from "./camera.ts";
 import { renderFrame } from "./render.ts";
 import { BUILT_INS } from "./scenarios.ts";
+import { savePrefab } from "./Panels.tsx";
 import { loadPrefs } from "./prefs.ts";
 import {
   ACTIONS,
@@ -275,6 +276,8 @@ export function ContextMenu() {
       {item("Duplicate", "Ctrl+D", duplicateSelection, "duplicate")}
       {item(b.fixed ? "Make free" : "Make fixed", undefined, () => edit([{ type: "body.set", id: b.id, patch: { fixed: !b.fixed } }], b.fixed ? "Make free" : "Make fixed"), "fixed")}
       {item("Stop (zero velocity)", undefined, () => edit([{ type: "body.set", id: b.id, patch: { velocity: { x: 0, y: 0 }, angularVelocity: 0 } }], `Stop ${b.id}`), "stop")}
+      {sb.world.joints.some((j) => j.a === b.id || j.b === b.id) && item("Detach from assembly", undefined, () => edit([{ type: "body.detach", id: b.id }], `Detach ${b.id}`), "detach")}
+      {sb.world.joints.some((j) => j.a === b.id || j.b === b.id) && item("Save assembly as prefab", undefined, () => savePrefab(b.id), "prefab")}
       {item("Delete", "Del", deleteSelection, "delete")}
     </Menu>
   );
