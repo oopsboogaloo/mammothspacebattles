@@ -1691,7 +1691,9 @@ export function stepGas(
     p.position = { x: x[i], y: y[i] };
     p.velocity = { x: vx[i], y: vy[i] };
     p.thermal = E[i];
-    if (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y || far(x[i], y[i])) {
+    // A wrapped world keeps gas that crosses its bounds: it wraps round after the step (FLT-012).
+    const outside = !bounds.wrap && (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y);
+    if (outside || far(x[i], y[i])) {
       acc.removed.count += 1;
       leave(i, 1, parcelChemical(p, scale));
       continue;

@@ -119,7 +119,7 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
     if (!(y > 0)) continue;
     const st = body.contents?.find((c) => c.resource === res);
     if (!st) return { firing: false, reason: `No ${res} store on the injector` };
-    if (st.mass < inj.parcelMass * y) {
+    if (st.mass < (inj.parcelMass / (inj.economy ?? 1)) * y) {
       const fed = world.links.some((l) => l.kind === "feed" && l.to === body.id && l.resource === res);
       return { firing: false, reason: fed ? `No ${res}: the tank feeding it is empty` : `No feed: nothing links ${res} to it` };
     }
@@ -482,6 +482,7 @@ function wrapAround(world: World): boolean {
   }
   const reach = b.farField ?? 10;
   const movedParcels = new Set<number>();
+  const near: { x: number; y: number; r2: number }[] = [];
   let moved = false;
   for (const members of groups.values()) {
     if (members.some((m) => m.fixed)) continue;
@@ -497,14 +498,15 @@ function wrapAround(world: World): boolean {
     if (!(m > 0)) continue;
     cx /= m;
     cy /= m;
-    const sx = cx < b.min.x ? w : cx >= b.max.x ? -w : 0;
-    const sy = cy < b.min.y ? h : cy >= b.max.y ? -h : 0;
-    if (sx === 0 && sy === 0) continue;
-    moved = true;
     let rad = 0;
     for (const x of members) rad = Math.max(rad, length(sub(x.position, { x: cx, y: cy })) + massProps(x.shape, x.mass).boundingRadius);
-    for (const x of members) x.position = { x: x.position.x + sx, y: x.position.y + sy };
     const r2 = (rad + reach) * (rad + reach);
+    const sx = cx < b.min.x ? w : cx >= b.max.x ? -w : 0;
+    const sy = cy < b.min.y ? h : cy >= b.max.y ? -h : 0;
+    near.push({ x: cx + sx, y: cy + sy, r2 });
+    if (sx === 0 && sy === 0) continue;
+    moved = true;
+    for (const x of members) x.position = { x: x.position.x + sx, y: x.position.y + sy };
     for (const p of world.gas.parcels) {
       if (movedParcels.has(p.id)) continue;
       const dx = p.position.x - cx;
@@ -513,6 +515,16 @@ function wrapAround(world: World): boolean {
       p.position = { x: p.position.x + sx, y: p.position.y + sy };
       movedParcels.add(p.id);
     }
+  }
+  // Gas outside the rectangle wraps on its own, unless it is near a free assembly: that gas (in a
+  // chamber straddling the edge, say) waits outside until the assembly itself wraps and takes it.
+  for (const p of world.gas.parcels) {
+    if (movedParcels.has(p.id)) continue;
+    const { x, y } = p.position;
+    if (x >= b.min.x && x < b.max.x && y >= b.min.y && y < b.max.y) continue;
+    if (near.some((c) => (x - c.x) ** 2 + (y - c.y) ** 2 <= c.r2)) continue;
+    p.position = { x: x < b.min.x ? x + w : x >= b.max.x ? x - w : x, y: y < b.min.y ? y + h : y >= b.max.y ? y - h : y };
+    moved = true;
   }
   return moved;
 }
@@ -568,7 +580,10 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
         const m = bodyMass(body);
         return 0.5 * m * (body.velocity.x ** 2 + body.velocity.y ** 2) + 0.5 * massProps(body.shape, m).inertia * body.angularVelocity ** 2;
       };
-      const before = ke(b);
+      // Mass made by an economy above 1 (FLT-010) appears moving with the outlet: its kinetic energy
+      // there is supplied, not work the injection does, so it must not cool the exhaust.
+      const supplied = dm - dm / (inj.economy ?? 1);
+      const before = ke(b) + 0.5 * supplied * (vPoint.x ** 2 + vPoint.y ** 2);
       let thermal = 0;
       const composition: Record<string, number> = {};
       const draw = dm / (inj.economy ?? 1);

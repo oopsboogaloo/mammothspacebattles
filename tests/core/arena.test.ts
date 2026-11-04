@@ -70,4 +70,64 @@ describe("flight-test arena", () => {
     const expected = -10 / (2 * Math.sqrt(2));
     expect(w.bodies.find((b) => b.id === "probe")!.velocity.x / test.timestep).toBeCloseTo(expected, 9);
   });
+
+  describe("economy engine details", () => {
+    const engine = (fuelMass: number, vx: number) =>
+      createWorld(
+        1,
+        [
+          {
+            ...disc("e", { mass: 1, velocity: { x: vx, y: 0 } }),
+            contents: [{ resource: "o2", mass: fuelMass, capacity: 1 }],
+            injector: { channel: "main", mixture: { o2: 1 }, speed: 0, igniter: false, economy: 20, outlet: { x: 0, y: -0.6 }, direction: { x: 0, y: -1 } },
+          },
+        ],
+        { x: 0, y: 0 },
+        { links: [{ id: "c", kind: "control", channel: "main", to: "e" }] },
+        sandbox,
+      );
+    const fire: Command[] = [{ type: "control.set", channel: "main", value: 1 }];
+
+    it("FLT-010 an economy engine fires on the last propellant a discounted parcel needs", () => {
+      const w = engine(0.0001, 0); // a twentieth of a 1 g parcel is 0.05 g: enough for two
+      stepInPlace(w, fire, sandbox);
+      expect(w.gas.parcels.length).toBeGreaterThan(0);
+    });
+
+    it("FLT-010 the made mass arrives moving with the engine, so a fast engine's exhaust is as warm as a still one's", () => {
+      const still = engine(0.5, 0);
+      const fast = engine(0.5, 100);
+      stepInPlace(still, fire, sandbox);
+      stepInPlace(fast, fire, sandbox);
+      const t = (w: World) => w.gas.parcels[0].thermal;
+      expect(t(fast) / t(still)).toBeCloseTo(1, 6); // equal up to rounding (the made mass carries 4.75 J at 100 m/s)
+      expect(t(still)).toBeGreaterThan(0);
+      expect(fast.ledger.violations).toBe(0);
+    });
+  });
+
+  it("FLT-012 gas crossing an edge with a ship wraps with it, and gas crossing alone wraps on its own; none is lost", () => {
+    // Single parcels feel no pressure, so they fly straight: one beside the ship, one 40 m below it.
+    const one = (y: number) => ({ min: { x: 8.9, y: y - 0.05 }, max: { x: 9.0, y: y + 0.05 }, count: 1, mass: 0.001, temperature: 300, composition: { air: 1 }, velocity: { x: 20, y: 0 } });
+    const w = createWorld(
+      1,
+      [disc("ship", { mass: 1, position: { x: 9.6, y: 20 }, velocity: { x: 20, y: 0 } })],
+      { x: 0, y: 0 },
+      { bounds: { min: { x: -30, y: -30 }, max: { x: 30, y: 30 }, wrap: true }, gas: [one(20.7), one(-20)] },
+      test,
+    );
+    w.bounds.min.x = -10; // a 20 m-wide arena, 60 m tall
+    w.bounds.max.x = 10;
+    const [near, alone] = [...w.gas.parcels].sort((a, b) => b.position.y - a.position.y);
+    const [gap, x0] = [near.position.x - w.bodies[0].position.x, alone.position.x];
+    for (let i = 0; i < 60; i++) stepInPlace(w, [], test); // 0.25 s: 5 m to the right, across x = 10
+    expect(w.gas.parcels).toHaveLength(2);
+    expect(w.gas.removed.count).toBe(0);
+    expect(w.events.some((e) => e.type === "gas.left")).toBe(false);
+    const ship = w.bodies[0].position;
+    expect(ship.x).toBeLessThan(0); // the ship came back in at the left…
+    expect(near.position.x - ship.x).toBeCloseTo(gap, 6); // …with the parcel beside it, still beside it
+    expect(alone.position.x).toBeCloseTo(x0 + 5 - 20, 6); // the lone parcel wrapped by itself
+    expect(w.ledger.violations).toBe(0);
+  });
 });

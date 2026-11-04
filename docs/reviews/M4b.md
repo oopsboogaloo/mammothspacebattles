@@ -94,7 +94,9 @@ You noticed that after landing, the ship floated on its own exhaust and the land
 | Gravity | Matches mu·r/(r² + core²)^1.5; the source doesn't move; recorded as a field | `FLT-011` |
 | Wrap | A welded pair crossing an edge at 20 m/s comes back at the other side with its weld intact. The angular momentum the move changes (D × P) is recorded at the boundary. No violations | `FLT-012` |
 | Gravity across the seam | Pulls from the source's nearest copy | `FLT-012` |
-| Firing while crossing | Exhaust within 10 m crosses with the ship; sideways drift over a 2 s burn matches a burn away from the edge | headless trial |
+| Gas at the edges | Gas beside a crossing ship wraps with it; gas crossing alone wraps by itself; none is lost | `FLT-012` |
+| Firing while crossing | Sideways drift over a 2 s burn matches a burn away from the edge | headless trial |
+| Economy details (from Codex review) | The engine fires on the last discounted parcel's worth of propellant. The made mass arrives moving with the engine, so a fast engine's exhaust is as warm as a still one's | `FLT-010` |
 
 Known limits:
 - Nothing collides across the seam (see the spec's model notes).
