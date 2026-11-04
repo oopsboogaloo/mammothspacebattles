@@ -559,6 +559,10 @@ So per-parcel substeps cut only the impulses unless the neighbour and wall-conta
 **Plan, agreed 2026-11** (each its own change, exact conservation and replays kept):
 1. **Chambers held as one volume** (PRP-011). Done: 4–6× in engine scenes.
 2. **A finer neighbour grid:** dropped after step 1. With the chambers held, Gunship 2 firing has about 180 parcels, mostly the sparse plume: about 400 candidate pairs a substep for 53 real ones (it was 17,700 for 3,200). The time is now the fixed cost of each substep (filing about 75 walls, sorting) and the rest of the step. Those were trimmed instead, with results bit-identical: Gunship 2 firing about 7.5 ms a step, LAND about 3 ms (real time is 4.2 ms).
+   Tried after that, and not kept:
+   - **A substep from the signal velocity** (sound plus how fast neighbours close or part, with guards against reaching a wall or another stream unseen) instead of sound plus each parcel's own speed. In LAND it was more accurate (climb after 1 s 4.20 m/s, converged about 4.1–4.15, the current rule 4.40) with 28% fewer substeps. But in Gunship 2 it saved only 9% of substeps and its own checks cost more than that. Counting only closing speed was faster but 25% off (gas that expands within a substep pushes too hard with its start-of-substep pressure).
+   - **More caching** (mass properties per shape, mixtures and chemical energy per composition, gas cells sorted by column): results identical, no measurable change.
+   - So the current rule's time error is about 6% on LAND's climb, and the cost is now spread evenly over each substep's work: about 30 substeps a step in a firing scene. The remaining large lever is more cores.
 3. **The simulation on a background thread** (a Web Worker), then the gas split across cores.
 4. **Per-parcel substeps** last, for scenes with gas at very different speeds.
 
