@@ -153,10 +153,11 @@ export function prepareJoints(world: World, byId: Map<string, JointBody>, dt: nu
       k22,
       angularMass: iA + iB > 0 ? 1 / (iA + iB) : 0,
       axis: rotate(a.rot, j.axis),
-      lo: -j.limits.tension * dt,
-      hi: j.limits.compression * dt,
-      shear: j.limits.shear * dt,
-      torque: j.limits.torque * dt,
+      // A damaged weld carries less (DMG-001): its limits scale with its integrity.
+      lo: -j.limits.tension * j.integrity * dt,
+      hi: j.limits.compression * j.integrity * dt,
+      shear: j.limits.shear * j.integrity * dt,
+      torque: j.limits.torque * j.integrity * dt,
       // No warm start: each step's weld impulse starts from zero. Reapplying last step's impulse
       // after the load has changed (an impact ending, thrust cut, gas pressure dropping) made the
       // solve create kinetic energy, up to 19 J in a crash, which the ledger reported. Loads come
@@ -333,17 +334,18 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     const compression = Math.max(0, axial);
     const shear = Math.abs(cross(axis, F));
     const torque = Math.abs(T / dt);
+    const k = j.integrity;
     const parts = {
-      tension: tension / j.limits.tension,
-      compression: compression / j.limits.compression,
-      shear: shear / j.limits.shear,
-      torque: torque / j.limits.torque,
+      tension: tension / (j.limits.tension * k),
+      compression: compression / (j.limits.compression * k),
+      shear: shear / (j.limits.shear * k),
+      torque: torque / (j.limits.torque * k),
     };
     const worst = (Object.keys(parts) as (keyof typeof parts)[]).reduce((w, k) => (parts[k] > parts[w] ? k : w), "tension");
     j.load = { tension, compression, shear, torque, fraction: parts[worst] };
     if (parts[worst] > 1 || capped.has(j.id)) {
       broken.add(j.id);
-      world.events.push({ tick: world.tick, type: "joint.break", data: { id: j.id, a: j.a, b: j.b, quantity: worst, load: parts[worst] * j.limits[worst], limit: j.limits[worst] } });
+      world.events.push({ tick: world.tick, type: "joint.break", data: { id: j.id, a: j.a, b: j.b, quantity: worst, load: parts[worst] * j.limits[worst] * k, limit: j.limits[worst] * k } });
     }
   }
   if (broken.size) world.joints = world.joints.filter((j) => !broken.has(j.id));

@@ -3,7 +3,7 @@
 import { add, assemblyRoots, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
-export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "grid";
+export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "grid";
 
 export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: string }[] = [
   { id: "velocity", label: "Velocity", legend: "solid blue arrow" },
@@ -12,6 +12,7 @@ export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: str
   { id: "forces", label: "Forces", legend: "purple dotted line (drags), arrow (gravity)" },
   { id: "joints", label: "Joint load", legend: "line thickens with load: blue < 50%, yellow < 80%, orange dashed ≥ 80% of the limit" },
   { id: "links", label: "Links", legend: "feed: purple dashed arrow · control: dotted line to the channel name" },
+  { id: "damage", label: "Damage", legend: "bar over each part that can be damaged: its integrity, blue > 50%, yellow > 20%, orange below; wreckage is dark with a cross" },
   { id: "grid", label: "Grid & axes", legend: "1 m grid, origin axes" },
 ];
 
@@ -32,6 +33,7 @@ export const COLORS = {
   com: "#F2F5FA",
   preview: "#F2C94C",
   label: "#E6EAF2",
+  wreck: "#0C0F18",
 } as const;
 
 export interface RulerView {
@@ -158,6 +160,7 @@ export interface RenderOptions {
 export type Ctx = Pick<
   CanvasRenderingContext2D,
   | "fillRect"
+  | "strokeRect"
   | "beginPath"
   | "moveTo"
   | "lineTo"
@@ -395,7 +398,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     const selected = opts.selection.has(b.id);
     const hover = opts.hover === b.id;
     bodyPath(ctx, c, vp, b);
-    ctx.fillStyle = b.fixed ? COLORS.fixed : COLORS.body;
+    ctx.fillStyle = b.integrity <= 0 ? COLORS.wreck : b.fixed ? COLORS.fixed : COLORS.body;
     ctx.fill();
     ctx.lineWidth = selected ? 3 : hover ? 2 : 1.25;
     ctx.strokeStyle = selected ? COLORS.selected : hover ? COLORS.hover : b.fixed ? COLORS.fixedStroke : COLORS.bodyStroke;
@@ -423,6 +426,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     }
   }
   if (opts.pad) drawPad(ctx, world, c, vp, opts.pad);
+  drawDamage(ctx, world, c, vp, opts.overlays.has("damage"));
 
   if (opts.overlays.has("com")) {
     for (const b of world.bodies) {
@@ -635,5 +639,42 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText(r.label, (a.x + b.x) / 2, (a.y + b.y) / 2 - 8);
+  }
+}
+
+/** Wreckage gets a cross (DMG-003). With the damage overlay, every part that can be damaged gets an integrity bar. */
+function drawDamage(ctx: Ctx, world: World, c: Camera, vp: Viewport, bars: boolean): void {
+  const taken: { x: number; y: number }[] = []; // bar + label boxes drawn so far, 76 × 12 px
+  for (const b of world.bodies) {
+    const s = toScreen(c, vp, b.position);
+    const r = Math.max(6, (b.shape.kind === "disc" ? b.shape.radius : massProps(b.shape, b.mass).boundingRadius) * c.zoom * 0.5);
+    if (b.integrity <= 0) {
+      ctx.strokeStyle = COLORS.contact;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(s.x - r * 0.5, s.y - r * 0.5);
+      ctx.lineTo(s.x + r * 0.5, s.y + r * 0.5);
+      ctx.moveTo(s.x + r * 0.5, s.y - r * 0.5);
+      ctx.lineTo(s.x - r * 0.5, s.y + r * 0.5);
+      ctx.stroke();
+    }
+    if (!bars || (!b.material && b.integrity >= 1)) continue;
+    const w = 36;
+    let y = s.y - r - 12;
+    // Neighbours (armour on its tank) would draw over each other: lift a bar until it's clear.
+    while (taken.some((t) => Math.abs(t.x - s.x) < 76 && Math.abs(t.y - y) < 12)) y -= 12;
+    taken.push({ x: s.x, y });
+    ctx.fillStyle = COLORS.wreck;
+    ctx.fillRect(s.x - w / 2, y, w, 5);
+    ctx.fillStyle = b.integrity > 0.5 ? COLORS.velocity : b.integrity > 0.2 ? COLORS.preview : COLORS.contact;
+    ctx.fillRect(s.x - w / 2, y, w * Math.max(0, b.integrity), 5);
+    ctx.strokeStyle = COLORS.bodyStroke;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(s.x - w / 2, y, w, 5);
+    ctx.fillStyle = COLORS.label;
+    ctx.font = "11px 'IBM Plex Mono', monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`${Math.round(b.integrity * 100)}%`, s.x + w / 2 + 4, y + 2.5);
   }
 }

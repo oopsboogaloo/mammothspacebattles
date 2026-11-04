@@ -1,0 +1,159 @@
+// Damage (DMG-001…DMG-003, DMG-005): integrity, the damage rule, failure, armour (RS-11).
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { createWorld, getProfile, injectorStatus, initialWorld, MATERIALS, parseScenario, runScenario, stepInPlace, type Material, type World } from "../../src/core/index.ts";
+import { box, disc, readJson, ROOT } from "../helpers.ts";
+
+const test = getProfile("test");
+const run = (w: World, n: number) => {
+  for (let i = 0; i < n; i++) stepInPlace(w, [], test);
+};
+const soft: Material = { threshold: 2.5, toughness: 20 };
+
+/** Two 1 kg discs meeting head on at 5 m/s each, with no bounce: 25 J of kinetic energy becomes heat. */
+function headOn(ma?: Material, mb?: Material): World {
+  return createWorld(1, [
+    disc("a", { position: { x: -1, y: 0 }, velocity: { x: 5, y: 0 }, restitution: 0, material: ma }),
+    disc("b", { position: { x: 1, y: 0 }, velocity: { x: -5, y: 0 }, restitution: 0, material: mb }),
+  ]);
+}
+
+const body = (w: World, id: string) => w.bodies.find((b) => b.id === id)!;
+
+describe("damage", () => {
+  it("DMG-001 every body, joint and link starts whole, and a scenario may set integrity between 0 and 1", () => {
+    const w = createWorld(1, [box("a", 1, 1, { contents: [{ resource: "o2", mass: 1, capacity: 1 }] }), box("b", 1, 1, { position: { x: 1, y: 0 }, contents: [{ resource: "o2", mass: 0, capacity: 1 }] })], { x: 0, y: 0 }, {
+      joints: [{ id: "j", a: "a", b: "b", anchorA: { x: 0.5, y: 0 }, anchorB: { x: -0.5, y: 0 } }],
+      links: [{ id: "f", kind: "feed", from: "a", to: "b", resource: "o2", rate: 1 }],
+    });
+    expect(w.bodies.map((b) => b.integrity)).toEqual([1, 1]);
+    expect(w.joints[0].integrity).toBe(1);
+    expect(w.links[0].integrity).toBe(1);
+    const raw = readJson(join(ROOT, "scenarios", "rs11-armour-ram.json")) as { world: { bodies: Record<string, unknown>[] } };
+    raw.world.bodies[0].integrity = 1.5;
+    raw.world.bodies[1].material = { threshold: -1, toughness: 0 };
+    let paths: string[] = [];
+    try {
+      parseScenario(raw);
+    } catch (e) {
+      paths = (e as { errors: { path: string }[] }).errors.map((x) => x.path);
+    }
+    expect(paths.sort()).toEqual(["$.world.bodies[0].integrity", "$.world.bodies[1].material.threshold", "$.world.bodies[1].material.toughness"]);
+  });
+
+  it("DMG-002 each body takes half the energy its contact lost; above its threshold it loses (share − threshold) ÷ toughness", () => {
+    const w = headOn(soft, soft);
+    let heat = 0;
+    for (let i = 0; i < 120 && !w.events.some((e) => e.type === "damage"); i++) {
+      stepInPlace(w, [], test);
+      heat = w.contacts.reduce((s, c) => s + c.energyLost, 0);
+    }
+    expect(heat).toBeCloseTo(25, 6); // ½ · (½ kg) · (10 m/s)²
+    const expected = 1 - (heat / 2 - soft.threshold) / soft.toughness; // 1 − (12.5 − 2.5)/20 = 0.5
+    expect(body(w, "a").integrity).toBeCloseTo(expected, 12);
+    expect(body(w, "b").integrity).toBeCloseTo(expected, 12);
+    expect(expected).toBeCloseTo(0.5, 6);
+    const e = w.events.find((x) => x.type === "damage")!;
+    expect(e.data).toMatchObject({ id: "a" });
+    expect(Number(e.data.energy)).toBeCloseTo(12.5, 6);
+  });
+
+  it("DMG-002 a hit below the threshold does nothing, and a body with no material can't be damaged", () => {
+    const below = headOn({ threshold: 13, toughness: 20 }, undefined);
+    run(below, 120);
+    expect(below.bodies.map((b) => b.integrity)).toEqual([1, 1]);
+    expect(below.events.some((e) => e.type === "damage")).toBe(false);
+  });
+
+  it("DMG-002 damage only reads the world: motion and the ledger are the same with or without materials", () => {
+    const plain = headOn();
+    const hurt = headOn(soft, soft);
+    run(plain, 120);
+    run(hurt, 120);
+    expect(hurt.bodies.map((b) => [b.position, b.velocity])).toEqual(plain.bodies.map((b) => [b.position, b.velocity]));
+    expect(hurt.ledger.totals).toEqual(plain.ledger.totals);
+    expect(hurt.ledger.violations).toBe(0);
+  });
+
+  it("DMG-003 at 0 a body is wreckage: its injector stops, its welds and links break, and it stays at 0", () => {
+    const w = createWorld(
+      1,
+      [
+        disc("ram", { mass: 20, position: { x: -2, y: 0 }, velocity: { x: 25, y: 0 }, restitution: 0 }),
+        {
+          ...disc("engine", { material: MATERIALS.tank }),
+          contents: [{ resource: "o2", mass: 1, capacity: 1 }],
+          injector: { channel: "main", mixture: { o2: 1 }, igniter: false },
+        },
+        box("hull", 1, 1, { position: { x: 1, y: 0 } }),
+      ],
+      { x: 0, y: 0 },
+      { joints: [{ id: "j", a: "engine", b: "hull", anchorA: { x: 0.5, y: 0 }, anchorB: { x: -0.5, y: 0 } }], links: [{ id: "c", kind: "control", channel: "main", to: "engine" }] },
+    );
+    expect(injectorStatus(w, body(w, "engine")).firing).toBe(false); // idle until commanded
+    for (let i = 0; i < 120 && body(w, "engine").integrity > 0; i++) stepInPlace(w, [], test);
+    expect(body(w, "engine").integrity).toBe(0);
+    const tick = w.events.find((e) => e.type === "destroyed")!.tick;
+    expect(w.events.filter((e) => e.tick === tick).map((e) => e.type)).toEqual(expect.arrayContaining(["damage", "destroyed", "joint.break", "link.break"]));
+    expect(w.events.find((e) => e.type === "joint.break")!.data.quantity).toBe("damage");
+    expect(w.joints).toHaveLength(0);
+    expect(w.links).toHaveLength(0);
+    // Even with a control link back, a destroyed injector doesn't fire.
+    stepInPlace(w, [{ type: "link.add", link: { id: "c2", kind: "control", channel: "main", to: "engine" } }, { type: "control.set", channel: "main", value: 1 }], test);
+    run(w, 10);
+    expect(injectorStatus(w, body(w, "engine"))).toEqual({ firing: false, reason: "Destroyed" });
+    expect(w.gas.parcels).toHaveLength(0);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("DMG-003 a weld near the hit is damaged too, and a damaged weld breaks at its limits × its integrity", () => {
+    // A weld at half integrity holding 1 kg against a 1.2 N·s pull: 0.6 N·s is too much for half of 200 N over one step.
+    const pull = (integrity: number) => {
+      const w = createWorld(1, [box("a", 1, 1, { position: { x: -0.5, y: 0 } }), box("b", 1, 1, { position: { x: 0.5, y: 0 } })], { x: 0, y: 0 }, {
+        joints: [{ id: "j", a: "a", b: "b", anchorA: { x: 0.5, y: 0 }, anchorB: { x: -0.5, y: 0 }, limits: { tension: 200 }, integrity }],
+      });
+      stepInPlace(w, [{ type: "body.impulse", id: "b", impulse: { x: 0.6, y: 0 }, point: { x: 0.5, y: 0 } }], test);
+      return w.joints.length;
+    };
+    expect(pull(1)).toBe(1); // needs 0.3 N·s = 72 N for a step: under 200 N
+    expect(pull(0.3)).toBe(0); // under 60 N: breaks
+    // The weld on the struck face loses as much as the body; one on the far side loses nothing.
+    const w = createWorld(
+      1,
+      [disc("ram", { mass: 20, position: { x: -2, y: 0 }, velocity: { x: 3, y: 0 }, restitution: 0 }), box("plate", 1, 1, { material: { threshold: 0, toughness: 1000 } }), box("near", 0.2, 0.2, { position: { x: -0.4, y: 0.6 } }), box("far", 0.2, 0.2, { position: { x: 0.6, y: 0 } })],
+      { x: 0, y: 0 },
+      {
+        joints: [
+          { id: "jn", a: "plate", b: "near", anchorA: { x: -0.4, y: 0.5 }, anchorB: { x: 0, y: -0.1 }, limits: { tension: 1e6, compression: 1e6, shear: 1e6, torque: 1e6 } },
+          { id: "jf", a: "plate", b: "far", anchorA: { x: 0.5, y: 0 }, anchorB: { x: -0.1, y: 0 }, limits: { tension: 1e6, compression: 1e6, shear: 1e6, torque: 1e6 } },
+        ],
+      },
+    );
+    run(w, 120);
+    const lost = 1 - body(w, "plate").integrity;
+    expect(lost).toBeGreaterThan(0);
+    const j = (id: string) => w.joints.find((x) => x.id === id)!;
+    expect(1 - j("jn").integrity).toBeGreaterThan(0);
+    expect(1 - j("jn").integrity).toBeLessThan(lost);
+    expect(j("jf").integrity).toBe(1); // a body radius (0.71 m) or more from the hit
+  });
+
+  it("DMG-005 RS-11: the ram destroys the bare tank; armour takes the hit and the tank behind it is untouched", () => {
+    const scn = parseScenario(readJson(join(ROOT, "scenarios", "rs11-armour-ram.json")));
+    const r = runScenario(scn);
+    expect(r.assertions.filter((a) => !a.pass)).toEqual([]);
+    const w = initialWorld(scn);
+    run(w, 240);
+    expect(body(w, "tank-a").integrity).toBe(0);
+    expect(body(w, "tank-b").integrity).toBe(1);
+    expect(body(w, "armour").integrity).toBeLessThan(1);
+    expect(w.events.filter((e) => e.type === "damage").map((e) => e.data.id)).not.toContain("tank-b");
+    // Slower, the bare tank survives, damaged, and the armour isn't marked at all.
+    const slow = parseScenario(readJson(join(ROOT, "scenarios", "rs11-armour-ram.json")), { v: 4 });
+    const s = initialWorld(slow);
+    run(s, 480);
+    expect(body(s, "tank-a").integrity).toBeGreaterThan(0);
+    expect(body(s, "tank-a").integrity).toBeLessThan(1);
+    expect(body(s, "armour").integrity).toBe(1);
+  });
+});

@@ -433,6 +433,15 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **DMG-005** `[M · M5 · S]` Armour struck first shall absorb contact before the component behind it is affected.
 - **DMG-006** `[S · M5 · S]` Damage to chamber or nozzle geometry shall change the shape that gas collides with.
 
+*Model as built (M5, part 1: DMG-001…003, DMG-005, RS-11).*
+- **Only bodies with a material take damage.** A body's `material` is a threshold and a toughness, both in joules. A body without one can't be damaged, so the scenarios written before M5 (LAND, FT and the reference set) behave exactly as before. In FT you still bounce off asteroids, and welds still break only past their limits. Examples (`MATERIALS`): hull (50 J, 600 J), tank (20 J, 100 J), armour (100 J, 4000 J). The inspector sets one per part, or a custom pair.
+- **The damage rule (DMG-002).** After each step, each pair of touching bodies shares the kinetic energy its contacts turned into heat that step (COL-006), half to each body. A body with a material loses (share − threshold) ÷ toughness of its integrity. A perfectly elastic bounce loses no energy, so it does no damage. Damage only reads the contacts. It never pushes on anything, so motion and the ledger are the same with or without materials.
+- **Welds and links share the damage.** A weld on a struck body loses the same integrity, scaled by its anchor's distance from the hit: all of it at the struck point, none a body radius away. A damaged weld's limits are its limits × its integrity, so it breaks more easily. A link loses what either end loses.
+- **Failure (DMG-003).** At 0 a body is wreckage. It keeps its shape, mass and motion, its injector stops (status "Destroyed"), and its welds and links break. A weld or link at 0 breaks. Events: `damage`, `destroyed`, `joint.break` (quantity `damage`) and `link.break`.
+- **Armour (DMG-005)** is a material with a high threshold and toughness, welded in front of what it protects. A ram touches the armour, not the part behind it, so the armour takes the damage. In RS-11 a 40 kg ram at 10 m/s destroys a bare 10 kg tank, which takes about 150 J. Behind an 8 kg plate, the tank is untouched; the plate takes about 200 J and loses 2.5%.
+- **Shown in the view.** Wreckage is drawn dark with an orange cross. The Damage overlay puts an integrity bar over each part that can be damaged, coloured blue above 50%, yellow above 20% and orange below, with the percentage beside it.
+- **Still to come (part 2):** leaks from damaged stores (DMG-004) and damaged engine geometry (DMG-006).
+
 ### 9.7 Weapons (M6)
 
 - **WPN-001** `[M · M6 · S]` A cannon shall accelerate a shell body using gas pressure in its chamber and barrel. Shot speed is not a configured constant.

@@ -9,7 +9,7 @@ import { resolveProbe } from "./probes.ts";
 import type { LandingGoal } from "./landing.ts";
 import { PROFILES, getProfile } from "./profile.ts";
 import { polygonProblem } from "./shapes.ts";
-import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type GasFill, type JointInput, type Link, type Vec2, type World } from "./world.ts";
+import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type GasFill, type JointInput, type LinkInput, type Vec2, type World } from "./world.ts";
 
 export const SCENARIO_SCHEMA = 1;
 
@@ -61,7 +61,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -219,6 +219,15 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       num(v, b.gravity.core, `${path}.gravity.core`, { positive: true });
     }
   }
+  if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
+  if (b.material !== undefined) {
+    if (!isObj(b.material)) err(v, `${path}.material`, "must be an object {threshold, toughness}");
+    else {
+      num(v, b.material.threshold, `${path}.material.threshold`, { min: 0 });
+      num(v, b.material.toughness, `${path}.material.toughness`, { positive: true });
+      if (b.material.name !== undefined) str(v, b.material.name, `${path}.material.name`);
+    }
+  }
   if (b.contents !== undefined) {
     if (!Array.isArray(b.contents)) return err(v, `${path}.contents`, "must be an array of stores");
     b.contents.forEach((s, i) => {
@@ -266,6 +275,7 @@ function validateJoint(v: V, j: unknown, path: string): void {
   if (j.axis !== undefined) vec(v, j.axis, `${path}.axis`);
   if (j.referenceAngle !== undefined) num(v, j.referenceAngle, `${path}.referenceAngle`);
   if (j.limits !== undefined) validateLimits(v, j.limits, `${path}.limits`);
+  if (j.integrity !== undefined) num(v, j.integrity, `${path}.integrity`, { positive: true, max: 1 });
 }
 
 function validateLimits(v: V, l: unknown, path: string): void {
@@ -277,6 +287,7 @@ function validateLink(v: V, l: unknown, path: string): void {
   if (!isObj(l)) return err(v, path, "must be an object");
   str(v, l.id, `${path}.id`);
   str(v, l.to, `${path}.to`);
+  if (l.integrity !== undefined) num(v, l.integrity, `${path}.integrity`, { positive: true, max: 1 });
   if (l.kind === "feed") {
     str(v, l.from, `${path}.from`);
     str(v, l.resource, `${path}.resource`);
