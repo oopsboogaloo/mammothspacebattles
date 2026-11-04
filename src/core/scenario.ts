@@ -38,6 +38,8 @@ export interface ScenarioUi {
   follow?: string;
   /** Suggested key bindings, key → control channel (SBX-020), added when the scenario opens. */
   keys?: Record<string, string>;
+  /** Draw body ids on the view (default true). */
+  labels?: boolean;
 }
 
 export type LedgerQuantity = "mass" | "momentum" | "angularMomentum" | "energy";
@@ -210,6 +212,13 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.restitution !== undefined) num(v, b.restitution, `${path}.restitution`, { min: 0, max: 1 });
   if (b.friction !== undefined) num(v, b.friction, `${path}.friction`, { min: 0 });
   if (b.injector !== undefined) validateInjector(v, b.injector, `${path}.injector`);
+  if (b.gravity !== undefined) {
+    if (!isObj(b.gravity)) err(v, `${path}.gravity`, "must be an object {mu, core}");
+    else {
+      num(v, b.gravity.mu, `${path}.gravity.mu`, { min: 0 });
+      num(v, b.gravity.core, `${path}.gravity.core`, { positive: true });
+    }
+  }
   if (b.contents !== undefined) {
     if (!Array.isArray(b.contents)) return err(v, `${path}.contents`, "must be an array of stores");
     b.contents.forEach((s, i) => {
@@ -231,6 +240,7 @@ function validateInjector(v: V, i: unknown, path: string): void {
   for (const k of ["parcelMass", "radius"]) if (i[k] !== undefined) num(v, i[k], `${path}.${k}`, { positive: true });
   for (const k of ["outlet", "direction"]) if (i[k] !== undefined) vec(v, i[k], `${path}.${k}`);
   if (i.igniter !== undefined && typeof i.igniter !== "boolean") err(v, `${path}.igniter`, "must be true or false");
+  if (i.economy !== undefined) num(v, i.economy, `${path}.economy`, { min: 1 });
   if (i.chamber !== undefined) {
     if (!isObj(i.chamber)) err(v, `${path}.chamber`, "must be an object {width, length}");
     else for (const k of ["width", "length"]) num(v, i.chamber[k], `${path}.chamber.${k}`, { positive: true });
@@ -308,6 +318,7 @@ function validateBounds(v: V, b: unknown, path: string): void {
   validateRect(v, b.min, b.max, path);
   if (b.farField !== undefined) num(v, b.farField, `${path}.farField`, { positive: true });
   if (b.depth !== undefined) num(v, b.depth, `${path}.depth`, { positive: true });
+  if (b.wrap !== undefined && typeof b.wrap !== "boolean") err(v, `${path}.wrap`, "must be true or false");
 }
 
 function validateChallenge(v: V, c: unknown, bodies: unknown, path: string): void {
@@ -566,6 +577,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     if (!isObj(data.ui)) err(v, "$.ui", "must be an object");
     else {
       if (data.ui.lookFor !== undefined && typeof data.ui.lookFor !== "string") err(v, "$.ui.lookFor", "must be a string");
+      if (data.ui.labels !== undefined && typeof data.ui.labels !== "boolean") err(v, "$.ui.labels", "must be true or false");
       if (data.ui.follow !== undefined && !(typeof data.ui.follow === "string" && ids.has(data.ui.follow))) err(v, "$.ui.follow", "must be the id of a body in the world");
       if (data.ui.keys !== undefined) {
         if (!isObj(data.ui.keys)) err(v, "$.ui.keys", "must be an object of key → channel");

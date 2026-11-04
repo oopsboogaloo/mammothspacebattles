@@ -83,6 +83,26 @@ You noticed that after landing, the ship floated on its own exhaust and the land
 - **Keys are still on/off**, so hovering takes pulsing.
 - **One pad, one terrain.** No level choice or score table yet.
 
+## Flight test among asteroids (RS-18, FLT-010…FLT-013)
+
+`scenarios/ft-asteroids.json`, **FT** in the picker. It flies the LAND ship, with the same parts, weight, legs and 8.1 kg tank, in a 240 × 160 m arena that wraps round, among eight irregular asteroids. The rocks are 2.3–8.6 t, convex with 8–11 corners, drift at 0.1–0.3 m/s and spin at 0.02–0.08 rad/s. Each pulls with its own gravity, 0.5–1.2 m/s² at its surface, and they bounce you (restitution 0.4). Nothing ends the run. The camera follows the ship, and the view draws the arena's neighbouring copies, so crossing an edge shows no seam except a faint dashed line.
+
+| Check | Result | Test |
+|---|---|---|
+| Fuel economy 20 | A 1 s full burn makes about 1 kg of exhaust from about 50 g of propellant. The ledger's `supply` source records the other 95% and finds no violations | `FLT-010 FLT-013` |
+| Thrust | Unchanged: the ship climbs at about 4 m/s² in open space, so the tank lasts about 160 s of full thrust on both engines, against 8 s | `FLT-010` |
+| Gravity | Matches mu·r/(r² + core²)^1.5; the source doesn't move; recorded as a field | `FLT-011` |
+| Wrap | A welded pair crossing an edge at 20 m/s comes back at the other side with its weld intact. The angular momentum the move changes (D × P) is recorded at the boundary. No violations | `FLT-012` |
+| Gravity across the seam | Pulls from the source's nearest copy | `FLT-012` |
+| Gas at the edges | Gas beside a crossing ship wraps with it; gas crossing alone wraps by itself; none is lost | `FLT-012` |
+| Firing while crossing | Sideways drift over a 2 s burn matches a burn away from the edge | headless trial |
+| Economy details (from Codex review) | The engine fires on the last discounted parcel's worth of propellant. The made mass arrives moving with the engine, so a fast engine's exhaust is as warm as a still one's | `FLT-010` |
+
+Known limits:
+- Nothing collides across the seam (see the spec's model notes).
+- Asteroids don't pull each other.
+- The economy makes mass from nothing, declared in the ledger, never hidden.
+
 ## Next flight trials (to agree)
 
 Increasingly complex ships, flown by hand with what exists. For example: a ship with a payload pod; a four-engine cross for turning both ways; flying a course of fixed markers; and, with gravity on, hovering and landing on a fixed pad.

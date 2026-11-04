@@ -779,6 +779,11 @@ export interface Bounds {
    * absent: a 2D slab that never thins.
    */
   depth?: number;
+  /**
+   * The world wraps round at this rectangle (FLT-012): a free assembly whose centre of mass leaves it
+   * comes back in at the opposite side, with the gas around it. Gas elsewhere still leaves here.
+   */
+  wrap?: boolean;
 }
 
 /** Gas younger than this has only just been made and doesn't spread out of the plane yet, s. */
@@ -1686,7 +1691,9 @@ export function stepGas(
     p.position = { x: x[i], y: y[i] };
     p.velocity = { x: vx[i], y: vy[i] };
     p.thermal = E[i];
-    if (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y || far(x[i], y[i])) {
+    // A wrapped world keeps gas that crosses its bounds: it wraps round after the step (FLT-012).
+    const outside = !bounds.wrap && (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y);
+    if (outside || far(x[i], y[i])) {
       acc.removed.count += 1;
       leave(i, 1, parcelChemical(p, scale));
       continue;

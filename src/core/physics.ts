@@ -23,7 +23,7 @@ const POSITION_ITERATIONS = 4;
 const BAUMGARTE = 0.2;
 const MAX_CORRECTION = 0.2; // m per iteration
 
-interface RB {
+export interface RB {
   body: Body;
   /** Total mass including stores, kg. */
   mass: number;

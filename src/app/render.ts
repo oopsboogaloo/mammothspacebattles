@@ -262,6 +262,43 @@ function drawGrid(ctx: Ctx, c: Camera, vp: Viewport): void {
 }
 
 /**
+ * Offsets (one world width or height, or both) of the copies of a wrapped world that the view
+ * overlaps, not counting the world itself (FLT-012).
+ */
+export function wrapImages(world: World, c: Camera, vp: Viewport): [number, number][] {
+  const b = world.bounds;
+  const w = b.max.x - b.min.x;
+  const h = b.max.y - b.min.y;
+  const halfW = vp.width / 2 / c.zoom;
+  const halfH = vp.height / 2 / c.zoom;
+  const out: [number, number][] = [];
+  for (const i of [-1, 0, 1])
+    for (const j of [-1, 0, 1]) {
+      if (i === 0 && j === 0) continue;
+      const x0 = b.min.x + i * w;
+      const y0 = b.min.y + j * h;
+      if (x0 + w < c.x - halfW || x0 > c.x + halfW || y0 + h < c.y - halfH || y0 > c.y + halfH) continue;
+      out.push([i * w, j * h]);
+    }
+  return out;
+}
+
+/** The edges of a wrapped world, faint and dashed, so you can see where it wraps. */
+function drawSeam(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  const b = world.bounds;
+  const corners = [b.min, { x: b.max.x, y: b.min.y }, b.max, { x: b.min.x, y: b.max.y }].map((p) => toScreen(c, vp, p));
+  ctx.strokeStyle = COLORS.axes;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 6]);
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x, corners[0].y);
+  for (const p of corners.slice(1)) ctx.lineTo(p.x, p.y);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/**
  * Centre of mass of each free welded assembly (two or more bodies), propellant in stores included:
  * the same mass-weighted mean the physics uses.
  */
@@ -335,6 +372,22 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
   if (opts.overlays.has("grid")) drawGrid(ctx, c, vp);
+  // A wrapped world (FLT-012): its neighbouring copies first, plain, so the seam doesn't show.
+  if (world.bounds.wrap) {
+    for (const [ox, oy] of wrapImages(world, c, vp)) {
+      const ci = { ...c, x: c.x - ox, y: c.y - oy };
+      drawGas(ctx, world, ci, vp, opts.gasColour ?? "temperature");
+      for (const b of world.bodies) {
+        bodyPath(ctx, ci, vp, b);
+        ctx.fillStyle = b.fixed ? COLORS.fixed : COLORS.body;
+        ctx.fill();
+        ctx.lineWidth = 1.25;
+        ctx.strokeStyle = b.fixed ? COLORS.fixedStroke : COLORS.bodyStroke;
+        ctx.stroke();
+      }
+    }
+    drawSeam(ctx, world, c, vp);
+  }
   // Gas under bodies, so walls stay crisp.
   drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature");
 
