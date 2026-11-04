@@ -527,6 +527,25 @@ FLY, LAND and FT run at about 0.4–0.5× real time while firing (about 140 parc
 
 **The bottleneck is the global substep.** Every parcel takes the substep the fastest gas anywhere needs (§9.4: CFL over all parcels and the smallest smoothing length). A few parcels at over 100 m/s in a nozzle set it for all the slow gas around them. GAS-008 (2,000 parcels in real time) holds for slow gas with some of the options below. It does not hold for engine exhaust without the first.
 
+**Where the time goes** (measured with the phase timings in `stepGas`, Gunship 2 with both engines firing: 403 parcels, 35 substeps a step, 47 ms of gas a step against 4.2 ms for real time):
+
+| Phase, every substep, every parcel | ms a step | Share |
+|---|---|---|
+| Neighbour search: sort into cells, list the pairs | 16.8 | 35% |
+| Impulses and energy | 15.4 | 32% |
+| Wall contacts and mirror ghosts | 11.5 | 24% |
+| Density, drift, setup, write-back | 3.2 | 7% |
+
+So per-parcel substeps cut only the impulses unless the neighbour and wall-contact searches stop being rebuilt every substep.
+
+**Plan in progress: per-parcel substeps** (each step its own change; exact conservation and replays kept throughout):
+0. Measure: phase timings in `stepGas` (`gas.*` in the step timings), and `scripts/gas-fingerprint.ts`, which records thrust, turn, muzzle speed, gas totals and residuals for eight gas-heavy cases, and compares a change against `docs/perf/gas-baseline.json`.
+1. Neighbour and wall-contact lists kept for several substeps (Verlet lists with a skin), rebuilt only when parcels have moved far enough. They sum in a different order, so results are checked against the fingerprint rather than bit for bit.
+2. Per-parcel levels (substeps of the step ÷ 2ᵏ), behind a profile switch: a pair interacts at its faster partner's pace, equal and opposite, so momentum stays exact; energy stays exact by the same work accounting; neighbours differ by at most one level, and a parcel a fast neighbour or shock reaches is woken at once.
+3. Compare the two modes: exact conservation and replays; thrust, turning, gas totals and muzzle speed within 3–5%; a jet into still gas, crushed gas and leaks.
+4. Benchmark; target at least 3× on Gunship 2 with its engines firing.
+5. Switch it on for the sandbox profile.
+
 **Options**, roughly in order of likely gain. Gains are estimates until measured.
 
 | Option | Likely gain | Cost and risk | Keeps exact replays? |

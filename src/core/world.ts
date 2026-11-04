@@ -1033,7 +1033,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // angular momentum and energy by construction. Fixed bodies are external; so is the boundary.
   if (world.gas.parcels.length) {
     before = after;
-    const gas = stepGas(world.gas, wallBodies(world.bodies), world.joints, dt, world.bounds, world.gravity, world.bounds.depth ? engineInteriors(world) : []);
+    const gas = stepGas(world.gas, wallBodies(world.bodies), world.joints, dt, world.bounds, world.gravity, world.bounds.depth ? engineInteriors(world) : [], timings);
     gasJointImpulse = gas.jointImpulse;
     after = computeTotals(world);
     sources.contact.momentumX += gas.externalImpulse.x;

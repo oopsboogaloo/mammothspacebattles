@@ -897,7 +897,18 @@ export function stepGas(
   bounds: Bounds,
   gravity: Vec2 = { x: 0, y: 0 },
   closed: readonly ClosedRegion[] = [],
+  timings?: { clock: () => number; out: Record<string, number> },
 ): GasAccount {
+  // Time per phase, summed over the substeps, into `timings.out` as gas.<phase> (LED-004). Reading the
+  // clock changes nothing in the results.
+  let tMark = timings ? timings.clock() : 0;
+  const phase = (name: string) => {
+    if (!timings) return;
+    const t = timings.clock();
+    timings.out[`gas.${name}`] = (timings.out[`gas.${name}`] ?? 0) + (t - tMark);
+    tMark = t;
+  };
+  if (timings) for (const k of ["setup", "contacts", "neighbours", "density", "impulses", "move", "finish"]) timings.out[`gas.${k}`] = 0;
   const acc: GasAccount = {
     externalImpulse: { x: 0, y: 0 },
     angular: 0,
@@ -1159,6 +1170,7 @@ export function stepGas(
     return [u.vx - u.w * (py - u.cy), u.vy + u.w * (px - u.cx)];
   };
 
+  phase("setup");
   let tDone = 0;
   let nsub = 0;
   // Substeps tried this step, retries included. A parcel crushed between two parts closing on each
@@ -1269,6 +1281,7 @@ export function stepGas(
       }
     }
 
+    phase("contacts");
     // --- Neighbour grid: sort entries by cell, then index (deterministic). ---
     for (let e = 0; e < ne; e++) {
       cellX[e] = clampCell(Math.floor(ex[e] * inv));
@@ -1382,6 +1395,7 @@ export function stepGas(
       }
     }
 
+    phase("neighbours");
     // --- Density: parcels plus mirror ghosts on the same face. ---
     for (let i = 0; i < n; i++) rho[i] = m[i] * (W_C2 / (hh[i] * hh[i]));
     for (let k = 0; k < np; k++) {
@@ -1408,6 +1422,7 @@ export function stepGas(
       cs[i] = Math.sqrt(gam[i] * g1[i] * u);
     }
 
+    phase("density");
     // --- Impulses and energy, retried with a shorter substep if any parcel's thermal energy
     // would go negative (expansion faster than the substep resolves). ---
     sVx.set(vx);
@@ -1595,6 +1610,7 @@ export function stepGas(
       }
       ds *= 0.5;
     }
+    phase("impulses");
     // Only if even the shortest substep could not resolve it: clamp, and the ledger reports the shortfall.
     for (let i = 0; i < n; i++) if (E[i] < 0) E[i] = 0;
     acc.externalImpulse.x += extX;
@@ -1638,6 +1654,7 @@ export function stepGas(
       u.qc = q.c;
       u.qs = q.s;
     }
+    phase("move");
   }
 
   /** Impulse J on the parcel, −J on the unit, both along the line through (px, py). Returns the scale applied (1 unless thermal ran out). */
@@ -1732,6 +1749,7 @@ export function stepGas(
     kept.push(p);
   }
   gas.parcels = kept;
+  phase("finish");
   const tot = gas.removed;
   tot.count += acc.removed.count;
   tot.mass += acc.removed.mass;

@@ -1,0 +1,191 @@
+[
+  {
+    "case": "SC-02 gas in a box",
+    "values": {
+      "parcels": 484,
+      "thermal": 107649.33055576625
+    },
+    "residual": {
+      "momentum": 6.8497362569042e-14,
+      "angularMomentum": 8.283324926579988e-15,
+      "energy": 1.0331859812140465e-9
+    },
+    "violations": 0,
+    "msPerStep": 25.88,
+    "gasMsPerStep": {
+      "gas.setup": 0.2,
+      "gas.contacts": 3.29,
+      "gas.neighbours": 7.97,
+      "gas.density": 1.57,
+      "gas.impulses": 11.63,
+      "gas.move": 0.57,
+      "gas.finish": 0.06,
+      "gas": 25.41
+    }
+  },
+  {
+    "case": "RS-07 gas burst",
+    "values": {
+      "parcels": 392,
+      "kinetic": 8568.665635706928
+    },
+    "residual": {
+      "momentum": 1.3788683915077173e-14,
+      "angularMomentum": 7.128637198768051e-12,
+      "energy": 1.6370904631912708e-10
+    },
+    "violations": 0,
+    "msPerStep": 8.91,
+    "gasMsPerStep": {
+      "gas.setup": 0.15,
+      "gas.contacts": 1.9,
+      "gas.neighbours": 5.39,
+      "gas.density": 0.42,
+      "gas.impulses": 0.49,
+      "gas.move": 0.27,
+      "gas.finish": 0.06,
+      "gas": 8.71
+    }
+  },
+  {
+    "case": "RS-08 chemical rocket, 2 s",
+    "values": {
+      "vy": 7.382117158404826
+    },
+    "residual": {
+      "momentum": 1.431016382876556e-13,
+      "angularMomentum": 1.3955503419538218e-13,
+      "energy": 0.0000011201300651464408
+    },
+    "violations": 0,
+    "msPerStep": 4.6,
+    "gasMsPerStep": {
+      "gas.setup": 0.13,
+      "gas.contacts": 1.39,
+      "gas.neighbours": 1.39,
+      "gas.density": 0.17,
+      "gas.impulses": 0.77,
+      "gas.move": 0.16,
+      "gas.finish": 0.06,
+      "gas": 4.14
+    }
+  },
+  {
+    "case": "RS-16 twin engine",
+    "values": {
+      "vy": 6.960763451385398,
+      "spin": -1.0641548176748914
+    },
+    "residual": {
+      "momentum": 2.0015085763738692e-13,
+      "angularMomentum": 1.0796521201078048e-13,
+      "energy": 0.000022369847542336174
+    },
+    "violations": 0,
+    "msPerStep": 5.34,
+    "gasMsPerStep": {
+      "gas.setup": 0.17,
+      "gas.contacts": 2.02,
+      "gas.neighbours": 1.49,
+      "gas.density": 0.11,
+      "gas.impulses": 0.67,
+      "gas.move": 0.17,
+      "gas.finish": 0.04,
+      "gas": 4.78
+    }
+  },
+  {
+    "case": "LAND both engines 1 s",
+    "values": {
+      "vy": 2.251203239348253
+    },
+    "residual": {
+      "momentum": 1.5788777337438075e-13,
+      "angularMomentum": 2.3243629243552277e-12,
+      "energy": 2.06108815348216e-7
+    },
+    "violations": 0,
+    "msPerStep": 11.26,
+    "gasMsPerStep": {
+      "gas.setup": 0.22,
+      "gas.contacts": 4.21,
+      "gas.neighbours": 3.04,
+      "gas.density": 0.27,
+      "gas.impulses": 1.73,
+      "gas.move": 0.33,
+      "gas.finish": 0.1,
+      "gas": 10.06
+    }
+  },
+  {
+    "case": "GS2 both engines 3 s",
+    "values": {
+      "vy": 16.8380858750923,
+      "parcels": 405
+    },
+    "residual": {
+      "momentum": 8.34144405625673e-12,
+      "angularMomentum": 2.4288504540947997e-10,
+      "energy": 0.0000012445570973795839
+    },
+    "violations": 0,
+    "msPerStep": 47.39,
+    "gasMsPerStep": {
+      "gas.setup": 0.48,
+      "gas.contacts": 10.55,
+      "gas.neighbours": 14.86,
+      "gas.density": 1.53,
+      "gas.impulses": 15.15,
+      "gas.move": 1.06,
+      "gas.finish": 0.21,
+      "gas": 44.32
+    }
+  },
+  {
+    "case": "GS2 left engine 0.5 s",
+    "values": {
+      "spin": -1.979080222004119
+    },
+    "residual": {
+      "momentum": 2.1397837106341953e-12,
+      "angularMomentum": 1.9809398565939773e-10,
+      "energy": 0.000011070745586039266
+    },
+    "violations": 0,
+    "msPerStep": 14.11,
+    "gasMsPerStep": {
+      "gas.setup": 0.38,
+      "gas.contacts": 4.14,
+      "gas.neighbours": 3.6,
+      "gas.density": 0.32,
+      "gas.impulses": 2.75,
+      "gas.move": 0.31,
+      "gas.finish": 0.08,
+      "gas": 11.94
+    }
+  },
+  {
+    "case": "GUN muzzle speed",
+    "values": {
+      "shell": 28.662325181953488,
+      "recoil": -1.4658586847664616
+    },
+    "residual": {
+      "momentum": 1.4699414276320664e-12,
+      "angularMomentum": 3.895662924191523e-10,
+      "energy": 8.496670034219278e-11
+    },
+    "violations": 0,
+    "msPerStep": 5.28,
+    "gasMsPerStep": {
+      "gas": 4.69,
+      "gas.setup": 0.06,
+      "gas.contacts": 0.43,
+      "gas.neighbours": 1.4,
+      "gas.density": 0.28,
+      "gas.impulses": 2.36,
+      "gas.move": 0.1,
+      "gas.finish": 0.01
+    }
+  }
+]
