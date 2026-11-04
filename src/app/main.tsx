@@ -147,8 +147,8 @@ function App() {
     return { x: view.left + s.x, y: view.top + s.y };
   },
   hash: () => (sandbox.value ? hashValue(sandbox.value.world) : null),
-  /** The simulation worker: whether there is one, and how many runs of steps it has delivered. */
-  sim: () => ({ worker: sim.available, runs: sim.runs }),
+  /** The simulation worker: whether there is one, runs of steps it has delivered, and gas jobs its helpers ran. */
+  sim: () => ({ worker: sim.available, runs: sim.runs, helperJobs: sim.helperJobs }),
 };
 
 render(<App />, document.getElementById("root")!);

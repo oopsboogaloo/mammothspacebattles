@@ -10,7 +10,10 @@ import {
   parseScenario,
   resolveProbe,
   stepInPlace,
+  stepInPlaceAsync,
   timelineByStep,
+  type GasAccount,
+  type GasJob,
   type Command,
   type Profile,
   type Scenario,
@@ -83,32 +86,55 @@ export interface StepRun {
  * sampling every series. The sandbox and the simulation worker both step with this.
  */
 export function runSteps(world: World, plan: StepPlan, n: number, opts: { deadline?: () => boolean; stopOnVerdict?: boolean } = {}): StepRun {
-  const from = world.tick;
-  const samples: Record<string, number[]> = {};
-  for (const s of plan.series) samples[s.id] = [];
-  const snapshots: [number, World][] = [];
-  const editsAt = (t: number) => plan.edits.filter((e) => e.tick === t).flatMap((e) => e.commands);
-  let steps = 0;
-  let verdict = false;
-  while (steps < n) {
+  const run = startRun(world, plan);
+  while (run.steps < n) {
     const flying = world.challenge?.status.phase === "flying";
     stepInPlace(world, plan.timeline.get(world.tick) ?? [], plan.profile);
-    steps++;
-    const t = world.tick;
-    if (t % SNAPSHOT_EVERY === 0) snapshots.push([t, structuredClone(world)]);
-    const pending = editsAt(t);
-    if (pending.length) applyCommands(world, pending, plan.profile);
-    for (const s of plan.series) {
-      const v = resolveProbe(world, s.path);
-      samples[s.id].push(typeof v === "number" ? v : NaN);
-    }
-    if (opts.stopOnVerdict && flying && world.challenge?.status.phase !== "flying") {
-      verdict = true;
-      break;
-    }
-    if (opts.deadline?.()) break;
+    if (afterStep(run, plan, flying, opts)) break;
   }
-  return { world, from, steps, samples, snapshots, verdict };
+  return run;
+}
+
+/** As `runSteps`, with each step's gas phase run by `runGas` (helper threads). Same results. */
+export async function runStepsAsync(
+  world: World,
+  plan: StepPlan,
+  n: number,
+  runGas: (job: GasJob) => Promise<GasAccount>,
+  opts: { deadline?: () => boolean; stopOnVerdict?: boolean } = {},
+): Promise<StepRun> {
+  const run = startRun(world, plan);
+  while (run.steps < n) {
+    const flying = world.challenge?.status.phase === "flying";
+    await stepInPlaceAsync(world, plan.timeline.get(world.tick) ?? [], plan.profile, runGas);
+    if (afterStep(run, plan, flying, opts)) break;
+  }
+  return run;
+}
+
+function startRun(world: World, plan: StepPlan): StepRun {
+  const samples: Record<string, number[]> = {};
+  for (const s of plan.series) samples[s.id] = [];
+  return { world, from: world.tick, steps: 0, samples, snapshots: [], verdict: false };
+}
+
+/** After a step: snapshot, recorded edits, samples. Returns true if the run should stop here. */
+function afterStep(run: StepRun, plan: StepPlan, flying: boolean, opts: { deadline?: () => boolean; stopOnVerdict?: boolean }): boolean {
+  const world = run.world;
+  run.steps++;
+  const t = world.tick;
+  if (t % SNAPSHOT_EVERY === 0) run.snapshots.push([t, structuredClone(world)]);
+  const pending = plan.edits.filter((e) => e.tick === t).flatMap((e) => e.commands);
+  if (pending.length) applyCommands(world, pending, plan.profile);
+  for (const s of plan.series) {
+    const v = resolveProbe(world, s.path);
+    run.samples[s.id].push(typeof v === "number" ? v : NaN);
+  }
+  if (opts.stopOnVerdict && flying && world.challenge?.status.phase !== "flying") {
+    run.verdict = true;
+    return true;
+  }
+  return !!opts.deadline?.();
 }
 
 export class Sandbox {

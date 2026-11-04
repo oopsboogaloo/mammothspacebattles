@@ -12,7 +12,7 @@ import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
-import { burn, clearOf, emptyGas, igniteAndBurn, makeFill, mixture, SPECIES, stepGas, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel, type WallBody } from "./gas.ts";
+import { burn, clearOf, emptyGas, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
@@ -941,7 +941,52 @@ export interface StepTimings {
 }
 
 /** Advances the world by one fixed step, mutating it. Commands apply at the start of the step. */
+/** The gas phase of a step, as `stepPhases` hands it out: run it (here or elsewhere) and hand back the account. */
+export interface GasJob {
+  gas: GasState;
+  bodies: WallBody[];
+  joints: { a: string; b: string }[];
+  dt: number;
+  bounds: Bounds;
+  gravity: Vec2;
+  closed: ClosedRegion[];
+  timings?: StepTimings;
+}
+
+/** Advances the world one fixed step in place (the gas phase runs here, cluster by cluster). */
 export function stepInPlace(world: World, commands: readonly Command[], profile: Profile, timings?: StepTimings): void {
+  const phases = stepPhases(world, commands, profile, timings);
+  let r = phases.next();
+  while (!r.done) {
+    const j = r.value;
+    r = phases.next(stepGasClustered(j.gas, j.bodies, j.joints, j.dt, j.bounds, j.gravity, j.closed, j.timings));
+  }
+}
+
+/** As `stepInPlace`, with the gas phase run by `runGas` (in helper threads, say). Same results. */
+export async function stepInPlaceAsync(world: World, commands: readonly Command[], profile: Profile, runGas: (job: GasJob) => Promise<GasAccount>, timings?: StepTimings): Promise<void> {
+  const phases = stepPhases(world, commands, profile, timings);
+  let r = phases.next();
+  while (!r.done) r = phases.next(await runGas(r.value));
+}
+
+/**
+ * Runs a gas phase as cluster jobs handed to `run` (helper threads, say), which must return each
+ * job's `runClusterJob` result in order. The same results as stepping in place.
+ */
+export async function runGasJob(job: GasJob, run: (jobs: ClusterJob[]) => Promise<ClusterResult[]>): Promise<GasAccount> {
+  const tc = job.timings?.clock();
+  const prepared = clusterGas(job.gas, job.bodies, job.joints, job.dt, job.bounds, job.gravity, job.closed, !!job.timings, false);
+  if (!prepared) return stepGasClustered(job.gas, job.bodies, job.joints, job.dt, job.bounds, job.gravity, job.closed, job.timings);
+  if (job.timings) {
+    for (const k of ["setup", "contacts", "neighbours", "density", "impulses", "move", "finish"]) job.timings.out[`gas.${k}`] = 0;
+    job.timings.out["gas.clusters"] = job.timings.clock() - tc!;
+  }
+  return prepared.apply(await run(prepared.jobs), job.timings);
+}
+
+/** The step, pausing at its gas phase for the caller to run it. */
+function* stepPhases(world: World, commands: readonly Command[], profile: Profile, timings?: StepTimings): Generator<GasJob, void, GasAccount> {
   const dt = profile.timestep;
   let t0 = timings?.clock() ?? 0;
   const mark = (name: string) => {
@@ -1095,7 +1140,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     const plugs = holding.filter((h) => h.plug);
     const walls = plugs.length ? [...wallBodies(world.bodies), ...plugs.map((h) => h.plug!)] : wallBodies(world.bodies);
     const joints = plugs.length ? [...world.joints, ...plugs.map((h) => ({ a: h.b.id, b: h.plug!.id }))] : world.joints;
-    const gas = stepGas(world.gas, walls, joints, dt, world.bounds, world.gravity, world.bounds.depth ? engineInteriors(world) : [], timings);
+    const gas: GasAccount = yield { gas: world.gas, bodies: walls, joints, dt, bounds: world.bounds, gravity: world.gravity, closed: world.bounds.depth ? engineInteriors(world) : [], timings };
     gasJointImpulse = gas.jointImpulse;
     // A plug is part of its engine.
     for (const h of plugs) {

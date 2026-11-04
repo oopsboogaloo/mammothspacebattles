@@ -887,6 +887,379 @@ export const wallLine = (q: number): number => lookup(LINE, q);
  * Advances the gas by dt in CFL-limited substeps, exchanging impulses with bodies.
  * Bodies are walls at their end-of-step pose; their velocities change.
  */
+/** Far-field circles: each free body's bounding box, grown by the far field. */
+function farFieldCircles(walls: readonly Wall[], ff: number): { x: number; y: number; r: number }[] {
+  return walls.filter((w) => w.unit >= 0).map((w) => ({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff }));
+}
+
+/**
+ * Splits the gas into clusters that cannot reach each other, or the same free assembly, within the
+ * step: parcels closer than their smoothing lengths plus twice how far they can move in the step, and
+ * every assembly (or fixed body) a parcel could reach. Clusters are in a fixed order (by their first
+ * parcel), each with its parcels and bodies in their original order.
+ */
+const MIN_CLUSTER = 32;
+
+export function gasClusters(
+  parcels: readonly Parcel[],
+  bodies: readonly WallBody[],
+  joints: readonly { a: string; b: string }[],
+  dt: number,
+): { parcels: number[]; bodies: number[] }[] {
+  const n = parcels.length;
+  if (!n) return [];
+  // How far each parcel can get from the gas's mean motion in the step (twice its speed relative to
+  // the mean, for headroom), plus half its smoothing length: two parcels can meet only if they are
+  // within their summed reach. Pairs are then checked with their own relative speed.
+  let mx = 0;
+  let my = 0;
+  for (const p of parcels) {
+    mx += p.velocity.x;
+    my += p.velocity.y;
+  }
+  mx /= n;
+  my /= n;
+  const reach = new Float64Array(n);
+  const half = new Float64Array(n);
+  let rmax = 0;
+  for (let i = 0; i < n; i++) {
+    const p = parcels[i];
+    half[i] = 0.5 * SMOOTHING * p.radius;
+    reach[i] = half[i] + 2 * Math.sqrt((p.velocity.x - mx) ** 2 + (p.velocity.y - my) ** 2) * dt;
+    rmax = Math.max(rmax, reach[i]);
+  }
+  // Union-find over parcels 0..n−1 and groups n..n+g−1 (a free assembly, or a fixed body).
+  const roots = joints.length ? assemblyRoots({ bodies, joints } as never) : null;
+  const groupOf = new Map<string, number>();
+  const groups: { members: number[]; x: number; y: number; r: number; vx: number; vy: number }[] = [];
+  bodies.forEach((b, k) => {
+    const key = b.fixed ? `#${k}` : (roots?.get(b.id) ?? b.id);
+    let g = groupOf.get(key);
+    if (g === undefined) {
+      g = groups.length;
+      groupOf.set(key, g);
+      groups.push({ members: [], x: 0, y: 0, r: 0, vx: 0, vy: 0 });
+    }
+    groups[g].members.push(k);
+  });
+  for (const g of groups) {
+    // A circle round the group's parts, grown by how far they move in the step.
+    let lo = { x: Infinity, y: Infinity };
+    let hi = { x: -Infinity, y: -Infinity };
+    // Its parts' spread about the first part's velocity (spin, flex), added to the circle.
+    const v0 = bodies[g.members[0]].fixed ? { x: 0, y: 0 } : bodies[g.members[0]].velocity;
+    let spread = 0;
+    for (const k of g.members) {
+      const b = bodies[k];
+      const r = massProps(b.shape, 1).boundingRadius;
+      lo = { x: Math.min(lo.x, b.position.x - r), y: Math.min(lo.y, b.position.y - r) };
+      hi = { x: Math.max(hi.x, b.position.x + r), y: Math.max(hi.y, b.position.y + r) };
+      if (!b.fixed) spread = Math.max(spread, Math.sqrt((b.velocity.x - v0.x) ** 2 + (b.velocity.y - v0.y) ** 2) + Math.abs(b.angularVelocity) * r);
+    }
+    g.x = 0.5 * (lo.x + hi.x);
+    g.y = 0.5 * (lo.y + hi.y);
+    g.r = 0.5 * Math.sqrt((hi.x - lo.x) ** 2 + (hi.y - lo.y) ** 2) + 2 * spread * dt;
+    g.vx = v0.x;
+    g.vy = v0.y;
+  }
+  const up = new Int32Array(n + groups.length);
+  for (let i = 0; i < up.length; i++) up[i] = i;
+  const find = (i: number): number => {
+    while (up[i] !== i) {
+      up[i] = up[up[i]];
+      i = up[i];
+    }
+    return i;
+  };
+  const join = (a: number, b: number) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) up[Math.max(ra, rb)] = Math.min(ra, rb);
+  };
+  // Parcels: a grid of cells 2·rmax wide, each parcel against its own and the neighbouring cells.
+  const cell = 2 * rmax;
+  const grid = new Map<number, number[]>();
+  const keyOf = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
+  for (let i = 0; i < n; i++) {
+    const key = keyOf(Math.floor(parcels[i].position.x / cell), Math.floor(parcels[i].position.y / cell));
+    const list = grid.get(key);
+    if (list) list.push(i);
+    else grid.set(key, [i]);
+  }
+  for (let i = 0; i < n; i++) {
+    const p = parcels[i].position;
+    const cx = Math.floor(p.x / cell);
+    const cy = Math.floor(p.y / cell);
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = -1; dy <= 1; dy++) {
+        const list = grid.get(keyOf(cx + dx, cy + dy));
+        if (!list) continue;
+        for (const j of list) {
+          if (j <= i) continue;
+          const q = parcels[j].position;
+          const vi = parcels[i].velocity;
+          const vj = parcels[j].velocity;
+          const d = half[i] + half[j] + 2 * Math.sqrt((vi.x - vj.x) ** 2 + (vi.y - vj.y) ** 2) * dt;
+          if ((p.x - q.x) ** 2 + (p.y - q.y) ** 2 <= d * d) join(i, j);
+        }
+      }
+  }
+  // Which parcels each group can reach. A free assembly joins them into one cluster (its motion
+  // is shared state); a fixed body never changes, so it doesn't, and goes with every cluster it reaches.
+  const reaches = (g: (typeof groups)[number], i: number) => {
+    const p = parcels[i].position;
+    const v = parcels[i].velocity;
+    const d = g.r + 2 * half[i] + 2 * Math.sqrt((v.x - g.vx) ** 2 + (v.y - g.vy) ** 2) * dt;
+    return (p.x - g.x) ** 2 + (p.y - g.y) ** 2 <= d * d;
+  };
+  const fixedGroups: number[] = [];
+  groups.forEach((g, k) => {
+    if (bodies[g.members[0]].fixed) {
+      fixedGroups.push(k);
+      return;
+    }
+    for (let i = 0; i < n; i++) if (reaches(g, i)) join(n + k, i);
+  });
+  const byRoot = new Map<number, { parcels: number[]; bodies: number[] }>();
+  for (let i = 0; i < n; i++) {
+    const r = find(i);
+    let c = byRoot.get(r);
+    if (!c) {
+      c = { parcels: [], bodies: [] };
+      byRoot.set(r, c);
+    }
+    c.parcels.push(i);
+  }
+  groups.forEach((g, k) => {
+    if (bodies[g.members[0]].fixed) return;
+    const c = byRoot.get(find(n + k));
+    if (c) c.bodies.push(...g.members);
+  });
+  for (const k of fixedGroups) {
+    const g = groups[k];
+    for (const c of byRoot.values()) if (c.parcels.some((i) => reaches(g, i))) c.bodies.push(...g.members);
+  }
+  // Small clusters go together into one: stepping each apart costs more than it saves.
+  const big: { parcels: number[]; bodies: number[] }[] = [];
+  const rest: { parcels: number[]; bodies: number[] } = { parcels: [], bodies: [] };
+  for (const c of byRoot.values()) {
+    if (c.parcels.length >= MIN_CLUSTER) big.push(c);
+    else {
+      rest.parcels.push(...c.parcels);
+      rest.bodies.push(...c.bodies);
+    }
+  }
+  if (rest.parcels.length) big.push(rest);
+  for (const c of big) {
+    c.parcels.sort((a, b) => a - b);
+    c.bodies.sort((a, b) => a - b);
+  }
+  big.sort((a, b) => a.parcels[0] - b.parcels[0]);
+  return big;
+}
+
+/** One cluster's gas step as plain data, so it can run anywhere (here or in a helper thread). */
+export interface ClusterJob {
+  parcels: Parcel[];
+  bodies: { id: string; shape: Shape; fixed: boolean; mass: number; inertia: number; position: Vec2; angle: number; velocity: Vec2; angularVelocity: number }[];
+  joints: { a: string; b: string }[];
+  dt: number;
+  bounds: Bounds;
+  gravity: Vec2;
+  closed: readonly ClosedRegion[];
+  far: { x: number; y: number; r: number }[];
+  scale: number;
+  timed: boolean;
+}
+
+/** What a cluster's step produced. */
+export interface ClusterResult {
+  /** Each job parcel's state after the step, in job order; `gone` if it left the world. */
+  parcels: { position: Vec2; velocity: Vec2; thermal: number; age?: number; keep?: number; gone: boolean }[];
+  bodies: { position: Vec2; angle: number; velocity: Vec2; angularVelocity: number }[];
+  account: { externalImpulse: Vec2; angular: number; removed: RemovedGas; removedPotential: number; jointImpulse: [string, { x: number; y: number; angular: number }][]; involved: string[] };
+  substeps: number;
+  wallImpulse: number;
+  timings: Record<string, number>;
+}
+
+/** Steps one cluster (see `stepGasClustered`). Pure: reads the job, mutates only the job's own objects. */
+export function runClusterJob(job: ClusterJob, clock?: () => number): ClusterResult {
+  const sub: GasState = { parcels: job.parcels.slice(), nextId: 0, removed: { count: 0, mass: 0, momentum: { x: 0, y: 0 }, angularMomentum: 0, energy: 0 }, wallImpulse: 0, substeps: 0, scale: job.scale };
+  const out: Record<string, number> = {};
+  const acc = stepGas(sub, job.bodies, job.joints, job.dt, job.bounds, job.gravity, job.closed, job.timed && clock ? { clock, out } : undefined, job.far);
+  const left = new Set(job.parcels);
+  for (const p of sub.parcels) left.delete(p);
+  return {
+    parcels: job.parcels.map((p) => ({ position: p.position, velocity: p.velocity, thermal: p.thermal, age: p.age, keep: p.keep, gone: left.has(p) })),
+    bodies: job.bodies.map((b) => ({ position: b.position, angle: b.angle, velocity: b.velocity, angularVelocity: b.angularVelocity })),
+    account: { externalImpulse: acc.externalImpulse, angular: acc.angular, removed: acc.removed, removedPotential: acc.removedPotential, jointImpulse: [...acc.jointImpulse], involved: [...acc.involved] },
+    substeps: sub.substeps,
+    wallImpulse: sub.wallImpulse,
+    timings: out,
+  };
+}
+
+/** The gas step split into cluster jobs, and how to take their results back in. */
+export interface ClusteredGas {
+  jobs: ClusterJob[];
+  /** Writes the results (in job order) into the gas and bodies, and returns the merged account. */
+  apply(results: ClusterResult[], timings?: { out: Record<string, number> }): GasAccount;
+}
+
+/** Prepares the gas step as cluster jobs (`gasClusters`), or null when there is no gas. */
+export function clusterGas(
+  gas: GasState,
+  bodies: WallBody[],
+  joints: { a: string; b: string }[],
+  dt: number,
+  bounds: Bounds,
+  gravity: Vec2,
+  closed: readonly ClosedRegion[],
+  timed: boolean,
+  copy: boolean,
+): ClusteredGas | null {
+  const ps = gas.parcels;
+  if (!ps.length) return null;
+  const clusters = gasClusters(ps, bodies, joints, dt);
+  let hmax = 0;
+  for (const p of ps) hmax = Math.max(hmax, SMOOTHING * p.radius);
+  const ff = bounds.farField;
+  const far: { x: number; y: number; r: number }[] = [];
+  if (ff)
+    for (const b of bodies) {
+      if (b.fixed) continue;
+      let minX: number, minY: number, maxX: number, maxY: number;
+      if (b.shape.kind === "disc") {
+        const r = b.shape.radius;
+        [minX, minY, maxX, maxY] = [b.position.x - r, b.position.y - r, b.position.x + r, b.position.y + r];
+      } else {
+        const q = sinCos(b.angle);
+        minX = minY = Infinity;
+        maxX = maxY = -Infinity;
+        for (const v of localVertices(b.shape)) {
+          const w = rotate(q, v);
+          minX = Math.min(minX, b.position.x + w.x);
+          minY = Math.min(minY, b.position.y + w.y);
+          maxX = Math.max(maxX, b.position.x + w.x);
+          maxY = Math.max(maxY, b.position.y + w.y);
+        }
+      }
+      // As the walls' boxes, grown by the largest smoothing length.
+      const w = { minX: minX - hmax, minY: minY - hmax, maxX: maxX + hmax, maxY: maxY + hmax };
+      far.push({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff });
+    }
+  // A job's bodies are plain copies of the bodies' state (stepped apart from the world, then written back).
+  const plain = (b: WallBody) => ({ id: b.id, shape: b.shape, fixed: b.fixed, mass: b.mass, inertia: b.inertia, position: b.position, angle: b.angle, velocity: b.velocity, angularVelocity: b.angularVelocity });
+  const jobs: ClusterJob[] = clusters.map((c) => {
+    const ids = new Set(c.bodies.map((k) => bodies[k].id));
+    return {
+      parcels: c.parcels.map((i) => (copy ? structuredClone(ps[i]) : ps[i])),
+      bodies: c.bodies.map((k) => plain(bodies[k])),
+      joints: joints.filter((j) => ids.has(j.a) && ids.has(j.b)),
+      dt,
+      bounds,
+      gravity,
+      closed,
+      far,
+      scale: gas.scale ?? 1,
+      timed,
+    };
+  });
+  return {
+    jobs,
+    apply(results, timings) {
+      const total: GasAccount = {
+        externalImpulse: { x: 0, y: 0 },
+        angular: 0,
+        removed: { count: 0, mass: 0, momentum: { x: 0, y: 0 }, angularMomentum: 0, energy: 0 },
+        removedPotential: 0,
+        jointImpulse: new Map(),
+        involved: new Set(),
+      };
+      const gone = new Set<Parcel>();
+      let substeps = 0;
+      results.forEach((res, k) => {
+        const c = clusters[k];
+        res.parcels.forEach((r, j) => {
+          const p = ps[c.parcels[j]];
+          p.position = r.position;
+          p.velocity = r.velocity;
+          p.thermal = r.thermal;
+          if (r.age !== undefined) p.age = r.age;
+          if (r.keep !== undefined) p.keep = r.keep;
+          if (r.gone) gone.add(p);
+        });
+        res.bodies.forEach((r, j) => {
+          const b = bodies[c.bodies[j]];
+          if (b.fixed) return;
+          if (b.position !== r.position) b.position = r.position;
+          if (b.angle !== r.angle) b.angle = r.angle;
+          if (b.velocity !== r.velocity) b.velocity = r.velocity;
+          if (b.angularVelocity !== r.angularVelocity) b.angularVelocity = r.angularVelocity;
+        });
+        if (timings) for (const [key, v] of Object.entries(res.timings)) timings.out[key] = (timings.out[key] ?? 0) + v;
+        substeps = Math.max(substeps, res.substeps);
+        gas.wallImpulse += res.wallImpulse;
+        const a = res.account;
+        total.externalImpulse.x += a.externalImpulse.x;
+        total.externalImpulse.y += a.externalImpulse.y;
+        total.angular += a.angular;
+        total.removedPotential += a.removedPotential;
+        const r = total.removed;
+        r.count += a.removed.count;
+        r.mass += a.removed.mass;
+        r.momentum.x += a.removed.momentum.x;
+        r.momentum.y += a.removed.momentum.y;
+        r.angularMomentum += a.removed.angularMomentum;
+        r.energy += a.removed.energy;
+        for (const [id, J] of a.jointImpulse) total.jointImpulse.set(id, J);
+        for (const id of a.involved) total.involved.add(id);
+      });
+      gas.parcels = ps.filter((p) => !gone.has(p));
+      gas.substeps = substeps;
+      const tot = gas.removed;
+      tot.count += total.removed.count;
+      tot.mass += total.removed.mass;
+      tot.momentum.x += total.removed.momentum.x;
+      tot.momentum.y += total.removed.momentum.y;
+      tot.angularMomentum += total.removed.angularMomentum;
+      tot.energy += total.removed.energy;
+      return total;
+    },
+  };
+}
+
+/**
+ * Steps the gas cluster by cluster (`gasClusters`): each with only its own parcels and the bodies it
+ * can reach, at its own substeps. Clusters can't meet within the step, so stepping them apart is the
+ * same physics; it is cheaper (a calm cluster takes long substeps, and no cluster files every body),
+ * and clusters can run in parallel (`clusterGas`, `runClusterJob`). Results are taken back in cluster
+ * order, so they never depend on where or in what order clusters ran.
+ */
+export function stepGasClustered(
+  gas: GasState,
+  bodies: WallBody[],
+  joints: { a: string; b: string }[],
+  dt: number,
+  bounds: Bounds,
+  gravity: Vec2 = { x: 0, y: 0 },
+  closed: readonly ClosedRegion[] = [],
+  timings?: { clock: () => number; out: Record<string, number> },
+): GasAccount {
+  const tc = timings?.clock();
+  const prepared = clusterGas(gas, bodies, joints, dt, bounds, gravity, closed, !!timings, false);
+  if (!prepared) return stepGas(gas, bodies, joints, dt, bounds, gravity, closed, timings);
+  if (timings) {
+    for (const k of ["setup", "contacts", "neighbours", "density", "impulses", "move", "finish"]) timings.out[`gas.${k}`] = 0;
+    timings.out["gas.clusters"] = timings.clock() - tc!;
+  }
+  return prepared.apply(
+    prepared.jobs.map((j) => runClusterJob(j, timings?.clock)),
+    timings,
+  );
+}
+
 export function stepGas(
   gas: GasState,
   bodies: WallBody[],
@@ -896,6 +1269,8 @@ export function stepGas(
   gravity: Vec2 = { x: 0, y: 0 },
   closed: readonly ClosedRegion[] = [],
   timings?: { clock: () => number; out: Record<string, number> },
+  /** Far-field circles to use instead of the bodies' own (when stepping part of the gas). */
+  farCircles?: readonly { x: number; y: number; r: number }[],
 ): GasAccount {
   // Time per phase, summed over the substeps, into `timings.out` as gas.<phase> (LED-004). Reading the
   // clock changes nothing in the results.
@@ -1825,7 +2200,7 @@ export function stepGas(
   // Far field: free bodies as bounding circles at their end-of-step pose. Fixed bodies (a ground) don't
   // count: gas far from everything that moves can't change what happens to it.
   const ff = bounds.farField;
-  const circles = ff ? walls.filter((w) => w.unit >= 0).map((w) => ({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff })) : [];
+  const circles = farCircles ?? (ff ? farFieldCircles(walls, ff) : []);
   const far = (px: number, py: number): boolean => {
     if (!ff || !circles.length) return false; // with no bodies there is nothing to be far from
     for (const c of circles) if ((px - c.x) ** 2 + (py - c.y) ** 2 < c.r * c.r) return false;

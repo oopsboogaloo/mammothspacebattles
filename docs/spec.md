@@ -514,11 +514,14 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
 - **A cockpit.** A square component that stands for the pilot, where every control channel starts. Controls reach a component only while it is connected to a working cockpit. With the cockpit wrecked or broken off, the rest of the ship takes no commands, and its engines stop or keep their last setting (to decide). This is also where an AI pilot (§13) would sit later.
   - Open questions: is the connection the assembly (as in option A) or routed control links (as in B)? Can a ship have more than one cockpit, and which one wins? Should a cockpit take damage like any part, and does losing it count as a crash in challenges such as LAND?
 
+- **Energy residuals in violent crashes.** Found with four Gunship 2 ships firing, when the player's ship ploughed into a target (welds and feed links breaking, leaks, damage). Steps through the crash show energy residuals of 1–4 mJ (tolerance 1 mJ), and one of 344 J in the step where the gun's feed link broke. Mass and momentum stay exact. It happens with or without chambers held as one volume (PRP-011), so it predates them. To investigate: contacts while welds break, leaks, and link breaks in the same step.
+
 ## 10. Performance Requirements
 
 - **NFR-001** `[M · M1 · B]` A benchmark command shall report steps per second for each reference scenario, and CI shall record results per commit.
 - **NFR-002** `[S · M1 · B]` CI shall warn when a benchmark regresses by more than 20% against the main branch.
 - **NFR-003** `[M · M1 · U]` Broad-phase collision shall scale sub-quadratically (e.g. a uniform grid or sweep-and-prune), verified by a benchmark at 100, 1,000 and 5,000 parcels.
+- **NFR-004** `[S · M4 · P]` The system shall step the gas as independent clusters: gas that cannot reach another cluster's gas, or the same free assembly, within the step. Each cluster shall have only the bodies it can reach and its own substeps. The results shall be the same whether clusters run in turn or in parallel threads, in any order.
 
 ### 10.1 Gas performance: baseline and future options (not scheduled)
 
@@ -568,8 +571,13 @@ So per-parcel substeps cut only the impulses unless the neighbour and wall-conta
    - **Same results:** stepping goes through one function, `runSteps`, on the page and in the worker. A run is taken in only if the sandbox hasn't changed since it was sent. If an edit makes the run in flight stale, the page steps that frame itself, so dragging never stalls the run.
    - **Fallback:** `?worker=0`, or a browser without workers, steps on the page as before.
    - **Measured** in Chromium, Gunship 2 with both engines firing: the simulation runs at 0.57× real time against 0.47× on the page, the page draws at 60 fps against 44, and its worst frames are 33 ms against 50. 0.57× is all the physics allows on that machine (about 7.5 ms a step), so the scene's own cost is now the limit.
-   - **Next:** splitting the gas across several workers.
-4. **Per-parcel substeps** last, for scenes with gas at very different speeds.
+4. **Gas clusters, and helper threads** (NFR-004). Done, helpers off by default:
+   - **Clusters:** each step the gas splits into clusters that can't meet within the step. Two parcels are in one cluster if they are within their smoothing lengths plus twice how far they can move relative to each other in the step. A free assembly they could reach joins them; a fixed body can't change, so it goes with every cluster that reaches it. Clusters under 32 parcels go together. Each cluster is stepped with only its own parcels and bodies, at its own substeps. The far field still sees every body.
+   - **Cost:** splitting costs about 5% of the gas step. A four-ship fleet (Gunship 2 with the target ships' engines wired to the same keys) makes four or five clusters, one per plume.
+   - **Helpers:** the world step pauses at its gas phase (a generator), so the simulation worker can hand clusters to helper threads, biggest first to the least loaded. Results are taken back in cluster order, so they are the same bit for bit as stepping on the page; a test replays the fleet on the page to the same hash.
+   - **Measured** on the 4-core development machine, the fleet stepped no faster with helpers: 27–30 ms a step alone, 42–49 with one helper, 47–62 with two. Copying the clusters out and back costs about 7 ms a step, and helpers ran about 30% slower per parcel on shared cores. So helpers are off by default; `?helpers=N` turns them on, to try on machines with more cores.
+   - **What would make them pay:** sharing memory (SharedArrayBuffer) instead of copying, which needs cross-origin isolation headers that GitHub Pages can't set (a service-worker shim can). That means the gas kept in shared typed arrays. Not scheduled.
+5. **Per-parcel substeps: parked.** Measured with the chambers held, they would save nothing in any current scene. Parcel-substeps a step, the shared substep against per-parcel power-of-two levels: Gunship 2 firing 5,925 against 6,207; LAND 1,657 against 2,032; SC-02 10,648 against 15,488; RS-07 38,400 against 49,152. The plume's speeds are within about 2× of each other, and levels round up to powers of two. They would pay for a hot jet into a large, calm cloud (a station full of air), which no scene has yet.
 
 The plume is kept as parcels: retiring supersonic exhaust once it is clear of the ship is a later option.
 
