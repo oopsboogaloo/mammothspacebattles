@@ -10,7 +10,17 @@ test("WPN-001 the cannon test fires on its own at 0.5 s, and the shell flies at 
   await page.getByTestId("play").click();
   await waitForTick(page, 150, 90_000);
   await page.getByTestId("play").click();
+  // The run may get well past step 150 before the pause lands (Firefox did), and by about step 290
+  // the shell has hit the ship and slowed. So: it left the barrel, and it was fast, either still in
+  // flight or when it struck.
   const s = (await body(page, "shell"))!;
-  expect(s.velocity.x).toBeGreaterThan(20);
+  expect(s.position.x).toBeGreaterThan(-16.5);
+  const hit = await page.evaluate(() =>
+    (window as unknown as { __msb: { sandbox: () => { world: { events: { type: string; data: Record<string, unknown> }[] } } } }).__msb
+      .sandbox()
+      .world.events.filter((e) => e.type === "collision" && (e.data.a === "shell" || e.data.b === "shell"))
+      .map((e) => Number(e.data.speed)),
+  );
+  expect(Math.max(s.velocity.x, ...hit)).toBeGreaterThan(20);
   await shot(page, info, "cannon-fired");
 });
