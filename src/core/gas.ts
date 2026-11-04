@@ -909,8 +909,9 @@ export function gasClusters(
   const n = parcels.length;
   if (!n) return [];
   // How far each parcel can get from the gas's mean motion in the step (twice its speed relative to
-  // the mean, for headroom), plus half its smoothing length: two parcels can meet only if they are
-  // within their summed reach. Pairs are then checked with their own relative speed.
+  // the mean, for headroom), plus how far its own pressure could push it from rest, plus half its
+  // smoothing length: two parcels can meet only if they are within their summed reach. Pairs are then
+  // checked with their own relative speed.
   let mx = 0;
   let my = 0;
   for (const p of parcels) {
@@ -921,11 +922,17 @@ export function gasClusters(
   my /= n;
   const reach = new Float64Array(n);
   const half = new Float64Array(n);
+  const push = new Float64Array(n);
   let rmax = 0;
   for (let i = 0; i < n; i++) {
     const p = parcels[i];
     half[i] = 0.5 * SMOOTHING * p.radius;
-    reach[i] = half[i] + 2 * Math.sqrt((p.velocity.x - mx) ** 2 + (p.velocity.y - my) ** 2) * dt;
+    // Pressure accelerates gas by about c²/h, so from rest it covers about ½·c²·dt²/h in a step (taken
+    // twice), and never more than gas expanding into vacuum, 2c/(γ − 1), covers.
+    const { gamma } = mixture(p.composition);
+    const c2 = gamma * (gamma - 1) * Math.max(0, p.thermal / p.mass);
+    push[i] = Math.min((c2 * dt * dt) / (2 * half[i]), ((2 * Math.sqrt(c2)) / (gamma - 1)) * dt);
+    reach[i] = half[i] + push[i] + 2 * Math.sqrt((p.velocity.x - mx) ** 2 + (p.velocity.y - my) ** 2) * dt;
     rmax = Math.max(rmax, reach[i]);
   }
   // Union-find over parcels 0..n−1 and groups n..n+g−1 (a free assembly, or a fixed body).
@@ -999,7 +1006,7 @@ export function gasClusters(
           const q = parcels[j].position;
           const vi = parcels[i].velocity;
           const vj = parcels[j].velocity;
-          const d = half[i] + half[j] + 2 * Math.sqrt((vi.x - vj.x) ** 2 + (vi.y - vj.y) ** 2) * dt;
+          const d = half[i] + half[j] + push[i] + push[j] + 2 * Math.sqrt((vi.x - vj.x) ** 2 + (vi.y - vj.y) ** 2) * dt;
           if ((p.x - q.x) ** 2 + (p.y - q.y) ** 2 <= d * d) join(i, j);
         }
       }
@@ -1009,7 +1016,7 @@ export function gasClusters(
   const reaches = (g: (typeof groups)[number], i: number) => {
     const p = parcels[i].position;
     const v = parcels[i].velocity;
-    const d = g.r + 2 * half[i] + 2 * Math.sqrt((v.x - g.vx) ** 2 + (v.y - g.vy) ** 2) * dt;
+    const d = g.r + 2 * half[i] + push[i] + 2 * Math.sqrt((v.x - g.vx) ** 2 + (v.y - g.vy) ** 2) * dt;
     return (p.x - g.x) ** 2 + (p.y - g.y) ** 2 <= d * d;
   };
   const fixedGroups: number[] = [];
@@ -1052,7 +1059,8 @@ export function gasClusters(
   if (rest.parcels.length) big.push(rest);
   for (const c of big) {
     c.parcels.sort((a, b) => a - b);
-    c.bodies.sort((a, b) => a - b);
+    // A fixed body several pooled clusters reach is listed once.
+    c.bodies = [...new Set(c.bodies)].sort((a, b) => a - b);
   }
   big.sort((a, b) => a.parcels[0] - b.parcels[0]);
   return big;

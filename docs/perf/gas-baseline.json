@@ -11,17 +11,17 @@
       "energy": 1.0331859812140465e-9
     },
     "violations": 0,
-    "msPerStep": 22.09,
+    "msPerStep": 27.45,
     "gasMsPerStep": {
-      "gas.setup": 0.27,
-      "gas.contacts": 1.89,
-      "gas.neighbours": 6.32,
-      "gas.density": 1.44,
-      "gas.impulses": 9.79,
-      "gas.move": 0.35,
-      "gas.finish": 0.1,
-      "gas.clusters": 1.16,
-      "gas": 21.63
+      "gas.setup": 0.29,
+      "gas.contacts": 1.87,
+      "gas.neighbours": 6.34,
+      "gas.density": 1.5,
+      "gas.impulses": 9.85,
+      "gas.move": 0.34,
+      "gas.finish": 0.11,
+      "gas.clusters": 6.4,
+      "gas": 27.01
     }
   },
   {
@@ -32,70 +32,70 @@
     },
     "residual": {
       "momentum": 1.3788683915077173e-14,
-      "angularMomentum": 7.128637198768051e-12,
+      "angularMomentum": 7.160226404845371e-12,
       "energy": 1.6370904631912708e-10
     },
     "violations": 0,
-    "msPerStep": 8.11,
+    "msPerStep": 8.34,
     "gasMsPerStep": {
-      "gas.setup": 0.22,
-      "gas.contacts": 1.81,
-      "gas.neighbours": 3.84,
+      "gas.setup": 0.25,
+      "gas.contacts": 1.76,
+      "gas.neighbours": 3.74,
       "gas.density": 0.48,
-      "gas.impulses": 0.55,
-      "gas.move": 0.31,
-      "gas.finish": 0.09,
-      "gas.clusters": 0.45,
-      "gas": 7.94
+      "gas.impulses": 0.71,
+      "gas.move": 0.3,
+      "gas.finish": 0.07,
+      "gas.clusters": 0.67,
+      "gas": 8.17
     }
   },
   {
     "case": "RS-08 chemical rocket, 2 s",
     "values": {
-      "vy": 7.465898301999764
+      "vy": 7.4460052052672925
     },
     "residual": {
-      "momentum": 1.145844726835023e-13,
-      "angularMomentum": 2.1538326677728037e-14,
-      "energy": 2.4471842152706813e-7
+      "momentum": 1.1972956231387816e-13,
+      "angularMomentum": 1.3444800828210646e-13,
+      "energy": 0.0000013777826097793877
     },
     "violations": 0,
-    "msPerStep": 4.61,
+    "msPerStep": 4.48,
     "gasMsPerStep": {
-      "gas.setup": 0.24,
-      "gas.contacts": 0.69,
-      "gas.neighbours": 1.42,
-      "gas.density": 0.22,
-      "gas.impulses": 0.96,
+      "gas.setup": 0.17,
+      "gas.contacts": 0.77,
+      "gas.neighbours": 1.27,
+      "gas.density": 0.18,
+      "gas.impulses": 0.86,
       "gas.move": 0.14,
       "gas.finish": 0.04,
-      "gas.clusters": 0.23,
-      "gas": 4.09
+      "gas.clusters": 0.37,
+      "gas": 3.94
     }
   },
   {
     "case": "RS-16 twin engine",
     "values": {
-      "vy": 6.910551990662017,
-      "spin": -1.1136374637430213
+      "vy": 6.970875167209561,
+      "spin": -1.0609517302767177
     },
     "residual": {
-      "momentum": 2.0955506323887453e-13,
-      "angularMomentum": 9.237586135111165e-14,
-      "energy": 0.00002350163777009584
+      "momentum": 2.46543476386953e-13,
+      "angularMomentum": 1.0133560657266116e-13,
+      "energy": 0.000022369847542336174
     },
     "violations": 0,
-    "msPerStep": 3.95,
+    "msPerStep": 4.24,
     "gasMsPerStep": {
-      "gas.setup": 0.25,
-      "gas.contacts": 0.86,
-      "gas.neighbours": 0.96,
+      "gas.setup": 0.21,
+      "gas.contacts": 0.94,
+      "gas.neighbours": 1.01,
       "gas.density": 0.08,
-      "gas.impulses": 0.41,
-      "gas.move": 0.11,
+      "gas.impulses": 0.42,
+      "gas.move": 0.1,
       "gas.finish": 0.04,
-      "gas.clusters": 0.36,
-      "gas": 3.27
+      "gas.clusters": 0.59,
+      "gas": 3.58
     }
   },
   {
@@ -109,91 +109,91 @@
       "energy": 1.0688474105791101e-8
     },
     "violations": 0,
-    "msPerStep": 3.54,
+    "msPerStep": 2.97,
     "gasMsPerStep": {
-      "gas": 2.58,
-      "gas.setup": 0.22,
-      "gas.contacts": 1.14,
-      "gas.neighbours": 0.43,
-      "gas.density": 0.07,
-      "gas.impulses": 0.1,
-      "gas.move": 0.09,
-      "gas.finish": 0.04,
-      "gas.clusters": 0.24
+      "gas": 1.9,
+      "gas.setup": 0.2,
+      "gas.contacts": 0.38,
+      "gas.neighbours": 0.5,
+      "gas.density": 0.08,
+      "gas.impulses": 0.11,
+      "gas.move": 0.08,
+      "gas.finish": 0.03,
+      "gas.clusters": 0.27
     }
   },
   {
     "case": "GS2 both engines 3 s",
     "values": {
-      "vy": 21.207007463980876,
-      "parcels": 328
+      "vy": 21.19895378434833,
+      "parcels": 331
     },
     "residual": {
-      "momentum": 1.2382702435175726e-11,
-      "angularMomentum": 3.874950013638134e-11,
-      "energy": 0.000009471959174334188
+      "momentum": 8.843127796404893e-12,
+      "angularMomentum": 4.7411852222012385e-11,
+      "energy": 0.000009403505828231573
     },
     "violations": 0,
-    "msPerStep": 8,
+    "msPerStep": 8.2,
     "gasMsPerStep": {
-      "gas": 5.21,
-      "gas.setup": 0.36,
-      "gas.contacts": 1.19,
-      "gas.neighbours": 1.23,
-      "gas.density": 0.15,
-      "gas.impulses": 0.39,
-      "gas.move": 0.11,
-      "gas.finish": 0.23,
-      "gas.clusters": 1.05
+      "gas": 5.32,
+      "gas.setup": 0.31,
+      "gas.contacts": 1.1,
+      "gas.neighbours": 1.26,
+      "gas.density": 0.14,
+      "gas.impulses": 0.45,
+      "gas.move": 0.13,
+      "gas.finish": 0.08,
+      "gas.clusters": 1.3
     }
   },
   {
     "case": "GS2 left engine 0.5 s",
     "values": {
-      "spin": -2.601540986776845
+      "spin": -2.601545637365051
     },
     "residual": {
-      "momentum": 1.8053377295402915e-12,
-      "angularMomentum": 3.209188470520985e-11,
-      "energy": 0.000017897575389724807
+      "momentum": 2.366411416898943e-12,
+      "angularMomentum": 3.740890930359342e-11,
+      "energy": 0.00001789367019000565
     },
     "violations": 0,
-    "msPerStep": 4.19,
+    "msPerStep": 4.54,
     "gasMsPerStep": {
-      "gas": 2.1,
-      "gas.setup": 0.25,
-      "gas.contacts": 0.36,
-      "gas.neighbours": 0.41,
+      "gas": 2.34,
+      "gas.setup": 0.19,
+      "gas.contacts": 0.5,
+      "gas.neighbours": 0.4,
       "gas.density": 0.04,
-      "gas.impulses": 0.11,
-      "gas.move": 0.06,
+      "gas.impulses": 0.1,
+      "gas.move": 0.05,
       "gas.finish": 0.03,
-      "gas.clusters": 0.46
+      "gas.clusters": 0.61
     }
   },
   {
     "case": "GUN muzzle speed",
     "values": {
-      "shell": 28.696044836195615,
-      "recoil": -1.4657858562674564
+      "shell": 28.685781750261057,
+      "recoil": -1.4657396436891292
     },
     "residual": {
-      "momentum": 1.421035553028876e-12,
+      "momentum": 1.4296414947757236e-12,
       "angularMomentum": 2.6975937737807386e-10,
       "energy": 8.674305718159303e-11
     },
     "violations": 0,
-    "msPerStep": 3.14,
+    "msPerStep": 5.11,
     "gasMsPerStep": {
-      "gas": 2.33,
-      "gas.setup": 0.06,
-      "gas.contacts": 0.19,
-      "gas.neighbours": 0.75,
-      "gas.density": 0.1,
-      "gas.impulses": 0.89,
-      "gas.move": 0.05,
-      "gas.finish": 0.03,
-      "gas.clusters": 0.12
+      "gas": 4.33,
+      "gas.setup": 0.05,
+      "gas.contacts": 0.24,
+      "gas.neighbours": 1.27,
+      "gas.density": 0.24,
+      "gas.impulses": 2.22,
+      "gas.move": 0.06,
+      "gas.finish": 0.02,
+      "gas.clusters": 0.13
     }
   }
 ]
