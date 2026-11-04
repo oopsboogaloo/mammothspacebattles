@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "gunship",
   "title": "Gunship",
-  "description": "The flight-test ship with a gas cannon on its nose, among three drifting, unmanned ships. F fires: the breech burns its charge of hydrogen and oxygen and the gas drives the shell out, and the ship recoils. A magazine in the breech loads the next shell once the bore is clear and the reload time has passed, and the ship's tank refills the charge. The shells are part of the ship's mass until they are fired. Every ship, yours included, has the same material and weld strength, so a weak mount can tear the cannon off under its own recoil. Q and E fire the engines, which have three times FT's thrust to carry the cannon.",
+  "description": "The flight-test ship with a gas cannon on its nose, among three drifting, unmanned ships and three asteroids. F fires: the breech burns its charge of hydrogen and oxygen and the gas drives the shell out, and the ship recoils. A magazine in the breech loads the next shell once the bore is clear and the reload time has passed, and the ship's tank refills the charge. The shells are part of the ship's mass until they are fired. The asteroids pull every ship and shell gently. Every ship, yours included, has the same material and weld strength, so a weak mount can tear the cannon off under its own recoil. Q and E fire the engines, which have three times FT's thrust to carry the cannon.",
   "profile": "sandbox",
   "seed": 31,
   "world": {
@@ -3194,6 +3194,197 @@
             "$expr": "600 * material"
           }
         }
+      },
+      {
+        "id": "rock-c",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -5.889209,
+              "y": -0.385818
+            },
+            {
+              "x": -5.211609,
+              "y": -2.391018
+            },
+            {
+              "x": -2.663609,
+              "y": -5.307118
+            },
+            {
+              "x": -1.006909,
+              "y": -6.482318
+            },
+            {
+              "x": 5.096691,
+              "y": -3.804918
+            },
+            {
+              "x": 5.737491,
+              "y": 0.539682
+            },
+            {
+              "x": 2.485691,
+              "y": 5.617382
+            },
+            {
+              "x": -1.736109,
+              "y": 6.661582
+            },
+            {
+              "x": -3.060709,
+              "y": 4.981382
+            },
+            {
+              "x": -4.958909,
+              "y": 1.785282
+            }
+          ]
+        },
+        "mass": 4146.8,
+        "position": {
+          "x": -24,
+          "y": 52
+        },
+        "velocity": {
+          "x": 0.1732,
+          "y": -0.199
+        },
+        "angle": 0,
+        "angularVelocity": 0.0624,
+        "restitution": 0.4,
+        "friction": 0.6,
+        "gravity": {
+          "mu": 53.237,
+          "core": 4.14
+        }
+      },
+      {
+        "id": "rock-d",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -9.284166,
+              "y": 1.501988
+            },
+            {
+              "x": -6.658266,
+              "y": -5.329212
+            },
+            {
+              "x": -3.283666,
+              "y": -7.079312
+            },
+            {
+              "x": 1.439934,
+              "y": -9.519912
+            },
+            {
+              "x": 4.810834,
+              "y": -6.786112
+            },
+            {
+              "x": 6.771534,
+              "y": -3.941312
+            },
+            {
+              "x": 8.228034,
+              "y": 3.629888
+            },
+            {
+              "x": 6.181534,
+              "y": 7.419488
+            },
+            {
+              "x": -3.087066,
+              "y": 7.920588
+            }
+          ]
+        },
+        "mass": 8599.4,
+        "position": {
+          "x": 38,
+          "y": 30
+        },
+        "velocity": {
+          "x": 0.0657,
+          "y": 0.1677
+        },
+        "angle": 0,
+        "angularVelocity": -0.0464,
+        "restitution": 0.4,
+        "friction": 0.6,
+        "gravity": {
+          "mu": 66.787,
+          "core": 5.359
+        }
+      },
+      {
+        "id": "rock-a",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -5.050892,
+              "y": 1.109229
+            },
+            {
+              "x": -3.760292,
+              "y": -2.812871
+            },
+            {
+              "x": -2.940692,
+              "y": -4.717771
+            },
+            {
+              "x": -0.592892,
+              "y": -5.329371
+            },
+            {
+              "x": 4.118508,
+              "y": -2.343571
+            },
+            {
+              "x": 5.566308,
+              "y": -0.238471
+            },
+            {
+              "x": 4.091508,
+              "y": 2.477329
+            },
+            {
+              "x": 2.433608,
+              "y": 4.148829
+            },
+            {
+              "x": 0.478508,
+              "y": 4.768129
+            },
+            {
+              "x": -1.459092,
+              "y": 5.216729
+            }
+          ]
+        },
+        "mass": 2912.7,
+        "position": {
+          "x": -36,
+          "y": -12
+        },
+        "velocity": {
+          "x": -0.1186,
+          "y": -0.0668
+        },
+        "angle": 0,
+        "angularVelocity": -0.0423,
+        "restitution": 0.4,
+        "friction": 0.6,
+        "gravity": {
+          "mu": 33.826,
+          "core": 3.371
+        }
       }
     ],
     "joints": [
@@ -5330,7 +5521,7 @@
     }
   ],
   "ui": {
-    "lookFor": "Fly with Q and E; F fires the cannon on the nose. Each shot kicks the ship back, so aim by turning, fire, then correct. Three unmanned ships drift nearby, the nearest about 15 m off. Hit a tank and it leaks; hit hard enough and parts break off. Try a heavier shell, a bigger charge, a longer barrel or a shorter reload, and turn everyone's strength down or up.",
+    "lookFor": "Fly with Q and E; F fires the cannon on the nose. Each shot kicks the ship back, so aim by turning, fire, then correct. Three unmanned ships drift nearby, the nearest about 15 m off, with three asteroids further out whose gravity bends your shots a little. Hit a tank and it leaks; hit hard enough and parts break off. Try a heavier shell, a bigger charge, a longer barrel or a shorter reload, and turn everyone's strength down or up.",
     "overlays": [
       "velocity",
       "damage"
