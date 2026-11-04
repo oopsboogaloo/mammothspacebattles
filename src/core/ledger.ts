@@ -32,9 +32,13 @@ export interface Delta {
   energy: number;
 }
 
-/** `boundary` is what gas carried out of the world boundary (GAS-007). */
-export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction" | "boundary";
-export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction", "boundary"];
+/**
+ * `boundary` is what gas carried out of the world boundary (GAS-007), and what wrapping round a
+ * wrapped world changed (FLT-012). `supply` is what an injector with an economy above 1 made from
+ * nothing (FLT-010): a declared, recorded departure from conservation, never a hidden one.
+ */
+export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction" | "boundary" | "supply";
+export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction", "boundary", "supply"];
 
 export interface StepLedger {
   tick: number;

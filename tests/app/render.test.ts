@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fitBounds, toScreen, toWorld, worldBounds, zoomAt } from "../../src/app/camera.ts";
 import { fmt, plain } from "../../src/app/format.ts";
-import { assemblyCentres, renderFrame, type Ctx } from "../../src/app/render.ts";
+import { assemblyCentres, renderFrame, wrapImages, type Ctx } from "../../src/app/render.ts";
 import { createWorld, getProfile, stepInPlace } from "../../src/core/index.ts";
 import { box, disc } from "../helpers.ts";
 
@@ -64,6 +64,16 @@ describe("assembly centre of mass", () => {
     const off = recorder();
     renderFrame(off.ctx, w, cam, vp, { overlays: new Set(), selection: new Set(), hover: null });
     expect(off.calls).not.toContain("arc(550,300,10,0,6)");
+  });
+});
+
+describe("wrapped world", () => {
+  it("FLT-012 the view draws the copies of a wrapped world it overlaps, and only those", () => {
+    const w = createWorld(1, [disc("a")], { x: 0, y: 0 }, { bounds: { min: { x: -10, y: -10 }, max: { x: 10, y: 10 }, wrap: true } });
+    const vp = { width: 800, height: 600 };
+    expect(wrapImages(w, { x: 0, y: 0, zoom: 100 }, vp)).toEqual([]); // 8 m × 6 m around the centre
+    expect(wrapImages(w, { x: 9, y: 0, zoom: 100 }, vp)).toEqual([[20, 0]]); // near the right edge
+    expect(wrapImages(w, { x: 9, y: 9, zoom: 100 }, vp).length).toBe(3); // a corner: right, top and diagonal
   });
 });
 

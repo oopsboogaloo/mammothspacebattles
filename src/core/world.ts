@@ -5,9 +5,9 @@
 
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
 import { bodyMass, type Store } from "./bodies.ts";
-import { evaluateJoints, recordGasLoads } from "./joints.ts";
+import { assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
 import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
-import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, rigid, solveContacts } from "./physics.ts";
+import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, rigid, solveContacts, type RB } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { burn, emptyGas, igniteAndBurn, makeFill, mixture, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel } from "./gas.ts";
@@ -42,6 +42,13 @@ export interface Body {
   contents?: Store[];
   /** Makes this body an injector (PRP-002). */
   injector?: Injector;
+  /**
+   * Makes this body a source of gravity (FLT-011): every other free body and gas parcel accelerates
+   * toward it at mu·r/(r² + core²)^1.5, m/s², r from it to them. One way: sources feel no gravity,
+   * from each other or anything, so they keep the paths they are given. `mu` is G·M, m³/s²;
+   * `core` softens the pull near and inside the body, m.
+   */
+  gravity?: { mu: number; core: number };
 }
 
 /**
@@ -73,6 +80,12 @@ export interface Injector {
    * spreads out of the plane in a world with `bounds.depth` (GAS-009). Absent: no interior.
    */
   chamber?: { width: number; length: number };
+  /**
+   * Fuel economy (FLT-010, a flight-test cheat): the stores supply 1/economy of each parcel's mass,
+   * so propellant lasts `economy` times as long at the same thrust. The rest is made from nothing,
+   * and the ledger records it under `supply`. Absent or 1: mass is conserved.
+   */
+  economy?: number;
   /** State: mass allowed by the command but not yet emitted, kg; parcels emitted so far; firing now. */
   credit: number;
   count: number;
@@ -397,6 +410,113 @@ function fillGas(world: World, fill: GasFill, profile?: Profile): void {
  * store's thermal and chemical energy, less any kinetic energy the injection gained, so energy
  * is unchanged too. Returns the parcels made.
  */
+/** Shortest offset from a to b in a world that may wrap round (the nearest periodic image). */
+export function nearestOffset(world: World, a: Vec2, b: Vec2): Vec2 {
+  let dx = b.x - a.x;
+  let dy = b.y - a.y;
+  if (world.bounds.wrap) {
+    const w = world.bounds.max.x - world.bounds.min.x;
+    const h = world.bounds.max.y - world.bounds.min.y;
+    dx -= w * Math.round(dx / w);
+    dy -= h * Math.round(dy / h);
+  }
+  return { x: dx, y: dy };
+}
+
+/**
+ * Gravity from bodies that carry it (FLT-011), as a kick on every other free body and gas parcel.
+ * It is a field, like uniform gravity: the impulses it gives are recorded under `field`.
+ */
+function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: Vec2; angular: number }): void {
+  const src = world.bodies.filter((b) => b.gravity && b.gravity.mu > 0);
+  if (!src.length) return;
+  const pull = (p: Vec2, self?: string): Vec2 => {
+    let ax = 0;
+    let ay = 0;
+    for (const s of src) {
+      if (s.id === self) continue;
+      const d = nearestOffset(world, p, s.position);
+      const r2 = d.x * d.x + d.y * d.y + s.gravity!.core * s.gravity!.core;
+      const k = s.gravity!.mu / (r2 * Math.sqrt(r2));
+      ax += k * d.x;
+      ay += k * d.y;
+    }
+    return { x: ax, y: ay };
+  };
+  for (const r of rbs) {
+    if (r.invMass === 0 || r.body.gravity) continue;
+    const a = pull(r.body.position, r.body.id);
+    r.body.velocity = { x: r.body.velocity.x + a.x * dt, y: r.body.velocity.y + a.y * dt };
+    const J = { x: r.mass * a.x * dt, y: r.mass * a.y * dt };
+    field.impulse.x += J.x;
+    field.impulse.y += J.y;
+    field.angular += cross(r.body.position, J);
+  }
+  for (const p of world.gas.parcels) {
+    const a = pull(p.position);
+    p.velocity = { x: p.velocity.x + a.x * dt, y: p.velocity.y + a.y * dt };
+    const J = { x: p.mass * a.x * dt, y: p.mass * a.y * dt };
+    field.impulse.x += J.x;
+    field.impulse.y += J.y;
+    field.angular += cross(p.position, J);
+  }
+}
+
+/**
+ * Wraps a wrapped world round (FLT-012). A free assembly whose centre of mass has left the
+ * rectangle moves, whole, by one width or height back into it, so its welds see nothing. Gas within
+ * its far field (or 10 m) moves with it, so its own exhaust and chamber gas stay with it. Returns
+ * whether anything moved.
+ */
+function wrapAround(world: World): boolean {
+  const b = world.bounds;
+  const w = b.max.x - b.min.x;
+  const h = b.max.y - b.min.y;
+  const roots = world.joints.length ? assemblyRoots(world) : null;
+  const groups = new Map<string, Body[]>();
+  for (const body of world.bodies) {
+    const r = roots?.get(body.id) ?? body.id;
+    const g = groups.get(r);
+    if (g) g.push(body);
+    else groups.set(r, [body]);
+  }
+  const reach = b.farField ?? 10;
+  const movedParcels = new Set<number>();
+  let moved = false;
+  for (const members of groups.values()) {
+    if (members.some((m) => m.fixed)) continue;
+    let m = 0;
+    let cx = 0;
+    let cy = 0;
+    for (const x of members) {
+      const mm = bodyMass(x);
+      m += mm;
+      cx += mm * x.position.x;
+      cy += mm * x.position.y;
+    }
+    if (!(m > 0)) continue;
+    cx /= m;
+    cy /= m;
+    const sx = cx < b.min.x ? w : cx >= b.max.x ? -w : 0;
+    const sy = cy < b.min.y ? h : cy >= b.max.y ? -h : 0;
+    if (sx === 0 && sy === 0) continue;
+    moved = true;
+    let rad = 0;
+    for (const x of members) rad = Math.max(rad, length(sub(x.position, { x: cx, y: cy })) + massProps(x.shape, x.mass).boundingRadius);
+    for (const x of members) x.position = { x: x.position.x + sx, y: x.position.y + sy };
+    const r2 = (rad + reach) * (rad + reach);
+    for (const p of world.gas.parcels) {
+      if (movedParcels.has(p.id)) continue;
+      const dx = p.position.x - cx;
+      const dy = p.position.y - cy;
+      if (dx * dx + dy * dy > r2) continue;
+      p.position = { x: p.position.x + sx, y: p.position.y + sy };
+      movedParcels.add(p.id);
+    }
+  }
+  return moved;
+}
+
 /** Each injector's declared interior as a rectangle in the world, at the bodies' current pose (GAS-009). */
 function engineInteriors(world: World): ClosedRegion[] {
   const out: ClosedRegion[] = [];
@@ -433,7 +553,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
     inj.credit += command * inj.rate * dt;
     while (inj.credit >= inj.parcelMass && world.gas.parcels.length < limit) {
       const stores = Object.entries(inj.mixture).filter(([, y]) => y > 0);
-      if (stores.some(([res, y]) => (b.contents?.find((c) => c.resource === res)?.mass ?? 0) < inj.parcelMass * y)) break;
+      if (stores.some(([res, y]) => (b.contents?.find((c) => c.resource === res)?.mass ?? 0) < (inj.parcelMass / (inj.economy ?? 1)) * y)) break;
       const dm = inj.parcelMass;
       const q = sinCos(b.angle);
       // Spread across the outlet in mirrored pairs, so injection itself is symmetric.
@@ -451,9 +571,10 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
       const before = ke(b);
       let thermal = 0;
       const composition: Record<string, number> = {};
+      const draw = dm / (inj.economy ?? 1);
       for (const [res, y] of stores) {
         const st = b.contents!.find((c) => c.resource === res)!;
-        st.mass -= dm * y;
+        st.mass -= draw * y;
         if (st.mass < 0) st.mass = 0;
         composition[res] = y;
         const sp = mixture({ [res]: 1 });
@@ -642,6 +763,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     transfer: zeroDelta(),
     correction: zeroDelta(),
     boundary: zeroDelta(),
+    supply: zeroDelta(),
   };
 
   // Feed links move resources between stores. Mass and momentum must not change; angular momentum may,
@@ -669,6 +791,11 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     const t1 = computeTotals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
     sources.transfer.energy += t1.energy.potential - t0.energy.potential;
+    // An injector with an economy makes the rest of each parcel from nothing (FLT-010): record it all.
+    if (world.bodies.some((b) => (b.injector?.economy ?? 1) !== 1)) {
+      const d = diff(t0, t1);
+      sources.supply = { mass: d.mass, momentumX: d.momentumX, momentumY: d.momentumY, angularMomentum: 0, energy: d.energy - (t1.energy.potential - t0.energy.potential) };
+    }
     before = t1;
   }
   const rbs = prepareBodies(world);
@@ -685,6 +812,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
       field.angular += p.position.x * J.y - p.position.y * J.x;
     }
   }
+  applyAttractors(world, rbs, dt, field);
   let after = computeTotals(world);
   sources.field.momentumX = field.impulse.x;
   sources.field.momentumY = field.impulse.y;
@@ -770,6 +898,15 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   for (const d of world.drags) {
     if (!world.bodies.some((b) => b.id === d.id)) world.drags = world.drags.filter((x) => x.id !== d.id);
+  }
+
+  // A wrapped world (FLT-012): what crosses an edge comes back in at the other one.
+  if (world.bounds.wrap) {
+    const t0 = computeTotals(world);
+    if (wrapAround(world)) {
+      after = computeTotals(world);
+      addDelta(sources.boundary, diff(t0, after));
+    }
   }
 
   world.tick += 1;

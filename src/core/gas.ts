@@ -779,6 +779,11 @@ export interface Bounds {
    * absent: a 2D slab that never thins.
    */
   depth?: number;
+  /**
+   * The world wraps round at this rectangle (FLT-012): a free assembly whose centre of mass leaves it
+   * comes back in at the opposite side, with the gas around it. Gas elsewhere still leaves here.
+   */
+  wrap?: boolean;
 }
 
 /** Gas younger than this has only just been made and doesn't spread out of the plane yet, s. */

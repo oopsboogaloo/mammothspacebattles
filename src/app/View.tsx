@@ -255,7 +255,7 @@ export function View() {
         gasColour: gasColour.value,
         pad: sb.world.challenge?.goal.pad,
         // In a challenge the parts' ids are clutter: the pad is marked instead.
-        labels: !sb.world.challenge,
+        labels: !sb.world.challenge && sb.scenario.ui?.labels !== false,
       });
       // Rotate handle for a single selected body with the Move tool.
       const handle = rotateHandle();

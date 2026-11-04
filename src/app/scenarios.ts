@@ -16,6 +16,7 @@ const ORDER: [string, string][] = [
   ["sc03-simplest-rocket", "SC-03"],
   ["fly-twin-engine", "FLY"],
   ["land-twin-engine", "LAND"],
+  ["ft-asteroids", "FT"],
   ["rs02-off-centre-impact", "RS-02"],
   ["rs03-bullet-thin-wall", "RS-03"],
   ["rs04-box-stack", "RS-04"],
