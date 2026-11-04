@@ -220,6 +220,22 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
     }
   }
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
+  if (b.magazine !== undefined) {
+    const m = b.magazine;
+    const mp = `${path}.magazine`;
+    if (!isObj(m)) err(v, mp, "must be an object {count, shell, at, angle, reload}");
+    else {
+      num(v, m.count, `${mp}.count`, { int: true, min: 0 });
+      if (!isObj(m.shell)) err(v, `${mp}.shell`, "must be a body without id or motion: {shape, mass, …}");
+      else {
+        validateShape(v, m.shell.shape, `${mp}.shell.shape`);
+        num(v, m.shell.mass, `${mp}.shell.mass`, { positive: true });
+      }
+      vec(v, m.at, `${mp}.at`);
+      num(v, m.angle, `${mp}.angle`);
+      num(v, m.reload, `${mp}.reload`, { min: 0 });
+    }
+  }
   if (b.material !== undefined) {
     if (!isObj(b.material)) err(v, `${path}.material`, "must be an object {threshold, toughness}");
     else {

@@ -1,0 +1,5612 @@
+{
+  "schema": 1,
+  "name": "gunship",
+  "title": "Gunship",
+  "description": "The flight-test ship with a gas cannon on its nose, among three drifting, unmanned ships and three asteroids. F fires: the breech burns its charge of hydrogen and oxygen and the gas drives the shell out, and the ship recoils. A magazine in the breech loads the next shell once the bore is clear and the reload time has passed, and the ship's tank refills the charge. The shells are part of the ship's mass until they are fired. The asteroids pull every ship and shell gently. Every ship, yours included, has the same material and weld strength, so a weak mount can tear the cannon off under its own recoil. Q and E fire the engines, which have three times FT's thrust to carry the cannon.",
+  "profile": "sandbox",
+  "seed": 31,
+  "world": {
+    "bodies": [
+      {
+        "id": "chamber-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -1.45,
+          "y": 0.0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "chamber-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 0.55,
+          "y": 0.0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "chamber-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -0.55,
+          "y": 0.0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "chamber-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 1.45,
+          "y": 0.0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "engine-l",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": -1.0,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "engine-r",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": 1.0,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1.0
+        },
+        "mass": 8.0,
+        "position": {
+          "x": 0.0,
+          "y": 1.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "leg-left",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": 0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": -1.752381,
+          "y": -0.421429
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "leg-right",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": -0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": 1.752381,
+          "y": -0.421429
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "nozzle-left-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -1.325,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "nozzle-left-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 0.675,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "nozzle-right-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -0.675,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "nozzle-right-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 1.325,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.5
+        },
+        "mass": 2.0,
+        "position": {
+          "x": 0.0,
+          "y": 1.05
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "material": {
+          "name": "tank",
+          "threshold": {
+            "$expr": "20 * material"
+          },
+          "toughness": {
+            "$expr": "100 * material"
+          }
+        }
+      },
+      {
+        "id": "throat-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -1.325,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "throat-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 0.675,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "throat-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -0.675,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "throat-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 1.325,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "wing",
+        "shape": {
+          "kind": "box",
+          "width": 3.0,
+          "height": 0.2
+        },
+        "mass": 2.0,
+        "position": {
+          "x": 0.0,
+          "y": 0.7
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "breech",
+        "shape": {
+          "kind": "box",
+          "width": 0.6000000000000001,
+          "height": 0.3
+        },
+        "mass": 15,
+        "position": {
+          "x": 0,
+          "y": 2.4499999999999997
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": {
+              "$expr": "charge / 9"
+            },
+            "capacity": {
+              "$expr": "charge / 9"
+            }
+          },
+          {
+            "resource": "o2",
+            "mass": {
+              "$expr": "charge * 8 / 9"
+            },
+            "capacity": {
+              "$expr": "charge * 8 / 9"
+            }
+          }
+        ],
+        "injector": {
+          "channel": "fire",
+          "rate": {
+            "$expr": "charge / 0.05"
+          },
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": 0.2
+          },
+          "direction": {
+            "x": 0,
+            "y": 1
+          },
+          "width": 0.3,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 0.4,
+            "length": {
+              "$expr": "barrel"
+            }
+          }
+        },
+        "magazine": {
+          "count": {
+            "$param": "ammo"
+          },
+          "reload": {
+            "$param": "reload"
+          },
+          "at": {
+            "x": 0,
+            "y": 0.5499999999999998
+          },
+          "angle": 0,
+          "shell": {
+            "shape": {
+              "kind": "box",
+              "width": 0.36000000000000004,
+              "height": 0.3
+            },
+            "mass": {
+              "$param": "shellMass"
+            },
+            "restitution": 0,
+            "friction": 0.05
+          }
+        }
+      },
+      {
+        "id": "barrel-left",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": {
+            "$expr": "barrel"
+          }
+        },
+        "mass": 4,
+        "position": {
+          "x": -0.25,
+          "y": {
+            "$expr": "2.5999999999999996 + barrel / 2"
+          }
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "barrel-right",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": {
+            "$expr": "barrel"
+          }
+        },
+        "mass": 4,
+        "position": {
+          "x": 0.25,
+          "y": {
+            "$expr": "2.5999999999999996 + barrel / 2"
+          }
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-chamber-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -13.891528,
+          "y": 15.480896
+        },
+        "velocity": {
+          "x": 0.325955,
+          "y": -0.144576
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-chamber-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -12.078912,
+          "y": 16.326132
+        },
+        "velocity": {
+          "x": 0.283693,
+          "y": -0.053946
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-chamber-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -13.075851,
+          "y": 15.861252
+        },
+        "velocity": {
+          "x": 0.306937,
+          "y": -0.103793
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-chamber-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -11.263235,
+          "y": 16.706489
+        },
+        "velocity": {
+          "x": 0.264676,
+          "y": -0.013162
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-engine-l",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": -13.694999,
+          "y": 16.124228
+        },
+        "velocity": {
+          "x": 0.293789,
+          "y": -0.13475
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-engine-r",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": -11.882383,
+          "y": 16.969464
+        },
+        "velocity": {
+          "x": 0.251527,
+          "y": -0.044119
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1.0
+        },
+        "mass": 8.0,
+        "position": {
+          "x": -13.338095,
+          "y": 17.725046
+        },
+        "velocity": {
+          "x": 0.213748,
+          "y": -0.116905
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-leg-left",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": 0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": -13.987475,
+          "y": 14.97116
+        },
+        "velocity": {
+          "x": 0.351442,
+          "y": -0.149374
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-leg-right",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": -0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": -10.811082,
+          "y": 16.452336
+        },
+        "velocity": {
+          "x": 0.277383,
+          "y": 0.009446
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-nozzle-left-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -13.440145,
+          "y": 14.808677
+        },
+        "velocity": {
+          "x": 0.359566,
+          "y": -0.122007
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-nozzle-left-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -11.627529,
+          "y": 15.653913
+        },
+        "velocity": {
+          "x": 0.317304,
+          "y": -0.031376
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-nozzle-right-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -12.851045,
+          "y": 15.083379
+        },
+        "velocity": {
+          "x": 0.345831,
+          "y": -0.092552
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-nozzle-right-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -11.038429,
+          "y": 15.928615
+        },
+        "velocity": {
+          "x": 0.303569,
+          "y": -0.001921
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.5
+        },
+        "mass": 2.0,
+        "position": {
+          "x": -13.021131,
+          "y": 17.045315
+        },
+        "velocity": {
+          "x": 0.247734,
+          "y": -0.101057
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "material": {
+          "name": "tank",
+          "threshold": {
+            "$expr": "20 * material"
+          },
+          "toughness": {
+            "$expr": "100 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-throat-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -13.588061,
+          "y": 15.125885
+        },
+        "velocity": {
+          "x": 0.343706,
+          "y": -0.129403
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-throat-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -11.775446,
+          "y": 15.971121
+        },
+        "velocity": {
+          "x": 0.301444,
+          "y": -0.038772
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-throat-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -12.998961,
+          "y": 15.400586
+        },
+        "velocity": {
+          "x": 0.329971,
+          "y": -0.099948
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-throat-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -11.186346,
+          "y": 16.245823
+        },
+        "velocity": {
+          "x": 0.287709,
+          "y": -0.009317
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t1-wing",
+        "shape": {
+          "kind": "box",
+          "width": 3.0,
+          "height": 0.2
+        },
+        "mass": 2.0,
+        "position": {
+          "x": -12.873215,
+          "y": 16.728108
+        },
+        "velocity": {
+          "x": 0.263595,
+          "y": -0.093661
+        },
+        "angle": 0.436332313,
+        "angularVelocity": 0.05,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-chamber-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 14.556237,
+          "y": 13.704574
+        },
+        "velocity": {
+          "x": -0.063634,
+          "y": 0.115501
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-chamber-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 13.872196,
+          "y": 11.825189
+        },
+        "velocity": {
+          "x": -0.213985,
+          "y": 0.170224
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-chamber-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 14.248418,
+          "y": 12.858851
+        },
+        "velocity": {
+          "x": -0.131292,
+          "y": 0.140127
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-chamber-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 13.564378,
+          "y": 10.979466
+        },
+        "velocity": {
+          "x": -0.281643,
+          "y": 0.19485
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-engine-l",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": 14.872174,
+          "y": 13.110703
+        },
+        "velocity": {
+          "x": -0.111144,
+          "y": 0.090226
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-engine-r",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": 14.188134,
+          "y": 11.231317
+        },
+        "velocity": {
+          "x": -0.261495,
+          "y": 0.144949
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1.0
+        },
+        "mass": 8.0,
+        "position": {
+          "x": 15.751754,
+          "y": 11.726384
+        },
+        "velocity": {
+          "x": -0.221889,
+          "y": 0.01986
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-leg-left",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": 0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": 14.263643,
+          "y": 14.132857
+        },
+        "velocity": {
+          "x": -0.029371,
+          "y": 0.138909
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-leg-right",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": -0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": 13.064944,
+          "y": 10.839458
+        },
+        "velocity": {
+          "x": -0.292843,
+          "y": 0.234804
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-nozzle-left-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.76173,
+          "y": 13.860729
+        },
+        "velocity": {
+          "x": -0.051142,
+          "y": 0.179062
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-nozzle-left-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.07769,
+          "y": 11.981344
+        },
+        "velocity": {
+          "x": -0.201493,
+          "y": 0.233785
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-nozzle-right-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.539417,
+          "y": 13.249929
+        },
+        "velocity": {
+          "x": -0.100006,
+          "y": 0.196847
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-nozzle-right-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 12.855377,
+          "y": 11.370544
+        },
+        "velocity": {
+          "x": -0.250357,
+          "y": 0.25157
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.5
+        },
+        "mass": 2.0,
+        "position": {
+          "x": 15.046985,
+          "y": 11.982899
+        },
+        "velocity": {
+          "x": -0.201368,
+          "y": 0.076241
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "material": {
+          "name": "tank",
+          "threshold": {
+            "$expr": "20 * material"
+          },
+          "toughness": {
+            "$expr": "100 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-throat-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 14.090622,
+          "y": 13.741022
+        },
+        "velocity": {
+          "x": -0.060718,
+          "y": 0.15275
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-throat-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.406582,
+          "y": 11.861637
+        },
+        "velocity": {
+          "x": -0.211069,
+          "y": 0.207473
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-throat-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.868309,
+          "y": 13.130222
+        },
+        "velocity": {
+          "x": -0.109582,
+          "y": 0.170535
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-throat-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.184269,
+          "y": 11.250836
+        },
+        "velocity": {
+          "x": -0.259933,
+          "y": 0.225258
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t2-wing",
+        "shape": {
+          "kind": "box",
+          "width": 3.0,
+          "height": 0.2
+        },
+        "mass": 2.0,
+        "position": {
+          "x": 14.718092,
+          "y": 12.102606
+        },
+        "velocity": {
+          "x": -0.191792,
+          "y": 0.102553
+        },
+        "angle": -1.919862177,
+        "angularVelocity": -0.08,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-chamber-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 4.601619,
+          "y": 28.733018
+        },
+        "velocity": {
+          "x": 0.078009,
+          "y": -0.101951
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-chamber-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 2.632004,
+          "y": 29.080314
+        },
+        "velocity": {
+          "x": 0.067591,
+          "y": -0.16104
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-chamber-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 3.715292,
+          "y": 28.889301
+        },
+        "velocity": {
+          "x": 0.073321,
+          "y": -0.128541
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-chamber-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 1.745677,
+          "y": 29.236598
+        },
+        "velocity": {
+          "x": 0.062902,
+          "y": -0.18763
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-engine-l",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": 4.071632,
+          "y": 28.318756
+        },
+        "velocity": {
+          "x": 0.090437,
+          "y": -0.117851
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-engine-r",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.2
+        },
+        "mass": 1.0,
+        "position": {
+          "x": 2.102016,
+          "y": 28.666052
+        },
+        "velocity": {
+          "x": 0.080018,
+          "y": -0.17694
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1.0,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1.0
+        },
+        "mass": 8.0,
+        "position": {
+          "x": 2.861081,
+          "y": 27.212154
+        },
+        "velocity": {
+          "x": 0.123635,
+          "y": -0.154168
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-leg-left",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": 0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": 4.972587,
+          "y": 29.095537
+        },
+        "velocity": {
+          "x": 0.067134,
+          "y": -0.090822
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-leg-right",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": -0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": 1.52107,
+          "y": 29.704132
+        },
+        "velocity": {
+          "x": 0.048876,
+          "y": -0.194368
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-nozzle-left-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 4.617437,
+          "y": 29.54257
+        },
+        "velocity": {
+          "x": 0.053723,
+          "y": -0.101477
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-nozzle-left-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 2.647821,
+          "y": 29.889866
+        },
+        "velocity": {
+          "x": 0.043304,
+          "y": -0.160565
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-nozzle-right-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 3.977312,
+          "y": 29.655441
+        },
+        "velocity": {
+          "x": 0.050337,
+          "y": -0.120681
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-nozzle-right-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 2.007696,
+          "y": 30.002738
+        },
+        "velocity": {
+          "x": 0.039918,
+          "y": -0.179769
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.0,
+          "height": 0.5
+        },
+        "mass": 2.0,
+        "position": {
+          "x": 2.991318,
+          "y": 27.95076
+        },
+        "velocity": {
+          "x": 0.101477,
+          "y": -0.15026
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "material": {
+          "name": "tank",
+          "threshold": {
+            "$expr": "20 * material"
+          },
+          "toughness": {
+            "$expr": "100 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-throat-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 4.55666,
+          "y": 29.197887
+        },
+        "velocity": {
+          "x": 0.064063,
+          "y": -0.1033
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-throat-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 2.587045,
+          "y": 29.545184
+        },
+        "velocity": {
+          "x": 0.053644,
+          "y": -0.162389
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-throat-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 3.916535,
+          "y": 29.310759
+        },
+        "velocity": {
+          "x": 0.060677,
+          "y": -0.122504
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-throat-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 1.94692,
+          "y": 29.658055
+        },
+        "velocity": {
+          "x": 0.050258,
+          "y": -0.181592
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "t3-wing",
+        "shape": {
+          "kind": "box",
+          "width": 3.0,
+          "height": 0.2
+        },
+        "mass": 2.0,
+        "position": {
+          "x": 3.052094,
+          "y": 28.295442
+        },
+        "velocity": {
+          "x": 0.091137,
+          "y": -0.148437
+        },
+        "angle": 2.967059728,
+        "angularVelocity": 0.03,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": {
+            "$expr": "50 * material"
+          },
+          "toughness": {
+            "$expr": "600 * material"
+          }
+        }
+      },
+      {
+        "id": "rock-c",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -5.889209,
+              "y": -0.385818
+            },
+            {
+              "x": -5.211609,
+              "y": -2.391018
+            },
+            {
+              "x": -2.663609,
+              "y": -5.307118
+            },
+            {
+              "x": -1.006909,
+              "y": -6.482318
+            },
+            {
+              "x": 5.096691,
+              "y": -3.804918
+            },
+            {
+              "x": 5.737491,
+              "y": 0.539682
+            },
+            {
+              "x": 2.485691,
+              "y": 5.617382
+            },
+            {
+              "x": -1.736109,
+              "y": 6.661582
+            },
+            {
+              "x": -3.060709,
+              "y": 4.981382
+            },
+            {
+              "x": -4.958909,
+              "y": 1.785282
+            }
+          ]
+        },
+        "mass": 4146.8,
+        "position": {
+          "x": -24,
+          "y": 52
+        },
+        "velocity": {
+          "x": 0.1732,
+          "y": -0.199
+        },
+        "angle": 0,
+        "angularVelocity": 0.0624,
+        "restitution": 0.4,
+        "friction": 0.6,
+        "gravity": {
+          "mu": 53.237,
+          "core": 4.14
+        }
+      },
+      {
+        "id": "rock-d",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -9.284166,
+              "y": 1.501988
+            },
+            {
+              "x": -6.658266,
+              "y": -5.329212
+            },
+            {
+              "x": -3.283666,
+              "y": -7.079312
+            },
+            {
+              "x": 1.439934,
+              "y": -9.519912
+            },
+            {
+              "x": 4.810834,
+              "y": -6.786112
+            },
+            {
+              "x": 6.771534,
+              "y": -3.941312
+            },
+            {
+              "x": 8.228034,
+              "y": 3.629888
+            },
+            {
+              "x": 6.181534,
+              "y": 7.419488
+            },
+            {
+              "x": -3.087066,
+              "y": 7.920588
+            }
+          ]
+        },
+        "mass": 8599.4,
+        "position": {
+          "x": 38,
+          "y": 30
+        },
+        "velocity": {
+          "x": 0.0657,
+          "y": 0.1677
+        },
+        "angle": 0,
+        "angularVelocity": -0.0464,
+        "restitution": 0.4,
+        "friction": 0.6,
+        "gravity": {
+          "mu": 66.787,
+          "core": 5.359
+        }
+      },
+      {
+        "id": "rock-a",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -5.050892,
+              "y": 1.109229
+            },
+            {
+              "x": -3.760292,
+              "y": -2.812871
+            },
+            {
+              "x": -2.940692,
+              "y": -4.717771
+            },
+            {
+              "x": -0.592892,
+              "y": -5.329371
+            },
+            {
+              "x": 4.118508,
+              "y": -2.343571
+            },
+            {
+              "x": 5.566308,
+              "y": -0.238471
+            },
+            {
+              "x": 4.091508,
+              "y": 2.477329
+            },
+            {
+              "x": 2.433608,
+              "y": 4.148829
+            },
+            {
+              "x": 0.478508,
+              "y": 4.768129
+            },
+            {
+              "x": -1.459092,
+              "y": 5.216729
+            }
+          ]
+        },
+        "mass": 2912.7,
+        "position": {
+          "x": -36,
+          "y": -12
+        },
+        "velocity": {
+          "x": -0.1186,
+          "y": -0.0668
+        },
+        "angle": 0,
+        "angularVelocity": -0.0423,
+        "restitution": 0.4,
+        "friction": 0.6,
+        "gravity": {
+          "mu": 33.826,
+          "core": 3.371
+        }
+      }
+    ],
+    "joints": [
+      {
+        "id": "w-head-left-l",
+        "a": "engine-l",
+        "b": "chamber-left-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-head-right-l",
+        "a": "engine-l",
+        "b": "chamber-right-l",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-left-throat-l",
+        "a": "chamber-left-l",
+        "b": "throat-left-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-right-throat-l",
+        "a": "chamber-right-l",
+        "b": "throat-right-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-throat-nozzle-left-l",
+        "a": "throat-left-l",
+        "b": "nozzle-left-l",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-throat-nozzle-right-l",
+        "a": "throat-right-l",
+        "b": "nozzle-right-l",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-head-left-r",
+        "a": "engine-r",
+        "b": "chamber-left-r",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-head-right-r",
+        "a": "engine-r",
+        "b": "chamber-right-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-left-throat-r",
+        "a": "chamber-left-r",
+        "b": "throat-left-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-right-throat-r",
+        "a": "chamber-right-r",
+        "b": "throat-right-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-throat-nozzle-left-r",
+        "a": "throat-left-r",
+        "b": "nozzle-left-r",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-throat-nozzle-right-r",
+        "a": "throat-right-r",
+        "b": "nozzle-right-r",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-wing-left",
+        "a": "wing",
+        "b": "engine-l",
+        "anchorA": {
+          "x": -1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-wing-right",
+        "a": "wing",
+        "b": "engine-r",
+        "anchorA": {
+          "x": 1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-wing-tank",
+        "a": "wing",
+        "b": "tank",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.25
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-tank-hull",
+        "a": "tank",
+        "b": "hull",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-wing-leg-left",
+        "a": "wing",
+        "b": "leg-left",
+        "anchorA": {
+          "x": -1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-wing-leg-right",
+        "a": "wing",
+        "b": "leg-right",
+        "anchorA": {
+          "x": 1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": -0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-hull-breech",
+        "a": "hull",
+        "b": "breech",
+        "anchorA": {
+          "x": 0,
+          "y": 0.5
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.15
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "w-breech-left",
+        "a": "breech",
+        "b": "barrel-left",
+        "anchorA": {
+          "x": -0.25,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": {
+            "$expr": "-barrel / 2"
+          }
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "w-breech-right",
+        "a": "breech",
+        "b": "barrel-right",
+        "anchorA": {
+          "x": 0.25,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": {
+            "$expr": "-barrel / 2"
+          }
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      },
+      {
+        "id": "t1-w-head-left-l",
+        "a": "t1-engine-l",
+        "b": "t1-chamber-left-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-head-right-l",
+        "a": "t1-engine-l",
+        "b": "t1-chamber-right-l",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-left-throat-l",
+        "a": "t1-chamber-left-l",
+        "b": "t1-throat-left-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-right-throat-l",
+        "a": "t1-chamber-right-l",
+        "b": "t1-throat-right-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-throat-nozzle-left-l",
+        "a": "t1-throat-left-l",
+        "b": "t1-nozzle-left-l",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-throat-nozzle-right-l",
+        "a": "t1-throat-right-l",
+        "b": "t1-nozzle-right-l",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-head-left-r",
+        "a": "t1-engine-r",
+        "b": "t1-chamber-left-r",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-head-right-r",
+        "a": "t1-engine-r",
+        "b": "t1-chamber-right-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-left-throat-r",
+        "a": "t1-chamber-left-r",
+        "b": "t1-throat-left-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-right-throat-r",
+        "a": "t1-chamber-right-r",
+        "b": "t1-throat-right-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-throat-nozzle-left-r",
+        "a": "t1-throat-left-r",
+        "b": "t1-nozzle-left-r",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-throat-nozzle-right-r",
+        "a": "t1-throat-right-r",
+        "b": "t1-nozzle-right-r",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-wing-left",
+        "a": "t1-wing",
+        "b": "t1-engine-l",
+        "anchorA": {
+          "x": -1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-wing-right",
+        "a": "t1-wing",
+        "b": "t1-engine-r",
+        "anchorA": {
+          "x": 1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-wing-tank",
+        "a": "t1-wing",
+        "b": "t1-tank",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.25
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-tank-hull",
+        "a": "t1-tank",
+        "b": "t1-hull",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-wing-leg-left",
+        "a": "t1-wing",
+        "b": "t1-leg-left",
+        "anchorA": {
+          "x": -1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t1-w-wing-leg-right",
+        "a": "t1-wing",
+        "b": "t1-leg-right",
+        "anchorA": {
+          "x": 1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": -0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-head-left-l",
+        "a": "t2-engine-l",
+        "b": "t2-chamber-left-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-head-right-l",
+        "a": "t2-engine-l",
+        "b": "t2-chamber-right-l",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-left-throat-l",
+        "a": "t2-chamber-left-l",
+        "b": "t2-throat-left-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-right-throat-l",
+        "a": "t2-chamber-right-l",
+        "b": "t2-throat-right-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-throat-nozzle-left-l",
+        "a": "t2-throat-left-l",
+        "b": "t2-nozzle-left-l",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-throat-nozzle-right-l",
+        "a": "t2-throat-right-l",
+        "b": "t2-nozzle-right-l",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-head-left-r",
+        "a": "t2-engine-r",
+        "b": "t2-chamber-left-r",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-head-right-r",
+        "a": "t2-engine-r",
+        "b": "t2-chamber-right-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-left-throat-r",
+        "a": "t2-chamber-left-r",
+        "b": "t2-throat-left-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-right-throat-r",
+        "a": "t2-chamber-right-r",
+        "b": "t2-throat-right-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-throat-nozzle-left-r",
+        "a": "t2-throat-left-r",
+        "b": "t2-nozzle-left-r",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-throat-nozzle-right-r",
+        "a": "t2-throat-right-r",
+        "b": "t2-nozzle-right-r",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-wing-left",
+        "a": "t2-wing",
+        "b": "t2-engine-l",
+        "anchorA": {
+          "x": -1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-wing-right",
+        "a": "t2-wing",
+        "b": "t2-engine-r",
+        "anchorA": {
+          "x": 1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-wing-tank",
+        "a": "t2-wing",
+        "b": "t2-tank",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.25
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-tank-hull",
+        "a": "t2-tank",
+        "b": "t2-hull",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-wing-leg-left",
+        "a": "t2-wing",
+        "b": "t2-leg-left",
+        "anchorA": {
+          "x": -1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t2-w-wing-leg-right",
+        "a": "t2-wing",
+        "b": "t2-leg-right",
+        "anchorA": {
+          "x": 1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": -0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-head-left-l",
+        "a": "t3-engine-l",
+        "b": "t3-chamber-left-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-head-right-l",
+        "a": "t3-engine-l",
+        "b": "t3-chamber-right-l",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-left-throat-l",
+        "a": "t3-chamber-left-l",
+        "b": "t3-throat-left-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-right-throat-l",
+        "a": "t3-chamber-right-l",
+        "b": "t3-throat-right-l",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-throat-nozzle-left-l",
+        "a": "t3-throat-left-l",
+        "b": "t3-nozzle-left-l",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-throat-nozzle-right-l",
+        "a": "t3-throat-right-l",
+        "b": "t3-nozzle-right-l",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-head-left-r",
+        "a": "t3-engine-r",
+        "b": "t3-chamber-left-r",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-head-right-r",
+        "a": "t3-engine-r",
+        "b": "t3-chamber-right-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-left-throat-r",
+        "a": "t3-chamber-left-r",
+        "b": "t3-throat-left-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-right-throat-r",
+        "a": "t3-chamber-right-r",
+        "b": "t3-throat-right-r",
+        "anchorA": {
+          "x": 0.0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-throat-nozzle-left-r",
+        "a": "t3-throat-left-r",
+        "b": "t3-nozzle-left-r",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-throat-nozzle-right-r",
+        "a": "t3-throat-right-r",
+        "b": "t3-nozzle-right-r",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-wing-left",
+        "a": "t3-wing",
+        "b": "t3-engine-l",
+        "anchorA": {
+          "x": -1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-wing-right",
+        "a": "t3-wing",
+        "b": "t3-engine-r",
+        "anchorA": {
+          "x": 1.0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-wing-tank",
+        "a": "t3-wing",
+        "b": "t3-tank",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.25
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-tank-hull",
+        "a": "t3-tank",
+        "b": "t3-hull",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-wing-leg-left",
+        "a": "t3-wing",
+        "b": "t3-leg-left",
+        "anchorA": {
+          "x": -1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      },
+      {
+        "id": "t3-w-wing-leg-right",
+        "a": "t3-wing",
+        "b": "t3-leg-right",
+        "anchorA": {
+          "x": 1.425,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": -0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": {
+            "$expr": "5000 * welds"
+          },
+          "compression": {
+            "$expr": "10000 * welds"
+          },
+          "shear": {
+            "$expr": "3000 * welds"
+          },
+          "torque": {
+            "$expr": "2000 * welds"
+          }
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "feed-h2-l",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine-l",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "feed-o2-l",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine-l",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "feed-h2-r",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine-r",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "feed-o2-r",
+        "kind": "feed",
+        "from": "tank",
+        "to": "engine-r",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "ctl-left",
+        "kind": "control",
+        "channel": "left",
+        "to": "engine-l"
+      },
+      {
+        "id": "ctl-right",
+        "kind": "control",
+        "channel": "right",
+        "to": "engine-r"
+      },
+      {
+        "id": "feed-h2-gun",
+        "kind": "feed",
+        "from": "tank",
+        "to": "breech",
+        "resource": "h2",
+        "rate": {
+          "$expr": "charge / 9 / 0.5"
+        }
+      },
+      {
+        "id": "feed-o2-gun",
+        "kind": "feed",
+        "from": "tank",
+        "to": "breech",
+        "resource": "o2",
+        "rate": {
+          "$expr": "charge * 8 / 9 / 0.5"
+        }
+      },
+      {
+        "id": "ctl-fire",
+        "kind": "control",
+        "channel": "fire",
+        "to": "breech"
+      }
+    ],
+    "gravity": {
+      "x": 0,
+      "y": 0
+    },
+    "bounds": {
+      "min": {
+        "x": -500,
+        "y": -500
+      },
+      "max": {
+        "x": 500,
+        "y": 500
+      },
+      "farField": 10,
+      "depth": 2
+    }
+  },
+  "timeline": [],
+  "end": {
+    "steps": 120
+  },
+  "probes": [
+    {
+      "id": "vx",
+      "path": "assembly[id=hull].velocity.x"
+    },
+    {
+      "id": "vy",
+      "path": "assembly[id=hull].velocity.y"
+    },
+    {
+      "id": "shells",
+      "path": "bodies[id=breech].magazine.count"
+    },
+    {
+      "id": "hullIntegrity",
+      "path": "bodies[id=hull].integrity"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "Fly with Q and E; F fires the cannon on the nose. Each shot kicks the ship back, so aim by turning, fire, then correct. Three unmanned ships drift nearby, the nearest about 15 m off, with three asteroids further out whose gravity bends your shots a little. Hit a tank and it leaks; hit hard enough and parts break off. Try a heavier shell, a bigger charge, a longer barrel or a shorter reload, and turn everyone's strength down or up.",
+    "overlays": [
+      "velocity",
+      "damage"
+    ],
+    "graphs": [
+      "vx",
+      "vy",
+      "shells"
+    ],
+    "camera": {
+      "x": 0,
+      "y": 8,
+      "zoom": 10
+    },
+    "follow": "hull",
+    "keys": {
+      "q": "left",
+      "e": "right",
+      "f": "fire"
+    },
+    "labels": false
+  },
+  "parameters": [
+    {
+      "id": "charge",
+      "label": "Propellant charge",
+      "unit": "kg",
+      "min": 0.01,
+      "max": 0.5,
+      "step": 0.01,
+      "default": 0.1
+    },
+    {
+      "id": "shellMass",
+      "label": "Shell mass",
+      "unit": "kg",
+      "min": 0.5,
+      "max": 10,
+      "step": 0.5,
+      "default": 2
+    },
+    {
+      "id": "barrel",
+      "label": "Barrel length",
+      "unit": "m",
+      "min": 1,
+      "max": 4,
+      "step": 0.25,
+      "default": 2
+    },
+    {
+      "id": "ammo",
+      "label": "Shells",
+      "unit": "",
+      "min": 1,
+      "max": 30,
+      "step": 1,
+      "default": 10
+    },
+    {
+      "id": "reload",
+      "label": "Reload time",
+      "unit": "s",
+      "min": 0.25,
+      "max": 5,
+      "step": 0.25,
+      "default": 1
+    },
+    {
+      "id": "material",
+      "label": "Material strength",
+      "unit": "\u00d7",
+      "min": 0.05,
+      "max": 50,
+      "step": 0.05,
+      "default": 1
+    },
+    {
+      "id": "welds",
+      "label": "Weld strength",
+      "unit": "\u00d7",
+      "min": 0.01,
+      "max": 100,
+      "step": 0.01,
+      "default": 1
+    }
+  ]
+}
