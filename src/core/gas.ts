@@ -1061,7 +1061,7 @@ export function stepGas(
   let wNext = new Int32Array(wCap);
   let wWall = new Int32Array(wCap);
   let wn = 0;
-  while (1 << hBits < 2 * n + 2) hBits++;
+  while (1 << hBits < 4 * n + 4) hBits++;
   if (hStamp.length !== 1 << hBits) {
     hStamp = new Int32Array(1 << hBits);
     hCx = new Int32Array(1 << hBits);
@@ -1070,8 +1070,10 @@ export function stepGas(
     hTail = new Int32Array(1 << hBits);
   }
   const hMask = (1 << hBits) - 1;
+  const hShift = 32 - hBits;
   const slotOf = (cx: number, cy: number): number => {
-    let h = (Math.imul(cx, 0x9e3779b1) ^ Math.imul(cy, 0x85ebca77)) & hMask;
+    // Multiplicative (Fibonacci) hashing: the high bits of the product are well mixed.
+    let h = Math.imul(cx ^ Math.imul(cy, 0x85ebca77), 0x9e3779b1) >>> hShift;
     while (hStamp[h] === stamp && (hCx[h] !== cx || hCy[h] !== cy)) h = (h + 1) & hMask;
     return h;
   };
@@ -1148,7 +1150,8 @@ export function stepGas(
         continue;
       }
       const clamped = x0 < -32767 || x1 > 32767 || y0 < -32767 || y1 > 32767;
-      if (area <= nOcc || clamped) {
+      // Probing the hash costs several times a plain comparison, so walls over more cells test the gas cells instead.
+      if (4 * area <= nOcc || clamped) {
         // Each cell under the wall (clamped cells repeat, as they did in a plain grid).
         for (let gx = x0; gx <= x1; gx++)
           for (let gy = y0; gy <= y1; gy++) {
@@ -1237,6 +1240,7 @@ export function stepGas(
   let gS = new Float64Array(gcap);
 
   let runStart = new Int32Array(0);
+  const stencilAt = new Int32Array(4);
   let runKey = new Float64Array(0);
 
   /** Parcels i and j are on opposite faces of the same body (a thin wall between them). */
@@ -1438,6 +1442,7 @@ export function stepGas(
 
     let np = 0;
     let ng = 0;
+    stencilAt[0] = stencilAt[1] = stencilAt[2] = stencilAt[3] = 0;
     for (let r = 0; r < nRuns; r++) {
       const a0 = runStart[r];
       const a1 = runStart[r + 1];
@@ -1448,21 +1453,13 @@ export function stepGas(
         let b1 = a1;
         if (st > 0) {
           const key = key0 + (st === 1 ? 1 : st === 2 ? 65535 : st === 3 ? 65536 : 65537);
-          // Binary search for the run with this key (runs are sorted by key).
-          let lo = r + 1;
-          let hi = nRuns - 1;
-          let found = -1;
-          while (lo <= hi) {
-            const mid = (lo + hi) >> 1;
-            const v = runKey[mid];
-            if (v === key) {
-              found = mid;
-              break;
-            }
-            if (v < key) lo = mid + 1;
-            else hi = mid - 1;
-          }
-          if (found < 0) continue;
+          // The run with this key, if any: runs are sorted by key and r's keys only grow, so each
+          // stencil cell's pointer only moves forward.
+          let at = stencilAt[st - 1];
+          while (at < nRuns && runKey[at] < key) at++;
+          stencilAt[st - 1] = at;
+          if (at >= nRuns || runKey[at] !== key) continue;
+          const found = at;
           b0 = runStart[found];
           b1 = runStart[found + 1];
         }

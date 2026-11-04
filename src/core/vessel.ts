@@ -194,10 +194,36 @@ export function vesselShape(world: World, b: Body, roots = assemblyRoots(world))
   return shape;
 }
 
+// A quick check that nothing the shape depends on has been replaced since last time: the objects
+// themselves (edits replace them), not their contents.
+const objIds = new WeakMap<object, number>();
+let nextObj = 1;
+function idOf(o: object): number {
+  let i = objIds.get(o);
+  if (i === undefined) {
+    i = nextObj++;
+    objIds.set(o, i);
+  }
+  return i;
+}
+const lastShape = new WeakMap<Body, { sig: string; shape: VesselShape | null }>();
+
 function vesselShapeNow(world: World, b: Body, roots: Map<string, string>): VesselShape | null {
   const f = frameOf(b);
   if (!f) return null;
   const members = assemblyOf(world, b, roots);
+  const inj = b.injector!;
+  const ids = new Set(members.map((m) => m.id));
+  const welds = world.joints.filter((j) => ids.has(j.a) && ids.has(j.b));
+  const sig = [idOf(inj.outlet), idOf(inj.direction), idOf(inj.chamber!), ...members.map((m) => `${m.id}:${idOf(m.shape)}`), ...welds.map((j) => `${idOf(j)}:${idOf(j.anchorA)}:${idOf(j.anchorB)}:${j.referenceAngle}`)].join("|");
+  const last = lastShape.get(b);
+  if (last && last.sig === sig) return last.shape;
+  const shape = shapeFor(b, f, members, world);
+  lastShape.set(b, { sig, shape });
+  return shape;
+}
+
+function shapeFor(b: Body, f: Frame, members: Body[], world: World): VesselShape | null {
   const inj = b.injector!;
   const poses = restPoses(world, b, members);
   const key = JSON.stringify([inj.outlet, inj.direction, inj.chamber, members.map((m) => [m.id, poses.get(m.id), m.shape])]);
