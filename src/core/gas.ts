@@ -90,7 +90,7 @@ export function storeEnergy(st: { resource: string; mass: number }, scale = 1): 
 /** Chemical energy a parcel still holds, J. */
 export function parcelChemical(p: { mass: number; composition: Record<string, number> }, scale = 1): number {
   let e = 0;
-  for (const k of Object.keys(p.composition)) e += p.composition[k] * (SPECIES[k]?.heat ?? 0);
+  for (const k in p.composition) e += p.composition[k] * (SPECIES[k]?.heat ?? 0);
   return (p.mass * e) / scale;
 }
 
@@ -831,8 +831,6 @@ export function leaveThreshold(id: number): number {
 }
 
 const W_C2 = 7 / Math.PI;
-/** Parcel index multiplier in sort keys: allows 2^17 parcels with keys below 2^49. */
-const IDX = 131072;
 /** |dW/dr| = G_C2/h³ · q(1 − q)³ */
 const G_C2 = 140 / Math.PI;
 
@@ -975,11 +973,25 @@ export function stepGas(
   const partJ = new Float64Array(3 * walls.length);
   const tPart = new Float64Array(3 * walls.length);
   /** Adds an impulse on body k, acting along a line through (px, py), to `into`. */
+  // Body positions at the end-of-step pose; bodies don't move until the write-back at the end.
+  const bodyX = new Float64Array(walls.length);
+  const bodyY = new Float64Array(walls.length);
+  for (let k = 0; k < walls.length; k++) {
+    const p = bodies[k].position;
+    bodyX[k] = p.x;
+    bodyY[k] = p.y;
+  }
+  // Bodies the gas touched, each added to acc.involved once.
+  const touched = new Uint8Array(walls.length);
+  const involve = (k: number) => {
+    if (touched[k]) return;
+    touched[k] = 1;
+    acc.involved.add(bodies[k].id);
+  };
   const pushPart = (into: Float64Array, k: number, jx: number, jy: number, px: number, py: number) => {
-    const b = bodies[k];
     const w = walls[k];
-    let bx = b.position.x;
-    let by = b.position.y;
+    let bx = bodyX[k];
+    let by = bodyY[k];
     if (w.unit >= 0) {
       const u = units[w.unit];
       const dx = bx - u.ex;
@@ -1032,11 +1044,61 @@ export function stepGas(
   // Wall candidates per grid cell, rebuilt each substep from each wall's bounding circle at its current pose.
   // Only cells where gas is are filled, so a large body (a ground) costs no more than the gas it touches;
   // a wall that would still fill very many cells is tested against every parcel instead.
-  const wallCells = new Map<number, number[]>();
+  // Walls are filed only in cells that hold gas: an open-addressed hash of those cells, in typed arrays
+  // (a slot is in use when its stamp is this substep's), each with a list of walls in ascending order,
+  // linked through wNext.
+  let hBits = 10;
+  let hStamp = new Int32Array(1 << hBits);
+  let hCx = new Int32Array(1 << hBits);
+  let hCy = new Int32Array(1 << hBits);
+  let hHead = new Int32Array(1 << hBits);
+  let hTail = new Int32Array(1 << hBits);
+  let stamp = 0;
+  const occ = new Int32Array(n); // the slots in use
+  let nOcc = 0;
+  const pSlot = new Int32Array(n); // each parcel's cell
+  let wCap = 256;
+  let wNext = new Int32Array(wCap);
+  let wWall = new Int32Array(wCap);
+  let wn = 0;
+  while (1 << hBits < 2 * n + 2) hBits++;
+  if (hStamp.length !== 1 << hBits) {
+    hStamp = new Int32Array(1 << hBits);
+    hCx = new Int32Array(1 << hBits);
+    hCy = new Int32Array(1 << hBits);
+    hHead = new Int32Array(1 << hBits);
+    hTail = new Int32Array(1 << hBits);
+  }
+  const hMask = (1 << hBits) - 1;
+  const slotOf = (cx: number, cy: number): number => {
+    let h = (Math.imul(cx, 0x9e3779b1) ^ Math.imul(cy, 0x85ebca77)) & hMask;
+    while (hStamp[h] === stamp && (hCx[h] !== cx || hCy[h] !== cy)) h = (h + 1) & hMask;
+    return h;
+  };
+  /** Appends wall k to the list of slot h. */
+  const fileWall = (h: number, k: number) => {
+    if (wn === wCap) {
+      wCap *= 2;
+      const a = new Int32Array(wCap);
+      a.set(wNext);
+      wNext = a;
+      const b = new Int32Array(wCap);
+      b.set(wWall);
+      wWall = b;
+    }
+    wWall[wn] = k;
+    wNext[wn] = -1;
+    if (hHead[h] < 0) hHead[h] = wn;
+    else wNext[hTail[h]] = wn;
+    hTail[h] = wn;
+    wn++;
+  };
   const bigWalls: number[] = [];
   const BIG_WALL_CELLS = 4096;
   const buildWallCells = () => {
-    wallCells.clear();
+    stamp++;
+    nOcc = 0;
+    wn = 0;
     bigWalls.length = 0;
     let gx0 = Infinity;
     let gx1 = -Infinity;
@@ -1047,6 +1109,17 @@ export function stepGas(
       if (x[i] > gx1) gx1 = x[i];
       if (y[i] < gy0) gy0 = y[i];
       if (y[i] > gy1) gy1 = y[i];
+      const pcx = clampCell(Math.floor(x[i] * inv));
+      const pcy = clampCell(Math.floor(y[i] * inv));
+      const h = slotOf(pcx, pcy);
+      if (hStamp[h] !== stamp) {
+        hStamp[h] = stamp;
+        hCx[h] = pcx;
+        hCy[h] = pcy;
+        hHead[h] = -1;
+        occ[nOcc++] = h;
+      }
+      pSlot[i] = h;
     }
     const cx0 = Math.floor(gx0 * inv) - 1;
     const cx1 = Math.floor(gx1 * inv) + 1;
@@ -1069,17 +1142,26 @@ export function stepGas(
       const y0 = Math.max(cy0, Math.floor((cy - r) * inv));
       const y1 = Math.min(cy1, Math.floor((cy + r) * inv));
       if (x0 > x1 || y0 > y1) continue; // no gas near this body
-      if ((x1 - x0 + 1) * (y1 - y0 + 1) > BIG_WALL_CELLS) {
+      const area = (x1 - x0 + 1) * (y1 - y0 + 1);
+      if (area > BIG_WALL_CELLS) {
         bigWalls.push(k);
         continue;
       }
-      for (let gx = x0; gx <= x1; gx++)
-        for (let gy = y0; gy <= y1; gy++) {
-          const key = cellKey(gx, gy);
-          const list = wallCells.get(key);
-          if (list) list.push(k);
-          else wallCells.set(key, [k]);
+      const clamped = x0 < -32767 || x1 > 32767 || y0 < -32767 || y1 > 32767;
+      if (area <= nOcc || clamped) {
+        // Each cell under the wall (clamped cells repeat, as they did in a plain grid).
+        for (let gx = x0; gx <= x1; gx++)
+          for (let gy = y0; gy <= y1; gy++) {
+            const h = slotOf(clampCell(gx), clampCell(gy));
+            if (hStamp[h] === stamp) fileWall(h, k);
+          }
+      } else {
+        // Fewer gas cells than cells under the wall: test each gas cell instead.
+        for (let o = 0; o < nOcc; o++) {
+          const h = occ[o];
+          if (hCx[h] >= x0 && hCx[h] <= x1 && hCy[h] >= y0 && hCy[h] <= y1) fileWall(h, k);
         }
+      }
     }
   };
 
@@ -1126,8 +1208,12 @@ export function stepGas(
   let gContact2 = new Int32Array(eCap);
   let cellX = new Int32Array(eCap);
   let cellY = new Int32Array(eCap);
-  let order = new Float64Array(eCap);
+  let ekey = new Uint32Array(eCap);
+  let sx = new Float64Array(eCap); // entry positions in sorted order
+  let sy = new Float64Array(eCap);
   let idx = new Int32Array(eCap);
+  let idx2 = new Int32Array(eCap);
+  const radixCount = new Int32Array(256);
   // Pair lists: parcel–parcel and parcel–ghost. Grown as needed.
   let cap = n * 16;
   let pa = new Int32Array(cap);
@@ -1164,10 +1250,17 @@ export function stepGas(
     for (let a = cStart[i]; a < cStart[i + 1]; a++) if (cW[a] === cW[c] && cNx[a] * cNx[c] + cNy[a] * cNy[c] > 0.5) return true;
     return false;
   };
-  const wallPointVelocity = (wall: Wall, px: number, py: number): [number, number] => {
-    if (wall.unit < 0) return [0, 0];
+  /** The wall's velocity at (px, py), into wpv. */
+  const wpv = { x: 0, y: 0 };
+  const wallPointVelocity = (wall: Wall, px: number, py: number) => {
+    if (wall.unit < 0) {
+      wpv.x = 0;
+      wpv.y = 0;
+      return;
+    }
     const u = units[wall.unit];
-    return [u.vx - u.w * (py - u.cy), u.vy + u.w * (px - u.cx)];
+    wpv.x = u.vx - u.w * (py - u.cy);
+    wpv.y = u.vy + u.w * (px - u.cx);
   };
 
   phase("setup");
@@ -1188,9 +1281,15 @@ export function stepGas(
     let nc = 0;
     for (let i = 0; i < n; i++) {
       cStart[i] = nc;
-      const list = wallCells.get(cellKey(clampCell(Math.floor(x[i] * inv)), clampCell(Math.floor(y[i] * inv))));
-      if (!list && !bigWalls.length) continue;
-      for (const k of list ? (bigWalls.length ? [...list, ...bigWalls] : list) : bigWalls) {
+      let at = hHead[pSlot[i]];
+      if (at < 0 && !bigWalls.length) continue;
+      // This cell's walls, then the big ones.
+      for (let b = 0; at >= 0 || b < bigWalls.length; ) {
+        let k: number;
+        if (at >= 0) {
+          k = wWall[at];
+          at = wNext[at];
+        } else k = bigWalls[b++];
         const w = walls[k];
         toWallFrame(w, x[i], y[i], local);
         if (local.x < w.minX || local.x > w.maxX || local.y < w.minY || local.y > w.maxY) continue;
@@ -1231,8 +1330,11 @@ export function stepGas(
       gContact2 = new Int32Array(eCap);
       cellX = new Int32Array(eCap);
       cellY = new Int32Array(eCap);
-      order = new Float64Array(eCap);
+      ekey = new Uint32Array(eCap);
+      sx = new Float64Array(eCap);
+      sy = new Float64Array(eCap);
       idx = new Int32Array(eCap);
+      idx2 = new Int32Array(eCap);
     }
     for (let i = 0; i < n; i++) {
       ex[i] = x[i];
@@ -1248,8 +1350,8 @@ export function stepGas(
       ex[ne] = x[i] - 2 * d * nx;
       ey[ne] = y[i] - 2 * d * ny;
       // Mirrored velocity relative to the wall: normal component reversed (free slip).
-      const [wvx, wvy] = wallPointVelocity(walls[cW[c]], x[i] - d * nx, y[i] - d * ny);
-      const vn = (vx[i] - wvx) * nx + (vy[i] - wvy) * ny;
+      wallPointVelocity(walls[cW[c]], x[i] - d * nx, y[i] - d * ny);
+      const vn = (vx[i] - wpv.x) * nx + (vy[i] - wpv.y) * ny;
       gvx[ne] = vx[i] - 2 * vn * nx;
       gvy[ne] = vy[i] - 2 * vn * ny;
       gContact[ne] = c;
@@ -1266,9 +1368,10 @@ export function stepGas(
           ey[ne] = y[i] - 2 * cD[c1] * cNy[c1] - 2 * cD[c2] * cNy[c2];
           let gx = vx[i];
           let gy = vy[i];
-          for (const c of [c1, c2]) {
-            const [wvx, wvy] = wallPointVelocity(walls[cW[c]], x[i] - cD[c] * cNx[c], y[i] - cD[c] * cNy[c]);
-            const vn = (gx - wvx) * cNx[c] + (gy - wvy) * cNy[c];
+          for (let t = 0; t < 2; t++) {
+            const c = t === 0 ? c1 : c2;
+            wallPointVelocity(walls[cW[c]], x[i] - cD[c] * cNx[c], y[i] - cD[c] * cNy[c]);
+            const vn = (gx - wpv.x) * cNx[c] + (gy - wpv.y) * cNy[c];
             gx -= 2 * vn * cNx[c];
             gy -= 2 * vn * cNy[c];
           }
@@ -1283,20 +1386,48 @@ export function stepGas(
 
     phase("contacts");
     // --- Neighbour grid: sort entries by cell, then index (deterministic). ---
+    // A stable radix sort of the entries by their 32-bit cell key, a byte at a time; bytes every key
+    // shares are skipped.
+    let kOr = 0;
+    let kAnd = 0xffffffff;
     for (let e = 0; e < ne; e++) {
       cellX[e] = clampCell(Math.floor(ex[e] * inv));
       cellY[e] = clampCell(Math.floor(ey[e] * inv));
-      order[e] = cellKey(cellX[e], cellY[e]) * IDX + e;
+      const key = cellKey(cellX[e], cellY[e]);
+      ekey[e] = key;
+      kOr |= key;
+      kAnd &= key;
+      idx[e] = e;
     }
-    const sorted = order.subarray(0, ne).sort();
-    for (let k = 0; k < ne; k++) idx[k] = sorted[k] % IDX;
+    for (let sh = 0; sh < 32; sh += 8) {
+      if ((((kOr ^ kAnd) >>> sh) & 255) === 0) continue;
+      radixCount.fill(0);
+      for (let k = 0; k < ne; k++) radixCount[(ekey[idx[k]] >>> sh) & 255]++;
+      let sum = 0;
+      for (let d = 0; d < 256; d++) {
+        const c = radixCount[d];
+        radixCount[d] = sum;
+        sum += c;
+      }
+      for (let k = 0; k < ne; k++) {
+        const e = idx[k];
+        idx2[radixCount[(ekey[e] >>> sh) & 255]++] = e;
+      }
+      const t = idx;
+      idx = idx2;
+      idx2 = t;
+    }
+    for (let k = 0; k < ne; k++) {
+      sx[k] = ex[idx[k]];
+      sy[k] = ey[idx[k]];
+    }
     let nRuns = 0;
     if (runStart.length < ne + 1) {
       runStart = new Int32Array(2 * ne + 1);
       runKey = new Float64Array(2 * ne + 1);
     }
     for (let k = 0; k < ne; k++) {
-      const key = Math.floor(sorted[k] / IDX);
+      const key = ekey[idx[k]];
       if (k === 0 || key !== runKey[nRuns - 1]) {
         runStart[nRuns] = k;
         runKey[nRuns] = key;
@@ -1337,14 +1468,14 @@ export function stepGas(
         }
         for (let a = a0; a < a1; a++) {
           const e = idx[a];
-          const exA = ex[e];
-          const eyA = ey[e];
+          const exA = sx[a];
+          const eyA = sy[a];
           for (let b = st === 0 ? a + 1 : b0; b < b1; b++) {
-            const f = idx[b];
-            const dx = exA - ex[f];
-            const dy = eyA - ey[f];
+            const dx = exA - sx[b];
+            const dy = eyA - sy[b];
             const r2 = dx * dx + dy * dy;
             if (r2 >= hmax2) continue; // most candidates are rejected here
+            const f = idx[b];
             const eg = e >= n;
             const fg = f >= n;
             if (eg && fg) continue;
@@ -1537,7 +1668,7 @@ export function stepGas(
           extY += jy;
           extA += x[i] * jy - y[i] * jx;
         }
-        acc.involved.add(bodies[cW[c]].id);
+        involve(cW[c]);
         // Pressure statistic: the impulse's normal part on each face it pushes.
         wallImp += Math.abs(Jm * (exx * cNx[c] + eyy * cNy[c]));
         const c2 = gContact2[g];
@@ -1631,8 +1762,8 @@ export function stepGas(
       const u = wall.unit >= 0 ? units[wall.unit] : null;
       const px = x[i] - d * nx;
       const py = y[i] - d * ny;
-      const [wvx, wvy] = wallPointVelocity(wall, px, py);
-      const vn = (vx[i] - wvx) * nx + (vy[i] - wvy) * ny;
+      wallPointVelocity(wall, px, py);
+      const vn = (vx[i] - wpv.x) * nx + (vy[i] - wpv.y) * ny;
       if (!(vn < 0) || d + vn * ds >= HARD_WALL * rad[i]) continue;
       const rn = u ? (px - u.cx) * ny - (py - u.cy) * nx : 0;
       const invK = 1 / m[i] + (u ? 1 / u.M + (rn * rn) / u.I : 0);
@@ -1688,7 +1819,7 @@ export function stepGas(
       acc.angular += x[i] * iy - y[i] * ix;
     }
     E[i] = Math.max(0, E[i] - dKE);
-    acc.involved.add(bodies[wallIdx].id);
+    involve(wallIdx);
     return sc;
   }
 
