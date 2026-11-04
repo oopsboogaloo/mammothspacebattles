@@ -26,18 +26,25 @@ test("WPN-001 the cannon test fires on its own at 0.5 s, and the shell flies at 
 });
 
 test("WPN-001 the gunship fires on F, recoils, and its magazine loads the next shell", async ({ page }, info) => {
+  type W = { tick: number; bodies: { id: string; mass: number; velocity: { x: number; y: number }; contents?: { mass: number }[]; magazine?: { count: number; shell: { mass: number } } }[]; events: { tick: number; type: string; data: Record<string, unknown> }[] };
+  const sim = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: unknown } } }).__msb.sandbox().world) as Promise<W>;
   await openStarter(page, "gunship");
   await page.getByTestId("play").click();
   await waitForTick(page, 30, 60_000);
   await page.keyboard.down("f");
-  await waitForTick(page, 60, 60_000);
+  // Let go once the shell has left: holding on burns a jet through the empty barrel (slow engines held it for seconds).
+  await expect.poll(async () => (await sim()).bodies.find((b) => b.id === "breech-shell-1")?.velocity.y ?? 0, { timeout: 60_000 }).toBeGreaterThan(30);
   await page.keyboard.up("f");
   // The first shell was loaded at the start; after the shot and the 1 s reload, the second is in.
-  await expect
-    .poll(() => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string }[] } } } }).__msb.sandbox().world.bodies.filter((b) => b.id.startsWith("breech-shell")).length), { timeout: 90_000 })
-    .toBe(2);
+  await expect.poll(async () => (await sim()).bodies.filter((b) => b.id.startsWith("breech-shell")).length, { timeout: 90_000 }).toBe(2);
   await page.getByTestId("play").click();
-  expect((await body(page, "hull"))!.velocity.y).toBeLessThan(-0.5);
+  // Recoil: the ship as a whole (every part but the shells and other ships) moves back, down its axis.
+  const w = await sim();
+  const own = w.bodies.filter((b) => !/^(t[123]-|rock-|breech-shell)/.test(b.id));
+  const mass = (b: W["bodies"][number]) => b.mass + (b.contents ?? []).reduce((s, c) => s + c.mass, 0) + (b.magazine ? b.magazine.count * b.magazine.shell.mass : 0);
+  const vy = own.reduce((s, b) => s + mass(b) * b.velocity.y, 0) / own.reduce((s, b) => s + mass(b), 0);
+  const hits = w.events.filter((e) => e.type === "collision" && own.some((b) => b.id === e.data.a || b.id === e.data.b)).map((e) => `${e.tick}:${e.data.a}/${e.data.b}`);
+  expect(vy, `tick ${w.tick}; ship collisions: ${hits.join(" ") || "none"}`).toBeLessThan(-0.5);
   await shot(page, info, "gunship");
 });
 
