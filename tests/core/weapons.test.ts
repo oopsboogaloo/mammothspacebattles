@@ -128,8 +128,8 @@ describe("gunship (GS)", () => {
     for (let i = 0; i < 360; i++) stepInPlace(w, i === 24 ? set(1) : i === 48 ? set(0) : [], sandbox);
     const shell = w.bodies.find((b) => b.id === "breech-shell-1")!;
     expect(shell.velocity.y).toBeGreaterThan(30);
-    expect(assemblyTotals(w, "hull")!.velocity.y).toBeLessThan(-1); // recoil, down the ship's axis
-    expect(w.bodies.find((b) => b.id === "breech")!.magazine!.count).toBe(8); // second loaded, 8 left
+    expect(assemblyTotals(w, "hull")!.velocity.y).toBeLessThan(-0.5); // recoil down the ship's axis: 0.86 m/s with 30 shells (60 kg) still aboard
+    expect(w.bodies.find((b) => b.id === "breech")!.magazine!.count).toBe(28); // second loaded, 28 of 30 left
     expect(w.bodies.some((b) => b.id === "breech-shell-2")).toBe(true);
     expect(w.ledger.violations).toBe(0);
   }, 300_000);

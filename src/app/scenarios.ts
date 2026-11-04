@@ -20,6 +20,8 @@ const ORDER: [string, string][] = [
   ["ft-breakable", "FT-B"],
   ["cannon-test", "GUN"],
   ["gunship", "GS"],
+  ["gunship-rubble", "GS-R"],
+  ["asteroid-collision", "AST-C"],
   ["rs02-off-centre-impact", "RS-02"],
   ["rs03-bullet-thin-wall", "RS-03"],
   ["rs04-box-stack", "RS-04"],

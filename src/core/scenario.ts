@@ -6,6 +6,7 @@ import { evaluateFormula } from "./formula.ts";
 import { SPECIES } from "./gas.ts";
 import { resolvePath } from "./path.ts";
 import { resolveProbe } from "./probes.ts";
+import { generateAsteroid, type AsteroidSpec } from "./asteroid.ts";
 import type { LandingGoal } from "./landing.ts";
 import { PROFILES, getProfile } from "./profile.ts";
 import { polygonProblem } from "./shapes.ts";
@@ -61,7 +62,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; asteroids?: AsteroidSpec[] };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -548,6 +549,21 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
       if (!Array.isArray(data.world.joints)) err(v, "$.world.joints", "must be an array");
       else data.world.joints.forEach((j, i) => validateJoint(v, j, `$.world.joints[${i}]`));
     }
+    if (data.world.asteroids !== undefined) {
+      if (!Array.isArray(data.world.asteroids)) err(v, "$.world.asteroids", "must be an array");
+      else
+        data.world.asteroids.forEach((a, i) => {
+          const p = `$.world.asteroids[${i}]`;
+          if (!isObj(a)) return err(v, p, "must be an object {id, seed, pieces, radius, density, bond, position}");
+          str(v, a.id, `${p}.id`);
+          num(v, a.seed, `${p}.seed`, { int: true });
+          num(v, a.pieces, `${p}.pieces`, { int: true, min: 1, max: 200 });
+          for (const k of ["radius", "density", "bond"]) num(v, a[k], `${p}.${k}`, { positive: true });
+          vec(v, a.position, `${p}.position`);
+          if (a.velocity !== undefined) vec(v, a.velocity, `${p}.velocity`);
+          for (const k of ["angle", "angularVelocity"]) if (a[k] !== undefined) num(v, a[k], `${p}.${k}`);
+        });
+    }
     if (data.world.links !== undefined) {
       if (!Array.isArray(data.world.links)) err(v, "$.world.links", "must be an array");
       else data.world.links.forEach((l, i) => validateLink(v, l, `$.world.links[${i}]`));
@@ -661,11 +677,13 @@ export interface RunResult {
 
 /** Builds the scenario's world at tick 0, with step-0 commands not yet applied. */
 export function initialWorld(scn: Scenario): World {
+  // Generated asteroids (AST-002) become ordinary pieces and bonds.
+  const made = (scn.world.asteroids ?? []).map(generateAsteroid);
   return createWorld(
     scn.seed,
-    scn.world.bodies,
+    [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: scn.world.joints, links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge },
     getProfile(scn.profile),
   );
 }
