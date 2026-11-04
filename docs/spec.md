@@ -462,6 +462,14 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
   - With the defaults, a shot leaves at about 44 m/s and kicks the 108 kg ship back by 0.86 m/s (1.4 m/s with 10 shells aboard).
   - One hit dents a target. A 6 kg shell on a 0.3 kg charge breaks one apart. Weak ships (0.3× material, 0.2× welds) shatter.
   - The arena doesn't wrap: a shell that went round the arena came back and hit the ship that fired it.
+  - The cannon burns its propellant with the engines' 20× economy (FLT-010), as a more efficient propellant. The breech holds exactly one shot's draw, a 20th of the charge, so holding F longer can't fire a bigger shot. The tank refills it in 0.5 s.
+- **Gunship 2 (GS2).** A more agile layout:
+  - the engines 0.45 m further out each, 1.45 m from the middle;
+  - the hull and tank between them, hull above tank, under a 3.9 m wing;
+  - the cannon on the wing, 1.5 m lower than the Gunship's, with the same barrel;
+  - 15 shells.
+
+  It weighs 78 kg against 108 kg, with a moment of inertia of 75 kg·m² against 100. The centre of mass is at the cannon's base. Half a second on one engine spins it to 2.0 rad/s, against the Gunship's 1.0. The original Gunship is unchanged apart from the cannon's economy.
 - **Crushed gas.** When a step's substeps can't keep a parcel's thermal energy from going negative, they are halved, up to 20 times. A parcel crushed between two parts closing on each other needed ever shorter substeps: a million in one step, 150 s, as a big shell smashed the ship. Now a halving that doesn't cut the shortfall by at least a quarter stops the retries. Each step also has a budget of 8,000 substeps, retries included. Past it the step finishes in one substep and clamps, and the ledger reports the energy clamped (1.3 J in that shot).
 
 ### 9.8 Asteroids (M7)
@@ -494,7 +502,6 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
   - Suggested: A as the default, B as an option for ships that declare routes. Open questions: does a cut feed spill what was in the line (a leak at the break, DMG-004), and should the sandbox draw link routes?
 - **A cockpit.** A square component that stands for the pilot, where every control channel starts. Controls reach a component only while it is connected to a working cockpit. With the cockpit wrecked or broken off, the rest of the ship takes no commands, and its engines stop or keep their last setting (to decide). This is also where an AI pilot (§13) would sit later.
   - Open questions: is the connection the assembly (as in option A) or routed control links (as in B)? Can a ship have more than one cockpit, and which one wins? Should a cockpit take damage like any part, and does losing it count as a crash in challenges such as LAND?
-- **The cannon's propellant economy.** The ships' cannons should burn propellant with the same 20× economy as their engines (FLT-010), treating it as a more efficient propellant. Today each shot draws its full charge from the ship's tank, so the cannon, not the engines, empties it. Planned for the next change.
 
 ## 10. Performance Requirements
 

@@ -40,3 +40,15 @@ test("WPN-001 the gunship fires on F, recoils, and its magazine loads the next s
   expect((await body(page, "hull"))!.velocity.y).toBeLessThan(-0.5);
   await shot(page, info, "gunship");
 });
+
+test("FLT-002 Gunship 2 opens with its engines either side of the hull and the cannon on the wing", async ({ page }, info) => {
+  await openStarter(page, "gunship-2");
+  const hull = (await body(page, "hull"))!;
+  const left = (await body(page, "engine-l"))!;
+  const right = (await body(page, "engine-r"))!;
+  const breech = (await body(page, "breech"))!;
+  expect(left.position.x).toBeLessThan(hull.position.x - 1);
+  expect(right.position.x).toBeGreaterThan(hull.position.x + 1);
+  expect(breech.position.y).toBeLessThan(1.5);
+  await shot(page, info, "gunship-2");
+});

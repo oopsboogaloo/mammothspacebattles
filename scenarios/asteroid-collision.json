@@ -794,19 +794,19 @@
           {
             "resource": "h2",
             "mass": {
-              "$expr": "charge / 9"
+              "$expr": "charge / 9 / 20"
             },
             "capacity": {
-              "$expr": "charge / 9"
+              "$expr": "charge / 9 / 20"
             }
           },
           {
             "resource": "o2",
             "mass": {
-              "$expr": "charge * 8 / 9"
+              "$expr": "charge * 8 / 9 / 20"
             },
             "capacity": {
-              "$expr": "charge * 8 / 9"
+              "$expr": "charge * 8 / 9 / 20"
             }
           }
         ],
@@ -819,6 +819,7 @@
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
           },
+          "economy": 20,
           "outlet": {
             "x": 0,
             "y": 0.2
@@ -1543,7 +1544,7 @@
         "to": "breech",
         "resource": "h2",
         "rate": {
-          "$expr": "charge / 9 / 0.5"
+          "$expr": "charge / 9 / 20 / 0.5"
         }
       },
       {
@@ -1553,7 +1554,7 @@
         "to": "breech",
         "resource": "o2",
         "rate": {
-          "$expr": "charge * 8 / 9 / 0.5"
+          "$expr": "charge * 8 / 9 / 20 / 0.5"
         }
       },
       {

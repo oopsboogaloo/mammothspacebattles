@@ -134,3 +134,28 @@ describe("gunship (GS)", () => {
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 });
+
+describe("gunship 2 (GS2)", () => {
+  /** Spin after half a second on the left engine alone. */
+  const turn = (file: string) => {
+    const w = initialWorld(parseScenario(readJson(join(ROOT, "scenarios", `${file}.json`))));
+    for (let i = 0; i < 120; i++) stepInPlace(w, i === 0 ? [{ type: "control.set", channel: "left", value: 1 }] : [], sandbox);
+    expect(w.ledger.violations).toBe(0);
+    return Math.abs(assemblyTotals(w, "hull")!.angularVelocity);
+  };
+
+  it("FLT-002 WPN-003 with the engines further apart, the cannon lower and half the shells, it turns about twice as fast", () => {
+    expect(turn("gunship-2")).toBeGreaterThan(1.7 * turn("gunship")); // 2.0 against 1.0 rad/s
+  }, 300_000);
+
+  it("WPN-001 the cannon burns its charge with the engines' economy: a shot takes a 20th of it from the tank", () => {
+    const w = initialWorld(parseScenario(readJson(join(ROOT, "scenarios", "gunship-2.json"))));
+    const breech = () => w.bodies.find((b) => b.id === "breech")!;
+    const stored = () => breech().contents!.reduce((s, c) => s + c.mass, 0);
+    expect(stored()).toBeCloseTo(0.1 / 20, 9); // one shot's draw for the default 0.1 kg charge
+    for (let i = 0; i < 360; i++) stepInPlace(w, i === 24 ? [{ type: "control.set", channel: "fire", value: 1 }] : i === 36 ? [{ type: "control.set", channel: "fire", value: 0 }] : [], sandbox);
+    expect(w.bodies.find((b) => b.id === "breech-shell-1")!.velocity.y).toBeGreaterThan(30);
+    expect(breech().magazine!.count).toBe(13); // 15, one fired, one loaded
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+});
