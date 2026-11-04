@@ -102,15 +102,177 @@ export const SPECIES_LIST = Object.entries(SPECIES).map(([id, sp]) => ({ id, col
 
 const BUCKETS = 32;
 
+// ---------- The plume (SBX-035): soft glowing blobs, blurred together ----------
+
+/** How gas is drawn: as a glowing plume of soft blobs (temperature colours), or as plain dots. */
+export type GasStyle = "plume" | "dots";
+
+/**
+ * Flame colours by temperature, K: white-yellow at the hottest, through orange and red to a dull
+ * ember, then grey smoke once the gas has cooled. Hot gas adds light; smoke is laid over.
+ */
+export const FLAME: readonly (readonly [number, string])[] = [
+  [300, "#8a8d94"],
+  [700, "#8a8d94"],
+  [900, "#6e2a20"],
+  [1200, "#c8442a"],
+  [1600, "#ff8a2e"],
+  [2100, "#ffc85a"],
+  [2700, "#fff3cf"],
+];
+/** Below this the gas is smoke, drawn over what is behind it; above, it glows. */
+export const GLOW_FROM = 800;
+
+/** The plume's colour and opacity at temperature T. */
+export function flameColour(T: number): { colour: string; alpha: number; glow: boolean } {
+  const stops = FLAME;
+  let rgb = hex(stops[0][1]);
+  if (T >= stops[stops.length - 1][0]) rgb = hex(stops[stops.length - 1][1]);
+  else
+    for (let i = 0; i < stops.length - 1; i++) {
+      const [t0, c0] = stops[i];
+      const [t1, c1] = stops[i + 1];
+      if (T < t1 && T >= t0) {
+        const f = (T - t0) / (t1 - t0);
+        const a = hex(c0);
+        const b = hex(c1);
+        rgb = [0, 1, 2].map((k) => Math.round(a[k] + (b[k] - a[k]) * f)) as [number, number, number];
+        break;
+      }
+    }
+  const glow = T >= GLOW_FROM;
+  // Smoke is faint; glow strengthens as the gas gets hotter.
+  const alpha = glow ? Math.min(0.9, 0.35 + 0.55 * ((T - GLOW_FROM) / 1900)) : 0.22;
+  return { colour: `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`, alpha, glow };
+}
+
+const PLUME_BUCKETS = 32;
+const PLUME_DOWN = 4; // the plume is drawn at a quarter of the resolution, then blurred up
+const SPRITE = 32;
+/** Temperature of plume bucket k, log-spaced from 150 K to 3,000 K. */
+const bucketT = (k: number) => 150 * Math.pow(3000 / 150, k / (PLUME_BUCKETS - 1));
+const bucketOf = (T: number) => Math.max(0, Math.min(PLUME_BUCKETS - 1, Math.round((Math.log(Math.max(T, 150) / 150) / Math.log(3000 / 150)) * (PLUME_BUCKETS - 1))));
+let sprites: HTMLCanvasElement[] | null = null;
+let buffer: HTMLCanvasElement | null = null;
+let blurred: HTMLCanvasElement | null = null;
+
+/** A soft round blob per bucket colour: opaque in the middle, fading smoothly to nothing. */
+function plumeSprites(): HTMLCanvasElement[] {
+  if (sprites) return sprites;
+  sprites = [];
+  for (let k = 0; k < PLUME_BUCKETS; k++) {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = SPRITE;
+    const g = cv.getContext("2d")!;
+    const { colour } = flameColour(bucketT(k));
+    const grad = g.createRadialGradient(SPRITE / 2, SPRITE / 2, 0, SPRITE / 2, SPRITE / 2, SPRITE / 2);
+    const [r, gg, b] = colour.slice(4, -1).split(",").map(Number);
+    for (const [at, a] of [
+      [0, 1],
+      [0.3, 0.75],
+      [0.6, 0.3],
+      [0.85, 0.08],
+      [1, 0],
+    ])
+      grad.addColorStop(at, `rgba(${r},${gg},${b},${a})`);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, SPRITE, SPRITE);
+    sprites.push(cv);
+  }
+  return sprites;
+}
+
+/** Can this context draw the plume (a real canvas, not a test recorder)? */
+function canPlume(ctx: Ctx): ctx is Ctx & CanvasRenderingContext2D {
+  return typeof document !== "undefined" && typeof (ctx as Partial<CanvasRenderingContext2D>).drawImage === "function";
+}
+
+/**
+ * The gas as a plume: each parcel a soft blob about its smoothing length across, at a third of the
+ * resolution, smoke laid down first and hot gas added as light, then blurred up over the scene.
+ */
+function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: Viewport): void {
+  const parcels = world.gas.parcels;
+  if (!parcels.length) return;
+  const w = Math.max(1, Math.ceil(vp.width / PLUME_DOWN));
+  const h = Math.max(1, Math.ceil(vp.height / PLUME_DOWN));
+  buffer ??= document.createElement("canvas");
+  if (buffer.width !== w || buffer.height !== h) {
+    buffer.width = w;
+    buffer.height = h;
+  }
+  const b = buffer.getContext("2d")!;
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "source-over";
+  b.globalAlpha = 1;
+  b.clearRect(0, 0, w, h);
+  const sp = plumeSprites();
+  const scale = world.gas.scale ?? 1;
+  const buckets = parcels.map((p) => bucketOf(temperatureOf(p, scale)));
+  // Each blob covers the space its parcel has: the area per parcel around it, from a count on a coarse
+  // grid (its cell and the 8 around it). Gas that has spread out gets bigger, fainter blobs.
+  const cell = 0.4;
+  const count = new Map<number, number>();
+  const key = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
+  const cells = parcels.map((p) => [Math.floor(p.position.x / cell), Math.floor(p.position.y / cell)] as const);
+  for (const [cx, cy] of cells) count.set(key(cx, cy), (count.get(key(cx, cy)) ?? 0) + 1);
+  const size = cells.map(([cx, cy], i) => {
+    let n = 0;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) n += count.get(key(cx + dx, cy + dy)) ?? 0;
+    const spacing = Math.sqrt((9 * cell * cell) / n);
+    return Math.min(1.6, Math.max(3 * parcels[i].radius, 1.05 * spacing));
+  });
+  for (const glow of [false, true]) {
+    b.globalCompositeOperation = glow ? "lighter" : "source-over";
+    parcels.forEach((p, i) => {
+      const k = buckets[i];
+      const f = flameColour(bucketT(k));
+      if (f.glow !== glow) return;
+      const s = toScreen(c, vp, p.position);
+      // At least the smoothing length across (6 radii), and as wide as the space between parcels,
+      // so neighbours overlap into one body of gas.
+      const R = Math.max(1.5, size[i] * c.zoom) / PLUME_DOWN;
+      const x = s.x / PLUME_DOWN;
+      const y = s.y / PLUME_DOWN;
+      if (x < -R || y < -R || x > w + R || y > h + R) return;
+      // Thinner where it has spread: the same gas over a larger area.
+      b.globalAlpha = f.alpha * Math.min(1, Math.max(0.35, (0.5 / Math.max(size[i], 0.5)) ** 0.5));
+      b.drawImage(sp[k], x - R, y - R, 2 * R, 2 * R);
+    });
+  }
+  // Blur at the small size (cheap), then let the stretch up smooth it further.
+  let out: HTMLCanvasElement = buffer;
+  if ("filter" in b) {
+    blurred ??= document.createElement("canvas");
+    if (blurred.width !== w || blurred.height !== h) {
+      blurred.width = w;
+      blurred.height = h;
+    }
+    const g = blurred.getContext("2d")!;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, w, h);
+    g.filter = "blur(1px)";
+    g.drawImage(buffer, 0, 0);
+    g.filter = "none";
+    out = blurred;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalAlpha = 1;
+  ctx.drawImage(out, 0, 0, vp.width, vp.height);
+  ctx.restore();
+}
+
 /** Gas held in engine chambers (§10.1): each chamber filled in its gas's colour. */
-function drawChambers(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition"): void {
+function drawChambers(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition", style: GasStyle = "dots"): void {
   for (const b of world.bodies) {
     const v = b.injector?.vessel;
     if (!v || !(v.mass > 0)) continue;
     const shape = vesselShape(world, b);
     if (!shape) continue;
     const gas = { ...v, id: 0, position: b.position, velocity: b.velocity, radius: 0 } as Parcel;
-    ctx.fillStyle = mode === "composition" ? compositionColour(gas) : temperatureColour(temperatureOf(gas, world.gas.scale ?? 1));
+    const T = temperatureOf(gas, world.gas.scale ?? 1);
+    ctx.fillStyle = mode === "composition" ? compositionColour(gas) : style === "plume" ? flameColour(T).colour : temperatureColour(T);
     const q = sinCos(b.angle);
     ctx.globalAlpha = 0.85;
     ctx.beginPath();
@@ -125,8 +287,10 @@ function drawChambers(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "te
   }
 }
 
-function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition"): void {
-  drawChambers(ctx, world, c, vp, mode);
+function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition", style: GasStyle = "dots"): void {
+  const plume = style === "plume" && mode === "temperature" && canPlume(ctx);
+  drawChambers(ctx, world, c, vp, mode, plume ? "plume" : "dots");
+  if (plume) return drawPlume(ctx, world, c, vp);
   const parcels = world.gas.parcels;
   if (!parcels.length) return;
   // Batch parcels by colour so each colour is one path (2,000 parcels per frame stay cheap).
@@ -176,6 +340,8 @@ export interface RenderOptions {
   velocityScale?: number;
   /** How to colour gas parcels (default temperature). */
   gasColour?: "temperature" | "composition";
+  /** Draw gas as a glowing plume (default) or as dots. The plume needs a real canvas; recorders get dots. */
+  gasStyle?: GasStyle;
   /** A landing pad to mark (FLT-009). */
   pad?: string;
 }
@@ -403,7 +569,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   if (world.bounds.wrap) {
     for (const [ox, oy] of wrapImages(world, c, vp)) {
       const ci = { ...c, x: c.x - ox, y: c.y - oy };
-      drawGas(ctx, world, ci, vp, opts.gasColour ?? "temperature");
+      drawGas(ctx, world, ci, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
       for (const b of world.bodies) {
         bodyPath(ctx, ci, vp, b);
         ctx.fillStyle = b.fixed ? COLORS.fixed : COLORS.body;
@@ -416,7 +582,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     drawSeam(ctx, world, c, vp);
   }
   // Gas under bodies, so walls stay crisp.
-  drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature");
+  drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
 
   for (const b of world.bodies) {
     const selected = opts.selection.has(b.id);

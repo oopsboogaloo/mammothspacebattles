@@ -14,6 +14,12 @@ test("SBX-035 parcels are coloured by temperature with a scale shown; the switch
   await waitForTick(page, 20);
   await page.keyboard.press("Space");
   await shot(page, info, "sc02-gas-in-a-box");
+  // Drawn as a glowing plume by default; the switch beside it gives dots.
+  await expect(page.getByTestId("gas-style")).toHaveText("Plume");
+  await expect(page.getByTestId("gas-scale")).toContainText("grey smoke below");
+  await page.getByTestId("gas-style").click();
+  await expect(page.getByTestId("gas-style")).toHaveText("Dots");
+  await expect(page.getByTestId("gas-scale")).toContainText("darker is colder");
   await page.getByTestId("gas-colour").click();
   await expect(page.getByTestId("gas-scale")).toContainText("helium");
   await expect(page.getByTestId("gas-colour")).toHaveText("Composition");
