@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "gunship",
   "title": "Gunship",
-  "description": "The flight-test ship with a gas cannon on its nose, among three drifting, unmanned ships and three asteroids. F fires: the breech burns its charge of hydrogen and oxygen and the gas drives the shell out, and the ship recoils. A magazine in the breech loads the next shell once the bore is clear and the reload time has passed, and the ship's tank refills the charge. The shells are part of the ship's mass until they are fired. The asteroids pull every ship and shell gently. Every ship, yours included, has the same material and weld strength, so a weak mount can tear the cannon off under its own recoil. Q and E fire the engines, which have three times FT's thrust to carry the cannon.",
+  "description": "The flight-test ship with a gas cannon on its nose, among three drifting, unmanned ships and three asteroids. F fires: the breech burns its charge of hydrogen and oxygen and the gas drives the shell out, and the ship recoils. A magazine in the breech loads the next shell once the bore is clear and the reload time has passed, and the ship's tank refills the charge. Like the engines, the cannon burns its propellant with a 20\u00d7 economy. The shells are part of the ship's mass until they are fired. The asteroids pull every ship and shell gently. Every ship, yours included, has the same material and weld strength, so a weak mount can tear the cannon off under its own recoil. Q and E fire the engines, which have three times FT's thrust to carry the cannon.",
   "profile": "sandbox",
   "seed": 31,
   "world": {
@@ -794,19 +794,19 @@
           {
             "resource": "h2",
             "mass": {
-              "$expr": "charge / 9"
+              "$expr": "charge / 9 / 20"
             },
             "capacity": {
-              "$expr": "charge / 9"
+              "$expr": "charge / 9 / 20"
             }
           },
           {
             "resource": "o2",
             "mass": {
-              "$expr": "charge * 8 / 9"
+              "$expr": "charge * 8 / 9 / 20"
             },
             "capacity": {
-              "$expr": "charge * 8 / 9"
+              "$expr": "charge * 8 / 9 / 20"
             }
           }
         ],
@@ -819,6 +819,7 @@
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
           },
+          "economy": 20,
           "outlet": {
             "x": 0,
             "y": 0.2
@@ -5454,7 +5455,7 @@
         "to": "breech",
         "resource": "h2",
         "rate": {
-          "$expr": "charge / 9 / 0.5"
+          "$expr": "charge / 9 / 20 / 0.5"
         }
       },
       {
@@ -5464,7 +5465,7 @@
         "to": "breech",
         "resource": "o2",
         "rate": {
-          "$expr": "charge * 8 / 9 / 0.5"
+          "$expr": "charge * 8 / 9 / 20 / 0.5"
         }
       },
       {
