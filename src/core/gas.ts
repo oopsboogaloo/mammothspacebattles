@@ -184,6 +184,8 @@ export interface Parcel {
   radius: number;
   /** Seconds since the parcel was made; kept only in worlds with `bounds.depth`. */
   age?: number;
+  /** Chance it is still in the plane, 0–1; kept only in worlds with `bounds.depth` (GAS-009). */
+  keep?: number;
 }
 
 export interface RemovedGas {
@@ -769,9 +771,12 @@ export interface Bounds {
   farField?: number;
   /**
    * Depth of the world out of the plane, m (GAS-009). When set, gas that has left its engine
-   * (older than DEPTH_DELAY) also spreads out of the plane: each step a parcel loses the share
-   * x/(1 + x) of its mass, x = c·dt/depth with c its sound speed, as a 3D cloud in vacuum would.
-   * What leaves is recorded at the boundary. Off when absent: a 2D slab that never thins.
+   * (older than DEPTH_DELAY, outside every engine interior) spreads out of the plane, as a 3D cloud
+   * in vacuum would: each step a parcel's chance of still being in the plane is multiplied by
+   * 1/(1 + x), x = c·dt/depth with c its sound speed, and it leaves whole once that chance falls
+   * below its own fixed threshold. On average the same share of mass leaves as from a thinning
+   * cloud, but every parcel keeps its full mass. What leaves is recorded at the boundary. Off when
+   * absent: a 2D slab that never thins.
    */
   depth?: number;
 }
@@ -800,8 +805,19 @@ const inClosed = (rs: readonly ClosedRegion[], px: number, py: number): boolean 
   }
   return false;
 };
-/** A parcel spreading out of the plane is removed once it holds less than this, kg (a microgram). */
-export const DEPTH_MIN_MASS = 1e-6;
+/**
+ * A parcel's fixed threshold for leaving the plane, uniform in [0, 1), from its id. Whole parcels
+ * leave rather than parcels thinning: a parcel much lighter than its neighbours is flung fast and
+ * runs out of thermal energy under their push, which shrinks every substep and, clamped, creates
+ * energy the ledger reports (GAS-009).
+ */
+export function leaveThreshold(id: number): number {
+  let h = Math.imul(id ^ 0x9e3779b9, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
 
 const W_C2 = 7 / Math.PI;
 /** Parcel index multiplier in sort keys: allows 2^17 parcels with keys below 2^49. */
@@ -1676,23 +1692,16 @@ export function stepGas(
       continue;
     }
     if (depth) {
-      // Out of the plane (GAS-009): the share x/(1 + x) leaves, x = c·dt/depth. Temperature and
-      // composition are unchanged; mass, momentum and energy shrink together.
+      // Out of the plane (GAS-009): the chance of staying shrinks by 1/(1 + x), x = c·dt/depth, and
+      // the parcel leaves whole when it falls below the parcel's own threshold.
       p.age = (p.age ?? 0) + dt;
       if (p.age > DEPTH_DELAY && !inClosed(closed, x[i], y[i])) {
         const c = Math.sqrt(gam[i] * g1[i] * Math.max(0, E[i] / m[i]));
-        const xs = (c * dt) / depth;
-        const chem = parcelChemical(p, scale);
-        if (m[i] * (1 - xs / (1 + xs)) < DEPTH_MIN_MASS) {
+        p.keep = (p.keep ?? 1) / (1 + (c * dt) / depth);
+        if (p.keep < leaveThreshold(p.id)) {
           acc.removed.count += 1;
-          leave(i, 1, chem);
+          leave(i, 1, parcelChemical(p, scale));
           continue;
-        }
-        const f = xs / (1 + xs);
-        if (f > 0) {
-          leave(i, f, chem);
-          p.mass = m[i] * (1 - f);
-          p.thermal = E[i] * (1 - f);
         }
       }
     }

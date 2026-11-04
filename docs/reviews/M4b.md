@@ -70,12 +70,16 @@ Building and flying now works by touch alone:
 
 You noticed that after landing, the ship floated on its own exhaust and the landing never finished. The cause was the 2D world, not cold gas: the gas trapped under the ship was about 2,800 K. A 2D world is a slab that never thins, so exhaust caught in a pocket under the wing, between the legs and the pad, stayed there. In 3D the pocket is open at the front and back. Measured 0.35–0.75 s after a cutoff 0.6 m above the pad, the gas still pushed with 3.4 N, 8% of the ship's weight. It bobbed for well over a second and kept resetting the rest timer.
 
-- **Gas out of the plane:** LAND's world has a depth of 2 m. Exhaust older than 0.1 s, outside the engines' interiors, loses mass at its own sound speed over that depth, as a cloud in vacuum would. The ledger records what leaves at the boundary. Over the same window, the push is now under 3% of the weight (`GAS-009` tests). Thrust in open space after a 1 s burn is within 2% of before, because the chamber and nozzle are declared closed (`injector.chamber`).
+- **Gas out of the plane:** LAND's world has a depth of 2 m. Exhaust older than 0.1 s, outside the engines' interiors, leaves the plane at its own sound speed over that depth, as a cloud in vacuum would, whole parcel by whole parcel. The ledger records what leaves at the boundary. Over the same window, the push is now under 3% of the weight (`GAS-009` tests). The chamber and nozzle are declared closed (`injector.chamber`). Thrust in open space is about 3% lower (the mean of four slightly offset 0.5 s climbs; a single run varies by 1–2%), because exhaust just past the nozzle exit thins.
+- **First version, thinning parcels, replaced:** parcels lost mass gradually instead. Light parcels next to full ones were flung fast and ran out of thermal energy, forcing up to 20 halvings of a substep. That made firing near the ground slower than with no depth at all, and in one run about 390,000 clamps in a single step created 3 mJ that the ledger reported. Whole-parcel removal fixes both: no parcel is ever lighter than its neighbours.
 - **Settling:** "Landed" now needs under 0.3 m/s and 0.3 rad/s for 0.5 s, and a bounce off the pad shorter than 0.1 s doesn't restart the count. A 3 m autopilot descent is now called about 0.9 s sooner. It touches down faster than before (1.1 m/s, score 483) because nothing cushions the last drop.
 
 ### Known limits
 
-- **Slow motion while firing near the ground:** about 300–450 parcels, 15–19 ms a step headless here, against 4.2 ms for real time. The sandbox shows the achieved speed.
+- **Slow motion while firing:** real time needs about 4.2 ms a step. Measured headless on the current container, engines on full:
+  - 20 m above the pad: 14 ms a step.
+  - 2 m above: 22 ms, with about 140 parcels. Without the out-of-plane gas this was 46 ms and about 400 parcels.
+  - The sandbox shows the achieved speed.
 - **Keys are still on/off**, so hovering takes pulsing.
 - **One pad, one terrain.** No level choice or score table yet.
 

@@ -274,7 +274,7 @@ describe("sealed box oracle", () => {
       createWorld(1, bodies, { x: 0, y: 0 }, { bounds: { min: { x: -50, y: -50 }, max: { x: 50, y: 50 }, ...(depth ? { depth } : {}) }, gas: [fill({ count: 100, mass: 0.1, temperature: 300 })] }, sandbox);
     const mass = (w: ReturnType<typeof cloud>) => w.gas.parcels.reduce((m, p) => m + p.mass, 0);
 
-    it("GAS-009 with a depth, gas older than DEPTH_DELAY spreads out at its sound speed, and the ledger records what leaves", () => {
+    it("GAS-009 with a depth, gas older than DEPTH_DELAY spreads out at its sound speed as whole parcels, and the ledger records what leaves", () => {
       const w = cloud(2);
       const m0 = mass(w);
       for (let s = 0; s < 24; s++) stepInPlace(w, [], sandbox); // 0.1 s: none leaves yet
@@ -285,6 +285,9 @@ describe("sealed box oracle", () => {
         boundary += w.ledger.last!.sources.boundary.mass;
       }
       expect(mass(w)).toBeLessThan(0.9 * m0);
+      // Whole parcels leave; none gets lighter (a light parcel among heavy ones is flung fast and
+      // runs out of thermal energy, which slowed every substep and created energy when clamped).
+      expect(w.gas.parcels.every((p) => p.mass === 0.1 / 100)).toBe(true);
       expect(mass(w) + w.gas.removed.mass).toBeCloseTo(m0, 12);
       expect(boundary).toBeCloseTo(-w.gas.removed.mass, 12);
       expect(w.ledger.violations).toBe(0);
