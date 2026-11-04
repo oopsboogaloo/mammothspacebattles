@@ -79,3 +79,51 @@ export function sinCos(x: number): Rot {
       return { s: -c, c: s };
   }
 }
+
+const LN2 = 0.6931471805599453;
+
+/** Deterministic natural logarithm of x > 0, from + − × ÷ only. Accurate to a few ulp. */
+export function lnPos(x: number): number {
+  if (!(x > 0) || !Number.isFinite(x)) return x === 0 ? -Infinity : x === Infinity ? Infinity : NaN;
+  let k = 0;
+  while (x >= 2) {
+    x /= 2;
+    k++;
+  }
+  while (x < 1) {
+    x *= 2;
+    k--;
+  }
+  // x in [1, 2): ln x = 2 atanh(z), z = (x − 1)/(x + 1) ≤ 1/3.
+  const z = (x - 1) / (x + 1);
+  const z2 = z * z;
+  let t = z;
+  let s = 0;
+  for (let n = 1; n < 64; n += 2) {
+    s += t / n;
+    t *= z2;
+  }
+  return 2 * s + k * LN2;
+}
+
+/** Deterministic e^y, from + − × ÷ only. Accurate to a few ulp for |y| < 700. */
+export function expD(y: number): number {
+  if (!Number.isFinite(y)) return y > 0 ? Infinity : y < 0 ? 0 : NaN;
+  if (y > 709) return Infinity;
+  if (y < -745) return 0;
+  const k = Math.round(y / LN2);
+  const r = y - k * LN2;
+  let term = 1;
+  let s = 1;
+  for (let n = 1; n < 30; n++) {
+    term *= r / n;
+    s += term;
+  }
+  let p = 1;
+  const base = k >= 0 ? 2 : 0.5;
+  for (let i = 0; i < Math.abs(k); i++) p *= base;
+  return s * p;
+}
+
+/** Deterministic x^y for x > 0. */
+export const powPos = (x: number, y: number): number => expD(y * lnPos(x));

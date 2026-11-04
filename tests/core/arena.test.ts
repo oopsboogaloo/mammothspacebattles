@@ -22,7 +22,8 @@ describe("flight-test arena", () => {
       stepInPlace(w, both(1), sandbox);
       supply += w.ledger.last!.sources.supply.mass;
     }
-    const made = (w.gas.nextId - 1) * 0.001; // 1 g parcels
+    // 1 g parcels, and what the chambers still hold.
+    const made = (w.gas.nextId - 1) * 0.001 + w.bodies.reduce((m, b) => m + (b.injector?.vessel?.mass ?? 0), 0);
     expect(made).toBeGreaterThan(0.9); // about 1 kg of exhaust a second from two engines
     expect(f0 - fuel(w)).toBeCloseTo(made / 20, 3);
     expect(supply).toBeCloseTo(made * (1 - 1 / 20), 3);

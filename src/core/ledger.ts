@@ -105,6 +105,12 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
         chemical += e.chemical;
       }
     }
+    // So does gas held in an engine's chamber.
+    const vessel = b.injector?.vessel;
+    if (vessel) {
+      thermal += vessel.thermal;
+      chemical += parcelChemical(vessel, world.gas.scale ?? 1);
+    }
   }
   // Gas parcels are point masses with thermal energy.
   for (const p of world.gas.parcels) {

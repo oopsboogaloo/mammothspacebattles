@@ -12,9 +12,10 @@ import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
-import { burn, clearOf, emptyGas, igniteAndBurn, makeFill, mixture, SPECIES, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel } from "./gas.ts";
+import { burn, clearOf, emptyGas, igniteAndBurn, makeFill, mixture, SPECIES, stepGas, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
+import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -117,6 +118,8 @@ export interface Injector {
    * and the ledger records it under `supply`. Absent or 1: mass is conserved.
    */
   economy?: number;
+  /** State: gas held in the chamber as one volume, when the engine's walls enclose it (§10.1). */
+  vessel?: Vessel;
   /** State: mass allowed by the command but not yet emitted, kg; parcels emitted so far; firing now. */
   credit: number;
   count: number;
@@ -645,6 +648,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
   const made: Parcel[] = [];
   const gs = world.gas.scale ?? 1;
   const limit = profile?.limit.gasParcels ?? Infinity;
+  const roots = world.bodies.some((b) => b.injector?.chamber) ? assemblyRoots(world) : null;
   for (const b of world.bodies) {
     const inj = b.injector;
     if (!inj || b.fixed) continue;
@@ -653,6 +657,24 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
     if (status.firing !== inj.firing) {
       inj.firing = status.firing;
       if (status.firing) pushEvent(world, { tick: world.tick, type: "ignition", data: { id: b.id } });
+    }
+    // An engine whose walls enclose its chamber holds the gas there as one volume (§10.1).
+    const shape = roots && inj.chamber ? holdingShape(world, b, roots) : null;
+    if (shape) {
+      const drawn = status.firing ? drawPropellant(b, command * inj.rate * dt, gs) : null;
+      inj.credit = 0;
+      for (const p of runVessel(world, b, shape, drawn, dt, limit)) {
+        world.gas.parcels.push(p);
+        made.push(p);
+      }
+      continue;
+    }
+    if (inj.vessel) {
+      // No longer enclosed: the chamber's gas spills out where it was.
+      for (const p of spill(world, b)) {
+        world.gas.parcels.push(p);
+        made.push(p);
+      }
     }
     if (!status.firing) {
       inj.credit = 0;
@@ -681,6 +703,32 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
     inj.credit = Math.min(inj.credit, inj.parcelMass);
   }
   return made;
+}
+
+/**
+ * Draws up to `want` kg of propellant from an injector's stores in its mixture's fractions (less if a
+ * store runs short), with the stores' thermal energy. An economy above 1 (FLT-010) makes the rest of
+ * the mass from nothing, as for parcels.
+ */
+function drawPropellant(b: Body, want: number, gs: number): { mass: number; composition: Record<string, number>; thermal: number } | null {
+  const inj = b.injector!;
+  const economy = inj.economy ?? 1;
+  const parts = Object.entries(inj.mixture).filter(([, y]) => y > 0);
+  let dm = want;
+  for (const [res, y] of parts) {
+    const have = b.contents?.find((c) => c.resource === res)?.mass ?? 0;
+    dm = Math.min(dm, (have * economy) / y);
+  }
+  if (!(dm > 0)) return null;
+  const composition: Record<string, number> = {};
+  let thermal = 0;
+  for (const [res, y] of parts) {
+    const st = b.contents!.find((c) => c.resource === res)!;
+    st.mass = Math.max(0, st.mass - (dm * y) / economy);
+    composition[res] = y;
+    thermal += storeEnergy({ resource: res, mass: dm * y }, gs).thermal;
+  }
+  return { mass: dm, composition, thermal };
 }
 
 /**
@@ -1031,10 +1079,35 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   let gasJointImpulse = new Map<string, { x: number; y: number; angular: number }>();
   // Gas: parcels exchange impulses with each other and with bodies, conserving momentum,
   // angular momentum and energy by construction. Fixed bodies are external; so is the boundary.
+  // Engines holding their chamber gas: a plug across each throat, moving with the engine, and the
+  // chamber's push on its walls (internal, so it only loads the welds).
+  const holding: { b: Body; plug: WallBody | null; shape: NonNullable<ReturnType<typeof holdingShape>> }[] = [];
+  if (world.bodies.some((b) => b.injector?.vessel)) {
+    const roots = assemblyRoots(world);
+    for (const b of world.bodies) {
+      if (!b.injector?.vessel) continue;
+      const shape = holdingShape(world, b, roots);
+      if (shape) holding.push({ b, plug: plugWall(b, shape), shape });
+    }
+  }
   if (world.gas.parcels.length) {
     before = after;
-    const gas = stepGas(world.gas, wallBodies(world.bodies), world.joints, dt, world.bounds, world.gravity, world.bounds.depth ? engineInteriors(world) : [], timings);
+    const plugs = holding.filter((h) => h.plug);
+    const walls = plugs.length ? [...wallBodies(world.bodies), ...plugs.map((h) => h.plug!)] : wallBodies(world.bodies);
+    const joints = plugs.length ? [...world.joints, ...plugs.map((h) => ({ a: h.b.id, b: h.plug!.id }))] : world.joints;
+    const gas = stepGas(world.gas, walls, joints, dt, world.bounds, world.gravity, world.bounds.depth ? engineInteriors(world) : [], timings);
     gasJointImpulse = gas.jointImpulse;
+    // A plug is part of its engine.
+    for (const h of plugs) {
+      const id = h.plug!.id;
+      const J = gasJointImpulse.get(id);
+      if (gas.involved.delete(id)) gas.involved.add(h.b.id);
+      if (!J) continue;
+      gasJointImpulse.delete(id);
+      const rel = sub(h.plug!.position, h.b.position);
+      const e = gasJointImpulse.get(h.b.id) ?? { x: 0, y: 0, angular: 0 };
+      gasJointImpulse.set(h.b.id, { x: e.x + J.x, y: e.y + J.y, angular: e.angular + J.angular + cross(rel, J) });
+    }
     after = computeTotals(world);
     sources.contact.momentumX += gas.externalImpulse.x;
     sources.contact.momentumY += gas.externalImpulse.y;
@@ -1049,6 +1122,12 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   } else world.gas.substeps = 0;
   mark("gas");
 
+  // What the welds supply against each chamber's push on its walls.
+  for (const h of holding)
+    for (const [id, J] of wallLoads(world, h.b, h.shape, dt)) {
+      const e = gasJointImpulse.get(id) ?? { x: 0, y: 0, angular: 0 };
+      gasJointImpulse.set(id, { x: e.x - J.x, y: e.y - J.y, angular: e.angular - J.angular });
+    }
   // Gas loads on joints, for next step's joint evaluation (one step later; see evaluateJoints).
   if (world.joints.length) recordGasLoads(world, gasJointImpulse);
 

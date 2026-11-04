@@ -376,21 +376,32 @@ Right-click on any entity opens a context menu with the common actions for that 
 Thrust must come from gas pushing on engine geometry. No component applies a direct force.
 
 - **PRP-001** `[M · M4 · U]` A tank shall hold a resource with mass and shall update its assembly's mass as it drains.
-- **PRP-002** `[M · M4 · S]` When an injector receives a non-zero command on its control channel, it shall draw fuel and oxidiser through intact feed links and emit parcels into its chamber. The rate is limited by command value, link capacity and supply.
+- **PRP-002** `[M · M4 · S]` When an injector receives a non-zero command on its control channel, it shall draw fuel and oxidiser through intact feed links and emit them into its chamber: as parcels, or into the gas the chamber holds as one volume (PRP-011). The rate is limited by command value, link capacity and supply.
 - **PRP-003** `[M · M4 · S]` When fuel and oxidiser parcels meet ignition conditions, they shall react by a declared rule into hot product parcels, conserving mass and momentum and converting chemical to thermal energy as declared.
 - **PRP-004** `[M · M4 · S]` A chamber with no opening shall produce no net thrust (ORC-006 applied to a chamber).
-- **PRP-005** `[M · M4 · S]` A chamber with a nozzle shall produce thrust along the nozzle axis, emerging only from gas–wall impulses (ORC-008).
+- **PRP-005** `[M · M4 · S]` A chamber with a nozzle shall produce thrust along the nozzle axis, emerging only from the gas: gas–wall impulses (ORC-008), and, for a chamber held as one volume (PRP-011), its jet's recoil and the exhaust pushing on its throat.
 - **PRP-006** `[M · M4 · S]` A thruster mounted off the centre of mass shall produce torque, with no special-case code.
 - **PRP-007** `[M · M4 · S]` Burning a ship's full propellant shall match the rocket equation (ORC-007).
 - **PRP-008** `[M · M4 · S]` Changing nozzle geometry (length, flare, damage) shall change thrust magnitude, direction or efficiency as a consequence of gas–wall interaction.
 - **PRP-009** `[M · M4 · S]` If a feed link is broken or a reactant runs out, then no new reaction gas shall be produced from that feed.
 - **PRP-010** `[S · M4 · B]` A reference single-engine ship shall sustain thrust in real time within the parcel budget of GAS-008.
+- **PRP-011** `[S · M4 · S]` While an engine's own walls enclose its chamber up to the throat, with nothing else inside, the system shall hold the gas there as one well-mixed volume. It shall let the gas out through the throat as a choked jet of parcels, push on the chamber's walls with its pressure, and keep mass, momentum and energy exact. When the chamber stops being enclosed, its gas shall become parcels where the chamber was.
 
 *Model as built (M4).*
 - **Tanks** are stores. Propellant in a store counts toward its body's mass, and carries thermal energy (at 300 K) and chemical energy in the ledger.
 - **An injector** is a component on a body. It is commanded through a control link on its channel and draws its mixture from its own stores, which feed links top up. At its outlet it emits parcels at up to `rate` × command kg/s. The injector recoils, so momentum is unchanged, and the parcel's thermal energy absorbs any kinetic energy the injection adds, so energy is unchanged.
 - **The reaction is declared:** H₂ + 8 O₂ → H₂O releases 3.4×10⁷ J per kg of H₂, about 3,000 K in the products. (The real lower heating value is 1.2×10⁸ J/kg; the declared figure stands in for dissociation.) It burns completely in a step, in a parcel holding both reactants, if the parcel or any parcel within its smoothing length is at 800 K or more. With an igniter on, what an injector emits burns at once.
 - **Thrust** is only gas on the chamber and nozzle walls.
+- **Chambers held as one volume (PRP-011, added 2026-11).** An engine's chamber, from its outlet to its throat, holds its gas as one well-mixed volume when the engine's own welded walls enclose it and nothing else is inside. The chamber is found from the welds' rest geometry inside the declared interior (`injector.chamber`): the throat is its narrowest cross-section, and the chamber is the free space flooded from the outlet up to it.
+  - **In:** the injector's propellant goes straight into the volume and burns there (PRP-003, fast chemistry). Its mass counts toward the engine body's mass, like a store's, and its energy is in the ledger.
+  - **Pressure** is the gas law over the chamber's area, P = (γ − 1)·U/A, per metre of depth, as for parcels.
+  - **Out:** gas leaves through the throat as a choked jet, ṁ = ρ*·c*·w with the throat's sonic state (T* = 2T₀/(γ + 1)). It is released as parcels just past the throat, moving at c* relative to the engine and carrying the gas's stagnation enthalpy (γ·u*). The engine recoils, and the volume pays the parcel's energy, so momentum and energy are exact.
+  - **The throat plug:** a wall across the throat, moving with the engine, keeps exhaust out of the chamber and takes the exhaust's push back on the throat. Thrust is the jet's recoil plus that push, plus the nozzle walls. Measured against the ideal choked throat, ṁ·c*·(1 + 1/γ): 99% for Gunship 2's engines (1.5 kg/s each). LAND's engines (0.5 kg/s) reach 84%, because the parcels just past the throat are sparser.
+  - **Thrust is higher than before.** A chamber full of parcels made about 80% of the ideal (151 against 188 m/s effective exhaust speed in Gunship 2), losing the rest to the parcels' numerical viscosity. So Gunship 2 climbs about 26% faster and turns about 30% faster on one engine, and LAND climbs off the pad faster.
+  - **Walls feel the pressure:** P on each wall, summing to zero over the closed chamber, so it moves nothing but loads the welds (ASM-004).
+  - **Spilling:** if a wall breaks off, a body enters the chamber, or the engine is wrecked, the gas becomes parcels spread over where the chamber was, again exactly. Parcels found inside an enclosed chamber join its volume.
+  - **Not held:** a gun's breech, because its gas has to push the shell. RS-08 and RS-16 declare no interior and still fill their chambers with parcels.
+  - **Cost:** the gas in a chamber was more than half of an engine scene's parcels, and the densest. Gunship 2 with both engines firing went from 47 to 8 ms a step, and LAND from 11 to 3.
 - **Joints feel the gas.** The impulse a weld must pass on, because gas pushes its assembly as one rigid body, is added to its load one step later.
 - **Far field:** `bounds.farField` removes exhaust that has flown farther than that from every body, and the ledger records it at the boundary.
 
@@ -538,13 +549,20 @@ FLY, LAND and FT run at about 0.4–0.5× real time while firing (about 140 parc
 
 So per-parcel substeps cut only the impulses unless the neighbour and wall-contact searches stop being rebuilt every substep.
 
-**Plan in progress: per-parcel substeps** (each step its own change; exact conservation and replays kept throughout):
-0. Measure: phase timings in `stepGas` (`gas.*` in the step timings), and `scripts/gas-fingerprint.ts`, which records thrust, turn, muzzle speed, gas totals and residuals for eight gas-heavy cases, and compares a change against `docs/perf/gas-baseline.json`.
-1. Neighbour and wall-contact lists kept for several substeps (Verlet lists with a skin), rebuilt only when parcels have moved far enough. They sum in a different order, so results are checked against the fingerprint rather than bit for bit.
-2. Per-parcel levels (substeps of the step ÷ 2ᵏ), behind a profile switch: a pair interacts at its faster partner's pace, equal and opposite, so momentum stays exact; energy stays exact by the same work accounting; neighbours differ by at most one level, and a parcel a fast neighbour or shock reaches is woken at once.
-3. Compare the two modes: exact conservation and replays; thrust, turning, gas totals and muzzle speed within 3–5%; a jet into still gas, crushed gas and leaks.
-4. Benchmark; target at least 3× on Gunship 2 with its engines firing.
-5. Switch it on for the sandbox profile.
+**What was tried** (2026-11):
+- **Verlet lists** (Step 1 of an earlier plan): exact, but no faster (0.6–1.3×), because rebuilding the lists was not where the time went. Dropped.
+- **Hot-loop tuning with bit-identical results:** walls filed only in grid cells that hold gas, a radix sort, no allocations per contact. 1.1–1.3× faster.
+- **WebAssembly:** the neighbour search ported to C and compiled to WebAssembly found the same pairs bit for bit, but ran only 1.25–1.45× faster, and SIMD made it slower (the loop is scattered loads). Not worth a second implementation of the gas.
+- **Per-parcel substeps, estimated first:** in Gunship 2 parcels need 8–64 substeps a step, mostly 16–32, so power-of-two levels would save only 1.3–1.6× there before the limiter neighbouring levels need (Saitoh & Makino 2009). They pay where a few fast parcels sit in a large calm cloud.
+- **Where the parcels were:** of about 400 parcels in Gunship 2 firing, about 230 sat in the chambers, slow but hot; the nozzles held about 15; the rest was the plume.
+
+**Plan, agreed 2026-11** (each its own change, exact conservation and replays kept):
+1. **Chambers held as one volume** (PRP-011). Done: 4–6× in engine scenes.
+2. **A finer neighbour grid:** cells smaller than the largest smoothing length, with a wider stencil, so fewer candidate pairs are tested (about 17,700 tested for 3,200 real pairs a substep in Gunship 2). Pairs come in a different order, so results are checked against the fingerprint, not bit for bit.
+3. **The simulation on a background thread** (a Web Worker), then the gas split across cores.
+4. **Per-parcel substeps** last, for scenes with gas at very different speeds.
+
+The plume is kept as parcels: retiring supersonic exhaust once it is clear of the ship is a later option.
 
 **Options**, roughly in order of likely gain. Gains are estimates until measured.
 

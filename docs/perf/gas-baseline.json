@@ -11,16 +11,16 @@
       "energy": 1.0331859812140465e-9
     },
     "violations": 0,
-    "msPerStep": 25.88,
+    "msPerStep": 24.74,
     "gasMsPerStep": {
-      "gas.setup": 0.2,
-      "gas.contacts": 3.29,
-      "gas.neighbours": 7.97,
-      "gas.density": 1.57,
-      "gas.impulses": 11.63,
-      "gas.move": 0.57,
-      "gas.finish": 0.06,
-      "gas": 25.41
+      "gas.setup": 0.31,
+      "gas.contacts": 2.36,
+      "gas.neighbours": 7.66,
+      "gas.density": 1.75,
+      "gas.impulses": 11.42,
+      "gas.move": 0.44,
+      "gas.finish": 0.09,
+      "gas": 24.19
     }
   },
   {
@@ -35,16 +35,16 @@
       "energy": 1.6370904631912708e-10
     },
     "violations": 0,
-    "msPerStep": 8.91,
+    "msPerStep": 9.01,
     "gasMsPerStep": {
-      "gas.setup": 0.15,
-      "gas.contacts": 1.9,
+      "gas.setup": 0.19,
+      "gas.contacts": 1.91,
       "gas.neighbours": 5.39,
-      "gas.density": 0.42,
-      "gas.impulses": 0.49,
+      "gas.density": 0.41,
+      "gas.impulses": 0.52,
       "gas.move": 0.27,
-      "gas.finish": 0.06,
-      "gas": 8.71
+      "gas.finish": 0.08,
+      "gas": 8.82
     }
   },
   {
@@ -58,16 +58,16 @@
       "energy": 0.0000011201300651464408
     },
     "violations": 0,
-    "msPerStep": 4.6,
+    "msPerStep": 4.02,
     "gasMsPerStep": {
-      "gas.setup": 0.13,
-      "gas.contacts": 1.39,
-      "gas.neighbours": 1.39,
-      "gas.density": 0.17,
-      "gas.impulses": 0.77,
-      "gas.move": 0.16,
+      "gas.setup": 0.18,
+      "gas.contacts": 0.79,
+      "gas.neighbours": 1.32,
+      "gas.density": 0.18,
+      "gas.impulses": 0.67,
+      "gas.move": 0.12,
       "gas.finish": 0.06,
-      "gas": 4.14
+      "gas": 3.42
     }
   },
   {
@@ -82,86 +82,86 @@
       "energy": 0.000022369847542336174
     },
     "violations": 0,
-    "msPerStep": 5.34,
+    "msPerStep": 4.26,
     "gasMsPerStep": {
-      "gas.setup": 0.17,
-      "gas.contacts": 2.02,
-      "gas.neighbours": 1.49,
+      "gas.setup": 0.22,
+      "gas.contacts": 1.04,
+      "gas.neighbours": 1.34,
       "gas.density": 0.11,
-      "gas.impulses": 0.67,
-      "gas.move": 0.17,
-      "gas.finish": 0.04,
-      "gas": 4.78
+      "gas.impulses": 0.52,
+      "gas.move": 0.12,
+      "gas.finish": 0.05,
+      "gas": 3.53
     }
   },
   {
     "case": "LAND both engines 1 s",
     "values": {
-      "vy": 2.251203239348253
+      "vy": 4.400375796039971
     },
     "residual": {
-      "momentum": 1.5788777337438075e-13,
-      "angularMomentum": 2.3243629243552277e-12,
-      "energy": 2.06108815348216e-7
+      "momentum": 1.8781151926329799e-13,
+      "angularMomentum": 3.678835014397919e-12,
+      "energy": 1.0688474105791101e-8
     },
     "violations": 0,
-    "msPerStep": 11.26,
+    "msPerStep": 3.14,
     "gasMsPerStep": {
+      "gas": 1.93,
       "gas.setup": 0.22,
-      "gas.contacts": 4.21,
-      "gas.neighbours": 3.04,
-      "gas.density": 0.27,
-      "gas.impulses": 1.73,
-      "gas.move": 0.33,
-      "gas.finish": 0.1,
-      "gas": 10.06
+      "gas.contacts": 0.49,
+      "gas.neighbours": 0.65,
+      "gas.density": 0.08,
+      "gas.impulses": 0.17,
+      "gas.move": 0.1,
+      "gas.finish": 0.04
     }
   },
   {
     "case": "GS2 both engines 3 s",
     "values": {
-      "vy": 16.8380858750923,
-      "parcels": 405
+      "vy": 21.19741240226876,
+      "parcels": 328
     },
     "residual": {
-      "momentum": 8.34144405625673e-12,
-      "angularMomentum": 2.4288504540947997e-10,
-      "energy": 0.0000012445570973795839
+      "momentum": 1.3414260201410397e-11,
+      "angularMomentum": 2.645101915277337e-10,
+      "energy": 0.00000940373354296753
     },
     "violations": 0,
-    "msPerStep": 47.39,
+    "msPerStep": 8.52,
     "gasMsPerStep": {
-      "gas.setup": 0.48,
-      "gas.contacts": 10.55,
-      "gas.neighbours": 14.86,
-      "gas.density": 1.53,
-      "gas.impulses": 15.15,
-      "gas.move": 1.06,
-      "gas.finish": 0.21,
-      "gas": 44.32
+      "gas": 5.07,
+      "gas.setup": 0.52,
+      "gas.contacts": 1.47,
+      "gas.neighbours": 1.65,
+      "gas.density": 0.17,
+      "gas.impulses": 0.43,
+      "gas.move": 0.18,
+      "gas.finish": 0.1
     }
   },
   {
     "case": "GS2 left engine 0.5 s",
     "values": {
-      "spin": -1.979080222004119
+      "spin": -2.601545637365048
     },
     "residual": {
-      "momentum": 2.1397837106341953e-12,
-      "angularMomentum": 1.9809398565939773e-10,
-      "energy": 0.000011070745586039266
+      "momentum": 1.7975814858410523e-12,
+      "angularMomentum": 2.341555838114573e-10,
+      "energy": 0.000017893702931814914
     },
     "violations": 0,
-    "msPerStep": 14.11,
+    "msPerStep": 4.88,
     "gasMsPerStep": {
-      "gas.setup": 0.38,
-      "gas.contacts": 4.14,
-      "gas.neighbours": 3.6,
-      "gas.density": 0.32,
-      "gas.impulses": 2.75,
-      "gas.move": 0.31,
-      "gas.finish": 0.08,
-      "gas": 11.94
+      "gas": 2.26,
+      "gas.setup": 0.41,
+      "gas.contacts": 0.59,
+      "gas.neighbours": 0.52,
+      "gas.density": 0.04,
+      "gas.impulses": 0.11,
+      "gas.move": 0.09,
+      "gas.finish": 0.04
     }
   },
   {
@@ -176,16 +176,16 @@
       "energy": 8.496670034219278e-11
     },
     "violations": 0,
-    "msPerStep": 5.28,
+    "msPerStep": 4.76,
     "gasMsPerStep": {
-      "gas": 4.69,
-      "gas.setup": 0.06,
-      "gas.contacts": 0.43,
-      "gas.neighbours": 1.4,
-      "gas.density": 0.28,
-      "gas.impulses": 2.36,
-      "gas.move": 0.1,
-      "gas.finish": 0.01
+      "gas": 3.54,
+      "gas.setup": 0.07,
+      "gas.contacts": 0.25,
+      "gas.neighbours": 1.2,
+      "gas.density": 0.2,
+      "gas.impulses": 1.62,
+      "gas.move": 0.08,
+      "gas.finish": 0.02
     }
   }
 ]

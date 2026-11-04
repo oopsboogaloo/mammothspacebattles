@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, leakRate, length, massProps, MATERIALS, mixture, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
+import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, leakRate, length, massProps, MATERIALS, mixture, temperatureOf, vesselPressure, vesselShape, type Body, type Parcel, type Joint, type Shape, type Store } from "../core/index.ts";
 import { assemblyIds, makePrefab } from "./ports.ts";
 import { deg, fmt, rad } from "./format.ts";
 import { NumberField } from "./NumberField.tsx";
@@ -589,6 +589,8 @@ function InjectorSection({ body }: { body: Body }) {
   const sb = sandbox.value!;
   const inj = body.injector!;
   const status = injectorStatus(sb.world, body);
+  const held = inj.vessel && inj.vessel.mass > 0 ? inj.vessel : null;
+  const shape = held ? vesselShape(sb.world, body) : null;
   const set = (patch: Partial<typeof inj>, label: string) => edit([{ type: "body.set", id: body.id, patch: { injector: { ...inj, ...patch } } }], label);
   return (
     <Section id="injector" title="Injector">
@@ -602,8 +604,15 @@ function InjectorSection({ body }: { body: Body }) {
         <span class="muted">Igniter</span>
         <input type="checkbox" checked={inj.igniter} onChange={(e) => set({ igniter: (e.currentTarget as HTMLInputElement).checked }, "Toggle igniter")} data-testid="injector-igniter" />
       </label>
+      {held && shape && (
+        <Row
+          k="Chamber"
+          v={`${fmt(held.mass * 1000, "g")} · ${fmt(vesselPressure(held, shape.area), "N/m")} · ${fmt(temperatureOf({ ...held, id: 0, position: body.position, velocity: body.velocity, radius: 0 } as Parcel, sb.world.gas.scale ?? 1), "K")}`}
+          title="Gas held in the chamber as one volume (its walls enclose it up to the throat): mass, pressure (per metre of depth) and temperature."
+        />
+      )}
       <span class="muted" style={{ fontSize: "12px" }}>
-        Thrust comes only from the gas pushing on the chamber and nozzle walls.
+        Thrust comes from the gas: the chamber's jet through the throat, and the exhaust pushing on the nozzle walls.
       </span>
     </Section>
   );
