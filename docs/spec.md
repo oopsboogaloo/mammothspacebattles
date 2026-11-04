@@ -291,7 +291,7 @@ Right-click on any entity opens a context menu with the common actions for that 
 ### 8.9 Requirements — seeing what's happening
 
 - **SBX-030** `[M · M1 · E]` The sandbox shall provide pan (drag empty space or middle-drag), zoom to the cursor (wheel or pinch), zoom to fit, and follow selection.
-- **SBX-031** `[M · M1 · E]` The sandbox shall provide toggleable overlays for velocity vectors, centres of mass, contact points and impulses, applied forces, joint load, link paths and the world boundary, with a legend for the active overlays.
+- **SBX-031** `[M · M1 · E]` The sandbox shall provide toggleable overlays for velocity vectors, centres of mass, contact points and impulses, applied forces, joint load, link paths and the world boundary, with a legend for the active overlays. The centre-of-mass overlay also marks each welded assembly's overall centre of mass, propellant included, with a larger symbol.
 - **SBX-032** `[M · M2 · E]` Joint load shall be shown as a fraction of its strength, using colour plus line thickness.
 - **SBX-033** `[M · M1 · E]` The sandbox shall show live graphs of ledger totals and probes, with a selectable time window, hover readout, and a cursor synced to the scrub bar.
 - **SBX-034** `[M · M1 · E]` When a conservation violation occurs, the sandbox shall increment the top-bar badge. Clicking an entry shall jump to that step and select the entities involved.

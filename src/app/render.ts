@@ -1,13 +1,13 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "grid";
 
 export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: string }[] = [
   { id: "velocity", label: "Velocity", legend: "solid blue arrow" },
-  { id: "com", label: "Centre of mass", legend: "white circled cross" },
+  { id: "com", label: "Centre of mass", legend: "white circled cross per part; large yellow-and-black disc for each welded assembly" },
   { id: "contacts", label: "Contacts", legend: "orange dot, dashed line ∝ impulse" },
   { id: "forces", label: "Forces", legend: "purple dotted line (drags), arrow (gravity)" },
   { id: "joints", label: "Joint load", legend: "line thickens with load: blue < 50%, yellow < 80%, orange dashed ≥ 80% of the limit" },
@@ -261,6 +261,48 @@ function drawGrid(ctx: Ctx, c: Camera, vp: Viewport): void {
   ctx.stroke();
 }
 
+/**
+ * Centre of mass of each free welded assembly (two or more bodies), propellant in stores included:
+ * the same mass-weighted mean the physics uses.
+ */
+export function assemblyCentres(world: World): Vec2[] {
+  if (!world.joints.length) return [];
+  const roots = assemblyRoots(world);
+  const sums = new Map<string, { m: number; x: number; y: number; n: number; fixed: boolean }>();
+  for (const b of world.bodies) {
+    const r = roots.get(b.id) ?? b.id;
+    const s = sums.get(r) ?? { m: 0, x: 0, y: 0, n: 0, fixed: false };
+    const m = bodyMass(b);
+    s.m += m;
+    s.x += m * b.position.x;
+    s.y += m * b.position.y;
+    s.n += 1;
+    s.fixed ||= b.fixed;
+    sums.set(r, s);
+  }
+  const out: Vec2[] = [];
+  for (const s of sums.values()) if (s.n > 1 && !s.fixed && s.m > 0) out.push({ x: s.x / s.m, y: s.y / s.m });
+  return out;
+}
+
+/** The usual centre-of-mass symbol, large: a disc in yellow and black quarters with a white ring. */
+function drawAssemblyCom(ctx: Ctx, s: Vec2): void {
+  const r = 10;
+  for (let q = 0; q < 4; q++) {
+    ctx.fillStyle = q % 2 === 0 ? COLORS.preview : COLORS.background;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.arc(s.x, s.y, r, (q * Math.PI) / 2, ((q + 1) * Math.PI) / 2);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.strokeStyle = COLORS.selected;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
 /** Marks a landing pad: a bright top edge with end posts, so it stands out from the ground. */
 function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string): void {
   const b = world.bodies.find((x) => x.id === id);
@@ -342,6 +384,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       ctx.lineTo(s.x, s.y + 7);
       ctx.stroke();
     }
+    for (const p of assemblyCentres(world)) drawAssemblyCom(ctx, toScreen(c, vp, p));
   }
 
   if (opts.overlays.has("velocity")) {

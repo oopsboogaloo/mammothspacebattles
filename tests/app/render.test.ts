@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fitBounds, toScreen, toWorld, worldBounds, zoomAt } from "../../src/app/camera.ts";
 import { fmt, plain } from "../../src/app/format.ts";
-import { renderFrame, type Ctx } from "../../src/app/render.ts";
+import { assemblyCentres, renderFrame, type Ctx } from "../../src/app/render.ts";
 import { createWorld, getProfile, stepInPlace } from "../../src/core/index.ts";
 import { box, disc } from "../helpers.ts";
 
@@ -45,6 +45,25 @@ describe("renderer", () => {
     renderFrame(r.ctx, fast, cam, vp, { overlays: new Set(["velocity"]), selection: new Set(), hover: null });
     const end = r.calls.filter((c) => c.startsWith("lineTo(")).map((c) => Number(c.slice(7).split(",")[0]));
     expect(Math.max(...end)).toBeLessThanOrEqual(400 + 240);
+  });
+});
+
+describe("assembly centre of mass", () => {
+  const vp = { width: 800, height: 600 };
+  const cam = { x: 0, y: 0, zoom: 100 };
+  it("SBX-031 the centre-of-mass overlay also marks each welded assembly's centre of mass, stores included", () => {
+    // A 1 kg box at x = 0 welded to a 1 kg box at x = 2 holding 2 kg of propellant: centre at x = 1.5.
+    const a = box("a", 1, 1, { position: { x: 0, y: 0 } });
+    const b = { ...box("b", 1, 1, { position: { x: 2, y: 0 } }), contents: [{ resource: "o2", mass: 2, capacity: 2 }] };
+    const lone = disc("lone", { position: { x: -3, y: 0 } });
+    const w = createWorld(1, [a, b, lone], { x: 0, y: 0 }, { joints: [{ id: "j", a: "a", b: "b", anchorA: { x: 1, y: 0 }, anchorB: { x: -1, y: 0 } }] });
+    expect(assemblyCentres(w)).toEqual([{ x: 1.5, y: 0 }]); // the lone disc is not an assembly
+    const { ctx, calls } = recorder();
+    renderFrame(ctx, w, cam, vp, { overlays: new Set(["com"]), selection: new Set(), hover: null });
+    expect(calls).toContain("arc(550,300,10,0,6)"); // the large ring, at 1.5 m right of centre
+    const off = recorder();
+    renderFrame(off.ctx, w, cam, vp, { overlays: new Set(), selection: new Set(), hover: null });
+    expect(off.calls).not.toContain("arc(550,300,10,0,6)");
   });
 });
 
