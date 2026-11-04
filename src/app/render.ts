@@ -12,7 +12,7 @@ export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: str
   { id: "forces", label: "Forces", legend: "purple dotted line (drags), arrow (gravity)" },
   { id: "joints", label: "Joint load", legend: "line thickens with load: blue < 50%, yellow < 80%, orange dashed ≥ 80% of the limit" },
   { id: "links", label: "Links", legend: "feed: purple dashed arrow · control: dotted line to the channel name" },
-  { id: "damage", label: "Damage", legend: "bar over each part that can be damaged: its integrity, blue > 50%, yellow > 20%, orange below; wreckage is dark with a cross; a thick orange stroke marks a leaking breach" },
+  { id: "damage", label: "Damage", legend: "bar over each damaged part: its integrity, blue > 50%, yellow > 20%, orange below; wreckage is dark with a cross; a thick orange stroke marks a leaking breach" },
   { id: "grid", label: "Grid & axes", legend: "1 m grid, origin axes" },
 ];
 
@@ -671,7 +671,8 @@ function drawDamage(ctx: Ctx, world: World, c: Camera, vp: Viewport, bars: boole
       ctx.lineTo(out.x, out.y);
       ctx.stroke();
     }
-    if (!b.material && b.integrity >= 1) continue;
+    // Only damaged parts get a bar: a whole ship of 19 parts at 100% stacked into a tower of bars.
+    if (b.integrity >= 1) continue;
     const w = 36;
     let y = s.y - r - 12;
     // Neighbours (armour on its tank) would draw over each other: lift a bar until it's clear.

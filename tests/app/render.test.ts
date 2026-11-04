@@ -46,7 +46,7 @@ describe("renderer", () => {
     expect(plain.calls.filter((c) => c.startsWith("fillText(") && c.includes("%"))).toEqual([]);
     const bars = recorder();
     renderFrame(bars.ctx, w, cam, vp, { overlays: new Set(["damage"]), selection: new Set(), hover: null });
-    expect(bars.calls.filter((c) => c.startsWith("fillText(") && c.includes("%")).map((c) => c.split(",")[0])).toEqual(["fillText(40%", "fillText(0%"]); // c has no material and is whole: no bar
+    expect(bars.calls.filter((c) => c.startsWith("fillText(") && c.includes("%")).map((c) => c.split(",")[0])).toEqual(["fillText(40%", "fillText(0%"]); // c is whole: no bar
   });
 
   it("TST-011 contact overlay draws only engaged contacts; huge velocities get a capped arrow", () => {

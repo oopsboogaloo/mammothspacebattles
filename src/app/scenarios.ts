@@ -18,6 +18,7 @@ const ORDER: [string, string][] = [
   ["land-twin-engine", "LAND"],
   ["ft-asteroids", "FT"],
   ["ft-breakable", "FT-B"],
+  ["cannon-test", "GUN"],
   ["rs02-off-centre-impact", "RS-02"],
   ["rs03-bullet-thin-wall", "RS-03"],
   ["rs04-box-stack", "RS-04"],

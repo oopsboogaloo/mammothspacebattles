@@ -1161,9 +1161,14 @@ export function stepGas(
 
   let tDone = 0;
   let nsub = 0;
+  // Substeps tried this step, retries included. A parcel crushed between two parts closing on each
+  // other needs ever shorter substeps (a million in one step, 150 s, as a shell smashed a ship);
+  // past this budget the step finishes in one substep and clamps, and the ledger reports it.
+  let tries = 0;
   while (tDone < dt) {
     const vmax = signalSpeed();
-    let ds = vmax > 0 ? Math.max(minDs, (CFL * hmin) / vmax) : dt;
+    const spent = tries >= 4 * MAX_SUBSTEPS;
+    let ds = spent ? dt - tDone : vmax > 0 ? Math.max(minDs, (CFL * hmin) / vmax) : dt;
     if (tDone + ds >= dt * (1 - 1e-12)) ds = dt - tDone;
 
     // --- Wall contacts within one smoothing length. ---
@@ -1417,6 +1422,7 @@ export function stepGas(
     let extY = 0;
     let extA = 0;
     let wallImp = 0;
+    let lastDeficit = Infinity;
     for (let attempt = 0; ; attempt++) {
       tPart.fill(0);
       extX = 0;
@@ -1571,9 +1577,14 @@ export function stepGas(
         u.w += u.dw;
       }
 
-      let ok = true;
-      for (let i = 0; i < n; i++) if (E[i] < 0) ok = false;
-      if (ok || attempt >= MAX_RETRIES) break;
+      tries++;
+      let deficit = 0;
+      for (let i = 0; i < n; i++) if (E[i] < 0) deficit -= E[i];
+      // A shorter substep only helps if the deficit shrinks with it. A parcel with no thermal energy
+      // wedged between two parts flying apart went negative by the same 10⁻⁶ J at any substep, and
+      // halving 20 times on every substep took a million substeps for one step.
+      if (deficit === 0 || spent || attempt >= MAX_RETRIES || (attempt > 0 && deficit > 0.75 * lastDeficit)) break;
+      lastDeficit = deficit;
       vx.set(sVx);
       vy.set(sVy);
       E.set(sE);
