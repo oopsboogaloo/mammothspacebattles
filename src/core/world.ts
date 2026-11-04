@@ -9,6 +9,7 @@ import { assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
 import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, solveContacts, type RB } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
+import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { burn, clearOf, emptyGas, igniteAndBurn, makeFill, mixture, SPECIES, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel } from "./gas.ts";
@@ -56,6 +57,29 @@ export interface Body {
   integrity: number;
   /** Where it leaks once damaged, if it holds gas (DMG-004). */
   breach?: Breach;
+  /** Shells it carries and loads into place one at a time (WPN, first look). */
+  magazine?: Magazine;
+}
+
+/**
+ * A magazine: shells carried as part of the body's mass, loaded one at a time at a set place in the
+ * body's own frame (a cannon's bore) once it is clear and the body has not fired (its injector) for
+ * `reload` seconds.
+ * A loaded shell becomes a body of its own, moving with the place it appears at; the magazine's body
+ * gives up its mass and momentum, so mass and momentum are unchanged.
+ */
+export interface Magazine {
+  count: number;
+  /** What each shell is: everything a body has but its id and motion. */
+  shell: Omit<BodyInput, "id" | "position" | "velocity" | "angle" | "angularVelocity">;
+  /** Where a loaded shell appears, in this body's frame. */
+  at: Vec2;
+  angle: number;
+  /** Seconds after firing stops before the next shell loads. */
+  reload: number;
+  /** State: seconds since the last load; shells loaded so far (names the next). */
+  timer: number;
+  loaded: number;
 }
 
 /**
@@ -138,8 +162,11 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
 const GOLDEN = 0.6180339887498949;
 
 /** Body as written in scenarios and commands: material fields are optional. */
-export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity"> &
-  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput };
+export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine"> &
+  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput };
+
+/** A magazine as written in scenarios: its state starts at zero. */
+export type MagazineInput = Omit<Magazine, "timer" | "loaded"> & Partial<Pick<Magazine, "timer" | "loaded">>;
 
 /** An injector as written in scenarios: everything but the channel has a default. */
 export type InjectorInput = Pick<Injector, "channel"> & Partial<Omit<Injector, "channel">>;
@@ -277,9 +304,11 @@ export type Command =
   | { type: "debug.kick"; id: string; dv: Vec2 };
 
 export function normalizeBody(input: BodyInput): Body {
-  const { injector, ...rest } = structuredClone(input);
+  const { injector, magazine, ...rest } = structuredClone(input);
   const body: Body = { ...BODY_DEFAULTS, integrity: 1, ...rest };
   if (injector) body.injector = { ...INJECTOR_DEFAULTS, ...injector };
+  // A full reload time has passed at the start, so the first shell loads at once.
+  if (magazine) body.magazine = { timer: magazine.reload, loaded: 0, ...magazine };
   if (body.shape.kind === "polygon") {
     const { vertices, centroid } = normalizePolygon(body.shape.vertices);
     body.shape = { kind: "polygon", vertices };
@@ -694,6 +723,42 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
   }
 }
 
+/**
+ * Magazines load their next shell when the place is clear (WPN, first look). The shell appears moving
+ * with that point of the body; the body gives up the shell's mass and the momentum it carries, so
+ * mass and momentum are unchanged. Angular momentum and kinetic energy change a little as the mass
+ * moves from the body's centre to the bore (recorded as a transfer, like feeds).
+ */
+function runMagazines(world: World, dt: number): void {
+  for (const b of [...world.bodies]) {
+    const mag = b.magazine;
+    if (!mag || b.integrity <= 0 || b.fixed) continue;
+    // The reload starts once the breech has stopped firing: loading during a shot fired two shells.
+    mag.timer = b.injector?.firing ? 0 : mag.timer + dt;
+    if (mag.count < 1 || mag.timer < mag.reload - 1e-9) continue;
+    const q = sinCos(b.angle);
+    const r = rotate(q, mag.at);
+    const angle = b.angle + mag.angle;
+    const shape = normalizeBody({ ...mag.shell, id: "probe", position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 }).shape;
+    const at = add(b.position, r);
+    // Loading into an occupied bore would push bodies apart violently: wait until it is clear.
+    const placedShell = { shape, position: at, rot: sinCos(angle) };
+    if (world.bodies.some((o) => { const m = collide(placedShell, { shape: o.shape, position: o.position, rot: sinCos(o.angle) }, 0, 0); return m !== null && m.points.some((p) => p.separation < -1e-3); })) continue;
+    const v = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
+    const m0 = bodyMass(b);
+    const ms = mag.shell.mass;
+    mag.count -= 1;
+    mag.loaded += 1;
+    mag.timer = 0;
+    // Momentum: the body keeps what the shell doesn't take.
+    const m1 = bodyMass(b);
+    b.velocity = { x: (m0 * b.velocity.x - ms * v.x) / m1, y: (m0 * b.velocity.y - ms * v.y) / m1 };
+    const id = `${b.id}-shell-${mag.loaded}`;
+    addBody(world, { ...structuredClone(mag.shell), id, position: at, velocity: v, angle, angularVelocity: b.angularVelocity });
+    pushEvent(world, { tick: world.tick, type: "loaded", data: { id: b.id, shell: id, left: mag.count } });
+  }
+}
+
 function findBody(world: World, id: string): Body {
   const body = world.bodies.find((b) => b.id === id);
   if (!body) throw new Error(`No body with id "${id}"`);
@@ -866,6 +931,14 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
       ? diff(before, after)
       : { ...zeroDelta(), angularMomentum: after.angularMomentum - before.angularMomentum, energy: after.energy.potential - before.energy.potential };
     before = after;
+  }
+  if (world.bodies.some((b) => b.magazine)) {
+    const t0 = computeTotals(world);
+    runMagazines(world, dt);
+    const t1 = computeTotals(world);
+    sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
+    sources.transfer.energy += t1.energy.total - t0.energy.total;
+    before = t1;
   }
   // Injectors turn stored propellant into gas; mixtures that are hot enough burn (PRP-002, PRP-003).
   // Mass, momentum and energy are unchanged; angular momentum may change as mass moves from a

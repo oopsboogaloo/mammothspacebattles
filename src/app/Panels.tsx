@@ -540,7 +540,8 @@ function ContentsSection({ body }: { body: Body }) {
   const setStores = (next: Store[], label: string) => edit([{ type: "body.set", id: body.id, patch: { contents: next } }], label);
   return (
     <Section id="contents" title="Contents">
-      {stores.length === 0 && <span class="muted">No stores.</span>}
+      {body.magazine && <Row k="Shells" v={`${body.magazine.count} × ${fmt(body.magazine.shell.mass, "kg")}`} title="Shells in the magazine, part of this body's mass until each is loaded." />}
+      {stores.length === 0 && !body.magazine && <span class="muted">No stores.</span>}
       {stores.map((s, i) => (
         <div key={s.resource} class="joint">
           <div class="row">
