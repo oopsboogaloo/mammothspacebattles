@@ -12,7 +12,7 @@ export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: str
   { id: "forces", label: "Forces", legend: "purple dotted line (drags), arrow (gravity)" },
   { id: "joints", label: "Joint load", legend: "line thickens with load: blue < 50%, yellow < 80%, orange dashed ≥ 80% of the limit" },
   { id: "links", label: "Links", legend: "feed: purple dashed arrow · control: dotted line to the channel name" },
-  { id: "damage", label: "Damage", legend: "bar over each part that can be damaged: its integrity, blue > 50%, yellow > 20%, orange below; wreckage is dark with a cross" },
+  { id: "damage", label: "Damage", legend: "bar over each part that can be damaged: its integrity, blue > 50%, yellow > 20%, orange below; wreckage is dark with a cross; a thick orange stroke marks a leaking breach" },
   { id: "grid", label: "Grid & axes", legend: "1 m grid, origin axes" },
 ];
 
@@ -658,7 +658,20 @@ function drawDamage(ctx: Ctx, world: World, c: Camera, vp: Viewport, bars: boole
       ctx.lineTo(s.x - r * 0.5, s.y + r * 0.5);
       ctx.stroke();
     }
-    if (!bars || (!b.material && b.integrity >= 1)) continue;
+    if (!bars) continue;
+    // The breach a damaged store leaks through (DMG-004): a short orange stroke out of the surface.
+    if (b.breach && b.integrity < 1) {
+      const q = sinCos(b.angle);
+      const at = toScreen(c, vp, add(b.position, rotate(q, b.breach.point)));
+      const out = toScreen(c, vp, add(b.position, rotate(q, add(b.breach.point, { x: b.breach.normal.x * 0.15, y: b.breach.normal.y * 0.15 }))));
+      ctx.strokeStyle = COLORS.contact;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(at.x, at.y);
+      ctx.lineTo(out.x, out.y);
+      ctx.stroke();
+    }
+    if (!b.material && b.integrity >= 1) continue;
     const w = 36;
     let y = s.y - r - 12;
     // Neighbours (armour on its tank) would draw over each other: lift a bar until it's clear.

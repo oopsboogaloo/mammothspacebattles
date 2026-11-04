@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "rs11-armour-ram",
   "title": "Ram an armoured and a bare tank",
-  "description": "RS-11. Two 40 kg rams at the chosen speed hit two identical 10 kg tanks of oxygen. The lower tank has an 8 kg armour plate welded to its face. Each hit loses kinetic energy as heat, and half of it goes to each body. A tank takes damage above 20 J and is destroyed by 100 J more. Armour takes damage only above 100 J and needs 4000 J more, and the ram touches the armour, not the tank behind it.",
+  "description": "RS-11. Two 40 kg rams at the chosen speed hit two identical 10 kg tanks of oxygen. The lower tank has an 8 kg armour plate welded to its face. Each hit loses kinetic energy as heat, and half of it goes to each body. A tank takes damage above 20 J and is destroyed by 100 J more. Armour takes damage only above 100 J and needs 4000 J more, and the ram touches the armour, not the tank behind it. A damaged tank leaks its oxygen through the dent (DMG-004).",
   "profile": "test",
   "seed": 1,
   "parameters": [
@@ -187,6 +187,14 @@
     {
       "id": "weld",
       "path": "joints[id=plate].integrity"
+    },
+    {
+      "id": "bareO2",
+      "path": "bodies[id=tank-a].contents[0].mass"
+    },
+    {
+      "id": "shieldedO2",
+      "path": "bodies[id=tank-b].contents[0].mass"
     }
   ],
   "assertions": [
@@ -201,6 +209,25 @@
       "kind": "event",
       "type": "destroyed",
       "occurred": true
+    },
+    {
+      "kind": "event",
+      "type": "leak",
+      "occurred": true
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "bareO2",
+      "from": 200,
+      "to": "end",
+      "max": 5.95
+    },
+    {
+      "kind": "valueAt",
+      "probe": "shieldedO2",
+      "step": "end",
+      "equals": 6,
+      "tol": 0
     },
     {
       "kind": "valueAt",
@@ -236,7 +263,7 @@
     }
   ],
   "ui": {
-    "lookFor": "Press play. Both rams hit at about 0.1 s. The bare tank (top) takes about 150 J and is destroyed: it goes dark with a cross. The armour (bottom) takes about 200 J, over its 100 J threshold, so it loses 2.5%, and the tank behind it is untouched. Lower the ram speed below about 9 m/s and the bare tank survives, damaged; below about 7 m/s the armour isn't marked at all.",
+    "lookFor": "Press play. Both rams hit at about 0.1 s. The bare tank (top) takes about 150 J and is destroyed: it goes dark with a cross, and its oxygen leaks out of the dent as a jet that pushes it along. The armour (bottom) takes about 200 J, over its 100 J threshold, so it loses 2.5%, and the tank behind it is untouched. Lower the ram speed below about 9 m/s and the bare tank survives, damaged; below about 7 m/s the armour isn't marked at all.",
     "overlays": [
       "velocity",
       "damage"
@@ -248,8 +275,8 @@
     },
     "graphs": [
       "bare",
-      "shielded",
-      "plate"
+      "plate",
+      "bareO2"
     ]
   }
 }
