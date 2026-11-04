@@ -21,6 +21,7 @@ import {
   type Vec2,
 } from "../core/index.ts";
 import { panBy, toScreen, toWorld, zoomAt } from "./camera.ts";
+import { SimClient } from "./simClient.ts";
 import { fmt } from "./format.ts";
 import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
 import { ENGINE, engineFor, HULL, TANK, withFreshChannels } from "./parts.ts";
@@ -99,6 +100,9 @@ type Gesture =
 
 /** Frame budget for simulation steps, ms: heavy scenes run in slow motion instead of freezing the page. */
 const STEP_BUDGET_MS = 12;
+/** How long the worker steps before sending what it has, ms: about two frames. */
+const WORKER_BUDGET_MS = 30;
+export const sim = new SimClient();
 /** How far a press must move before it counts as a pan rather than a tap. */
 const PAN_SLOP_PX = 8;
 
@@ -180,6 +184,24 @@ export function View() {
     let behindAt = -Infinity;
     let smoothed = 1;
     let raf = 0;
+    // Steps owed to the worker, and steps it has delivered since the last frame.
+    let owed = 0;
+    let taken = 0;
+    sim.onRun = (steps, verdict) => {
+      taken += steps;
+      if (verdict) {
+        // A landing verdict (FLT-009) pauses the run, so the moment it happened stays on screen.
+        playing.value = false;
+        bump();
+        return;
+      }
+      // Keep the worker busy: start on what is owed straight away rather than at the next frame.
+      const sb = sandbox.value;
+      if (sb && playing.value && owed > 0 && !sim.stale(sb)) {
+        sim.request(sb, Math.min(owed, 256), WORKER_BUDGET_MS);
+        owed = 0;
+      }
+    };
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       const sb = sandbox.value;
@@ -189,23 +211,39 @@ export function View() {
       last = now;
       if (playing.value) {
         const r = advanceStepper(stepper, realDt, { timestep: sb.profile.timestep, timeScale: timeScale.value, maxStepsPerFrame: 64 });
-        // Step within the frame budget, at least one step a frame. What doesn't fit is dropped,
-        // so a heavy scene (gas) runs in smooth slow motion rather than stalling the page.
-        const t0 = performance.now();
         let done = 0;
-        while (done < r.steps) {
-          const flying = sb.world.challenge?.status.phase === "flying";
-          sb.step(1);
-          done++;
-          // A landing verdict (FLT-009) pauses the run, so the moment it happened stays on screen.
-          if (flying && sb.world.challenge?.status.phase !== "flying") {
-            playing.value = false;
-            bump();
-            break;
+        let cut = false;
+        if (sim.available && !sim.stale(sb)) {
+          // The worker steps (§10.1): ask for what is owed, and take results as they come, so the
+          // page draws at full rate however heavy the physics. What it can't keep up with is dropped,
+          // so a heavy scene runs in smooth slow motion.
+          owed += r.steps;
+          done = taken;
+          taken = 0;
+          if (!sim.inFlight && owed > 0) {
+            sim.request(sb, Math.min(owed, 256), WORKER_BUDGET_MS);
+            owed = 0;
+          } else if (owed > 4 * 64) {
+            owed = 0;
+            cut = true;
           }
-          if (performance.now() - t0 > STEP_BUDGET_MS) break;
+        } else {
+          // On the page: within the frame budget, at least one step a frame. What doesn't fit is
+          // dropped, so a heavy scene (gas) runs in smooth slow motion rather than stalling the page.
+          const t0 = performance.now();
+          while (done < r.steps) {
+            // A landing verdict (FLT-009) pauses the run, so the moment it happened stays on screen.
+            if (sb.step(1, true)) {
+              done++;
+              playing.value = false;
+              bump();
+              break;
+            }
+            done++;
+            if (performance.now() - t0 > STEP_BUDGET_MS) break;
+          }
+          cut = done < r.steps;
         }
-        const cut = done < r.steps;
         if (cut) stepper.accumulator = 0;
         const scaleNow = realDt > 0 ? (done * sb.profile.timestep) / realDt : 0;
         smoothed = smoothed * 0.9 + scaleNow * 0.1;
@@ -218,6 +256,9 @@ export function View() {
       } else {
         stepper.accumulator = 0;
         smoothed = timeScale.value;
+        owed = 0;
+        taken = 0;
+        sim.cancel();
       }
       if (follow.value && followId.value) {
         const b = sb.world.bodies.find((x) => x.id === followId.value);

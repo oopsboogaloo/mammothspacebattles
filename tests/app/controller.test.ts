@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { emptyScenario, Sandbox } from "../../src/app/controller.ts";
+import { emptyScenario, runSteps, Sandbox } from "../../src/app/controller.ts";
 import { hashValue, parseScenario, runScenario, ScenarioError } from "../../src/core/index.ts";
 import { disc, readJson, ROOT } from "../helpers.ts";
 
@@ -109,5 +109,36 @@ describe("sandbox controller", () => {
     const out = s.exportScenario() as { parameters: { id: string; default: number }[] };
     expect(out.parameters.find((p) => p.id === "mA")!.default).toBe(4);
     expect(new Sandbox(out).world.bodies[0].mass).toBe(4);
+  });
+});
+
+describe("stepping elsewhere (the simulation worker)", () => {
+  const scenario = () => readJson(join(ROOT, "scenarios", "cannon-test.json"));
+
+  it("ARC-006 DET-001 a run made on a copy of the world, taken in, equals stepping in place: world, graphs and snapshots", () => {
+    const here = new Sandbox(scenario());
+    const there = new Sandbox(scenario());
+    here.step(130);
+    // As the worker does: a copy of the world and the plan, stepped, then handed back.
+    const copy = structuredClone(there.world);
+    const run = runSteps(copy, structuredClone({ ...there.plan, profile: there.profile }), 130);
+    expect(there.acceptRun(run, there.version)).toBe(true);
+    expect(hashValue(there.world)).toBe(hashValue(here.world));
+    expect(there.history).toEqual(here.history);
+    there.goTo(65); // from the snapshot at 60 the run delivered
+    here.goTo(65);
+    expect(hashValue(there.world)).toBe(hashValue(here.world));
+  });
+
+  it("ARC-006 a run is dropped if the sandbox changed while it was out: an edit, a step or a jump", () => {
+    const sb = new Sandbox(scenario());
+    for (const change of [() => sb.edit([{ type: "body.add", body: disc("x", { position: { x: 50, y: 50 } }) }], "Spawn"), () => sb.step(1), () => sb.goTo(0)]) {
+      const v = sb.version;
+      const run = runSteps(structuredClone(sb.world), sb.plan, 10);
+      change();
+      const before = hashValue(sb.world);
+      expect(sb.acceptRun(run, v)).toBe(false);
+      expect(hashValue(sb.world)).toBe(before);
+    }
   });
 });

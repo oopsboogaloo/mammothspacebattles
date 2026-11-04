@@ -24,7 +24,7 @@ import {
   tool,
   violationsOpen,
 } from "./state.ts";
-import { View } from "./View.tsx";
+import { sim, View } from "./View.tsx";
 import { toScreen } from "./camera.ts";
 import { hashValue } from "../core/index.ts";
 
@@ -147,6 +147,8 @@ function App() {
     return { x: view.left + s.x, y: view.top + s.y };
   },
   hash: () => (sandbox.value ? hashValue(sandbox.value.world) : null),
+  /** The simulation worker: whether there is one, and how many runs of steps it has delivered. */
+  sim: () => ({ worker: sim.available, runs: sim.runs }),
 };
 
 render(<App />, document.getElementById("root")!);

@@ -563,7 +563,12 @@ So per-parcel substeps cut only the impulses unless the neighbour and wall-conta
    - **A substep from the signal velocity** (sound plus how fast neighbours close or part, with guards against reaching a wall or another stream unseen) instead of sound plus each parcel's own speed. In LAND it was more accurate (climb after 1 s 4.20 m/s, converged about 4.1–4.15, the current rule 4.40) with 28% fewer substeps. But in Gunship 2 it saved only 9% of substeps and its own checks cost more than that. Counting only closing speed was faster but 25% off (gas that expands within a substep pushes too hard with its start-of-substep pressure).
    - **More caching** (mass properties per shape, mixtures and chemical energy per composition, gas cells sorted by column): results identical, no measurable change.
    - So the current rule's time error is about 6% on LAND's climb, and the cost is now spread evenly over each substep's work: about 30 substeps a step in a firing scene. The remaining large lever is more cores.
-3. **The simulation on a background thread** (a Web Worker), then the gas split across cores.
+3. **The simulation on a background thread** (a Web Worker). Done:
+   - **How it works:** while playing, the page hands the worker runs of steps (up to 30 ms each) and draws the latest world meanwhile. The worker keeps its own copy of the world, so the page sends one only after it changed its own (an edit, undo, scrub or single step). Each run returns the new world, the graphs' samples and any snapshots.
+   - **Same results:** stepping goes through one function, `runSteps`, on the page and in the worker. A run is taken in only if the sandbox hasn't changed since it was sent. If an edit makes the run in flight stale, the page steps that frame itself, so dragging never stalls the run.
+   - **Fallback:** `?worker=0`, or a browser without workers, steps on the page as before.
+   - **Measured** in Chromium, Gunship 2 with both engines firing: the simulation runs at 0.57× real time against 0.47× on the page, the page draws at 60 fps against 44, and its worst frames are 33 ms against 50. 0.57× is all the physics allows on that machine (about 7.5 ms a step), so the scene's own cost is now the limit.
+   - **Next:** splitting the gas across several workers.
 4. **Per-parcel substeps** last, for scenes with gas at very different speeds.
 
 The plume is kept as parcels: retiring supersonic exhaust once it is clear of the ship is a later option.

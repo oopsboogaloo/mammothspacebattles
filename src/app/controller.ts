@@ -53,6 +53,64 @@ export const LEDGER_SERIES: Series[] = [
   { id: "ledger.total", label: "Total energy", unit: "J", path: "ledger.totals.energy.total" },
 ];
 
+/** What a run of steps needs, apart from the world: everything here is plain data, so a worker can take it. */
+export interface StepPlan {
+  profile: Profile;
+  /** The scenario's own commands by step. */
+  timeline: Map<number, Command[]>;
+  /** The user's recorded edits, applied after the step that reaches their tick. */
+  edits: Edit[];
+  series: Series[];
+}
+
+/** What a run of steps produced, for the sandbox to take in. */
+export interface StepRun {
+  world: World;
+  /** Steps taken; the world ran from tick `from` to `from + steps`. */
+  from: number;
+  steps: number;
+  /** Each series' value after each step, in order. */
+  samples: Record<string, number[]>;
+  /** Copies of the world at snapshot ticks reached. */
+  snapshots: [number, World][];
+  /** A landing verdict was reached (FLT-009): the run stops there. */
+  verdict: boolean;
+}
+
+/**
+ * Advances `world` in place by up to `n` steps (fewer if `deadline` passes, or a landing verdict is
+ * reached when `stopOnVerdict`), applying the scenario's timeline and the recorded edits, and
+ * sampling every series. The sandbox and the simulation worker both step with this.
+ */
+export function runSteps(world: World, plan: StepPlan, n: number, opts: { deadline?: () => boolean; stopOnVerdict?: boolean } = {}): StepRun {
+  const from = world.tick;
+  const samples: Record<string, number[]> = {};
+  for (const s of plan.series) samples[s.id] = [];
+  const snapshots: [number, World][] = [];
+  const editsAt = (t: number) => plan.edits.filter((e) => e.tick === t).flatMap((e) => e.commands);
+  let steps = 0;
+  let verdict = false;
+  while (steps < n) {
+    const flying = world.challenge?.status.phase === "flying";
+    stepInPlace(world, plan.timeline.get(world.tick) ?? [], plan.profile);
+    steps++;
+    const t = world.tick;
+    if (t % SNAPSHOT_EVERY === 0) snapshots.push([t, structuredClone(world)]);
+    const pending = editsAt(t);
+    if (pending.length) applyCommands(world, pending, plan.profile);
+    for (const s of plan.series) {
+      const v = resolveProbe(world, s.path);
+      samples[s.id].push(typeof v === "number" ? v : NaN);
+    }
+    if (opts.stopOnVerdict && flying && world.challenge?.status.phase !== "flying") {
+      verdict = true;
+      break;
+    }
+    if (opts.deadline?.()) break;
+  }
+  return { world, from, steps, samples, snapshots, verdict };
+}
+
 export class Sandbox {
   readonly raw: Record<string, unknown>;
   readonly scenario: Scenario;
@@ -69,6 +127,8 @@ export class Sandbox {
   private snapshots = new Map<number, World>();
   private undoStack: UndoEntry[] = [];
   private redoStack: UndoEntry[] = [];
+  /** Bumped by every change to the world or what stepping depends on, so a run started elsewhere can tell it is stale. */
+  version = 0;
 
   /** Throws ScenarioError if the input is invalid (UX-006); nothing is changed then. */
   constructor(raw: unknown, values: Record<string, number> = {}) {
@@ -117,22 +177,46 @@ export class Sandbox {
     }
   }
 
-  /** Advances n fixed steps. */
-  step(n = 1): void {
-    if (n > 0) for (const e of this.undoStack) if (e.tick <= this.world.tick) e.before = undefined;
-    for (let i = 0; i < n; i++) {
-      stepInPlace(this.world, this.timeline.get(this.world.tick) ?? [], this.profile);
-      const t = this.world.tick;
-      if (t % SNAPSHOT_EVERY === 0) this.saveSnapshot(t);
-      const pending = this.editsAt(t);
-      if (pending.length) applyCommands(this.world, pending, this.profile);
-      this.sample();
-      this.maxTick = Math.max(this.maxTick, t);
-    }
+  /** What stepping needs besides the world. */
+  get plan(): StepPlan {
+    return { profile: this.profile, timeline: this.timeline, edits: this.edits, series: this.series };
   }
 
-  private saveSnapshot(t: number): void {
-    this.snapshots.set(t, structuredClone(this.world));
+  /** Advances n fixed steps (stopping at a landing verdict if asked). Returns whether a verdict stopped it. */
+  step(n = 1, stopOnVerdict = false): boolean {
+    if (!(n > 0)) return false;
+    const run = runSteps(this.world, this.plan, n, { stopOnVerdict });
+    this.version++;
+    this.takeRun(run);
+    return run.verdict;
+  }
+
+  /**
+   * Takes in a run of steps made elsewhere (the simulation worker) from this sandbox's world at
+   * `version`. Returns false, changing nothing, if anything has changed since.
+   */
+  acceptRun(run: StepRun, version: number): boolean {
+    if (version !== this.version || run.from !== this.world.tick) return false;
+    this.world = run.world;
+    this.takeRun(run);
+    return true;
+  }
+
+  private takeRun(run: StepRun): void {
+    if (!run.steps) return;
+    for (const e of this.undoStack) if (e.tick <= run.from) e.before = undefined;
+    for (const [t, w] of run.snapshots) this.saveSnapshot(t, w);
+    for (const s of this.series) {
+      const arr = (this.history[s.id] ??= []);
+      const vs = run.samples[s.id] ?? [];
+      for (let k = 0; k < run.steps; k++) arr[run.from + 1 + k] = vs[k] ?? NaN;
+      arr.length = Math.max(arr.length, run.from + run.steps + 1);
+    }
+    this.maxTick = Math.max(this.maxTick, run.from + run.steps);
+  }
+
+  private saveSnapshot(t: number, w: World): void {
+    this.snapshots.set(t, w);
     if (this.snapshots.size > MAX_SNAPSHOTS) {
       const oldest = [...this.snapshots.keys()].filter((k) => k !== 0).sort((a, b) => a - b)[0];
       this.snapshots.delete(oldest);
@@ -151,9 +235,10 @@ export class Sandbox {
     const start = Math.max(...[...this.snapshots.keys()].filter((k) => k <= target));
     const keepMax = this.maxTick;
     this.world = structuredClone(this.snapshots.get(start)!);
+    this.version++;
     const pending = this.editsAt(start);
     if (pending.length) applyCommands(this.world, pending, this.profile);
-    while (this.world.tick < target) this.step(1);
+    if (this.world.tick < target) this.step(target - this.world.tick);
     this.maxTick = Math.max(keepMax, target);
     this.sample();
   }
@@ -171,6 +256,7 @@ export class Sandbox {
   edit(commands: Command[], label: string, group?: number): void {
     const t = this.world.tick;
     const before = structuredClone(this.world);
+    this.version++;
     try {
       applyCommands(this.world, commands, this.profile);
     } catch (e) {
@@ -216,6 +302,7 @@ export class Sandbox {
     if (entry.before && entry.removed.length === 0 && this.world.tick === entry.tick && this.maxTick <= entry.tick) {
       // Nothing has been simulated since this edit: put the world back as it was.
       this.world = structuredClone(entry.before);
+      this.version++;
       this.invalidateAfter(entry.tick);
       this.sample();
       return;
@@ -235,6 +322,7 @@ export class Sandbox {
   addProbe(id: string, label: string, unit: string, path: string): void {
     if (this.series.some((s) => s.id === id)) return;
     this.series.push({ id, label, unit, path });
+    this.version++;
     this.history[id] = [];
     this.sample();
     this.dirty = true;
