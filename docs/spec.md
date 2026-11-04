@@ -456,6 +456,45 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **NFR-002** `[S · M1 · B]` CI shall warn when a benchmark regresses by more than 20% against the main branch.
 - **NFR-003** `[M · M1 · U]` Broad-phase collision shall scale sub-quadratically (e.g. a uniform grid or sweep-and-prune), verified by a benchmark at 100, 1,000 and 5,000 parcels.
 
+### 10.1 Gas performance: baseline and future options (not scheduled)
+
+These are options for later, when a game needs more gas than the sandbox does. None is scheduled, and none is a requirement yet. Each would become one, with a benchmark, when it is taken up.
+
+**Baseline** (measured 2026-11-04, headless Node on the development container, `sandbox` profile):
+- One parcel for one substep costs about 1.8 µs. That is steady from 1,000 to 4,000 parcels, so cost grows with the number of parcels.
+- A step's gas cost is therefore about parcels × substeps per step × 1.8 µs. Real time at 240 steps/s allows 4.2 ms a step: about 2,300 parcel-substeps.
+
+| Gas | Substeps per step | Parcels in real time |
+|---|---|---|
+| 300 K gas at rest | 3 | about 750 |
+| 3,000 K gas | 8 | about 300 |
+| A firing engine's jet | about 24 | about 100 |
+
+FLY, LAND and FT run at about 0.4–0.5× real time while firing (about 140 parcels).
+
+**The bottleneck is the global substep.** Every parcel takes the substep the fastest gas anywhere needs (§9.4: CFL over all parcels and the smallest smoothing length). A few parcels at over 100 m/s in a nozzle set it for all the slow gas around them. GAS-008 (2,000 parcels in real time) holds for slow gas with some of the options below. It does not hold for engine exhaust without the first.
+
+**Options**, roughly in order of likely gain. Gains are estimates until measured.
+
+| Option | Likely gain | Cost and risk | Keeps exact replays? |
+|---|---|---|---|
+| **Per-parcel substeps** (local or block time-stepping): fast parcels take short substeps, slow ones long. | 3–5× in engine scenes, where most gas is slow | Hardest to keep exactly conserving. Pairs that cross time-step levels must be synchronised; standard in astrophysical SPH. | Yes, if levels are assigned deterministically |
+| **Larger parcels.** Cost scales as 1/size³: more parcels per area, and smaller substeps. | About 3× for 1.4× larger | Cheap to try. The nozzle flow is already not resolution-converged (§9.5), and jets would wobble more. | Yes |
+| **Simulation in a Web Worker**, off the main thread, so physics no longer shares it with drawing and the UI. | 1.5–2× physics per frame | Moderate plumbing (messages or shared state); no physics change | Yes |
+| **Several CPU cores**, splitting the gas spatially. | 2–4× on 4–6 core phones and tablets | Needs SharedArrayBuffer, hence cross-origin isolation headers. GitHub Pages cannot set them; a service-worker shim can. Per-parcel sums must keep a fixed order. | Yes, with fixed summation order |
+| **WebAssembly with SIMD** for the gas loop. | 1.5–3× | A port of `gas.ts`; WebAssembly floating point is deterministic | Yes |
+| **Neighbour lists kept for several substeps** (Verlet lists with a skin) instead of re-sorting every substep. | Most of the search cost | Small and safe | Yes |
+| **GPU (WebGPU) gas.** | 10–100× parcels | Results are not guaranteed identical across GPUs, which breaks replay, scrub and DET tests. Suited to cosmetic gas (visual smoke) over a coarser, exact CPU gas. | No |
+| **Game-level budgets:** full detail only near what matters (ships, impacts), and merging or thinning distant gas. The far field (§9.5) and GAS-009 already do some of this. | Bounds cost by design | Design work; merging must follow PRF-003's conserving merge rule | Yes |
+
+**Suggested order when needed:**
+1. Profile a substep to see where the time goes.
+2. Take the safe wins: Verlet lists and the Web Worker.
+3. Add per-parcel substeps.
+4. Use several cores.
+
+Together these plausibly give 10× or more with exact replays kept. Cosmetic GPU smoke can come after.
+
 ## 11. Reference Scenarios
 
 These live in `scenarios/` and serve as both tests and sandbox starting points.
