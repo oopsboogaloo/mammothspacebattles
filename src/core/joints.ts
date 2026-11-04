@@ -31,6 +31,8 @@ export interface ConstraintAccount {
 
 export const emptyAccount = (): ConstraintAccount => ({ externalImpulse: { x: 0, y: 0 }, angular: 0, predictedKE: 0, involved: new Set() });
 
+type JointImpulse = { x: number; y: number; angular: number };
+
 interface JointSolver {
   j: Joint;
   a: JointBody;
@@ -41,7 +43,18 @@ interface JointSolver {
   m11: number;
   m12: number;
   m22: number;
+  /** The 2×2 point-constraint matrix itself, for solves along one direction. */
+  k11: number;
+  k12: number;
+  k22: number;
   angularMass: number;
+  /** The joint's axis in world space; impulse on b along it is compression. */
+  axis: Vec2;
+  /** Impulse limits for this step (ASM-003 limits × dt): along the axis, across it, and angular. */
+  lo: number;
+  hi: number;
+  shear: number;
+  torque: number;
   P: Vec2;
   L: number;
 }
@@ -109,7 +122,7 @@ export function assemblyProps(bodies: { mass: number; inertia: number; position:
   return { mass: m, centreOfMass: com, inertia: I, count: bodies.length };
 }
 
-export function prepareJoints(world: World, byId: Map<string, JointBody>): JointSolver[] {
+export function prepareJoints(world: World, byId: Map<string, JointBody>, dt: number): JointSolver[] {
   const out: JointSolver[] = [];
   for (const j of world.joints) {
     const a = byId.get(j.a);
@@ -135,7 +148,15 @@ export function prepareJoints(world: World, byId: Map<string, JointBody>): Joint
       m11: inv * k22,
       m12: -inv * k12,
       m22: inv * k11,
+      k11,
+      k12,
+      k22,
       angularMass: iA + iB > 0 ? 1 / (iA + iB) : 0,
+      axis: rotate(a.rot, j.axis),
+      lo: -j.limits.tension * dt,
+      hi: j.limits.compression * dt,
+      shear: j.limits.shear * dt,
+      torque: j.limits.torque * dt,
       // No warm start: each step's weld impulse starts from zero. Reapplying last step's impulse
       // after the load has changed (an impact ending, thrust cut, gas pressure dropping) made the
       // solve create kinetic energy, up to 19 J in a crash, which the ledger reported. Loads come
@@ -177,28 +198,77 @@ function applyAngular(s: JointSolver, L: number, acc: ConstraintAccount): void {
   if (s.b.invMass !== 0) acc.angular += L;
 }
 
+/** The largest t in [0, 1] that keeps x + t·d within [lo, hi], given x inside it. */
+const reach = (x: number, d: number, lo: number, hi: number): number => Math.max(0, d > 0 && x + d > hi ? (hi - x) / d : d < 0 && x + d < lo ? (lo - x) / d : 1);
+const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+
+/**
+ * One pass of the weld solve. A joint carries at most its limits (ASM-003): each accumulated
+ * impulse stays inside its limit box. Every update minimises kinetic energy over a convex set
+ * that contains the current impulse, so no update can add energy, capped or not. The point
+ * constraint is solved as a block, cut short where it would leave the box, then slid along the
+ * box's faces by one-direction solves. Taking back a capped joint's excess after the solve
+ * instead could create kinetic energy, because the other joints had been solved against the
+ * full impulse.
+ */
 export function solveJoints(js: JointSolver[], acc: ConstraintAccount): void {
   for (const s of js) {
     const wRel = s.b.body.angularVelocity - s.a.body.angularVelocity;
-    const dL = -wRel * s.angularMass;
-    s.L += dL;
-    applyAngular(s, dL, acc);
+    const L = clamp(s.L - wRel * s.angularMass, -s.torque, s.torque);
+    applyAngular(s, L - s.L, acc);
+    s.L = L;
     const c = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
     const dP = { x: -(s.m11 * c.x + s.m12 * c.y), y: -(s.m12 * c.x + s.m22 * c.y) };
-    s.P = add(s.P, dP);
-    applyLinear(s, dP, acc);
+    const n = s.axis;
+    const t = { x: -n.y, y: n.x };
+    const pn = dot(s.P, n);
+    const pt = dot(s.P, t);
+    const dn = dot(dP, n);
+    const dq = dot(dP, t);
+    const f = Math.min(reach(pn, dn, s.lo, s.hi), reach(pt, dq, -s.shear, s.shear));
+    const step = scale(dP, f);
+    s.P = add(s.P, step);
+    applyLinear(s, step, acc);
+    if (f < 1) {
+      slide(s, n, s.lo, s.hi, acc);
+      slide(s, t, -s.shear, s.shear, acc);
+    }
   }
 }
 
-/** Stores each joint's accumulated impulse for warm starting next step. */
-export function finishJoints(js: JointSolver[], acc: ConstraintAccount): void {
+/** Solves the point constraint along one direction only, keeping that component in [lo, hi]. */
+function slide(s: JointSolver, d: Vec2, lo: number, hi: number, acc: ConstraintAccount): void {
+  const k = s.k11 * d.x * d.x + 2 * s.k12 * d.x * d.y + s.k22 * d.y * d.y;
+  if (!(k > 0)) return;
+  const c = dot(sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA)), d);
+  const now = dot(s.P, d);
+  const next = clamp(now - c / k, lo, hi);
+  const step = scale(d, next - now);
+  s.P = add(s.P, step);
+  applyLinear(s, step, acc);
+}
+
+/**
+ * Stores each joint's impulse (its load, see evaluateJoints) and returns the joints the solver
+ * held at a limit, so they break, with the impulse each would have needed to hold: its demand.
+ */
+export function finishJoints(js: JointSolver[], acc: ConstraintAccount): Map<string, JointImpulse> {
+  const capped = new Map<string, JointImpulse>();
+  const near = (x: number, limit: number) => x >= limit * (1 - 1e-9);
   for (const s of js) {
     s.j.impulse = { x: s.P.x, y: s.P.y, angular: s.L };
+    const axial = dot(s.P, s.axis);
+    if (near(-axial, -s.lo) || near(axial, s.hi) || near(Math.abs(cross(s.axis, s.P)), s.shear) || near(Math.abs(s.L), s.torque)) {
+      const c = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
+      const wRel = s.b.body.angularVelocity - s.a.body.angularVelocity;
+      capped.set(s.j.id, { x: s.P.x - (s.m11 * c.x + s.m12 * c.y), y: s.P.y - (s.m12 * c.x + s.m22 * c.y), angular: s.L - wRel * s.angularMass });
+    }
     if (s.P.x !== 0 || s.P.y !== 0 || s.L !== 0) {
       acc.involved.add(s.j.a);
       acc.involved.add(s.j.b);
     }
   }
+  return capped;
 }
 
 /** Bodies reachable from `start` through joints, not using joint `skip`. */
@@ -226,16 +296,17 @@ function sideOf(world: World, start: string, skip: string): Set<string> {
  * it passed on from gas last step (recordGasLoads). Exact for tree-shaped assemblies; a joint in
  * a loop counts only the solver's share.
  */
-export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<string, Vec2>, rigid: (b: Body) => JointBody): ConstraintAccount {
-  const acc = emptyAccount();
+export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<string, Vec2>, capped: ReadonlyMap<string, JointImpulse>): void {
   const broken = new Set<string>();
   const byId = new Map(world.bodies.map((b) => [b.id, b]));
   for (const j of world.joints) {
     const A = byId.get(j.a);
     const B = byId.get(j.b);
     if (!A || !B) continue;
-    let P = { x: j.impulse.x, y: j.impulse.y };
-    let T = j.impulse.angular;
+    // A joint held at a limit is loaded by what it would have needed, not by what it carried.
+    const own = capped.get(j.id) ?? j.impulse;
+    let P = { x: own.x, y: own.y };
+    let T = own.angular;
     if (rigidImpulse.size && rigidImpulse.has(j.b)) {
       const side = sideOf(world, j.b, j.id);
       if (!side.has(j.a)) {
@@ -270,18 +341,12 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     };
     const worst = (Object.keys(parts) as (keyof typeof parts)[]).reduce((w, k) => (parts[k] > parts[w] ? k : w), "tension");
     j.load = { tension, compression, shear, torque, fraction: parts[worst] };
-    if (parts[worst] > 1) {
+    if (parts[worst] > 1 || capped.has(j.id)) {
       broken.add(j.id);
       world.events.push({ tick: world.tick, type: "joint.break", data: { id: j.id, a: j.a, b: j.b, quantity: worst, load: parts[worst] * j.limits[worst], limit: j.limits[worst] } });
-      // A joint that breaks only carries up to its limit: take back the rest of this step's solver impulse.
-      const keep = 1 / parts[worst];
-      const s = { a: rigid(A), b: rigid(B), rA: rotate(sinCos(A.angle), j.anchorA), rB: rotate(sinCos(B.angle), j.anchorB) } as JointSolver;
-      applyLinear(s, scale({ x: j.impulse.x, y: j.impulse.y }, keep - 1), acc);
-      applyAngular(s, j.impulse.angular * (keep - 1), acc);
     }
   }
   if (broken.size) world.joints = world.joints.filter((j) => !broken.has(j.id));
-  return acc;
 }
 
 /**

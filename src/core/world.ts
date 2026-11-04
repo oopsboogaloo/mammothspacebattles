@@ -7,7 +7,7 @@ import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type De
 import { bodyMass, type Store } from "./bodies.ts";
 import { assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
 import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
-import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, rigid, solveContacts, type RB } from "./physics.ts";
+import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, solveContacts, type RB } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { burn, emptyGas, igniteAndBurn, makeFill, mixture, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel } from "./gas.ts";
@@ -843,7 +843,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   // Contacts: kinetic energy lost becomes heat.
   before = after;
-  const { account, jointAccount, solved } = solveContacts(world, rbs, profile);
+  const { account, jointAccount, capped, solved } = solveContacts(world, rbs, profile);
   world.ledger.thermal -= account.predictedKE + jointAccount.predictedKE;
   const contactHeat = -account.predictedKE - jointAccount.predictedKE;
   sources.contact.momentumX = account.externalImpulse.x;
@@ -861,16 +861,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   const rigidImpulse = integratePositions(rbs, dt, world);
   after = computeTotals(world);
   sources.field.energy += after.energy.potential - before.energy.potential;
-  let breakHeat = 0;
-  if (world.joints.length) {
-    const brk = evaluateJoints(world, dt, rigidImpulse, rigid);
-    world.ledger.thermal -= brk.predictedKE;
-    breakHeat = -brk.predictedKE;
-    sources.joint.momentumX += brk.externalImpulse.x;
-    sources.joint.momentumY += brk.externalImpulse.y;
-    sources.joint.angularMomentum += brk.angular;
-    after = computeTotals(world);
-  }
+  // Joints past a limit break (ASM-004). The solver already held them to their limits, so
+  // breaking changes no velocity and the ledger has nothing more to record.
+  if (world.joints.length) evaluateJoints(world, dt, rigidImpulse, capped);
 
   // Disc pairs that met mid-step move onto their true paths; this is part of the contact.
   before = after;
@@ -926,7 +919,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   world.tick += 1;
   world.time = world.tick * dt;
-  finishLedger(world, start, after, sources, profile, [...account.involved], contactHeat + breakHeat);
+  finishLedger(world, start, after, sources, profile, [...account.involved], contactHeat);
   world.pendingUser = zeroDelta();
   world.pendingDebug = [];
   mark("ledger");
