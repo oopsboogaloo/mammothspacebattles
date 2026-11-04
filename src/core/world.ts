@@ -9,6 +9,7 @@ import { assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
 import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, solveContacts, type RB } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
+import { applyDamage, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { burn, emptyGas, igniteAndBurn, makeFill, mixture, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel } from "./gas.ts";
 import type { Profile } from "./profile.ts";
@@ -49,6 +50,10 @@ export interface Body {
    * `core` softens the pull near and inside the body, m.
    */
   gravity?: { mu: number; core: number };
+  /** How it takes damage (DMG-002). Absent: it can't be damaged. */
+  material?: Material;
+  /** 1 whole, 0 failed (DMG-001). At 0 it is wreckage: it no longer functions (DMG-003). */
+  integrity: number;
 }
 
 /**
@@ -111,6 +116,7 @@ export const INJECTOR_DEFAULTS: Omit<Injector, "channel"> = {
 export function injectorStatus(world: World, body: Body): { firing: boolean; reason: string } {
   const inj = body.injector;
   if (!inj) return { firing: false, reason: "Not an injector" };
+  if (body.integrity <= 0) return { firing: false, reason: "Destroyed" };
   const hasLink = world.links.some((l) => l.kind === "control" && l.to === body.id && l.channel === inj.channel);
   if (!hasLink) return { firing: false, reason: `No control link for channel "${inj.channel}"` };
   const command = world.controls[inj.channel] ?? 0;
@@ -130,8 +136,8 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
 const GOLDEN = 0.6180339887498949;
 
 /** Body as written in scenarios and commands: material fields are optional. */
-export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector"> &
-  Partial<Pick<Body, "fixed" | "restitution" | "friction">> & { injector?: InjectorInput };
+export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity"> &
+  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput };
 
 /** An injector as written in scenarios: everything but the channel has a default. */
 export type InjectorInput = Pick<Injector, "channel"> & Partial<Omit<Injector, "channel">>;
@@ -162,16 +168,25 @@ export interface Joint {
   impulse: { x: number; y: number; angular: number };
   /** Impulse the joint passed on from gas pushing its assembly last step (on b's side, about b's anchor). */
   gasImpulse?: { x: number; y: number; angular: number };
-  /** Last step's load; fraction is the worst of each load ÷ its limit. */
+  /** 1 whole, 0 broken (DMG-001). Its limits scale with it: a damaged weld breaks more easily. */
+  integrity: number;
+  /** Last step's load; fraction is the worst of each load ÷ its (damaged) limit. */
   load: { tension: number; compression: number; shear: number; torque: number; fraction: number };
 }
 
-export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle">> & { limits?: Partial<JointLimits> };
+export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity">> & { limits?: Partial<JointLimits> };
 
 /** Zero-mass connections (ASM-006): feed links move a resource between stores; control links carry a channel to a component. */
-export type Link =
+export type Link = (
   | { id: string; kind: "feed"; from: string; to: string; resource: string; rate: number /* kg/s */ }
-  | { id: string; kind: "control"; channel: string; to: string };
+  | { id: string; kind: "control"; channel: string; to: string }
+) & {
+  /** 1 whole, 0 broken (DMG-001). It falls with damage to either end. Absent in a scenario: 1. */
+  integrity: number;
+};
+
+/** A link as written in scenarios: integrity defaults to 1. */
+export type LinkInput = Link extends infer L ? (L extends Link ? Omit<L, "integrity"> & { integrity?: number } : never) : never;
 
 export const BODY_DEFAULTS = { fixed: false, restitution: 0.5, friction: 0.4 } as const;
 
@@ -252,7 +267,7 @@ export type Command =
   | { type: "joint.set"; id: string; limits: Partial<JointLimits> }
   /** Removes every joint touching the body: it leaves its assembly with its own momentum. */
   | { type: "body.detach"; id: string }
-  | { type: "link.add"; link: Link }
+  | { type: "link.add"; link: LinkInput }
   | { type: "link.remove"; id: string }
   | { type: "control.set"; channel: string; value: number }
   | { type: "rng.sample"; label: string }
@@ -261,7 +276,7 @@ export type Command =
 
 export function normalizeBody(input: BodyInput): Body {
   const { injector, ...rest } = structuredClone(input);
-  const body: Body = { ...BODY_DEFAULTS, ...rest };
+  const body: Body = { ...BODY_DEFAULTS, integrity: 1, ...rest };
   if (injector) body.injector = { ...INJECTOR_DEFAULTS, ...injector };
   if (body.shape.kind === "polygon") {
     const { vertices, centroid } = normalizePolygon(body.shape.vertices);
@@ -280,7 +295,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: Link[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -339,12 +354,14 @@ export function addJoint(world: World, input: JointInput): void {
     referenceAngle: input.referenceAngle ?? b.angle - a.angle,
     limits: { ...JOINT_DEFAULT_LIMITS, ...input.limits },
     impulse: { x: 0, y: 0, angular: 0 },
+    integrity: input.integrity ?? 1,
     load: { tension: 0, compression: 0, shear: 0, torque: 0, fraction: 0 },
   };
   world.joints = [...world.joints, joint].sort((p, q) => compareIds(p.id, q.id));
 }
 
-function addLink(world: World, link: Link): void {
+function addLink(world: World, input: LinkInput): void {
+  const link = { integrity: 1, ...input } as Link;
   if (world.links.some((l) => l.id === link.id)) throw new Error(`Duplicate link id "${link.id}"`);
   const to = findBody(world, link.to);
   if (link.kind === "feed") {
@@ -864,6 +881,8 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Joints past a limit break (ASM-004). The solver already held them to their limits, so
   // breaking changes no velocity and the ledger has nothing more to record.
   if (world.joints.length) evaluateJoints(world, dt, rigidImpulse, capped);
+  // Contacts damage what they hit (DMG-002); what fails stops working or breaks (DMG-003).
+  applyDamage(world);
 
   // Disc pairs that met mid-step move onto their true paths; this is part of the contact.
   before = after;

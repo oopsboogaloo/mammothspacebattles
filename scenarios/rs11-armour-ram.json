@@ -1,0 +1,255 @@
+{
+  "schema": 1,
+  "name": "rs11-armour-ram",
+  "title": "Ram an armoured and a bare tank",
+  "description": "RS-11. Two 40 kg rams at the chosen speed hit two identical 10 kg tanks of oxygen. The lower tank has an 8 kg armour plate welded to its face. Each hit loses kinetic energy as heat, and half of it goes to each body. A tank takes damage above 20 J and is destroyed by 100 J more. Armour takes damage only above 100 J and needs 4000 J more, and the ram touches the armour, not the tank behind it.",
+  "profile": "test",
+  "seed": 1,
+  "parameters": [
+    {
+      "id": "v",
+      "label": "Ram speed",
+      "unit": "m/s",
+      "min": 1,
+      "max": 20,
+      "step": 0.5,
+      "default": 10
+    }
+  ],
+  "world": {
+    "bodies": [
+      {
+        "id": "ram-a",
+        "shape": {
+          "kind": "disc",
+          "radius": 0.35
+        },
+        "mass": 40,
+        "position": {
+          "x": -2,
+          "y": 1.2
+        },
+        "velocity": {
+          "x": {
+            "$param": "v"
+          },
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "tank-a",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 4,
+        "position": {
+          "x": 0,
+          "y": 1.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "material": {
+          "name": "tank",
+          "threshold": 20,
+          "toughness": 100
+        },
+        "contents": [
+          {
+            "resource": "o2",
+            "mass": 6,
+            "capacity": 8
+          }
+        ]
+      },
+      {
+        "id": "ram-b",
+        "shape": {
+          "kind": "disc",
+          "radius": 0.35
+        },
+        "mass": 40,
+        "position": {
+          "x": -2.2,
+          "y": -1.2
+        },
+        "velocity": {
+          "x": {
+            "$param": "v"
+          },
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0
+      },
+      {
+        "id": "armour",
+        "shape": {
+          "kind": "box",
+          "width": 0.2,
+          "height": 1.2
+        },
+        "mass": 8,
+        "position": {
+          "x": -0.6,
+          "y": -1.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "material": {
+          "name": "armour",
+          "threshold": 100,
+          "toughness": 4000
+        }
+      },
+      {
+        "id": "tank-b",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 4,
+        "position": {
+          "x": 0,
+          "y": -1.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "material": {
+          "name": "tank",
+          "threshold": 20,
+          "toughness": 100
+        },
+        "contents": [
+          {
+            "resource": "o2",
+            "mass": 6,
+            "capacity": 8
+          }
+        ]
+      }
+    ],
+    "joints": [
+      {
+        "id": "plate",
+        "a": "armour",
+        "b": "tank-b",
+        "anchorA": {
+          "x": 0.1,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": 0
+        },
+        "limits": {
+          "tension": 1000000.0,
+          "compression": 1000000.0,
+          "shear": 1000000.0,
+          "torque": 1000000.0
+        }
+      }
+    ]
+  },
+  "timeline": [],
+  "end": {
+    "steps": 240
+  },
+  "probes": [
+    {
+      "id": "bare",
+      "path": "bodies[id=tank-a].integrity"
+    },
+    {
+      "id": "shielded",
+      "path": "bodies[id=tank-b].integrity"
+    },
+    {
+      "id": "plate",
+      "path": "bodies[id=armour].integrity"
+    },
+    {
+      "id": "weld",
+      "path": "joints[id=plate].integrity"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "valueAt",
+      "probe": "bare",
+      "step": "end",
+      "equals": 0,
+      "tol": 0
+    },
+    {
+      "kind": "event",
+      "type": "destroyed",
+      "occurred": true
+    },
+    {
+      "kind": "valueAt",
+      "probe": "shielded",
+      "step": "end",
+      "equals": 1,
+      "tol": 0
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "plate",
+      "from": 120,
+      "to": "end",
+      "min": 0.9,
+      "max": 0.999
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "weld",
+      "from": 0,
+      "to": "end",
+      "min": 0.9
+    },
+    {
+      "kind": "ledgerResidual",
+      "quantity": "energy",
+      "maxAbs": 1e-06
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "Press play. Both rams hit at about 0.1 s. The bare tank (top) takes about 150 J and is destroyed: it goes dark with a cross. The armour (bottom) takes about 200 J, over its 100 J threshold, so it loses 2.5%, and the tank behind it is untouched. Lower the ram speed below about 9 m/s and the bare tank survives, damaged; below about 7 m/s the armour isn't marked at all.",
+    "overlays": [
+      "velocity",
+      "damage"
+    ],
+    "camera": {
+      "x": 1.5,
+      "y": -0.6,
+      "zoom": 55
+    },
+    "graphs": [
+      "bare",
+      "shielded",
+      "plate"
+    ]
+  }
+}

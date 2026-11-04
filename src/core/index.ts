@@ -1,6 +1,7 @@
 // Public API of the headless simulation core. No DOM, timers or wall-clock time (ARC-001).
 export * from "./canonical.ts";
 export * from "./collide.ts";
+export * from "./damage.ts";
 export * from "./formula.ts";
 export * from "./gas.ts";
 export * from "./joints.ts";

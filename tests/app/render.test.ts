@@ -34,6 +34,21 @@ describe("renderer", () => {
     expect(calls.filter((c) => c.startsWith("fillText(")).map((c) => c.split(",")[0])).toEqual(["fillText(a", "fillText(floor"]); // bodies draw in id order
   });
 
+  it("DMG-003 wreckage draws dark with a cross; the damage overlay bars each damageable part with its integrity", () => {
+    const w = createWorld(1, [
+      disc("a", { material: { threshold: 1, toughness: 10 }, integrity: 0.4 }),
+      disc("b", { position: { x: 2, y: 0 }, integrity: 0 }),
+      disc("c", { position: { x: -2, y: 0 } }),
+    ]);
+    const plain = recorder();
+    renderFrame(plain.ctx, w, cam, vp, { overlays: new Set(), selection: new Set(), hover: null });
+    expect(plain.calls).toContain("fillStyle=#0C0F18"); // b is wreckage
+    expect(plain.calls.filter((c) => c.startsWith("fillText(") && c.includes("%"))).toEqual([]);
+    const bars = recorder();
+    renderFrame(bars.ctx, w, cam, vp, { overlays: new Set(["damage"]), selection: new Set(), hover: null });
+    expect(bars.calls.filter((c) => c.startsWith("fillText(") && c.includes("%")).map((c) => c.split(",")[0])).toEqual(["fillText(40%", "fillText(0%"]); // c has no material and is whole: no bar
+  });
+
   it("TST-011 contact overlay draws only engaged contacts; huge velocities get a capped arrow", () => {
     const w = createWorld(1, [disc("a", { restitution: 0, position: { x: 0, y: 0.5 } }), box("floor", 4, 0.5, { fixed: true, restitution: 0, position: { x: 0, y: -0.25 } })], { x: 0, y: -9.81 });
     for (let i = 0; i < 240; i++) stepInPlace(w, [], getProfile("test"));

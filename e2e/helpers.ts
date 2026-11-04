@@ -11,7 +11,7 @@ interface Hook {
 }
 interface World {
   tick: number;
-  bodies: { id: string; position: { x: number; y: number }; velocity: { x: number; y: number }; angle: number; mass: number; fixed: boolean }[];
+  bodies: { id: string; position: { x: number; y: number }; velocity: { x: number; y: number }; angle: number; mass: number; fixed: boolean; integrity: number }[];
   events: { tick: number; type: string; data: Record<string, unknown> }[];
   ledger: { violations: number };
 }

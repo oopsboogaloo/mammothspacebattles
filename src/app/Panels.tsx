@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, length, massProps, mixture, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
+import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, length, massProps, MATERIALS, mixture, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
 import { assemblyIds, makePrefab } from "./ports.ts";
 import { deg, fmt, rad } from "./format.ts";
 import { NumberField } from "./NumberField.tsx";
@@ -302,6 +302,17 @@ const positive = (v: number) => (v > 0 ? null : "Must be greater than 0");
 const unit01 = (v: number) => (v >= 0 && v <= 1 ? null : "Must be between 0 and 1");
 const nonNegative = (v: number) => (v >= 0 ? null : "Must be 0 or more");
 
+/** Which named material every selected body has, if they agree (DMG-002). */
+function materialKey(bodies: Body[]): string {
+  const key = (b: Body) => {
+    if (!b.material) return "none";
+    const k = Object.keys(MATERIALS).find((n) => MATERIALS[n].threshold === b.material!.threshold && MATERIALS[n].toughness === b.material!.toughness);
+    return k ?? "custom";
+  };
+  const k = key(bodies[0]);
+  return bodies.every((b) => key(b) === k) ? k : "mixed";
+}
+
 function BodyInspector({ bodies }: { bodies: Body[] }) {
   // Signals skip re-rendering components whose props are unchanged; the body object is mutated in place.
   void version.value;
@@ -341,6 +352,37 @@ function BodyInspector({ bodies }: { bodies: Body[] }) {
         {one && mp && <Row k="Moment of inertia (derived)" v={fmt(mp.inertia, "kg·m²")} title="From mass and shape, assuming uniform density." />}
         <NumberField id="restitution" label="Restitution" step={0.05} value={shared(bodies, (b) => b.restitution)} validate={unit01} onCommit={set("Set restitution", (_b, v) => ({ restitution: v }))} />
         <NumberField id="friction" label="Friction" step={0.05} value={shared(bodies, (b) => b.friction)} validate={nonNegative} onCommit={set("Set friction", (_b, v) => ({ friction: v }))} />
+        <label class="row">
+          <span class="muted">Damage</span>
+          <select
+            aria-label="Damage material"
+            data-testid="field-damage-material"
+            value={materialKey(bodies)}
+            onChange={(e) => {
+              const k = (e.currentTarget as HTMLSelectElement).value;
+              if (k === "custom" || k === "mixed") return;
+              const material = k === "none" ? undefined : { ...MATERIALS[k] };
+              edit(bodies.map((b) => ({ type: "body.set", id: b.id, patch: { material } })), k === "none" ? "Make undamageable" : `Make ${k}`);
+            }}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <option value="none">None: can't be damaged</option>
+            {Object.keys(MATERIALS).map((k) => (
+              <option value={k}>
+                {k} (above {MATERIALS[k].threshold} J, {MATERIALS[k].toughness} J to destroy)
+              </option>
+            ))}
+            {materialKey(bodies) === "custom" && <option value="custom">custom</option>}
+            {materialKey(bodies) === "mixed" && <option value="mixed">mixed</option>}
+          </select>
+        </label>
+        {bodies.every((b) => b.material) && (
+          <>
+            <NumberField id="threshold" label="Damage threshold" unit="J" step={10} value={shared(bodies, (b) => b.material!.threshold)} validate={nonNegative} onCommit={set("Set damage threshold", (b, v) => ({ material: { ...b.material!, threshold: v } }))} />
+            <NumberField id="toughness" label="Toughness" unit="J" step={10} value={shared(bodies, (b) => b.material!.toughness)} validate={positive} onCommit={set("Set toughness", (b, v) => ({ material: { ...b.material!, toughness: v } }))} />
+          </>
+        )}
+        <NumberField id="integrity" label="Integrity" step={0.05} value={shared(bodies, (b) => b.integrity)} validate={unit01} onCommit={set("Set integrity", (_b, v) => ({ integrity: v }))} />
         <label class="row">
           <span class="muted">Fixed (never moves)</span>
           <input
@@ -462,6 +504,7 @@ function JointsSection({ body }: { body: Body }) {
                 {pct.toFixed(0)}% {worst.k}
               </span>
             </div>
+            {j.integrity < 1 && <Row k="Integrity" v={`${Math.round(j.integrity * 100)}%: limits scaled to match`} title="A damaged weld carries its limits × its integrity (DMG-001)." />}
             <div class="loadbar" role="meter" aria-label={`Load on ${j.id}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
               <div style={{ width: `${pct}%`, background: pct >= 80 ? "var(--orange)" : pct >= 50 ? "#F2C94C" : "var(--accent)" }} />
             </div>

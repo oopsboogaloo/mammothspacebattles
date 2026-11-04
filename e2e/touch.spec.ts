@@ -173,16 +173,16 @@ test.describe("flight buttons (phone, 390 px)", () => {
     await expect(btn).toHaveAttribute("aria-pressed", "false");
     // Hold again, then remove its control link: the channel is let go, not left on.
     await btn.dispatchEvent("pointerdown", { pointerId: 8, pointerType: "touch", clientX: box.x + 10, clientY: box.y + 10, bubbles: true });
+    await expect(btn).toHaveAttribute("aria-pressed", "true");
     await page.evaluate(() => {
       const hook = (window as unknown as { __msb: { sandbox: () => { edit: (c: unknown[], l: string) => void } } }).__msb;
       hook.sandbox().edit([{ type: "link.remove", id: "ctl-left" }], "Remove");
     });
     await page.getByTestId("step").click();
     await expect(page.getByTestId("fly-left")).toHaveCount(0);
-    const controls = await page.evaluate(
-      () => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls,
-    );
-    expect(controls.left ?? 0).toBe(0);
+    // The button goes with the link at once; the hold is let go just after, in an effect (WebKit can read in between).
+    const left = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls.left ?? 0);
+    await expect.poll(left, { timeout: 5_000 }).toBe(0);
   });
 
   test("SBX-030 SBX-047 the camera keeps following the ship after a tap on empty space, a wobbly tap, or a tap on another part", async ({ page }) => {
