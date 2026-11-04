@@ -10,7 +10,7 @@
 
 import { bodyMass } from "./bodies.ts";
 import { collide, type Manifold, type Placed } from "./collide.ts";
-import { assemblyRoots, correctJoints, emptyAccount, finishJoints, prepareJoints, solveJoints, type ConstraintAccount, type JointBody } from "./joints.ts";
+import { assemblyOf, assemblyRoots, correctJoints, emptyAccount, finishJoints, prepareJoints, resetJoints, solveJoints, type ConstraintAccount, type JointBody } from "./joints.ts";
 import { add, cross, crossSV, dot, invRotate, length, rotate, scale, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
 import type { Profile } from "./profile.ts";
 import { massProps } from "./shapes.ts";
@@ -177,7 +177,16 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   });
 
   const previous = new Map<string, Contact>();
-  for (const c of world.contacts) previous.set(pairKey(c.a, c.b, c.key), c);
+  // A contact's last impulse was sized for the assembly it pushed then. If welds broke last step,
+  // the parts of that assembly now move on their own, and reapplying it (warm starting) can make
+  // the solve create kinetic energy, up to 18 J a step as a ship came apart on a rock. Those parts'
+  // contacts start from zero instead.
+  const loosened = new Set<string>();
+  for (const e of world.events) {
+    if (e.type !== "joint.break" || e.tick !== world.tick - 1) continue;
+    for (const id of [String(e.data.a), String(e.data.b)]) for (const m of assemblyOf(world, id)) loosened.add(m);
+  }
+  for (const c of world.contacts) if (!loosened.has(c.a) && !loosened.has(c.b)) previous.set(pairKey(c.a, c.b, c.key), c);
   // Pairs that were actually pushing last step; a speculative contact with no impulse is not a touch.
   const previousPairs = new Set(world.contacts.filter((c) => c.normalImpulse > 0).map((c) => `${c.a}\u0000${c.b}`));
 
@@ -270,60 +279,96 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
     else if (c.b.invMass === 0) account.externalImpulse = sub(account.externalImpulse, P);
   };
 
-  // Warm start contacts from the previous step's impulses (welds start from zero: see prepareJoints).
-  for (const c of contacts) {
-    const t = { x: c.normal.y, y: -c.normal.x };
-    for (const p of c.points) {
-      apply(c, p, c.normal, p.normalImpulse);
-      apply(c, p, t, p.tangentImpulse);
+  const solve = (warm: boolean) => {
+    // Warm start contacts from the previous step's impulses (welds start from zero: see prepareJoints).
+    if (warm) {
+      for (const c of contacts) {
+        const t = { x: c.normal.y, y: -c.normal.x };
+        for (const p of c.points) {
+          apply(c, p, c.normal, p.normalImpulse);
+          apply(c, p, t, p.tangentImpulse);
+        }
+      }
     }
-  }
 
-  for (let it = 0; it < profile.solverIterations; it++) {
-    solveJoints(joints, jointAccount);
+    for (let it = 0; it < profile.solverIterations; it++) {
+      solveJoints(joints, jointAccount);
+      for (const c of contacts) {
+        const n = c.normal;
+        const t = { x: n.y, y: -n.x };
+        for (const p of c.points) {
+          // Friction, limited by the current normal impulse (Coulomb).
+          const vt = dot(relVel(c, p), t);
+          const maxF = c.friction * p.normalImpulse;
+          const newT = Math.max(-maxF, Math.min(maxF, p.tangentImpulse - vt * p.tangentMass));
+          apply(c, p, t, newT - p.tangentImpulse);
+          p.tangentImpulse = newT;
+        }
+        for (const p of c.points) {
+          // Non-penetration. A positive separation lets the bodies close exactly that gap this step (speculative contact).
+          const vn = dot(relVel(c, p), n);
+          const bias = p.separation > 0 ? p.separation / dt : 0;
+          const newN = Math.max(0, p.normalImpulse - (vn + bias) * p.normalMass);
+          apply(c, p, n, newN - p.normalImpulse);
+          p.normalImpulse = newN;
+          p.maxNormalImpulse = Math.max(p.maxNormalImpulse, newN);
+        }
+      }
+    }
+
+    // Restitution: contacts that engaged this step leave at −e × their approach speed.
+    // This also runs for e = 0, so a speculative impact finishes within one step instead of
+    // carrying leftover approach speed into the next step (where the normal has rotated).
     for (const c of contacts) {
-      const n = c.normal;
-      const t = { x: n.y, y: -n.x };
       for (const p of c.points) {
-        // Friction, limited by the current normal impulse (Coulomb).
-        const vt = dot(relVel(c, p), t);
-        const maxF = c.friction * p.normalImpulse;
-        const newT = Math.max(-maxF, Math.min(maxF, p.tangentImpulse - vt * p.tangentMass));
-        apply(c, p, t, newT - p.tangentImpulse);
-        p.tangentImpulse = newT;
-      }
-      for (const p of c.points) {
-        // Non-penetration. A positive separation lets the bodies close exactly that gap this step (speculative contact).
-        const vn = dot(relVel(c, p), n);
-        const bias = p.separation > 0 ? p.separation / dt : 0;
-        const newN = Math.max(0, p.normalImpulse - (vn + bias) * p.normalMass);
-        apply(c, p, n, newN - p.normalImpulse);
+        if (p.vn0 > -RESTITUTION_THRESHOLD || p.maxNormalImpulse === 0) continue;
+        const vn = dot(relVel(c, p), c.normal);
+        let newN = Math.max(0, p.normalImpulse - (vn + c.restitution * p.vn0) * p.normalMass);
+        // Newton's restitution with friction can add energy in off-centre impacts (Kane's paradox).
+        // Cap the extra impulse so this point never returns more energy than it has absorbed this step:
+        // the work of impulse λ is λ·vn + λ²/(2·normalMass), which must stay ≤ energyLost.
+        const extra = newN - p.normalImpulse;
+        if (extra > 0 && p.normalMass > 0) {
+          const L0 = Math.max(0, p.energyLost);
+          const limit = p.normalMass * (-vn + Math.sqrt(vn * vn + (2 * L0) / p.normalMass));
+          if (extra > limit) newN = p.normalImpulse + Math.max(0, limit);
+        }
+        apply(c, p, c.normal, newN - p.normalImpulse);
         p.normalImpulse = newN;
-        p.maxNormalImpulse = Math.max(p.maxNormalImpulse, newN);
       }
     }
-  }
-
-  // Restitution: contacts that engaged this step leave at −e × their approach speed.
-  // This also runs for e = 0, so a speculative impact finishes within one step instead of
-  // carrying leftover approach speed into the next step (where the normal has rotated).
-  for (const c of contacts) {
-    for (const p of c.points) {
-      if (p.vn0 > -RESTITUTION_THRESHOLD || p.maxNormalImpulse === 0) continue;
-      const vn = dot(relVel(c, p), c.normal);
-      let newN = Math.max(0, p.normalImpulse - (vn + c.restitution * p.vn0) * p.normalMass);
-      // Newton's restitution with friction can add energy in off-centre impacts (Kane's paradox).
-      // Cap the extra impulse so this point never returns more energy than it has absorbed this step:
-      // the work of impulse λ is λ·vn + λ²/(2·normalMass), which must stay ≤ energyLost.
-      const extra = newN - p.normalImpulse;
-      if (extra > 0 && p.normalMass > 0) {
-        const L0 = Math.max(0, p.energyLost);
-        const limit = p.normalMass * (-vn + Math.sqrt(vn * vn + (2 * L0) / p.normalMass));
-        if (extra > limit) newN = p.normalImpulse + Math.max(0, limit);
+  };
+  // Keep what the solve starts from, in case it has to run again.
+  const v0 = rbs.map((r) => ({ v: r.body.velocity, w: r.body.angularVelocity }));
+  const ke0 = rbs.reduce((e, r) => (r.invMass === 0 ? e : e + 0.5 * r.mass * (r.body.velocity.x ** 2 + r.body.velocity.y ** 2) + 0.5 * r.inertia * r.body.angularVelocity ** 2), 0);
+  const warmImpulses = contacts.map((c) => c.points.map((p) => ({ n: p.normalImpulse, t: p.tangentImpulse })));
+  solve(true);
+  // Every weld and contact update lowers kinetic energy or leaves it, except reapplying contacts' last
+  // impulses (warm starting). Iterations usually take that back, but not always: a ship coming apart
+  // on a rock gained up to 13 J a step, its contacts adding far more than its welds removed. If the
+  // solve gained more than the ledger allows (finishLedger), solve the step again with every contact
+  // starting from zero, which can't gain energy.
+  const gained = account.predictedKE + jointAccount.predictedKE;
+  if (gained > profile.tol.energy + 1e-5 * ke0 && warmImpulses.some((ps) => ps.some((q) => q.n !== 0 || q.t !== 0))) {
+    rbs.forEach((r, i) => {
+      r.body.velocity = v0[i].v;
+      r.body.angularVelocity = v0[i].w;
+    });
+    for (const c of contacts)
+      for (const p of c.points) {
+        p.normalImpulse = 0;
+        p.tangentImpulse = 0;
+        p.maxNormalImpulse = 0;
+        p.energyLost = 0;
       }
-      apply(c, p, c.normal, newN - p.normalImpulse);
-      p.normalImpulse = newN;
+    for (const acc of [account, jointAccount]) {
+      acc.externalImpulse = { x: 0, y: 0 };
+      acc.angular = 0;
+      acc.predictedKE = 0;
+      acc.involved.clear();
     }
+    resetJoints(joints);
+    solve(false);
   }
 
   // Record contacts for warm starting, overlays and damage (COL-006).

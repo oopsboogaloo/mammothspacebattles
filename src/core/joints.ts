@@ -237,6 +237,14 @@ export function solveJoints(js: JointSolver[], acc: ConstraintAccount): void {
   }
 }
 
+/** Clears every weld's impulse for this step, to solve it again from the start. */
+export function resetJoints(js: JointSolver[]): void {
+  for (const s of js) {
+    s.P = { x: 0, y: 0 };
+    s.L = 0;
+  }
+}
+
 /** Solves the point constraint along one direction only, keeping that component in [lo, hi]. */
 function slide(s: JointSolver, d: Vec2, lo: number, hi: number, acc: ConstraintAccount): void {
   const k = s.k11 * d.x * d.x + 2 * s.k12 * d.x * d.y + s.k22 * d.y * d.y;

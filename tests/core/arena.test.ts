@@ -1,7 +1,7 @@
 // Flight-test arena (FLT-010…FLT-013): fuel economy, gravity from asteroids, a world that wraps round.
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assemblyTotals, createWorld, getProfile, initialWorld, parseScenario, stepInPlace, type Command, type World } from "../../src/core/index.ts";
+import { assemblyOf, assemblyTotals, createWorld, getProfile, initialWorld, parseScenario, stepInPlace, type Command, type World } from "../../src/core/index.ts";
 import { disc, readJson, ROOT } from "../helpers.ts";
 
 const sandbox = getProfile("sandbox");
@@ -129,5 +129,41 @@ describe("flight-test arena", () => {
     expect(near.position.x - ship.x).toBeCloseTo(gap, 6); // …with the parcel beside it, still beside it
     expect(alone.position.x).toBeCloseTo(x0 + 5 - 20, 6); // the lone parcel wrapped by itself
     expect(w.ledger.violations).toBe(0);
+  });
+
+  describe("breakable ship (FT-B)", () => {
+    /** The FT-B ship dropped onto rock-d at `v` m/s, legs first, with its strengths set. */
+    const crash = (v: number, material: number, welds: number, steps = 360) => {
+      const raw = readJson(join(ROOT, "scenarios", "ft-breakable.json")) as { world: { bodies: { gravity?: unknown; position: { x: number; y: number }; velocity: { x: number; y: number } }[] } };
+      for (const b of raw.world.bodies) {
+        if (b.gravity) continue;
+        b.position = { x: b.position.x + 37.7, y: b.position.y - 2.5 }; // legs about 3 m above the rock
+        b.velocity = { x: 0, y: -v };
+      }
+      const w = initialWorld(parseScenario(raw, { material, welds }));
+      for (let i = 0; i < steps; i++) stepInPlace(w, [], sandbox);
+      return w;
+    };
+
+    it("DMG-002 DMG-003 turned down, the ship comes apart on a rock; turned up, it bounces off whole", () => {
+      const weak = crash(8, 0.2, 0.1);
+      expect(assemblyOf(weak, "hull").length).toBeLessThan(5);
+      expect(weak.bodies.filter((b) => b.integrity === 0).length).toBeGreaterThan(1);
+      expect(weak.ledger.violations).toBe(0);
+      const strong = crash(8, 50, 100);
+      expect(assemblyOf(strong, "hull")).toHaveLength(19);
+      expect(strong.bodies.every((b) => b.integrity === 1)).toBe(true);
+      expect(assemblyTotals(strong, "hull")!.velocity.y).toBeGreaterThan(0); // bounced
+      expect(strong.ledger.violations).toBe(0);
+    }, 300_000);
+
+    it("COL-006 LED-003 a ship coming apart on a rock creates no energy: a solve that gains is redone without warm starts", () => {
+      // Its contacts' warm starts added up to 144 J a step while its welds took back less, a net
+      // gain of up to 13 J; plain FT gained 0.19 J landing hard on the same rock.
+      for (const [v, m, k] of [[8, 1, 1], [15, 1, 1], [8, 50, 100]]) {
+        const w = crash(v, m, k, 240);
+        expect(w.ledger.violations, `${v} m/s at ${m}× / ${k}×`).toBe(0);
+      }
+    }, 300_000);
   });
 });
