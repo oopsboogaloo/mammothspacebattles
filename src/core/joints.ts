@@ -280,19 +280,37 @@ export function finishJoints(js: JointSolver[], acc: ConstraintAccount): Map<str
   return capped;
 }
 
-/** Bodies reachable from `start` through joints, not using joint `skip`. */
-function sideOf(world: World, start: string, skip: string): Set<string> {
+type Adjacency = Map<string, Joint[]>;
+
+/** Each body's joints, built once per pass (searching every joint from every body was slow with many welds). */
+function adjacency(world: World): Adjacency {
+  const adj: Adjacency = new Map();
+  for (const j of world.joints) {
+    for (const id of [j.a, j.b]) {
+      const list = adj.get(id);
+      if (list) list.push(j);
+      else adj.set(id, [j]);
+    }
+  }
+  return adj;
+}
+
+/**
+ * Bodies reachable from `start` through joints, not using joint `skip`. Stops early once `stop` is
+ * reached: then the joint is in a loop, and its callers don't need the rest.
+ */
+function sideOf(adj: Adjacency, start: string, skip: string, stop: string): Set<string> {
   const seen = new Set([start]);
   const queue = [start];
   while (queue.length) {
     const id = queue.pop()!;
-    for (const j of world.joints) {
+    for (const j of adj.get(id) ?? []) {
       if (j.id === skip) continue;
-      const other = j.a === id ? j.b : j.b === id ? j.a : null;
-      if (other && !seen.has(other)) {
-        seen.add(other);
-        queue.push(other);
-      }
+      const other = j.a === id ? j.b : j.a;
+      if (seen.has(other)) continue;
+      seen.add(other);
+      if (other === stop) return seen;
+      queue.push(other);
     }
   }
   return seen;
@@ -307,6 +325,7 @@ function sideOf(world: World, start: string, skip: string): Set<string> {
  */
 export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<string, Vec2>, capped: ReadonlyMap<string, JointImpulse>): void {
   const broken = new Set<string>();
+  const adj = adjacency(world);
   const byId = new Map(world.bodies.map((b) => [b.id, b]));
   for (const j of world.joints) {
     const A = byId.get(j.a);
@@ -317,7 +336,7 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     let P = { x: own.x, y: own.y };
     let T = own.angular;
     if (rigidImpulse.size && rigidImpulse.has(j.b)) {
-      const side = sideOf(world, j.b, j.id);
+      const side = sideOf(adj, j.b, j.id, j.a);
       if (!side.has(j.a)) {
         const pB = add(B.position, rotate(sinCos(B.angle), j.anchorB));
         for (const id of side) {
@@ -365,13 +384,14 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
  * directly. Stored on the joint for the next step's evaluation (ASM-004 under thrust, RS-10).
  */
 export function recordGasLoads(world: World, supplied: Map<string, { x: number; y: number; angular: number }>): void {
+  const adj = adjacency(world);
   const byId = new Map(world.bodies.map((b) => [b.id, b]));
   for (const j of world.joints) {
     j.gasImpulse = undefined;
     if (!supplied.size || !supplied.has(j.b)) continue;
     const B = byId.get(j.b);
     if (!B) continue;
-    const side = sideOf(world, j.b, j.id);
+    const side = sideOf(adj, j.b, j.id, j.a);
     if (side.has(j.a)) continue; // a loop: the solver shares it
     const pB = add(B.position, rotate(sinCos(B.angle), j.anchorB));
     let x = 0;
