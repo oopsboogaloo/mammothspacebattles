@@ -494,6 +494,7 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
   - Suggested: A as the default, B as an option for ships that declare routes. Open questions: does a cut feed spill what was in the line (a leak at the break, DMG-004), and should the sandbox draw link routes?
 - **A cockpit.** A square component that stands for the pilot, where every control channel starts. Controls reach a component only while it is connected to a working cockpit. With the cockpit wrecked or broken off, the rest of the ship takes no commands, and its engines stop or keep their last setting (to decide). This is also where an AI pilot (§13) would sit later.
   - Open questions: is the connection the assembly (as in option A) or routed control links (as in B)? Can a ship have more than one cockpit, and which one wins? Should a cockpit take damage like any part, and does losing it count as a crash in challenges such as LAND?
+- **The cannon's propellant economy.** The ships' cannons should burn propellant with the same 20× economy as their engines (FLT-010), treating it as a more efficient propellant. Today each shot draws its full charge from the ship's tank, so the cannon, not the engines, empties it. Planned for the next change.
 
 ## 10. Performance Requirements
 
