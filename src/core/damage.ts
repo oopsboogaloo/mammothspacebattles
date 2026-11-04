@@ -14,11 +14,13 @@
 // Armour (DMG-005) is just a material with a high threshold and toughness. Whatever hits it
 // touches it, not the part behind, so the armour takes the damage first.
 //
-// At 0 (DMG-003) a body is wreckage: it keeps its shape, mass and motion, but its injector stops
+// A damaged body holding gas leaks it (DMG-004) through a breach where it was first hit: see
+// leakRate. At 0 (DMG-003) a body is wreckage: it keeps its shape, mass and motion, but its injector stops
 // and its joints and links break. A joint or link at 0 breaks. Damage only reads the world's
 // contacts; it never pushes on anything, so the ledger is unchanged.
 
-import { add, length, rotate, sinCos, sub, type Vec2 } from "./math.ts";
+import { add, invRotate, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
+import { SPECIES } from "./gas.ts";
 import { localVertices } from "./shapes.ts";
 import type { Body, World } from "./world.ts";
 
@@ -38,6 +40,54 @@ export const MATERIALS: Record<string, Material> = {
   tank: { name: "tank", threshold: 20, toughness: 100 },
   armour: { name: "armour", threshold: 100, toughness: 4000 },
 };
+
+/** Where a damaged body leaks (DMG-004), in its own frame: a point on its surface and the outward direction. */
+export interface Breach {
+  point: Vec2;
+  normal: Vec2;
+  /** Leaked mass owed but not yet emitted, kg; parcels emitted so far. */
+  credit: number;
+  count: number;
+}
+
+/**
+ * The leak rule (DMG-004). A store's pressure is proportional to how full it is (a fixed volume at a
+ * fixed temperature), and the breach widens as integrity falls, so a body leaks
+ *   LEAK_RATE × (1 − integrity) × (gas mass ÷ gas capacity)   kg/s,
+ * through its breach, as parcels of LEAK_PARCEL kg moving out at LEAK_SPEED, spread across the
+ * breach's width, BREACH_WIDTH × (1 − integrity). A full store fully breached empties with a time
+ * constant of capacity ÷ LEAK_RATE. Only stores of gas species leak.
+ */
+export const LEAK_RATE = 0.5; // kg/s
+export const BREACH_WIDTH = 0.5; // m
+export const LEAK_PARCEL = 0.002; // kg
+export const LEAK_RADIUS = 0.05; // m
+export const LEAK_SPEED = 10; // m/s, relative to the breach
+
+/** Gas mass and capacity in a body's stores (only gas species leak), kg. */
+export function gasStores(b: Body): { mass: number; capacity: number } {
+  let mass = 0;
+  let capacity = 0;
+  for (const s of b.contents ?? []) {
+    if (!SPECIES[s.resource]) continue;
+    mass += s.mass;
+    capacity += s.capacity;
+  }
+  return { mass, capacity };
+}
+
+/** How fast a body leaks now, kg/s (DMG-004). */
+export function leakRate(b: Body): number {
+  if (b.integrity >= 1 || b.fixed) return 0;
+  const g = gasStores(b);
+  return g.capacity > 0 && g.mass > 0 ? LEAK_RATE * (1 - b.integrity) * (g.mass / g.capacity) : 0;
+}
+
+/** A breach for a body damaged without a hit (set by hand): the top of its outline. */
+export function defaultBreach(b: Body): Breach {
+  const top = b.shape.kind === "disc" ? b.shape.radius : Math.max(...localVertices(b.shape).map((v) => v.y));
+  return { point: { x: 0, y: top }, normal: { x: 0, y: 1 }, credit: 0, count: 0 };
+}
 
 /** Integrity below this counts as 0, so rounding never leaves a part hanging on at 10⁻¹⁶. */
 const GONE = 1e-9;
@@ -70,7 +120,6 @@ export function applyDamage(world: World): void {
     p.y += w * c.point.y;
     p.w += w;
   }
-  if (!pairs.size) return;
   const byId = new Map(world.bodies.map((b) => [b.id, b]));
   const destroyed: string[] = [];
   for (const p of pairs.values()) {
@@ -83,6 +132,13 @@ export function applyDamage(world: World): void {
       const loss = Math.min(body.integrity, Math.max(0, share - m.threshold) / m.toughness);
       if (!(loss > 0)) continue;
       body.integrity = body.integrity - loss < GONE ? 0 : body.integrity - loss;
+      // The first hit on a body holding gas opens its breach there (DMG-004).
+      if (!body.breach && gasStores(body).capacity > 0) {
+        const q = sinCos(body.angle);
+        const local = invRotate(q, sub(at, body.position));
+        const d = length(local);
+        body.breach = { point: local, normal: d > 1e-9 ? scale(local, 1 / d) : { x: 0, y: 1 }, credit: 0, count: 0 };
+      }
       world.events.push({ tick: world.tick, type: "damage", data: { id, loss, integrity: body.integrity, energy: share } });
       const r = radius(body);
       for (const j of world.joints) {
@@ -103,7 +159,9 @@ export function applyDamage(world: World): void {
       }
     }
   }
-  const gone = new Set(destroyed);
+  // Wreckage holds nothing, however it got to 0: a hit, or integrity set by hand (DMG-003, DMG-006).
+  const gone = new Set(world.bodies.filter((b) => b.integrity <= 0).map((b) => b.id));
+  if (!gone.size && !world.joints.some((j) => j.integrity <= 0) && !world.links.some((l) => l.integrity <= 0)) return;
   const brokenJoints = world.joints.filter((j) => j.integrity === 0 || gone.has(j.a) || gone.has(j.b));
   for (const j of brokenJoints) world.events.push({ tick: world.tick, type: "joint.break", data: { id: j.id, a: j.a, b: j.b, quantity: "damage", load: 0, limit: 0 } });
   if (brokenJoints.length) world.joints = world.joints.filter((j) => !brokenJoints.includes(j));

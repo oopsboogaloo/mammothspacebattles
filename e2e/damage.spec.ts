@@ -2,7 +2,7 @@
 import { expect, test } from "@playwright/test";
 import { body, openStarter, shot, toPage, waitForTick } from "./helpers.ts";
 
-test("DMG-003 DMG-005 RS-11 runs on screen: the bare tank is wrecked, the armoured one isn't, and the inspector shows why", async ({ page }, info) => {
+test("DMG-003 DMG-004 DMG-005 RS-11 runs on screen: the bare tank is wrecked, the armoured one isn't, and the inspector shows why", async ({ page }, info) => {
   await openStarter(page, "rs11-armour-ram");
   await expect(page.getByTestId("overlay-damage")).toHaveAttribute("aria-pressed", "true"); // the scenario turns it on
   await page.getByTestId("play").click();
@@ -18,4 +18,7 @@ test("DMG-003 DMG-005 RS-11 runs on screen: the bare tank is wrecked, the armour
   await page.mouse.click(p.x, p.y);
   await expect(page.getByTestId("field-damage-material")).toHaveValue("tank");
   await expect(page.getByTestId("field-integrity")).toHaveValue("0");
+  // DMG-004: it leaks through the dent, and the inspector says how fast.
+  await expect(page.getByTestId("inspector")).toContainText("Leaking");
+  expect((await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { gas: { parcels: unknown[] } } } } }).__msb.sandbox().world.gas.parcels.length))).toBeGreaterThan(0);
 });

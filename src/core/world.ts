@@ -9,9 +9,9 @@ import { assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
 import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, solveContacts, type RB } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
-import { applyDamage, type Material } from "./damage.ts";
+import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
-import { burn, emptyGas, igniteAndBurn, makeFill, mixture, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel } from "./gas.ts";
+import { burn, clearOf, emptyGas, igniteAndBurn, makeFill, mixture, SPECIES, stepGas, STORE_TEMPERATURE, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasState, type Parcel } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 
@@ -54,6 +54,8 @@ export interface Body {
   material?: Material;
   /** 1 whole, 0 failed (DMG-001). At 0 it is wreckage: it no longer functions (DMG-003). */
   integrity: number;
+  /** Where it leaks once damaged, if it holds gas (DMG-004). */
+  breach?: Breach;
 }
 
 /**
@@ -562,6 +564,54 @@ function engineInteriors(world: World): ClosedRegion[] {
   return out;
 }
 
+/**
+ * Makes one parcel of mass `dm` from a body's stores and sends it off at `point` with velocity
+ * `vParcel` (PRP-002, DMG-004). `draw` kg comes from the stores in the fractions `parts`; the rest,
+ * if any, is made from nothing (an economy, FLT-010). Mass moves from the store to the parcel, the
+ * body recoils so momentum is unchanged, and the parcel carries the store's thermal energy less
+ * any kinetic energy the emission gained, so energy is unchanged too.
+ */
+function emitParcel(world: World, b: Body, parts: [string, number][], dm: number, draw: number, point: Vec2, vParcel: Vec2, radius: number): Parcel {
+  const gs = world.gas.scale ?? 1;
+  const r = sub(point, b.position);
+  const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
+  // Kinetic energy of the body before the mass leaves it.
+  const ke = (body: Body) => {
+    const m = bodyMass(body);
+    return 0.5 * m * (body.velocity.x ** 2 + body.velocity.y ** 2) + 0.5 * massProps(body.shape, m).inertia * body.angularVelocity ** 2;
+  };
+  // Mass made by an economy above 1 (FLT-010) appears moving with the outlet: its kinetic energy
+  // there is supplied, not work the emission does, so it must not cool the gas.
+  const supplied = dm - draw;
+  const before = ke(b) + 0.5 * supplied * (vPoint.x ** 2 + vPoint.y ** 2);
+  let thermal = 0;
+  const composition: Record<string, number> = {};
+  for (const [res, y] of parts) {
+    const st = b.contents!.find((c) => c.resource === res)!;
+    st.mass -= draw * y;
+    if (st.mass < 0) st.mass = 0;
+    composition[res] = y;
+    const sp = mixture({ [res]: 1 });
+    thermal += (dm * y * sp.cv * STORE_TEMPERATURE) / gs;
+  }
+  // Recoil: the body gives the parcel its relative velocity (momentum conserved).
+  const J = { x: -dm * (vParcel.x - b.velocity.x), y: -dm * (vParcel.y - b.velocity.y) };
+  const m1 = bodyMass(b);
+  const I1 = massProps(b.shape, m1).inertia;
+  b.velocity = add(b.velocity, scale(J, 1 / m1));
+  b.angularVelocity += cross(r, J) / I1;
+  const after = ke(b) + 0.5 * dm * (vParcel.x ** 2 + vParcel.y ** 2);
+  return {
+    id: world.gas.nextId++,
+    mass: dm,
+    composition,
+    position: point,
+    velocity: vParcel,
+    thermal: Math.max(0, thermal - (after - before)),
+    radius,
+  };
+}
+
 function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
   const made: Parcel[] = [];
   const gs = world.gas.scale ?? 1;
@@ -592,42 +642,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
       const r = sub(point, b.position);
       const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
       const vParcel = add(vPoint, scale(rotate(q, inj.direction), inj.speed));
-      // Kinetic energy of the body before the mass leaves it.
-      const ke = (body: Body) => {
-        const m = bodyMass(body);
-        return 0.5 * m * (body.velocity.x ** 2 + body.velocity.y ** 2) + 0.5 * massProps(body.shape, m).inertia * body.angularVelocity ** 2;
-      };
-      // Mass made by an economy above 1 (FLT-010) appears moving with the outlet: its kinetic energy
-      // there is supplied, not work the injection does, so it must not cool the exhaust.
-      const supplied = dm - dm / (inj.economy ?? 1);
-      const before = ke(b) + 0.5 * supplied * (vPoint.x ** 2 + vPoint.y ** 2);
-      let thermal = 0;
-      const composition: Record<string, number> = {};
-      const draw = dm / (inj.economy ?? 1);
-      for (const [res, y] of stores) {
-        const st = b.contents!.find((c) => c.resource === res)!;
-        st.mass -= draw * y;
-        if (st.mass < 0) st.mass = 0;
-        composition[res] = y;
-        const sp = mixture({ [res]: 1 });
-        thermal += (dm * y * sp.cv * STORE_TEMPERATURE) / gs;
-      }
-      // Recoil: the injector gives the parcel its relative velocity (momentum conserved).
-      const J = { x: -dm * (vParcel.x - b.velocity.x), y: -dm * (vParcel.y - b.velocity.y) };
-      const m1 = bodyMass(b);
-      const I1 = massProps(b.shape, m1).inertia;
-      b.velocity = add(b.velocity, scale(J, 1 / m1));
-      b.angularVelocity += cross(r, J) / I1;
-      const after = ke(b) + 0.5 * dm * (vParcel.x ** 2 + vParcel.y ** 2);
-      const p: Parcel = {
-        id: world.gas.nextId++,
-        mass: dm,
-        composition,
-        position: point,
-        velocity: vParcel,
-        thermal: Math.max(0, thermal - (after - before)),
-        radius: inj.radius,
-      };
+      const p = emitParcel(world, b, stores, dm, dm / (inj.economy ?? 1), point, vParcel, inj.radius);
       if (inj.igniter) burn(p, gs);
       world.gas.parcels.push(p);
       made.push(p);
@@ -637,6 +652,46 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
     inj.credit = Math.min(inj.credit, inj.parcelMass);
   }
   return made;
+}
+
+/**
+ * Damaged bodies holding gas leak it through their breach (DMG-004, rule in damage.ts), with the
+ * same mass, momentum and energy bookkeeping as an injector: the leak pushes the body like a jet.
+ */
+function runLeaks(world: World, dt: number, profile?: Profile): void {
+  const limit = profile?.limit.gasParcels ?? Infinity;
+  let clear: ReturnType<typeof clearOf> | null = null;
+  for (const b of world.bodies) {
+    const rate = leakRate(b);
+    if (!(rate > 0)) continue;
+    if (!b.breach) b.breach = defaultBreach(b);
+    const br = b.breach;
+    if (br.count === 0 && br.credit === 0) pushEvent(world, { tick: world.tick, type: "leak", data: { id: b.id } });
+    br.credit += rate * dt;
+    while (br.credit >= LEAK_PARCEL && world.gas.parcels.length < limit) {
+      const gasses = (b.contents ?? []).filter((s) => SPECIES[s.resource] && s.mass > 0);
+      const total = gasses.reduce((t, s) => t + s.mass, 0);
+      if (total < LEAK_PARCEL) break;
+      const parts: [string, number][] = gasses.map((s) => [s.resource, s.mass / total]);
+      const q = sinCos(b.angle);
+      const n = rotate(q, br.normal);
+      // Across the breach in mirrored pairs (as injectors do), and staggered along the jet by when in
+      // the step each parcel's mass would have left, so parcels never start on top of each other.
+      const spread = (br.count % 2 === 0 ? 1 : -1) * (((Math.floor(br.count / 2) * GOLDEN) % 1) * 0.5) * BREACH_WIDTH * (1 - b.integrity);
+      const ahead = LEAK_RADIUS + 0.01 + ((br.credit - LEAK_PARCEL) / rate) * LEAK_SPEED;
+      const point = add(b.position, add(rotate(q, br.point), add(scale(n, ahead), scale({ x: -n.y, y: n.x }, spread))));
+      // Nothing leaks into another body: a breach pressed against something stays shut until it moves off.
+      clear ??= clearOf(wallBodies(world.bodies));
+      if (!clear(point.x, point.y, LEAK_RADIUS)) break;
+      const r = sub(point, b.position);
+      const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
+      const p = emitParcel(world, b, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, LEAK_SPEED)), LEAK_RADIUS);
+      world.gas.parcels.push(p);
+      br.credit -= LEAK_PARCEL;
+      br.count += 1;
+    }
+    br.credit = Math.min(br.credit, LEAK_PARCEL);
+  }
 }
 
 function findBody(world: World, id: string): Body {
@@ -816,9 +871,10 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Mass, momentum and energy are unchanged; angular momentum may change as mass moves from a
   // store at the body's centre to the outlet (recorded, not checked, as for feeds), and so may
   // gravitational potential energy, by the height of the outlet above the centre.
-  if (world.bodies.some((b) => b.injector) || world.gas.parcels.length) {
+  if (world.bodies.some((b) => b.injector || b.breach || (b.integrity < 1 && b.contents?.length)) || world.gas.parcels.length) {
     const t0 = computeTotals(world);
     runInjectors(world, dt, profile);
+    runLeaks(world, dt, profile);
     igniteAndBurn(world.gas);
     const t1 = computeTotals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;

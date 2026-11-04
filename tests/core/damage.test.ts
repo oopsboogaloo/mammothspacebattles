@@ -1,7 +1,7 @@
 // Damage (DMG-001…DMG-003, DMG-005): integrity, the damage rule, failure, armour (RS-11).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createWorld, getProfile, injectorStatus, initialWorld, MATERIALS, parseScenario, runScenario, stepInPlace, type Material, type World } from "../../src/core/index.ts";
+import { assemblyOf, assemblyTotals, BREACH_WIDTH, createWorld, getProfile, injectorStatus, initialWorld, LEAK_PARCEL, LEAK_RATE, leakRate, MATERIALS, parseScenario, runScenario, stepInPlace, type Material, type World } from "../../src/core/index.ts";
 import { box, disc, readJson, ROOT } from "../helpers.ts";
 
 const test = getProfile("test");
@@ -156,4 +156,90 @@ describe("damage", () => {
     expect(body(s, "tank-a").integrity).toBeLessThan(1);
     expect(body(s, "armour").integrity).toBe(1);
   });
+
+  describe("leaks (DMG-004)", () => {
+    /** A free 2 kg box holding oxygen, damaged by hand (no hit): it leaks from the top of its outline. */
+    const tank = (integrity: number, o2: number, extra: { resource: string; mass: number; capacity: number }[] = []) =>
+      createWorld(1, [box("t", 1, 1, { mass: 2, integrity, contents: [{ resource: "o2", mass: o2, capacity: 4 }, ...extra] })]);
+    const leaked = (w: World, steps: number) => {
+      const m0 = w.bodies[0].contents![0].mass;
+      run(w, steps);
+      return m0 - w.bodies[0].contents![0].mass;
+    };
+
+    it("DMG-004 a damaged store leaks at LEAK_RATE × (1 − integrity) × how full it is: breach size and pressure", () => {
+      expect(leakRate(tank(0.5, 4).bodies[0])).toBeCloseTo(LEAK_RATE * 0.5, 12);
+      expect(leakRate(tank(0.5, 2).bodies[0])).toBeCloseTo(LEAK_RATE * 0.25, 12); // half the pressure
+      expect(leakRate(tank(0.75, 4).bodies[0])).toBeCloseTo(LEAK_RATE * 0.25, 12); // half the breach
+      // Over 0.5 s the store drains as dm/dt = −rate: exponentially, within one parcel.
+      for (const [integrity, o2] of [[0.5, 4], [0.75, 4], [0.5, 2]]) {
+        const w = tank(integrity, o2);
+        const k = (LEAK_RATE * (1 - integrity)) / 4;
+        expect(Math.abs(leaked(w, 120) - o2 * (1 - Math.exp(-k * 0.5)))).toBeLessThan(LEAK_PARCEL * 1.01);
+        expect(w.ledger.violations).toBe(0);
+      }
+      expect(tank(0.5, 4).events.some((e) => e.type === "leak")).toBe(false);
+      const w = tank(0.5, 4);
+      run(w, 1);
+      expect(w.events.filter((e) => e.type === "leak").map((e) => e.data.id)).toEqual(["t"]);
+    });
+
+    it("DMG-004 a whole store, or a store of something that isn't a gas, doesn't leak", () => {
+      expect(leaked(tank(1, 4), 60)).toBe(0);
+      const w = tank(0.5, 0, [{ resource: "fuel", mass: 1, capacity: 1 }]);
+      run(w, 60);
+      expect(w.bodies[0].contents![1].mass).toBe(1);
+      expect(w.gas.parcels).toHaveLength(0);
+    });
+
+    it("DMG-004 the leak is a jet: it pushes the body the other way, conserving momentum, and spreads across the breach", () => {
+      const w = tank(0.2, 4);
+      run(w, 120);
+      const gasP = w.gas.parcels.reduce((s, p) => s + p.mass * p.velocity.y, 0);
+      expect(w.gas.parcels.length).toBeGreaterThan(50);
+      expect(gasP).toBeGreaterThan(0); // up, out of the top
+      expect(w.bodies[0].velocity.y * 2 + w.bodies[0].contents![0].mass * w.bodies[0].velocity.y + gasP).toBeCloseTo(0, 9);
+      const xs = w.gas.parcels.map((p) => p.position.x);
+      expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(0.5 * BREACH_WIDTH * 0.8 * 0.5);
+      expect(w.ledger.violations).toBe(0);
+    });
+
+    it("DMG-004 a hit opens the breach where it struck; a breach pressed against a body stays shut", () => {
+      const scn = parseScenario(readJson(join(ROOT, "scenarios", "rs11-armour-ram.json")));
+      const w = initialWorld(scn);
+      run(w, 240);
+      const a = body(w, "tank-a");
+      expect(a.breach!.normal.x).toBeLessThan(-0.9); // the rams came from the left
+      expect(a.contents![0].mass).toBeLessThan(6);
+      expect(w.gas.parcels.length).toBeGreaterThan(0);
+      // Gas expanding into vacuum spreads every way, but on the whole it went out of the struck side, backwards.
+    const mean = w.gas.parcels.reduce((t, p) => t + p.velocity.x, 0) / w.gas.parcels.length;
+    expect(mean).toBeLessThan(a.velocity.x);
+      // A damaged tank resting on its breach, on a floor: nothing comes out.
+      const shut = createWorld(1, [box("t", 1, 1, { mass: 2, integrity: 0.5, angle: Math.PI, position: { x: 0, y: 0.5 }, contents: [{ resource: "o2", mass: 4, capacity: 4 }] }), box("floor", 4, 0.2, { fixed: true, position: { x: 0, y: -0.1 } })]);
+      run(shut, 60);
+      expect(shut.gas.parcels).toHaveLength(0);
+    });
+  });
+
+  it("DMG-006 a wrecked nozzle wall breaks away, so the exhaust meets a different shape: RS-08 loses thrust and turns", () => {
+    const fly = (wreck: boolean) => {
+      const raw = readJson(join(ROOT, "scenarios", "rs08-chemical-rocket.json")) as { world: { bodies: { id: string; integrity?: number }[] } };
+      if (wreck) raw.world.bodies.find((b) => b.id === "nozzle-left")!.integrity = 0;
+      const scn = parseScenario(raw);
+      const w = initialWorld(scn);
+      const sandbox = getProfile("sandbox");
+      for (let i = 0; i < 480; i++) stepInPlace(w, i === 0 ? scn.timeline[0].commands : [], sandbox);
+      expect(w.ledger.violations).toBe(0);
+      return w;
+    };
+    const intact = fly(false);
+    const broken = fly(true);
+    expect(assemblyOf(intact, "hull")).toContain("nozzle-left");
+    expect(assemblyOf(broken, "hull")).not.toContain("nozzle-left");
+    expect(broken.events.find((e) => e.type === "joint.break")!.data).toMatchObject({ b: "nozzle-left", quantity: "damage" });
+    const [a, b] = [assemblyTotals(intact, "hull")!, assemblyTotals(broken, "hull")!];
+    expect(b.velocity.y).toBeLessThan(0.9 * a.velocity.y); // less thrust along the axis
+    expect(Math.abs(b.angularVelocity)).toBeGreaterThan(3 * Math.abs(a.angularVelocity)); // and a turn
+  }, 300_000);
 });

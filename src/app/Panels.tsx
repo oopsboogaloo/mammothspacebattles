@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, length, massProps, MATERIALS, mixture, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
+import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, leakRate, length, massProps, MATERIALS, mixture, type Body, type Joint, type Shape, type Store } from "../core/index.ts";
 import { assemblyIds, makePrefab } from "./ports.ts";
 import { deg, fmt, rad } from "./format.ts";
 import { NumberField } from "./NumberField.tsx";
@@ -383,6 +383,7 @@ function BodyInspector({ bodies }: { bodies: Body[] }) {
           </>
         )}
         <NumberField id="integrity" label="Integrity" step={0.05} value={shared(bodies, (b) => b.integrity)} validate={unit01} onCommit={set("Set integrity", (_b, v) => ({ integrity: v }))} />
+        {one && leakRate(one) > 0 && <Row k="Leaking" v={fmt(leakRate(one), "kg/s")} title="Gas escaping through the breach: faster the more damaged and the fuller the store (DMG-004)." />}
         <label class="row">
           <span class="muted">Fixed (never moves)</span>
           <input

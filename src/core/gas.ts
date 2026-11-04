@@ -660,6 +660,12 @@ function blocked(walls: Wall[], x: number, y: number, clearance: number): boolea
   return false;
 }
 
+/** A test for points inside, or within a clearance of, any of these bodies; builds their walls once. */
+export function clearOf(bodies: WallBody[]): (x: number, y: number, clearance: number) => boolean {
+  const { walls } = buildWalls(bodies, [], 0);
+  return (x, y, clearance) => !blocked(walls, x, y, clearance);
+}
+
 /**
  * Makes the parcels for a fill: a regular lattice over the rectangle, skipping points inside bodies.
  * The lattice has about `count` points; the result says how many were made. Returns null, having
