@@ -1,7 +1,7 @@
 // Core workflows from spec §8.3, each within its action budget (UXV-001).
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { Budget, body, hash, openStarter, shot, waitForTick, world } from "./helpers.ts";
+import { Budget, body, hash, openStarter, shot, toPage, waitForTick, world } from "./helpers.ts";
 
 test("UXV-001 W1 open the sandbox and run a reference scenario in ≤ 3 actions", async ({ page }, info) => {
   await page.goto("./");
@@ -96,8 +96,16 @@ test("SBX-012 dragging a body while running pulls it with a spring and records t
   await page.getByTestId("hide-look-for").click();
   await page.keyboard.press("m");
   await page.keyboard.press("Space");
-  const { dragWorld } = await import("./helpers.ts");
-  await dragWorld(page, [3, 0], [3, 3], 20);
+  // Hold the drag until the run has stepped with it: a quick drag can end before a slow browser
+  // (WebKit) has run a single step.
+  const a = await toPage(page, 3, 0);
+  const to = await toPage(page, 3, 3);
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 20 });
+  const t0 = (await world(page)).tick;
+  await waitForTick(page, t0 + 30);
+  await page.mouse.up();
   await page.keyboard.press("Space");
   const b = await body(page, "b");
   expect(b!.velocity.y).toBeGreaterThan(0);
