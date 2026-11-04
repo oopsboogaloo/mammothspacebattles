@@ -246,3 +246,8 @@ button { cursor: pointer; }
 @media (max-width: 600px) {
   .view .flightpad { top: auto; left: 12px; right: 12px; bottom: 56px; flex-direction: row; flex-wrap: wrap-reverse; justify-content: space-between; align-content: flex-start; }
 }
+
+/* Below 1400 px the command palette button drops its word, so the top bar keeps to one row. */
+@media (max-width: 1400px) {
+  .topbar .palette-label { display: none; }
+}

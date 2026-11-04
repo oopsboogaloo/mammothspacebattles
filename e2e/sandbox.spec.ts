@@ -35,6 +35,9 @@ test.describe("time control", () => {
     expect(slow).toBeLessThan(40); // ~15 ticks/s at 1/16×
     await page.keyboard.press("]");
     await expect(page.getByTestId("scale-0.25")).toHaveAttribute("aria-pressed", "false");
+    await page.getByTestId("scale-0.5").click(); // half speed has its own button
+    await expect(page.getByTestId("scale-0.5")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("scale-0.5")).toHaveText("1/2×");
     await page.getByTestId("scale-4").click();
     await page.keyboard.press("Space");
     await expect(page.getByTestId("achieved")).toContainText("speed");
