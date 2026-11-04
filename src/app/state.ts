@@ -253,7 +253,7 @@ export function fitView(): void {
 }
 
 const SCALES = [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8];
-export const SCALE_BUTTONS = [1 / 16, 1 / 4, 1, 4, 8];
+export const SCALE_BUTTONS = [1 / 16, 1 / 4, 1 / 2, 1, 4, 8];
 export function scaleLabel(s: number): string {
   return s >= 1 ? `${s}×` : `1/${Math.round(1 / s)}×`;
 }

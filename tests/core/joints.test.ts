@@ -163,6 +163,26 @@ describe("joints", () => {
     );
   });
 
+  it("ASM-004 a weld breaking under an off-centre hit creates no kinetic energy", () => {
+    // Found by the property above on CI: a chain of three, the weak weld between the first two.
+    // Taking back the weak weld's excess after the solve gained up to 13% in kinetic energy.
+    for (const jx of [0, 5, -10, 20])
+      for (const jy of [-20, -5, -1.4459740393571492, 3, 15])
+        for (const at of [-0.4, 0, 0.09563707261820766, 0.4]) {
+          const w = createWorld(
+            1,
+            [0, 1, 2].map((i) => box(`p${i}`, 1, 0.5, { position: { x: i, y: 0 } })),
+            { x: 0, y: 0 },
+            { joints: [weld("j01", "p0", "p1", { x: 0.5, y: 0 }, { x: -0.5, y: 0 }, { tension: 30, compression: 30, shear: 30, torque: 10 }), weld("j12", "p1", "p2", { x: 0.5, y: 0 }, { x: -0.5, y: 0 })] },
+          );
+          stepInPlace(w, [{ type: "body.impulse", id: "p2", impulse: { x: jx, y: jy }, point: { x: 2 + at, y: 0.25 } }], test);
+          expect(w.ledger.violations, `${jx} ${jy} ${at}`).toBe(0);
+          expect(w.ledger.totals.energy.kinetic).toBeLessThanOrEqual(w.ledger.last!.sources.user.energy + 1e-9);
+          const brk = w.events.find((e) => e.type === "joint.break");
+          if (brk) expect(Number(brk.data.load)).toBeGreaterThan(Number(brk.data.limit) * (1 - 1e-9)); // the demand, at least the limit
+        }
+  });
+
   it("SBX-015 detaching a part removes its joints; it keeps its momentum", () => {
     const w = pair();
     w.bodies.forEach((b) => (b.velocity = { x: 1, y: 0.5 }));

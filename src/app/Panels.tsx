@@ -110,9 +110,9 @@ export function TopBar() {
           {violations} violation{violations === 1 ? "" : "s"}
         </span>
       </button>
-      <button class="btn wide" onClick={() => action("palette").run()} title="Command palette (Ctrl+K)" data-testid="open-palette">
+      <button class="btn wide" onClick={() => action("palette").run()} title="Command palette (Ctrl+K)" aria-label="Commands" data-testid="open-palette">
         <Icon name="search" />
-        Commands <span class="kbd">Ctrl K</span>
+        <span class="palette-label">Commands</span> <span class="kbd">Ctrl K</span>
       </button>
     </header>
   );

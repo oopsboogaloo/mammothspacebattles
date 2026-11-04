@@ -161,7 +161,7 @@ export function broadPhase(boxes: { minX: number; minY: number; maxX: number; ma
  * Velocity solve for one step: contacts and joints together (sequential impulses).
  * Bodies in the same assembly don't collide with each other.
  */
-export function solveContacts(world: World, rbs: RB[], profile: Profile): { account: ContactAccount; jointAccount: ConstraintAccount; solved: SolvedContacts } {
+export function solveContacts(world: World, rbs: RB[], profile: Profile): { account: ContactAccount; jointAccount: ConstraintAccount; capped: ReturnType<typeof finishJoints>; solved: SolvedContacts } {
   const dt = profile.timestep;
   const slop = profile.tol.penetration / 2;
   const sweep = rbs.map((r) => (r.invMass === 0 ? 0 : (length(r.body.velocity) + Math.abs(r.body.angularVelocity) * r.radius) * dt));
@@ -244,7 +244,7 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   const account: ContactAccount = emptyAccount();
   const jointAccount = emptyAccount();
   const byId = new Map<string, JointBody>(rbs.map((r) => [r.body.id, r]));
-  const joints = prepareJoints(world, byId);
+  const joints = prepareJoints(world, byId, dt);
 
   // Applies impulse `lambda` along `dir` at a contact point: +B, −A. Tracks energy and external impulse exactly.
   const relVel = (c: SolverContact, p: SolverPoint): Vec2 =>
@@ -357,8 +357,8 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
     }
   }
   world.contacts = records;
-  finishJoints(joints, jointAccount);
-  return { account, jointAccount, solved: { contacts, byId } };
+  const capped = finishJoints(joints, jointAccount);
+  return { account, jointAccount, capped, solved: { contacts, byId } };
 }
 
 /**
