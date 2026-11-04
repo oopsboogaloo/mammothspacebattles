@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "grid";
@@ -102,7 +102,31 @@ export const SPECIES_LIST = Object.entries(SPECIES).map(([id, sp]) => ({ id, col
 
 const BUCKETS = 32;
 
+/** Gas held in engine chambers (§10.1): each chamber filled in its gas's colour. */
+function drawChambers(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition"): void {
+  for (const b of world.bodies) {
+    const v = b.injector?.vessel;
+    if (!v || !(v.mass > 0)) continue;
+    const shape = vesselShape(world, b);
+    if (!shape) continue;
+    const gas = { ...v, id: 0, position: b.position, velocity: b.velocity, radius: 0 } as Parcel;
+    ctx.fillStyle = mode === "composition" ? compositionColour(gas) : temperatureColour(temperatureOf(gas, world.gas.scale ?? 1));
+    const q = sinCos(b.angle);
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    shape.outline.forEach((p, i) => {
+      const s = toScreen(c, vp, add(b.position, rotate(q, p)));
+      if (i === 0) ctx.moveTo(s.x, s.y);
+      else ctx.lineTo(s.x, s.y);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
 function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition"): void {
+  drawChambers(ctx, world, c, vp, mode);
   const parcels = world.gas.parcels;
   if (!parcels.length) return;
   // Batch parcels by colour so each colour is one path (2,000 parcels per frame stay cheap).

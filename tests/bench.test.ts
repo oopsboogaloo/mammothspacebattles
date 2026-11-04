@@ -14,7 +14,10 @@ describe("benchmark command", () => {
     expect(rows).toHaveLength(scenarioFiles().length);
     for (const row of rows) {
       expect(row.stepsPerSecond).toBeGreaterThan(0);
-      expect(Object.keys(row.subsystemsMs)).toEqual(["commands", "forces", "contacts", "integrate", "gas", "ledger"]);
+      // The six subsystems, plus the gas step's own phases (gas.*) where there is gas.
+      const keys = Object.keys(row.subsystemsMs);
+      expect(keys.filter((k) => !k.startsWith("gas."))).toEqual(["commands", "forces", "contacts", "integrate", "gas", "ledger"]);
+      if (row.parcels > 0) expect(keys.filter((k) => k.startsWith("gas."))).toEqual(["gas.setup", "gas.contacts", "gas.neighbours", "gas.density", "gas.impulses", "gas.move", "gas.finish"]);
       expect(row.parcels).toBeGreaterThanOrEqual(0);
     }
     expect(r.stdout).toMatch(/rs00-workload/);
