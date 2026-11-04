@@ -558,7 +558,7 @@ So per-parcel substeps cut only the impulses unless the neighbour and wall-conta
 
 **Plan, agreed 2026-11** (each its own change, exact conservation and replays kept):
 1. **Chambers held as one volume** (PRP-011). Done: 4–6× in engine scenes.
-2. **A finer neighbour grid:** cells smaller than the largest smoothing length, with a wider stencil, so fewer candidate pairs are tested (about 17,700 tested for 3,200 real pairs a substep in Gunship 2). Pairs come in a different order, so results are checked against the fingerprint, not bit for bit.
+2. **A finer neighbour grid:** dropped after step 1. With the chambers held, Gunship 2 firing has about 180 parcels, mostly the sparse plume: about 400 candidate pairs a substep for 53 real ones (it was 17,700 for 3,200). The time is now the fixed cost of each substep (filing about 75 walls, sorting) and the rest of the step. Those were trimmed instead, with results bit-identical: Gunship 2 firing about 7.5 ms a step, LAND about 3 ms (real time is 4.2 ms).
 3. **The simulation on a background thread** (a Web Worker), then the gas split across cores.
 4. **Per-parcel substeps** last, for scenes with gas at very different speeds.
 
