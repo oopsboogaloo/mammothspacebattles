@@ -737,24 +737,24 @@ function runMagazines(world: World, dt: number): void {
     mag.timer = b.injector?.firing ? 0 : mag.timer + dt;
     if (mag.count < 1 || mag.timer < mag.reload - 1e-9) continue;
     const q = sinCos(b.angle);
-    const r = rotate(q, mag.at);
     const angle = b.angle + mag.angle;
-    const shape = normalizeBody({ ...mag.shell, id: "probe", position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 }).shape;
-    const at = add(b.position, r);
+    const id = `${b.id}-shell-${mag.loaded + 1}`;
+    // The shell as it will be: a polygon is moved to its centroid, so check the bore where it really lands.
+    const shell = normalizeBody({ ...structuredClone(mag.shell), id, position: add(b.position, rotate(q, mag.at)), velocity: { x: 0, y: 0 }, angle, angularVelocity: b.angularVelocity });
     // Loading into an occupied bore would push bodies apart violently: wait until it is clear.
-    const placedShell = { shape, position: at, rot: sinCos(angle) };
+    const placedShell = { shape: shell.shape, position: shell.position, rot: sinCos(angle) };
     if (world.bodies.some((o) => { const m = collide(placedShell, { shape: o.shape, position: o.position, rot: sinCos(o.angle) }, 0, 0); return m !== null && m.points.some((p) => p.separation < -1e-3); })) continue;
-    const v = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
+    const r = sub(shell.position, b.position);
+    shell.velocity = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
     const m0 = bodyMass(b);
-    const ms = mag.shell.mass;
+    const ms = bodyMass(mag.shell); // with anything the shell carries
     mag.count -= 1;
     mag.loaded += 1;
     mag.timer = 0;
     // Momentum: the body keeps what the shell doesn't take.
     const m1 = bodyMass(b);
-    b.velocity = { x: (m0 * b.velocity.x - ms * v.x) / m1, y: (m0 * b.velocity.y - ms * v.y) / m1 };
-    const id = `${b.id}-shell-${mag.loaded}`;
-    addBody(world, { ...structuredClone(mag.shell), id, position: at, velocity: v, angle, angularVelocity: b.angularVelocity });
+    b.velocity = { x: (m0 * b.velocity.x - ms * shell.velocity.x) / m1, y: (m0 * b.velocity.y - ms * shell.velocity.y) / m1 };
+    addBody(world, shell); // already normalised: normalising again changes nothing
     pushEvent(world, { tick: world.tick, type: "loaded", data: { id: b.id, shell: id, left: mag.count } });
   }
 }
