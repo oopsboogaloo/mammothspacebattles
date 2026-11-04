@@ -467,6 +467,18 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **AST-004** `[S · M7 · S]` Spin fast enough to overload bonds shall shed children without an impact.
 - **AST-005** `[S · M7 · S]` Children below `limit.minFragment` shall become conserved mineral parcels.
 
+### 9.9 Logged for later (not scheduled)
+
+Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and it still fed both engines while the ship still answered the keys. Today a link (ASM-006) joins its two ends wherever they are: it breaks only if an end is wrecked or the link's own integrity reaches 0. Nothing here has requirement IDs or a milestone yet.
+
+- **Links that run through welds.** A feed or control link should follow the ship's structure, so it is cut when the ship splits between its ends.
+  - *Option A (simplest):* a link works only while its two ends are in the same assembly, connected through welds. No authoring needed; any split that separates the ends cuts it.
+  - *Option B (explicit routing):* a link names the welds it runs through (`via: ["w-wing-tank", …]`), and is cut when any of them breaks. Weld damage near a hit (DMG-003) can then cut a fuel line without the parts separating, and two links between the same parts can take different routes.
+  - *Option C (pipes as parts):* the line is a run of thin bodies that can be hit and broken like anything else. The most physical, and the most to build.
+  - Suggested: A as the default, B as an option for ships that declare routes. Open questions: does a cut feed spill what was in the line (a leak at the break, DMG-004), and should the sandbox draw link routes?
+- **A cockpit.** A square component that stands for the pilot, where every control channel starts. Controls reach a component only while it is connected to a working cockpit. With the cockpit wrecked or broken off, the rest of the ship takes no commands, and its engines stop or keep their last setting (to decide). This is also where an AI pilot (§13) would sit later.
+  - Open questions: is the connection the assembly (as in option A) or routed control links (as in B)? Can a ship have more than one cockpit, and which one wins? Should a cockpit take damage like any part, and does losing it count as a crash in challenges such as LAND?
+
 ## 10. Performance Requirements
 
 - **NFR-001** `[M · M1 · B]` A benchmark command shall report steps per second for each reference scenario, and CI shall record results per commit.
