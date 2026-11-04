@@ -46,7 +46,7 @@ test("ARC-006 DET-001 Gunship 2 runs in the simulation worker, and replaying the
 });
 
 test("NFR-004 DET-001 four ships firing, once their plumes draw apart, step their gas clusters in helper threads, and a replay on the page gives the same world", async ({ page }) => {
-  test.setTimeout(180_000); // 420 heavy steps, then the same again replayed on the page
+  test.setTimeout(420_000); // 420 heavy steps (WebKit manages about 5 a second), then the same again replayed on the page
   // Helpers are off by default; ask for two.
   await page.goto("./?helpers=2");
   await page.getByTestId("pick-gunship-2").click();
@@ -64,7 +64,7 @@ test("NFR-004 DET-001 four ships firing, once their plumes draw apart, step thei
   await page.keyboard.down("q");
   await page.keyboard.down("e");
   await page.getByTestId("play").click();
-  await waitForTick(page, 420, 120_000); // the plumes draw apart into separate clusters
+  await waitForTick(page, 420, 300_000); // the plumes draw apart into separate clusters
   await page.getByTestId("play").click();
   await page.keyboard.up("q");
   await page.keyboard.up("e");
