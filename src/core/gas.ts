@@ -760,6 +760,11 @@ export interface GasAccount {
   /** Gravitational potential energy of the parcels that left, at the point they left, J. */
   removedPotential: number;
   /**
+   * Thermal energy made up when crushed gas could not be resolved (see the clamp in stepGas), J:
+   * recorded by the ledger as a correction. The crushed parcels then leave the gas.
+   */
+  clamped: number;
+  /**
    * For parts of free assemblies: the impulse their joints had to supply this step because the gas
    * pushed the assembly as one rigid body (rigid share minus the gas's direct push), for joint loads.
    */
@@ -1085,7 +1090,7 @@ export interface ClusterResult {
   /** Each job parcel's state after the step, in job order; `gone` if it left the world. */
   parcels: { position: Vec2; velocity: Vec2; thermal: number; age?: number; keep?: number; gone: boolean }[];
   bodies: { position: Vec2; angle: number; velocity: Vec2; angularVelocity: number }[];
-  account: { externalImpulse: Vec2; angular: number; removed: RemovedGas; removedPotential: number; jointImpulse: [string, { x: number; y: number; angular: number }][]; involved: string[] };
+  account: { externalImpulse: Vec2; angular: number; removed: RemovedGas; removedPotential: number; clamped: number; jointImpulse: [string, { x: number; y: number; angular: number }][]; involved: string[] };
   substeps: number;
   wallImpulse: number;
   timings: Record<string, number>;
@@ -1101,7 +1106,7 @@ export function runClusterJob(job: ClusterJob, clock?: () => number): ClusterRes
   return {
     parcels: job.parcels.map((p) => ({ position: p.position, velocity: p.velocity, thermal: p.thermal, age: p.age, keep: p.keep, gone: left.has(p) })),
     bodies: job.bodies.map((b) => ({ position: b.position, angle: b.angle, velocity: b.velocity, angularVelocity: b.angularVelocity })),
-    account: { externalImpulse: acc.externalImpulse, angular: acc.angular, removed: acc.removed, removedPotential: acc.removedPotential, jointImpulse: [...acc.jointImpulse], involved: [...acc.involved] },
+    account: { externalImpulse: acc.externalImpulse, angular: acc.angular, removed: acc.removed, removedPotential: acc.removedPotential, clamped: acc.clamped, jointImpulse: [...acc.jointImpulse], involved: [...acc.involved] },
     substeps: sub.substeps,
     wallImpulse: sub.wallImpulse,
     timings: out,
@@ -1182,6 +1187,7 @@ export function clusterGas(
         angular: 0,
         removed: { count: 0, mass: 0, momentum: { x: 0, y: 0 }, angularMomentum: 0, energy: 0 },
         removedPotential: 0,
+        clamped: 0,
         jointImpulse: new Map(),
         involved: new Set(),
       };
@@ -1214,6 +1220,7 @@ export function clusterGas(
         total.externalImpulse.y += a.externalImpulse.y;
         total.angular += a.angular;
         total.removedPotential += a.removedPotential;
+        total.clamped += a.clamped;
         const r = total.removed;
         r.count += a.removed.count;
         r.mass += a.removed.mass;
@@ -1301,6 +1308,7 @@ export function stepGas(
       energy: 0,
     },
     removedPotential: 0,
+    clamped: 0,
     jointImpulse: new Map(),
     involved: new Set(),
   };
@@ -1657,6 +1665,7 @@ export function stepGas(
   // other needs ever shorter substeps (a million in one step, 150 s, as a shell smashed a ship);
   // past this budget the step finishes in one substep and clamps, and the ledger reports it.
   let tries = 0;
+  const crushed = new Uint8Array(n);
   while (tDone < dt) {
     const vmax = signalSpeed();
     const spent = tries >= 4 * MAX_SUBSTEPS;
@@ -2122,8 +2131,15 @@ export function stepGas(
       ds *= 0.5;
     }
     phase("impulses");
-    // Only if even the shortest substep could not resolve it: clamp, and the ledger reports the shortfall.
-    for (let i = 0; i < n; i++) if (E[i] < 0) E[i] = 0;
+    // Only if even the shortest substep could not resolve it: clamp. What that makes up is recorded
+    // (the ledger's correction), and the crushed parcels leave the gas at the end of the step, out
+    // of the plane, so they cannot hold every later step at its substep limit.
+    for (let i = 0; i < n; i++)
+      if (E[i] < 0) {
+        acc.clamped -= E[i];
+        crushed[i] = 1;
+        E[i] = 0;
+      }
     acc.externalImpulse.x += extX;
     acc.externalImpulse.y += extY;
     acc.angular += extA;
@@ -2238,7 +2254,7 @@ export function stepGas(
     p.thermal = E[i];
     // A wrapped world keeps gas that crosses its bounds: it wraps round after the step (FLT-012).
     const outside = !bounds.wrap && (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y);
-    if (outside || far(x[i], y[i])) {
+    if (outside || far(x[i], y[i]) || crushed[i]) {
       acc.removed.count += 1;
       leave(i, 1, parcelChemical(p, scale));
       continue;

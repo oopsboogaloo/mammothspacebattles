@@ -46,11 +46,17 @@ describe("asteroid generator", () => {
     const t0 = computeTotals(w);
     for (let i = 0; i < 960; i++) stepInPlace(w, [], sandbox);
     const t1 = computeTotals(w);
-    expect(parts(w, "big-")).toBeGreaterThan(3);
-    expect(parts(w, "small-")).toBeGreaterThan(3);
-    expect(t1.mass).toBeCloseTo(t0.mass, 6);
-    expect(t1.momentum.x).toBeCloseTo(t0.momentum.x, 3);
-    expect(t1.momentum.y).toBeCloseTo(t0.momentum.y, 3);
+    // Pieces destroyed in the crash leave in dust (DMG-007); the rest break into parts.
+    const gone = (prefix: string) => w.events.filter((e) => e.type === "destroyed.removed" && String(e.data.id).startsWith(prefix)).length;
+    expect(parts(w, "big-") + gone("big-")).toBeGreaterThan(3);
+    expect(parts(w, "small-") + gone("small-")).toBeGreaterThan(3);
+    // What stays plus what left through the boundary is what there was.
+    const left = w.events.filter((e) => e.type === "destroyed.removed").reduce((m, e) => m + Number(e.data.mass), 0);
+    expect(t1.mass + left).toBeCloseTo(t0.mass, 6);
+    if (!left) {
+      expect(t1.momentum.x).toBeCloseTo(t0.momentum.x, 3);
+      expect(t1.momentum.y).toBeCloseTo(t0.momentum.y, 3);
+    }
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 

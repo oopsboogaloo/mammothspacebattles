@@ -50,13 +50,13 @@ describe("tractor beam", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("TRC-003 within 20 m, something no bigger than the ship is taken on the tether; something too heavy or too big is not", () => {
+  it("TRC-003 within 15 m, something no bigger than the ship is taken on the tether; something too heavy or too big is not", () => {
     const w = world([ball("ball", 1, 50, 1, -40)]);
     run(w, 2000, () => set(1));
     expect(at(w, "ship").tractor!.mode).toBe("tether");
     expect(at(w, "ship").tractor!.cargo).toBe("ball");
     const e = w.events.find((x) => x.type === "tether.engage")!;
-    expect(Number(e.data.distance)).toBeLessThanOrEqual(20);
+    expect(Number(e.data.distance)).toBeLessThanOrEqual(15);
 
     const heavy = world([ball("rock", 1, 61, 1, -40)]); // over 1.2 × 50 kg
     let nearheavy = Infinity;
@@ -64,7 +64,7 @@ describe("tractor beam", () => {
       nearheavy = Math.min(nearheavy, reach(heavy, "rock"));
       return set(1);
     });
-    expect(nearheavy).toBeLessThan(15); // it came well within reach…
+    expect(nearheavy).toBeLessThan(11); // it came well within reach…
     expect(heavy.events.some((e) => e.type === "tether.engage")).toBe(false); // …and was never taken
     const big = world([ball("rock", 3, 10, 1, -40)]); // wider than the ship
     let nearbig = Infinity;
@@ -72,12 +72,12 @@ describe("tractor beam", () => {
       nearbig = Math.min(nearbig, reach(big, "rock"));
       return set(1);
     });
-    expect(nearbig).toBeLessThan(15); // it came well within reach…
+    expect(nearbig).toBeLessThan(11); // it came well within reach…
     expect(big.events.some((e) => e.type === "tether.engage")).toBe(false); // …and was never taken
   });
 
-  it("TRC-004 the tether holds the cargo at 20 m as it swings round the ship, and the ledger stays exact", () => {
-    const w = world([ball("ball", 1, 50, 0, -23)]);
+  it("TRC-004 the tether holds the cargo at 15 m as it swings round the ship, and the ledger stays exact", () => {
+    const w = world([ball("ball", 1, 50, 0, -18)]);
     engage(w);
     expect(at(w, "ship").tractor!.mode).toBe("tether");
     run(w, 960); // settle
@@ -90,8 +90,8 @@ describe("tractor beam", () => {
       lo = Math.min(lo, reach(w, "ball"));
       hi = Math.max(hi, reach(w, "ball"));
     }
-    expect(lo).toBeGreaterThan(19);
-    expect(hi).toBeLessThan(21);
+    expect(lo).toBeGreaterThan(14);
+    expect(hi).toBeLessThan(16);
     // It went a long way round: the line from ship to ball turned.
     const s = at(w, "ship");
     const b = at(w, "ball");
@@ -101,7 +101,7 @@ describe("tractor beam", () => {
   });
 
   it("TRC-005 pressing again lets the cargo go, and the beam stays off until the button is released", () => {
-    const w = world([ball("ball", 1, 50, 0, -23)]);
+    const w = world([ball("ball", 1, 50, 0, -18)]);
     engage(w);
     expect(at(w, "ship").tractor!.mode).toBe("tether");
     run(w, 30, () => set(1)); // pressed and held
@@ -113,7 +113,7 @@ describe("tractor beam", () => {
   });
 
   it("TRC-006 past its maximum tension the tether breaks", () => {
-    const w = world([ball("ball", 1, 50, 0, -23)], { tether: { maxTension: 2000 } });
+    const w = world([ball("ball", 1, 50, 0, -18)], { tether: { maxTension: 2000 } });
     engage(w);
     run(w, 960);
     expect(at(w, "ship").tractor!.mode).toBe("tether");
@@ -129,7 +129,7 @@ describe("tractor beam", () => {
 
   it("TRC-005 TRC-006 a tether that breaks with the button held is not taken again until a fresh press", () => {
     // Close cargo, a weak tether: it breaks at once, and must not re-engage while T stays held.
-    const w = world([ball("ball", 1, 50, 0, -15)], { tether: { maxTension: 500 } });
+    const w = world([ball("ball", 1, 50, 0, -11)], { tether: { maxTension: 500 } });
     run(w, 240, () => set(1));
     const engaged = w.events.filter((e) => e.type === "tether.engage").length;
     expect(w.events.some((e) => e.type === "tether.break")).toBe(true);
@@ -139,7 +139,7 @@ describe("tractor beam", () => {
   });
 
   it("TRC-001 losing the control link lets the cargo go", () => {
-    const w = world([ball("ball", 1, 50, 0, -23)]);
+    const w = world([ball("ball", 1, 50, 0, -18)]);
     engage(w);
     expect(at(w, "ship").tractor!.mode).toBe("tether");
     w.links = [];

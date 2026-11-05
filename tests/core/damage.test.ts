@@ -75,7 +75,7 @@ describe("damage", () => {
     expect(hurt.ledger.violations).toBe(0);
   });
 
-  it("DMG-003 at 0 a body is wreckage: its injector stops, its welds and links break, and it stays at 0", () => {
+  it("DMG-003 DMG-007 at 0 a body is destroyed: its welds and links break and it leaves the world in a burst of dust", () => {
     const w = createWorld(
       1,
       [
@@ -91,20 +91,18 @@ describe("damage", () => {
       { joints: [{ id: "j", a: "engine", b: "hull", anchorA: { x: 0.5, y: 0 }, anchorB: { x: -0.5, y: 0 } }], links: [{ id: "c", kind: "control", channel: "main", to: "engine" }] },
     );
     expect(injectorStatus(w, body(w, "engine")).firing).toBe(false); // idle until commanded
-    for (let i = 0; i < 120 && body(w, "engine").integrity > 0; i++) stepInPlace(w, [], test);
-    expect(body(w, "engine").integrity).toBe(0);
+    for (let i = 0; i < 120 && w.bodies.some((b) => b.id === "engine"); i++) stepInPlace(w, [], test);
+    expect(w.bodies.some((b) => b.id === "engine")).toBe(false);
     const tick = w.events.find((e) => e.type === "destroyed")!.tick;
-    expect(w.events.filter((e) => e.tick === tick).map((e) => e.type)).toEqual(expect.arrayContaining(["damage", "destroyed", "joint.break", "link.break"]));
+    expect(w.events.filter((e) => e.tick === tick).map((e) => e.type)).toEqual(expect.arrayContaining(["damage", "destroyed", "joint.break", "link.break", "destroyed.removed"]));
     expect(w.events.find((e) => e.type === "joint.break")!.data.quantity).toBe("damage");
     expect(w.joints).toHaveLength(0);
     expect(w.links).toHaveLength(0);
-    // Even with a control link back, a destroyed injector doesn't fire.
-    stepInPlace(w, [{ type: "link.add", link: { id: "c2", kind: "control", channel: "main", to: "engine" } }, { type: "control.set", channel: "main", value: 1 }], test);
-    run(w, 10);
-    expect(injectorStatus(w, body(w, "engine"))).toEqual({ firing: false, reason: "Destroyed" });
+    expect(w.dust!.length).toBeGreaterThan(0);
     expect(w.gas.parcels).toHaveLength(0);
     expect(w.ledger.violations).toBe(0);
   });
+
 
   it("DMG-003 a weld near the hit is damaged too, and a damaged weld breaks at its limits × its integrity", () => {
     // A weld at half integrity holding 1 kg against a 1.2 N·s pull: 0.6 N·s is too much for half of 200 N over one step.
@@ -144,7 +142,7 @@ describe("damage", () => {
     expect(r.assertions.filter((a) => !a.pass)).toEqual([]);
     const w = initialWorld(scn);
     run(w, 240);
-    expect(body(w, "tank-a").integrity).toBe(0);
+    expect(w.bodies.some((b) => b.id === "tank-a")).toBe(false); // destroyed, gone in a burst of dust
     expect(body(w, "tank-b").integrity).toBe(1);
     expect(body(w, "armour").integrity).toBeLessThan(1);
     expect(w.events.filter((e) => e.type === "damage").map((e) => e.data.id)).not.toContain("tank-b");
@@ -205,9 +203,10 @@ describe("damage", () => {
     });
 
     it("DMG-004 a hit opens the breach where it struck; a breach pressed against a body stays shut", () => {
-      const scn = parseScenario(readJson(join(ROOT, "scenarios", "rs11-armour-ram.json")));
+      // Slow enough that the bare tank is damaged, not destroyed.
+      const scn = parseScenario(readJson(join(ROOT, "scenarios", "rs11-armour-ram.json")), { v: 8 });
       const w = initialWorld(scn);
-      run(w, 240);
+      run(w, 480);
       const a = body(w, "tank-a");
       expect(a.breach!.normal.x).toBeLessThan(-0.9); // the rams came from the left
       expect(a.contents![0].mass).toBeLessThan(6);

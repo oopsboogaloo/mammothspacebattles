@@ -2,24 +2,20 @@
 import { expect, test } from "@playwright/test";
 import { body, openStarter, shot, toPage, waitForTick } from "./helpers.ts";
 
-test("DMG-003 DMG-004 DMG-005 RS-11 runs on screen: the bare tank is wrecked, the armoured one isn't, and the inspector shows why", async ({ page }, info) => {
+test("DMG-003 DMG-005 DMG-007 RS-11 runs on screen: the bare tank bursts into dust, the armoured one is untouched, and the inspector shows why", async ({ page }, info) => {
   await openStarter(page, "rs11-armour-ram");
   await expect(page.getByTestId("overlay-damage")).toHaveAttribute("aria-pressed", "true"); // the scenario turns it on
-  // Step to an exact tick rather than play and pause: a pause lands later on a slow machine, and the
-  // wreck, flying off at about 13 m/s, can be off screen by then.
+  // Step to an exact tick rather than play and pause: a pause lands later on a slow machine.
   for (let i = 0; i < 8; i++) await page.getByTestId("step10").click();
   await waitForTick(page, 80);
-  expect((await body(page, "tank-a"))!.integrity).toBe(0);
+  expect(await body(page, "tank-a")).toBeUndefined(); // destroyed: gone, in a puff of dust
+  expect(await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { dust?: unknown[] } } } }).__msb.sandbox().world.dust?.length ?? 0)).toBeGreaterThan(10);
   expect((await body(page, "tank-b"))!.integrity).toBe(1);
   expect((await body(page, "armour"))!.integrity).toBeLessThan(1);
   await shot(page, info, "rs11-after-ram");
-  // Select the wrecked tank: its material and integrity are in the inspector.
-  const a = (await body(page, "tank-a"))!.position;
+  // Select the armour: its material and integrity are in the inspector.
+  const a = (await body(page, "armour"))!.position;
   const p = await toPage(page, a.x, a.y);
   await page.mouse.click(p.x, p.y);
-  await expect(page.getByTestId("field-damage-material")).toHaveValue("tank");
-  await expect(page.getByTestId("field-integrity")).toHaveValue("0");
-  // DMG-004: it leaks through the dent, and the inspector says how fast.
-  await expect(page.getByTestId("inspector")).toContainText("Leaking");
-  expect((await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { gas: { parcels: unknown[] } } } } }).__msb.sandbox().world.gas.parcels.length))).toBeGreaterThan(0);
+  await expect(page.getByTestId("field-integrity")).not.toHaveValue("1");
 });

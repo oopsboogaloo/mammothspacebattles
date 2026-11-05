@@ -1,7 +1,7 @@
 // AI pilots, phase 1: foundations (AIP-001…AIP-007, §9.10).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assemblyTotals, getProfile, hashValue, initialWorld, learnShip, parseScenario, pilotChannels, stepInPlace, type PilotGoal, type World } from "../../src/core/index.ts";
+import { aimAt, assemblyTotals, getProfile, hashValue, initialWorld, learnShip, parseScenario, pilotChannels, stepInPlace, type PilotGoal, type World } from "../../src/core/index.ts";
 import { runPilots } from "../../src/core/pilot.ts";
 import { readJson, ROOT } from "../helpers.ts";
 
@@ -119,14 +119,14 @@ describe("AI pilot foundations", () => {
     expect(hashValue(c)).toBe(hashValue(a));
   }, 300_000);
 
-  it("AIP-001 a wrecked pilot's ship does nothing more", () => {
+  it("AIP-001 DMG-007 a pilot destroyed with its hull lets go of every control and does nothing more", () => {
     const w = ship({ kind: "heading", angle: 0 });
     run(w, 24);
-    hull(w).integrity = 0;
-    const before = { ...w.controls };
+    expect(Object.values(w.controls).some((v) => v > 0)).toBe(true);
+    w.bodies.find((b) => b.id === "hull")!.integrity = 0;
     run(w, 48);
-    expect(hull(w).pilot!.intent).toBe("wrecked");
-    expect(w.controls).toEqual(before);
+    expect(w.bodies.some((b) => b.id === "hull")).toBe(false);
+    for (const ch of ["e1.left", "e1.right"]) expect(w.controls[ch] ?? 0).toBe(0);
   });
 
   it("AIP-018 a pilot's decisions cost well under the budget", () => {
@@ -233,3 +233,118 @@ describe("AI pilot navigation (phase 2)", () => {
     expect(w.ledger.violations).toBe(0);
   }, 600_000);
 });
+
+/**
+ * Two Gunship 2s in empty space: the player's (its own ids and channels) at `player`, pointing up,
+ * and an AI one (ids e1-*, channels e1.*) at `ai`, with a pilot in `mode`.
+ */
+function duel(o: { mode: string; ai?: { x: number; y: number }; player?: { x: number; y: number; vx?: number; vy?: number }; combat?: number; route?: boolean }): World {
+  const raw = readJson(join(ROOT, "scenarios", "base.json")) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  type B = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const shift = (p: B, dx: number, dy: number) => ({ x: typeof p.x === "number" ? p.x + dx : { $expr: `(${p.x.$expr}) + ${dx}` }, y: typeof p.y === "number" ? p.y + dy : { $expr: `(${p.y.$expr}) + ${dy}` } });
+  const parts: B[] = raw.world.bodies.filter((b: B) => !b.fixed);
+  const ids = new Set(parts.map((b) => b.id));
+  const pl = o.player ?? { x: 0, y: 0 };
+  const ai = o.ai ?? { x: 0, y: 60 };
+  const player = parts.map((b) => ({ ...structuredClone(b), position: shift(b.position, pl.x, pl.y), velocity: { x: pl.vx ?? 0, y: pl.vy ?? 0 } }));
+  const enemy = parts.map((b) => {
+    const c = structuredClone(b);
+    c.id = `e1-${b.id}`;
+    c.position = shift(b.position, ai.x, ai.y);
+    if (c.injector) c.injector.channel = `e1.${c.injector.channel}`;
+    if (c.tractor) c.tractor.channel = `e1.${c.tractor.channel}`;
+    return c;
+  });
+  enemy.find((b) => b.id === "e1-hull")!.pilot = { skill: { flight: 0.7, combat: o.combat ?? 0.5 }, mode: o.mode, goal: { kind: "idle" }, ...(o.route !== false && o.mode !== "hunting" ? { route: { waypoints: [ai, { x: ai.x + 1, y: ai.y }], loop: true } } : {}) };
+  const joints = raw.world.joints.filter((j: B) => ids.has(j.a));
+  const links = raw.world.links.filter((l: B) => ids.has(l.to));
+  raw.world.bodies = [...player, ...enemy];
+  raw.world.joints = [...joints, ...joints.map((j: B) => ({ ...j, id: `e1-${j.id}`, a: `e1-${j.a}`, b: `e1-${j.b}` }))];
+  raw.world.links = [...links, ...links.map((l: B) => ({ ...l, id: `e1-${l.id}`, to: `e1-${l.to}`, ...(l.from ? { from: `e1-${l.from}` } : {}), ...(l.channel ? { channel: `e1.${l.channel}` } : {}) }))];
+  raw.world.gravity = { x: 0, y: 0 };
+  raw.world.asteroids = [];
+  delete raw.world.bounds;
+  Object.assign(raw, { timeline: [], probes: [], assertions: [] });
+  delete raw.ui;
+  return initialWorld(parseScenario(raw));
+}
+const enemyPilot = (w: World) => w.bodies.find((b) => b.id === "e1-hull")!.pilot!;
+
+describe("AI pilot combat (phase 3)", () => {
+  it("AIP-011 it leads a moving target: a shell on its aim meets the target, allowing for its own motion; with no lead it aims where the target is", () => {
+    const from = { x: 0, y: 0 };
+    const own = { x: 1, y: -2 };
+    const target = { x: 80, y: 30 };
+    const tv = { x: -3, y: 6 };
+    const muzzle = 45;
+    const d = aimAt(from, own, target, tv, muzzle, 1);
+    expect(Math.hypot(d.x, d.y)).toBeCloseTo(1, 12);
+    // Shell velocity = ours + muzzle along d; find the time it is nearest the target, and check it meets it.
+    const sv = { x: own.x + muzzle * d.x, y: own.y + muzzle * d.y };
+    const r = { x: target.x - from.x, y: target.y - from.y };
+    const w = { x: tv.x - sv.x, y: tv.y - sv.y };
+    const t = -(r.x * w.x + r.y * w.y) / (w.x * w.x + w.y * w.y);
+    expect(t).toBeGreaterThan(0);
+    expect(Math.hypot(r.x + w.x * t, r.y + w.y * t)).toBeLessThan(1e-9);
+    const flat = aimAt(from, own, target, tv, muzzle, 0);
+    expect(flat.x).toBeCloseTo(target.x / Math.hypot(target.x, target.y), 12);
+    expect(flat.y).toBeCloseTo(target.y / Math.hypot(target.x, target.y), 12);
+  });
+
+  it("AIP-015 AIP-016 scenarios take the combat modes, a side and a detection range; Cautious and Evading need a route", () => {
+    const raw = readJson(join(ROOT, "scenarios", "ai-patrol.json")) as { world: { bodies: Record<string, any>[] } }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const pilot = () => raw.world.bodies.find((b) => b.id === "e1-hull")!.pilot;
+    for (const mode of ["hunting", "cautious", "evading"]) {
+      Object.assign(pilot(), { mode, side: "pirates", detect: 120 });
+      expect(() => parseScenario(structuredClone(raw))).not.toThrow();
+    }
+    const route = pilot().route;
+    delete pilot().route;
+    expect(() => parseScenario(structuredClone(raw))).toThrow(); // evading, no route
+    pilot().mode = "hunting";
+    expect(() => parseScenario(structuredClone(raw))).not.toThrow(); // a hunter needs none
+    pilot().route = route;
+    for (const bad of [{ mode: "berserk" }, { detect: -5 }, { side: 3 }]) {
+      const r = structuredClone(raw);
+      Object.assign(r.world.bodies.find((b) => b.id === "e1-hull")!.pilot, bad);
+      expect(() => parseScenario(r)).toThrow();
+    }
+  });
+
+  it("AIP-003 it never touches a gun whose fire channel another ship shares, and only a fighting pilot works its own trigger", () => {
+    const w = ship({ kind: "idle" });
+    w.links.push({ id: "x", kind: "control", channel: "e1.fire", to: "elsewhere", integrity: 1 } as never);
+    hull(w).pilot!.mode = "hunting";
+    w.controls["e1.fire"] = 0.7;
+    run(w, 24);
+    expect(w.controls["e1.fire"]).toBe(0.7);
+    const m = ship({ kind: "idle" }); // manual, owning its gun: it leaves the trigger to whoever set it
+    m.controls["e1.fire"] = 0.7;
+    run(m, 24);
+    expect(m.controls["e1.fire"]).toBe(0.7);
+  }, 120_000);
+
+  it("AIP-015 a Cautious pilot is not provoked by a ship closing on it with a shell only loaded, not fired", () => {
+    const w = duel({ mode: "cautious", ai: { x: 0, y: 30 }, player: { x: 0, y: 0, vy: 8 } });
+    run(w, 240);
+    expect(w.events.some((e) => e.type === "loaded" && e.data.id === "breech")).toBe(true);
+    expect(enemyPilot(w).combat?.grudgeUntil).toBeUndefined();
+    expect(enemyPilot(w).intent).toMatch(/watching hull/);
+  }, 120_000);
+
+  it("AIP-011 AIP-012 AIP-015 a Hunting pilot closes on the player's ship, aims, fires and hits it, with the ledger clean", () => {
+    const w = duel({ mode: "hunting", ai: { x: 0, y: 45 }, combat: 1 });
+    const player = () => new Set(w.bodies.filter((b) => !b.id.startsWith("e1-")).map((b) => b.id));
+    let hit = false;
+    for (let i = 0; i < 2400 && !hit; i++) {
+      stepInPlace(w, [], sandbox);
+      const own = player();
+      hit = w.events.some((e) => e.tick === w.tick - 1 && (e.type === "detonation" || e.type === "collision") && /^e1-breech-shell-/.test(String(e.data.id ?? e.data.a) + String(e.data.b ?? "")) && (own.has(String(e.data.a)) || own.has(String(e.data.b)) || e.type === "detonation"));
+    }
+    expect(enemyPilot(w).combat!.shots).toBeGreaterThan(0);
+    expect(enemyPilot(w).combat!.muzzle).toBeGreaterThan(60); // learned from its shots: Gunship 3 fires at about 96 m/s
+    expect(hit).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+  }, 600_000);
+});
+

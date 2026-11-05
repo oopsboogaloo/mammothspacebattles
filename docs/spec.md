@@ -373,6 +373,7 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **GAS-007** `[M · M3 · P]` When parcels leave the world boundary or are merged, the ledger shall record the mass, momentum and energy removed or combined.
 - **GAS-008** `[S · M3 · B]` The `sandbox` profile shall support at least 2,000 active parcels in real time on the reference hardware.
 - **GAS-009** `[M · M4b · P]` In a world given a depth out of the plane (`bounds.depth`), gas that has left its engine shall spread out of the plane as a cloud in vacuum would. Each step a parcel's chance of staying in the plane shall be multiplied by 1/(1 + x), x = c·dt/depth with c its sound speed. It shall leave whole once that chance falls below its own fixed threshold (from its id), so every parcel keeps its mass. The ledger shall record what leaves at the boundary. Gas inside an engine's declared interior (`injector.chamber`), which is closed in 3D, shall not leave.
+- **GAS-011** `[S · M8 · E]` Gas that leaves the gas model inside the world (out of the plane, or far from everything) shall carry on for about a second as a simple particle, a *wisp*: it moves on under the uniform field, grows to three times its size, cools and fades out, its mass fading with it. A wisp shall bounce off solid bodies (restitution 0.3) and push them. The gas has already left the ledger's books, so what a wisp gives a body shall be recorded as coming in through the boundary. *Built November 2026 (Gunship 3):* at most 8,000 wisps; a Gunship 3 firing both engines keeps about 3,000.
 
 *Model as built (M3, DEC-04).* SPH with a Wendland C2 kernel (support h = 3 parcel spacings) and an ideal-gas equation of state per species, P = (γ − 1)·ρ·u in 2D (ρ in kg/m², P in N/m). Each step runs CFL-limited substeps. In each substep all impulses come from the state at its start, and each impulse's work, taken at the mean of the old and new velocities, is moved between kinetic and thermal energy. So momentum and angular momentum are conserved exactly and energy to rounding. Artificial viscosity (Monaghan α = 1, β = 2) is capped at the impulse that stops a pair closing. **Wall model (GAS-004):** a body surface is a mirror. Each parcel within h of a surface gets a ghost image, which the parcels on that face see. A ghost's impulse acts on the parcel and, equal and opposite along the same line, on the body, or on its free assembly as one rigid unit. At rest this presses on walls at the equation-of-state pressure, to within about 1% in SC-02. Parcels on opposite faces of a thin wall don't interact.
 
@@ -448,6 +449,7 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **DMG-004** `[M · M5 · S]` A damaged store shall leak its contents as parcels through the breach, at a rate depending on breach size and pressure.
 - **DMG-005** `[M · M5 · S]` Armour struck first shall absorb contact before the component behind it is affected.
 - **DMG-006** `[S · M5 · S]` Damage to chamber or nozzle geometry shall change the shape that gas collides with.
+- **DMG-007** `[M · M8 · S]` A non-fixed body that reaches 0 integrity shall leave the world in the step it is destroyed, with its welds and links, its stores and anything it holds. The ledger shall record its mass, momentum and energy as leaving through the boundary. Where it was, a burst of harmless dust shall drift off and fade over 20–30 s: 10–80 grains by its size, glowing for the first half second, coloured by what it was (rock, gold, hull). Dust has no mass, touches nothing and is outside the books. A pilot destroyed with its body lets go of its controls. *Added November 2026: destroyed asteroid pieces and ship parts used to stay as dark wreckage.*
 
 *Model as built (M5).*
 - **Only bodies with a material take damage.** A body's `material` is a threshold and a toughness, both in joules. A body without one can't be damaged, so the scenarios written before M5 (LAND, FT and the reference set) behave exactly as before. In FT you still bounce off asteroids, and welds still break only past their limits. Examples (`MATERIALS`): hull (50 J, 600 J), tank (20 J, 100 J), armour (100 J, 4000 J). The inspector sets one per part, or a custom pair.
@@ -504,7 +506,14 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
   - 15 shells.
 
   It weighs 78 kg against 108 kg, with a moment of inertia of 75 kg·m² against 100. The centre of mass is at the cannon's base. Half a second on one engine spins it to 2.0 rad/s, against the Gunship's 1.0. The original Gunship is unchanged apart from the cannon's economy.
-- **Crushed gas.** When a step's substeps can't keep a parcel's thermal energy from going negative, they are halved, up to 20 times. A parcel crushed between two parts closing on each other needed ever shorter substeps: a million in one step, 150 s, as a big shell smashed the ship. Now a halving that doesn't cut the shortfall by at least a quarter stops the retries. Each step also has a budget of 8,000 substeps, retries included. Past it the step finishes in one substep and clamps, and the ledger reports the energy clamped (1.3 J in that shot).
+- **Gunship 3 (GS3, November 2026).** Gunship 2 was hard to fly. Gunship 3 is the same layout with:
+  - *lean-burning engines:* 1 kg of hydrogen to 47 of oxygen (Gunship 2: 1 to 8), four times the mass flow (6 kg/s each) in parcels four times heavier (4 g). Each kilogram carries a quarter of the heat, so the exhaust leaves at about half the speed (99 m/s against 195, measured 2–4 m behind the ship) and each engine pushes twice as hard (574 N against 282). Full thrust gives 12.8 m/s² against 7.2. The economy is 80× (Gunship 2: 20×), so the tank lasts as long;
+  - *welds twice as strong* (10,000 N tension, 20,000 compression, 6,000 shear, 4,000 N·m torque at weld strength 1);
+  - *a faster cannon:* 1 kg explosive shells (Gunship 2: 2 kg solid) on a 0.4 kg charge, leaving at about 96 m/s against 45. It carries 40 and reloads in 0.25 s (Gunship 2: 15, 1 s). A 0.35 kg charge gave 94 m/s but its first shot clamped crushed gas (32 J, reported by the ledger; see *crushed gas* below); 0.4 kg fired 20 shots clean;
+  - *a 15 m tether* (TRC-003).
+
+  It weighs 90 kg with its 40 shells. The base, tractor and AI scenarios now fly Gunship 3; the older scenarios keep Gunship 2. The exhaust's tail (GAS-011) applies everywhere.
+- **Crushed gas.** When a step's substeps can't keep a parcel's thermal energy from going negative, they are halved, up to 20 times. A parcel crushed between two parts closing on each other needed ever shorter substeps: a million in one step, 150 s, as a big shell smashed the ship. Now a halving that doesn't cut the shortfall by at least a quarter stops the retries. Each step also has a budget of 8,000 substeps, retries included. Past it the step finishes in one substep and clamps, and the ledger reports the energy clamped (1.3 J in that shot). *Since November 2026* the energy the clamp makes up is recorded as a correction, and the crushed parcels leave the gas (out of the plane) at the end of the step, becoming tail wisps. Before, the ledger reported it as a violation: with destroyed pieces leaving (DMG-007), blast gas was often crushed as the rest of a rock closed in, 100–170 J a step in GS-X, and Gunship 3's first shot at a 0.35 kg charge clamped 32 J.
 
 ### 9.8 Asteroids (M7)
 
@@ -536,7 +545,7 @@ Salvage: a ship pulls loose objects in with a beam and tows them home on a tethe
 
 - **TRC-001** `[M · M7 · U]` A ship's tractor shall project a beam while its control is on: a wedge (default 30°, 50 m) from a declared point, along a declared direction in the ship's frame. Without its control link, or once its body is wreckage, it does nothing.
 - **TRC-002** `[M · M7 · P]` The beam shall pull every free assembly in the wedge toward its origin with a total force (default 400 N) shared equally between them, and pull the ship toward each with an equal and opposite force, so momentum and angular momentum are unchanged.
-- **TRC-003** `[M · M7 · S]` When an assembly no bigger than the ship and at most a declared multiple of its mass (default 1.2) comes within the tether's length (default 20 m), the beam shall stop and a tether shall take its piece nearest the ship. Heavier or bigger assemblies are only pulled.
+- **TRC-003** `[M · M7 · S]` When an assembly no bigger than the ship and at most a declared multiple of its mass (default 1.2) comes within the tether's length (default 15 m), the beam shall stop and a tether shall take its piece nearest the ship. Heavier or bigger assemblies are only pulled.
 - **TRC-004** `[M · M7 · P]` The tether shall be a stiff, damped spring (Hooke's law) of the declared length between the ship and the cargo's centre of mass, acting along the line between them only, so the cargo swings freely round the ship and stays within about a metre of that length under normal flying.
 - **TRC-005** `[M · M7 · U]` Pressing the control again shall let the cargo go. The beam shall not return until the control has been released and pressed afresh.
 - **TRC-006** `[M · M7 · U]` A tether whose force passes its declared maximum shall break, raising `tether.break`.
@@ -549,7 +558,7 @@ Salvage: a ship pulls loose objects in with a beam and tows them home on a tethe
 - **Events.** `tractor.on`, `tractor.off`, `tether.engage` (with the distance), `tether.release`, `tether.break` (with the force).
 - **On screen.** The beam is a faint teal wedge. The tether is a line that warms from teal to red as its force nears the limit, dashed while it pushes. The inspector shows the mode, the cargo and the force.
 - **Scenario: *Gunship 2: tractor beam and tether (TRC)*.** Gunship 2 (80 kg, 3.3 m from its centre of mass to its far edge) with a tractor at its tail, aimed backwards, on T. To pick up: an 80 kg ball half the ship's size, a 40 kg asteroid fragment, and an 18 kg derelict of three welded parts. A 6 m rock is too heavy to tow, so the beam pulls the ship to it. Three rubble asteroids to fly round, and a fixed base platform to bring cargo back to. Sliders for the beam force, tether length and breaking force. No gravity.
-- **Measured.** Holding T from the start, the beam takes the ball on the tether at 20 m after 2.2 s (with a 30 m tether, as first built: 1.6 s, and the ball stayed between 29.2 and 30.2 m under full thrust), with the ledger clean. The step takes about 4 ms.
+- **Measured.** Holding T from the start, the beam takes the ball on the tether at 20 m after 2.2 s (the tether was 20 m then; it is now 15 m, shortened for Gunship 3. With a 30 m tether, as first built: 1.6 s, and the ball stayed between 29.2 and 30.2 m under full thrust), with the ledger clean. The step takes about 4 ms.
 
 ### 9.8c Home base (M7)
 
@@ -568,10 +577,10 @@ The first piece of the game loop (§9.9): a base to bring what is mined back to.
   - *Ledger:* the collector is fixed, so its pull is external. Its impulse and angular impulse, with the energy it adds or takes, go under `tractor`. Captured cargo leaving the world goes under `boundary`, like gas leaving.
   - *Reach:* first built with a 25 m reach, it took the loose shell in the parked ship's barrel 17 m away and tipped the ship over. 10 m keeps it to the cup.
 - **Scenario: *Home base: mine and deliver (BASE)*.**
-  - *The base asteroid:* a fixed 60 m rock (16-sided, flat-topped) with `gravity` mu 5,408 m³/s², core 10 m: about 1.9 m/s² at the surface, against Gunship 2's 6.9 m/s² at full thrust.
+  - *The base asteroid:* a fixed 60 m rock (16-sided, flat-topped) with `gravity` mu 5,408 m³/s², core 10 m: about 1.9 m/s² at the surface, against Gunship 3's 12.8 m/s² at full thrust (Gunship 2: 6.9).
   - *On its 60 m plateau:* the pad at the centre, where gravity is straight down (off-centre, the plateau slopes against the pull and a parked ship slid). The egg cup (stem, floor, walls flared outward so the biggest cargo it takes reaches the bowl) to the right; a control tower and a dome to the left.
   - *Mining asteroids:* three rubble asteroids (TRC's light rock, gold and larger fragments) on circular orbits 140, 175 and 210 m from the base's centre, at 5–6 m/s.
-  - *The ship:* Gunship 2 with the tractor on T, parked on the pad.
+  - *The ship:* Gunship 3 (Gunship 2 until November 2026) with the tractor on T, parked on the pad.
   - *Sliders and graphs:* sliders for the collector's reach and reel speed. Graphs of gold and rock delivered.
   - *Measured:* the parked ship stays put for 10 s, and the orbits hold to within 3% over that time. A step takes about 3 ms. The ledger is clean.
 - **Not yet.** The base is fixed and indestructible, and buildings are plain fixed bodies with no function. Delivered material is counted but can't be spent. Recipes, building and ship upgrades are the next steps (§9.9).
@@ -600,9 +609,9 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
   - *Ship design is part of it.* Recipes unlock parts, and the player builds and refits ships from them in the sandbox's builder.
   - Needs, roughly in order: the base asteroid with gravity and the pad; the collector (a fixed tether that reels in, and a capture rule); a store of what has been delivered, kept with the world (these three are built: §9.8c); then recipes, buildings and part unlocks. More minerals than gold, and asteroids that are harder to reach, come with the tree.
 
-### 9.10 AI pilots (M8, phases 1–2 built)
+### 9.10 AI pilots (M8, phases 1–3 built)
 
-Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but nothing in the pilot may assume that ship: it must be able to fly any ship built from the parts in this spec. Specified November 2026; the plan comes next.
+Enemy and neutral ships flown by the computer. For now they fly the gunship (Gunship 3 since November 2026), but nothing in the pilot may assume that ship: it must be able to fly any ship built from the parts in this spec. Specified November 2026; the plan comes next.
 
 **Principles**
 - **AIP-001** `[M · M8 · U]` A pilot shall fly only through the ship's control channels, as a player does: the same engines, cannon and tractor, the same physics, no forces or knowledge a player's ship doesn't have. It never moves bodies or changes the world directly.
@@ -685,7 +694,18 @@ Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but n
 - **Overlay (AIP-017).** "AI plans": each pilot's waypoints as rings, a dashed line to where it is going, and a red ring round what it is steering past. The flight pad no longer shows buttons for channels a pilot flies.
 - **Scenario: *AI pilot: patrol among the rocks (AI-2)*.** An AI Gunship 2 in Ignoring mode flies a loop of five waypoints through TRC's rubble asteroids, routed close to the rocks and past the player's ship. Sliders: AI flight skill, cruise speed.
   - *Measured:* at flight skill 0.3, 0.7 and 1, it goes round the whole loop and on in 60 s, with no contact with anything and no ledger violations, at about 6 ms a step with gas.
-- **Next (phase 3):** combat: detection radius and sides, aiming at a moving target (lead), fire control, and the Hunting, Cautious and Evading modes.
+
+*Model as built (phase 3: combat, November 2026).*
+- **Sides and seeing (AIP-016).** A pilot's `side` defaults to "enemy"; a ship with no pilot is the player's. It sees ships within `detect` (150 m). A ship, until cockpits exist, is an assembly with a working pilot or tractor, or a working engine and gun together: a gun or engine broken off on its own is debris.
+- **Its gun.** The body with a magazine whose fire channel is its own (AIP-003): never a channel shared with another ship. Only Hunting and Cautious work the trigger.
+- **Aiming (AIP-011).** The bore points where a shell meets the target: a quadratic intercept from both ships' positions and velocities and the muzzle speed, which it learns from its own shots (starting from 40 m/s; Gunship 2 measured 45). It allows for 30–100% of the target's motion by combat skill, plus an aim error of up to 4° at skill 0, steady for a second at a time. To point the bore it turns the thrust axis by the angle between them in the design (none for the gunships). While aiming it still thrusts along the nose, which holds its distance against the recoil.
+- **Fire control (AIP-012).** It fires a 0.1 s pulse when a shell is loaded, the target is within 100 m, the aim is within 0.6°–4° by skill, and the line of fire is clear of everything but the target. Debris lighter than a fifth of its own ship doesn't count, and nor does a round still loaded in a bore.
+- **Hunting.** It closes on the nearest foe to a stand-off of 35–55 m (by skill), matching its velocity, then attacks: aims and fires. It breaks off past the stand-off plus 40 m, or above 6 m/s relative.
+  - *Measured* (Gunship 2s, 45 m apart, 10 s): 3–6 shots and 2–3 hits at combat skill 0, 0.5 and 1, against a target still or drifting at 3 m/s; ledger clean.
+- **Cautious.** It flies its route; with the player within sight it stops and watches them. A foreign shell in flight whose path passes within 4 ship widths in the next 3 s, or a hit, starts a minute's rage: it attacks whoever fired.
+- **Evading.** It flies its route, and runs (straight away, at 6–14 m/s by flight skill) from a foe within 60 m that is closing, until it is 100 m clear.
+- **Found on the way.** Fuel fed out of a spinning tank carried spin energy that went unrecorded (a 3 mJ violation each step once a ship broke up); it is now a recorded transfer.
+- **Next:** the combat-duel scenario (mini game 3), then phase 4 (Mining, Mad, the tractor and sector exits).
 
 *Decided (November 2026).*
 - **Who flies.** The pilot will be a creature, often a small woolly mammoth, sitting in a cockpit: a component still to design (§9.9). Until then the pilot is a computer built into the ship, on the ship as a whole.

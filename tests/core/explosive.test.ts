@@ -117,16 +117,21 @@ describe("explosive shells", () => {
     };
     const w = shoot(true);
     const det = w.events.find((e) => e.type === "detonation")!;
-    const wrecked = w.bodies.filter((b) => /^r[a-d]-\d+$/.test(b.id) && b.integrity === 0);
+    // Destroyed pieces leave the world in dust (DMG-007), where they were.
+    const wrecked = w.events.filter((e) => e.type === "destroyed.removed" && /^r[a-d]-\d+$/.test(String(e.data.id))).map((e) => ({ id: String(e.data.id), position: { x: Number(e.data.x), y: Number(e.data.y) } }));
     expect(wrecked.length).toBeGreaterThan(0);
-    // Every wrecked piece is at the blast: within its radius (2 m) plus a piece's size.
-    for (const b of wrecked) expect(Math.hypot(b.position.x - Number(det.data.x), b.position.y - Number(det.data.y))).toBeLessThan(3.5);
+    // Every piece the blast itself wrecked is at the blast: within its radius (2 m) plus a piece's size.
+    // (Pieces knocked loose may be wrecked later, elsewhere, as they hit things.)
+    const byBlast = w.events.filter((e) => e.type === "destroyed.removed" && e.tick === det.tick).map((e) => String(e.data.id));
+    expect(byBlast.length).toBeGreaterThan(0);
+    for (const b of wrecked.filter((x) => byBlast.includes(x.id))) expect(Math.hypot(b.position.x - Number(det.data.x), b.position.y - Number(det.data.y))).toBeLessThan(3.5);
     // The far side of the 5 m rock is untouched.
     expect(w.bodies.filter((b) => /^rc-\d+$/.test(b.id) && Math.hypot(b.position.x - Number(det.data.x), b.position.y - Number(det.data.y)) > 5).every((b) => b.integrity === 1)).toBe(true);
-    // Every bond that broke touches a piece at the blast: the rock cracks where it is struck (AST-003).
-    const at = (id: string) => w.bodies.find((b) => b.id === id)!;
+    // Every bond the blast broke touches a piece at the blast: the rock cracks where it is struck (AST-003).
+    // (Later, pieces knocked loose crack more as they hit their neighbours.)
+    const at = (id: string) => w.bodies.find((b) => b.id === id) ?? wrecked.find((b) => b.id === id)!;
     const near = (id: string) => Math.hypot(at(id).position.x - Number(det.data.x), at(id).position.y - Number(det.data.y)) < 3.5;
-    const breaks = w.events.filter((e) => e.type === "joint.break" && /^r[a-d]-b/.test(String(e.data.id)));
+    const breaks = w.events.filter((e) => e.type === "joint.break" && /^r[a-d]-b/.test(String(e.data.id)) && e.tick === det.tick);
     expect(breaks.length).toBeGreaterThan(0);
     for (const e of breaks) expect(near(String(e.data.a)) || near(String(e.data.b))).toBe(true);
     expect(w.ledger.violations).toBe(0);

@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "ai-patrol",
   "title": "AI pilot: patrol among the rocks",
-  "description": "An AI Gunship 2 in Ignoring mode flies a looping route of five waypoints through the rubble asteroids, steering round any rock in its way, and pays the player no attention. It plans its speed so it can turn round and brake in time, and passes through waypoints on a loop without stopping. Turn on the AI plans overlay to see its route, where it is heading and what it is steering round. Sliders: AI flight skill and cruise speed.",
+  "description": "An AI Gunship 3 in Ignoring mode flies a looping route of five waypoints through the rubble asteroids, steering round any rock in its way, and pays the player no attention. It plans its speed so it can turn round and brake in time, and passes through waypoints on a loop without stopping. Turn on the AI plans overlay to see its route, where it is heading and what it is steering round. Sliders: AI flight skill and cruise speed.",
   "profile": "sandbox",
   "seed": 71,
   "world": {
@@ -161,10 +161,10 @@
         ],
         "injector": {
           "channel": "left",
-          "rate": 1.5,
+          "rate": 6.0,
           "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
+            "h2": 0.020833333333333332,
+            "o2": 0.9791666666666666
           },
           "outlet": {
             "x": 0,
@@ -176,14 +176,14 @@
           },
           "width": 0.6,
           "speed": 10,
-          "parcelMass": 0.001,
+          "parcelMass": 0.004,
           "radius": 0.035,
           "igniter": true,
           "chamber": {
             "width": 1.0,
             "length": 1.45
           },
-          "economy": 20
+          "economy": 80
         },
         "material": {
           "name": "hull",
@@ -229,10 +229,10 @@
         ],
         "injector": {
           "channel": "right",
-          "rate": 1.5,
+          "rate": 6.0,
           "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
+            "h2": 0.020833333333333332,
+            "o2": 0.9791666666666666
           },
           "outlet": {
             "x": 0,
@@ -244,14 +244,14 @@
           },
           "width": 0.6,
           "speed": 10,
-          "parcelMass": 0.001,
+          "parcelMass": 0.004,
           "radius": 0.035,
           "igniter": true,
           "chamber": {
             "width": 1.0,
             "length": 1.45
           },
-          "economy": 20
+          "economy": 80
         },
         "material": {
           "name": "hull",
@@ -619,13 +619,13 @@
         "contents": [
           {
             "resource": "h2",
-            "mass": 0.9,
-            "capacity": 0.9
+            "mass": 0.16875,
+            "capacity": 0.16875
           },
           {
             "resource": "o2",
-            "mass": 7.2,
-            "capacity": 7.2
+            "mass": 7.93125,
+            "capacity": 7.93125
           }
         ],
         "material": {
@@ -889,7 +889,18 @@
               "$param": "shellMass"
             },
             "restitution": 0,
-            "friction": 0.05
+            "friction": 0.05,
+            "explosive": {
+              "charge": {
+                "$param": "blast"
+              },
+              "fragments": {
+                "$param": "fragments"
+              },
+              "radius": {
+                "$param": "radius"
+              }
+            }
           },
           "stop": {
             "shape": {
@@ -1127,10 +1138,10 @@
         ],
         "injector": {
           "channel": "e1.left",
-          "rate": 1.5,
+          "rate": 6.0,
           "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
+            "h2": 0.020833333333333332,
+            "o2": 0.9791666666666666
           },
           "outlet": {
             "x": 0,
@@ -1142,14 +1153,14 @@
           },
           "width": 0.6,
           "speed": 10,
-          "parcelMass": 0.001,
+          "parcelMass": 0.004,
           "radius": 0.035,
           "igniter": true,
           "chamber": {
             "width": 1.0,
             "length": 1.45
           },
-          "economy": 20
+          "economy": 80
         },
         "material": {
           "name": "hull",
@@ -1195,10 +1206,10 @@
         ],
         "injector": {
           "channel": "e1.right",
-          "rate": 1.5,
+          "rate": 6.0,
           "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
+            "h2": 0.020833333333333332,
+            "o2": 0.9791666666666666
           },
           "outlet": {
             "x": 0,
@@ -1210,14 +1221,14 @@
           },
           "width": 0.6,
           "speed": 10,
-          "parcelMass": 0.001,
+          "parcelMass": 0.004,
           "radius": 0.035,
           "igniter": true,
           "chamber": {
             "width": 1.0,
             "length": 1.45
           },
-          "economy": 20
+          "economy": 80
         },
         "material": {
           "name": "hull",
@@ -1625,13 +1636,13 @@
         "contents": [
           {
             "resource": "h2",
-            "mass": 0.9,
-            "capacity": 0.9
+            "mass": 0.16875,
+            "capacity": 0.16875
           },
           {
             "resource": "o2",
-            "mass": 7.2,
-            "capacity": 7.2
+            "mass": 7.93125,
+            "capacity": 7.93125
           }
         ],
         "material": {
@@ -1895,7 +1906,18 @@
               "$param": "shellMass"
             },
             "restitution": 0,
-            "friction": 0.05
+            "friction": 0.05,
+            "explosive": {
+              "charge": {
+                "$param": "blast"
+              },
+              "fragments": {
+                "$param": "fragments"
+              },
+              "radius": {
+                "$param": "radius"
+              }
+            }
           },
           "stop": {
             "shape": {
@@ -1995,16 +2017,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2022,16 +2044,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2049,16 +2071,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2076,16 +2098,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2103,16 +2125,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2130,16 +2152,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2157,16 +2179,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2184,16 +2206,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2211,16 +2233,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2238,16 +2260,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2265,16 +2287,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2292,16 +2314,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2319,16 +2341,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2346,16 +2368,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2373,16 +2395,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2400,16 +2422,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2469,16 +2491,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2496,16 +2518,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2523,16 +2545,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2550,16 +2572,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2577,16 +2599,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2604,16 +2626,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2631,16 +2653,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2658,16 +2680,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2685,16 +2707,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2712,16 +2734,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2739,16 +2761,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2766,16 +2788,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2793,16 +2815,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2820,16 +2842,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2847,16 +2869,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2874,16 +2896,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2901,16 +2923,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2928,16 +2950,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -2955,16 +2977,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -3024,16 +3046,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -3051,16 +3073,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       },
@@ -3078,16 +3100,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "5000 * welds"
-          },
-          "compression": {
             "$expr": "10000 * welds"
           },
+          "compression": {
+            "$expr": "20000 * welds"
+          },
           "shear": {
-            "$expr": "3000 * welds"
+            "$expr": "6000 * welds"
           },
           "torque": {
-            "$expr": "2000 * welds"
+            "$expr": "4000 * welds"
           }
         }
       }
@@ -3434,7 +3456,7 @@
       "min": 0.01,
       "max": 0.5,
       "step": 0.01,
-      "default": 0.1
+      "default": 0.4
     },
     {
       "id": "shellMass",
@@ -3443,7 +3465,7 @@
       "min": 0.5,
       "max": 10,
       "step": 0.5,
-      "default": 2
+      "default": 1
     },
     {
       "id": "barrel",
@@ -3461,7 +3483,7 @@
       "min": 1,
       "max": 50,
       "step": 1,
-      "default": 15
+      "default": 40
     },
     {
       "id": "reload",
@@ -3470,7 +3492,7 @@
       "min": 0.25,
       "max": 5,
       "step": 0.25,
-      "default": 1
+      "default": 0.25
     },
     {
       "id": "material",
@@ -3489,6 +3511,33 @@
       "max": 100,
       "step": 0.01,
       "default": 1
+    },
+    {
+      "id": "blast",
+      "label": "Explosive charge",
+      "unit": "kg",
+      "min": 0.05,
+      "max": 0.5,
+      "step": 0.05,
+      "default": 0.3
+    },
+    {
+      "id": "fragments",
+      "label": "Fragments",
+      "unit": "",
+      "min": 0,
+      "max": 8,
+      "step": 2,
+      "default": 6
+    },
+    {
+      "id": "radius",
+      "label": "Blast radius",
+      "unit": "m",
+      "min": 0.5,
+      "max": 5,
+      "step": 0.25,
+      "default": 2
     },
     {
       "id": "pieces",
@@ -3524,7 +3573,7 @@
       "min": 5,
       "max": 50,
       "step": 1,
-      "default": 20
+      "default": 15
     },
     {
       "id": "maxTension",

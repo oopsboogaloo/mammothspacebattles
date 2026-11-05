@@ -234,12 +234,15 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       }
       if (pl.interval !== undefined) num(v, pl.interval, `${pp}.interval`, { int: true, min: 1, max: 240 });
       if (pl.goal !== undefined) validatePilotGoal(v, pl.goal, `${pp}.goal`);
-      if (pl.mode !== undefined && !["manual", "ignoring"].includes(pl.mode as string)) err(v, `${pp}.mode`, 'must be "manual" or "ignoring"');
+      const MODES = ["manual", "ignoring", "hunting", "cautious", "evading"];
+      if (pl.mode !== undefined && !MODES.includes(pl.mode as string)) err(v, `${pp}.mode`, `must be one of ${MODES.join(", ")}`);
+      if (pl.side !== undefined) str(v, pl.side, `${pp}.side`);
+      if (pl.detect !== undefined) num(v, pl.detect, `${pp}.detect`, { positive: true });
       if (pl.route !== undefined) {
         if (!isObj(pl.route)) err(v, `${pp}.route`, "must be {waypoints, loop?, speed?}");
         else validateRoute(v, pl.route, `${pp}.route`);
       }
-      if (pl.mode === "ignoring" && pl.route === undefined) err(v, `${pp}.route`, "Ignoring needs a route");
+      if ((pl.mode === "ignoring" || pl.mode === "cautious" || pl.mode === "evading") && pl.route === undefined) err(v, `${pp}.route`, `${pl.mode} needs a route`);
     }
   }
   if (b.collector !== undefined) {
