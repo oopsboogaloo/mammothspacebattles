@@ -188,3 +188,38 @@ describe("magazine stop", () => {
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 });
+
+describe("magazine stop, review findings", () => {
+  const set = (channel: string, value: number) => ({ type: "control.set" as const, channel, value });
+  /** Gunship 2 with its first shell and stop loaded, everything drifting at `drift`. */
+  const loaded = (drift: { x: number; y: number }, edit?: (w: World) => void) => {
+    const w = initialWorld(parseScenario(readJson(join(ROOT, "scenarios", "gunship-2.json"))));
+    for (const b of w.bodies) if (!b.fixed) b.velocity = { x: b.velocity.x + drift.x, y: b.velocity.y + drift.y };
+    edit?.(w);
+    w.ledger.totals = computeTotals(w);
+    stepInPlace(w, [], sandbox); // loads the shell and deploys the stop
+    return w;
+  };
+
+  it("WPN-001 retracting the stop doesn't depend on how fast the ship drifts: no spin from common motion", () => {
+    const still = loaded({ x: 0, y: 0 });
+    const moving = loaded({ x: 10, y: -7 });
+    stepInPlace(still, [set("fire", 1)], sandbox);
+    stepInPlace(moving, [set("fire", 1)], sandbox);
+    const spin = (w: World) => w.bodies.find((b) => b.id === "breech")!.angularVelocity;
+    expect(still.events.some((e) => e.type === "unlatched")).toBe(true);
+    // Was 0.04 rad/s apart. What is left comes from the scenario's asteroids, whose pull differs a
+    // little once the drifting copy has moved.
+    expect(Math.abs(spin(moving) - spin(still))).toBeLessThan(1e-4);
+    expect(moving.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("WPN-001 a cannon that can't fire (its control link gone) keeps its stop in", () => {
+    const w = loaded({ x: 0, y: 0 }, (x) => {
+      x.links = x.links.filter((l) => !(l.kind === "control" && l.to === "breech"));
+    });
+    for (let i = 0; i < 30; i++) stepInPlace(w, i === 0 ? [set("fire", 1)] : [], sandbox);
+    expect(w.events.some((e) => e.type === "unlatched")).toBe(false);
+    expect(w.bodies.some((b) => b.id === "breech-stop")).toBe(true);
+  }, 300_000);
+});

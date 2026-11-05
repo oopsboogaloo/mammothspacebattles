@@ -834,14 +834,16 @@ function deployStop(world: World, b: Body, stop: NonNullable<Magazine["stop"]>):
 }
 
 /**
- * Takes a magazine's stop back into its body when the fire command arrives (before the charge fires
- * this step). Momentum is kept exactly; what kinetic energy the merge loses becomes heat.
+ * Takes a magazine's stop back into its body when the body is about to fire (commanded, linked and
+ * fuelled: before the charge fires this step). Momentum is kept exactly. Spin keeps the stop's motion
+ * relative to the body, so it doesn't depend on how fast the two drift together; the small change in
+ * angular momentum, as the stop's mass moves to the body's centre, is recorded as a transfer, as when
+ * a shell loads. What kinetic energy the merge loses becomes heat.
  */
 function retractStops(world: World): void {
   for (const b of world.bodies) {
     const mag = b.magazine;
-    const inj = b.injector;
-    if (!mag?.stop || !inj || !((world.controls[inj.channel] ?? 0) > 0)) continue;
+    if (!mag?.stop || !b.injector || !injectorStatus(world, b).firing) continue;
     const id = stopId(b);
     const stop = world.bodies.find((x) => x.id === id);
     const weld = world.joints.find((j) => j.id === `${id}-weld`);
@@ -854,7 +856,7 @@ function retractStops(world: World): void {
     const m0 = bodyMass(b);
     const I0 = massProps(b.shape, m0).inertia;
     const r = sub(stop.position, b.position);
-    const Ls = cross(r, scale(stop.velocity, stop.mass)) + massProps(stop.shape, stop.mass).inertia * stop.angularVelocity;
+    const Ls = cross(r, scale(sub(stop.velocity, b.velocity), stop.mass)) + massProps(stop.shape, stop.mass).inertia * stop.angularVelocity;
     b.mass += stop.mass;
     const m1 = bodyMass(b);
     const I1 = massProps(b.shape, m1).inertia;
