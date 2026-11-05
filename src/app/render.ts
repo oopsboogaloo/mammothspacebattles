@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "grid";
@@ -566,6 +566,23 @@ function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string): v
 
 /** Tractor beams as a faint wedge, and tethers as a line that warms from teal to red as it nears breaking (TRC). */
 function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  // A base's collector: a thin dashed line from its cup to what it is reeling in (BAS).
+  for (const b of world.bodies) {
+    const col = b.collector;
+    if (!col?.cargo) continue;
+    const cargo = world.bodies.find((x) => x.id === col.cargo);
+    if (!cargo) continue;
+    const m = toScreen(c, vp, collectorMouth(b));
+    const p = toScreen(c, vp, cargo.position);
+    ctx.strokeStyle = COLORS.goldStroke;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   for (const b of world.bodies) {
     const t = b.tractor;
     if (!t || t.mode === "off") continue;

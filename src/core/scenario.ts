@@ -223,6 +223,17 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
+  if (b.collector !== undefined) {
+    const c = b.collector;
+    const cp = `${path}.collector`;
+    if (!isObj(c)) err(v, cp, "must be {mouth, range?, maxExtent?, stiffness?, damping?, reel?, capture?, maxTension?}");
+    else {
+      if (b.fixed !== true) err(v, cp, "a collector must be on a fixed body");
+      vec(v, c.mouth, `${cp}.mouth`);
+      for (const k of ["range", "maxExtent", "stiffness", "reel", "capture", "maxTension"]) if (c[k] !== undefined) num(v, c[k], `${cp}.${k}`, { positive: true });
+      if (c.damping !== undefined) num(v, c.damping, `${cp}.damping`, { min: 0 });
+    }
+  }
   if (b.magazine !== undefined) {
     const m = b.magazine;
     const mp = `${path}.magazine`;

@@ -20,9 +20,9 @@ test("TRC-001 TRC-003 holding T beams the ball in, and the tether takes it", asy
   await waitForTick(page, 200);
   expect((await tractor(page)).mode).toBe("beam");
   await shot(page, info, "tractor-beam");
-  // The ball comes within 30 m at about step 380.
-  for (let i = 0; i < 20; i++) await page.getByTestId("step10").click();
-  await waitForTick(page, 400);
+  // The ball comes within 20 m at about step 530.
+  for (let i = 0; i < 40; i++) await page.getByTestId("step10").click();
+  await waitForTick(page, 600);
   await page.keyboard.up("t");
   const t = await tractor(page);
   expect(t.mode).toBe("tether");
