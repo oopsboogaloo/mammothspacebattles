@@ -37,9 +37,11 @@ export interface Delta {
  * `boundary` is what gas carried out of the world boundary (GAS-007), and what wrapping round a
  * wrapped world changed (FLT-012). `supply` is what an injector with an economy above 1 made from
  * nothing (FLT-010): a declared, recorded departure from conservation, never a hidden one.
+ * `tractor` is the work tractor beams and tethers do (TRC): their pulls come in equal and opposite
+ * pairs, so it is energy only, which the ship supplies.
  */
-export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction" | "boundary" | "supply";
-export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction", "boundary", "supply"];
+export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction" | "boundary" | "supply" | "tractor";
+export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction", "boundary", "supply", "tractor"];
 
 export interface StepLedger {
   tick: number;

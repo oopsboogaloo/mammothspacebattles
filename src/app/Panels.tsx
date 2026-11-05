@@ -540,6 +540,13 @@ function ContentsSection({ body }: { body: Body }) {
   const setStores = (next: Store[], label: string) => edit([{ type: "body.set", id: body.id, patch: { contents: next } }], label);
   return (
     <Section id="contents" title="Contents">
+      {body.tractor && (
+        <Row
+          k="Tractor"
+          v={body.tractor.mode === "tether" ? `tether on ${body.tractor.cargo}, ${fmt(body.tractor.tension, "N")}` : body.tractor.mode === "beam" ? `beam on ${body.tractor.targets.length}` : "off"}
+          title={`Beam ${fmt(body.tractor.force, "N")} over ${fmt(body.tractor.range, "m")}; tether ${fmt(body.tractor.tether.length, "m")}, breaks past ${fmt(body.tractor.tether.maxTension, "N")}. Tension is positive when it pulls.`}
+        />
+      )}
       {body.magazine && <Row k="Shells" v={`${body.magazine.count} × ${fmt(body.magazine.shell.mass, "kg")}`} title="Shells in the magazine, part of this body's mass until each is loaded." />}
       {stores.length === 0 && !body.magazine && <span class="muted">No stores.</span>}
       {stores.map((s, i) => (

@@ -1,0 +1,256 @@
+// Tractor beam and tether (TRC-001…TRC-006).
+//
+// A body with a tractor projects a beam while its control channel is on: a wedge `arc` wide and
+// `range` long from `origin`, along `direction` (both in the body's own frame). The beam pulls
+// with a total force `force`, shared equally between the assemblies in it; within an assembly,
+// between the pieces in the wedge by mass. Every pull is a pair: the piece is pulled toward the
+// origin and the ship is pulled toward the piece, along the line between them, so momentum and
+// angular momentum are unchanged (Newton's third law).
+//
+// When an assembly no bigger than the ship and at most `capture` times its mass comes within the tether's length,
+// the beam stops and a tether takes the nearest of its pieces: a stiff, damped spring of rest length
+// `length` between the origin and that piece's centre of mass. It pulls and pushes along that line
+// only, so the cargo swings freely round the ship. Past `maxTension` it breaks. Pressing the
+// control again lets go; the beam comes back only once the control has been released.
+//
+// The spring is implicit (backward Euler along the line), with the effective mass of both whole
+// assemblies, so it is stable however stiff. Beam and tether are powered by the ship: the kinetic
+// energy they add or take is recorded under the ledger's `tractor` source, never hidden.
+
+import { add, cross, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
+import { assemblyProps, assemblyRoots } from "./joints.ts";
+import { localVertices } from "./shapes.ts";
+import type { RB } from "./physics.ts";
+import type { Body, World } from "./world.ts";
+
+export interface Tether {
+  /** Rest length, m. */
+  length: number;
+  /** Spring constant, N/m. */
+  stiffness: number;
+  /** Damping as a fraction of critical, for the two assemblies it joins. */
+  damping: number;
+  /** Largest force it carries, pulling or pushing, before it breaks, N. */
+  maxTension: number;
+}
+
+export interface Tractor {
+  /** Control channel that works it, through a control link (on above 0). */
+  channel: string;
+  /** Where the beam starts and the tether is held, body-local, m. */
+  origin: Vec2;
+  /** Beam axis, body-local unit vector. */
+  direction: Vec2;
+  /** Beam length, m. */
+  range: number;
+  /** Beam width, full angle, rad. */
+  arc: number;
+  /** Total pull, shared between what is in the beam, N. */
+  force: number;
+  /** Heaviest cargo the tether takes, as a multiple of the ship's mass (its size must not exceed the ship's). */
+  capture: number;
+  tether: Tether;
+  /** State: what it is doing now. */
+  mode: "off" | "beam" | "tether";
+  /** State: the control was on last step (to see a fresh press). */
+  held: boolean;
+  /** State: a press let the cargo go; the beam stays off until the control is released. */
+  latched: boolean;
+  /** State: the tethered body. */
+  cargo?: string;
+  /** State: last step's tether force, N (positive pulling), and the beam's targets. */
+  tension: number;
+  targets: string[];
+}
+
+export const TRACTOR_DEFAULTS: Omit<Tractor, "channel" | "origin" | "direction"> = {
+  range: 50,
+  arc: Math.PI / 6,
+  force: 400,
+  capture: 1.2,
+  tether: { length: 30, stiffness: 2000, damping: 0.7, maxTension: 20000 },
+  mode: "off",
+  held: false,
+  latched: false,
+  tension: 0,
+  targets: [],
+};
+
+/** A tractor as written in scenarios: channel, origin and direction, the rest defaulted. */
+export type TractorInput = Pick<Tractor, "channel" | "origin" | "direction"> & Partial<Omit<Tractor, "channel" | "origin" | "direction" | "tether">> & { tether?: Partial<Tether> };
+
+export function normalizeTractor(t: TractorInput): Tractor {
+  return { ...TRACTOR_DEFAULTS, ...t, tether: { ...TRACTOR_DEFAULTS.tether, ...t.tether }, targets: [...(t.targets ?? [])] };
+}
+
+/** The beam's origin and unit axis in the world. */
+export function tractorFrame(b: Body): { origin: Vec2; axis: Vec2 } {
+  const q = sinCos(b.angle);
+  const d = rotate(q, b.tractor!.direction);
+  const n = length(d);
+  return { origin: add(b.position, rotate(q, b.tractor!.origin)), axis: n > 0 ? scale(d, 1 / n) : { x: 0, y: -1 } };
+}
+
+interface Group {
+  root: string;
+  pieces: RB[];
+  mass: number;
+  inertia: number;
+  com: Vec2;
+  /** Largest distance from its centre of mass to any of its outline, m. */
+  extent: number;
+}
+
+function groupOf(rbs: RB[], roots: Map<string, string>, root: string): Group {
+  const pieces = rbs.filter((r) => roots.get(r.body.id) === root);
+  const p = assemblyProps(pieces.map((r) => ({ mass: r.mass, inertia: r.inertia, position: r.body.position })));
+  let extent = 0;
+  for (const r of pieces) {
+    const shape = r.body.shape;
+    if (shape.kind === "disc") extent = Math.max(extent, length(sub(r.body.position, p.centreOfMass)) + shape.radius);
+    else for (const v of localVertices(shape)) extent = Math.max(extent, length(sub(add(r.body.position, rotate(r.rot, v)), p.centreOfMass)));
+  }
+  return { root, pieces, mass: p.mass, inertia: p.inertia, com: p.centreOfMass, extent };
+}
+
+/** Applies an impulse at a point of a body (velocity only; the welds share it in the solve). */
+function push(r: RB, J: Vec2, at: Vec2): void {
+  r.body.velocity = add(r.body.velocity, scale(J, r.invMass));
+  r.body.angularVelocity += r.invInertia * cross(sub(at, r.body.position), J);
+}
+
+/** 1 / effective mass of an assembly along unit n at point p. */
+function invMassAlong(g: Group, p: Vec2, n: Vec2): number {
+  const rn = cross(sub(p, g.com), n);
+  return 1 / g.mass + (g.inertia > 0 ? (rn * rn) / g.inertia : 0);
+}
+
+/**
+ * Runs every tractor for one step (TRC-001…TRC-006): updates its mode from its control, then
+ * applies the beam's pulls or the tether's force as velocity changes on both ends. Events:
+ * `tractor.on`, `tractor.off`, `tether.engage`, `tether.release`, `tether.break`.
+ */
+export function applyTractors(world: World, rbs: RB[], dt: number): void {
+  const users = rbs.filter((r) => r.body.tractor && r.invMass > 0);
+  if (!users.length) return;
+  const roots = assemblyRoots(world);
+  const byId = new Map(rbs.map((r) => [r.body.id, r]));
+  const ev = (type: string, data: Record<string, number | string | boolean>) => world.events.push({ tick: world.tick, type, data });
+  for (const ship of users) {
+    const b = ship.body;
+    const t = b.tractor!;
+    const linked = world.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === t.channel && l.integrity > 0);
+    const on = linked && b.integrity > 0 && (world.controls[t.channel] ?? 0) > 0;
+    const pressed = on && !t.held;
+    t.held = on;
+    if (!on) t.latched = false;
+    t.targets = [];
+    t.tension = 0;
+
+    if (t.mode === "tether") {
+      const cargo = t.cargo ? byId.get(t.cargo) : undefined;
+      // A fresh press lets go; so does losing the control link (TRC-001), the cargo, or the ship's tail.
+      if (pressed || !linked || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id)) {
+        ev("tether.release", { id: b.id, cargo: t.cargo ?? "" });
+        t.mode = "off";
+        t.cargo = undefined;
+        t.latched = pressed;
+        continue;
+      }
+      tether(world, ship, cargo, roots, rbs, dt, ev);
+      // A tether that broke with the control still on stays off until a fresh press (TRC-005, TRC-006).
+      if (t.mode !== "tether") t.latched = on;
+      continue;
+    }
+
+    const want = on && !t.latched;
+    if (want !== (t.mode === "beam")) ev(want ? "tractor.on" : "tractor.off", { id: b.id });
+    t.mode = want ? "beam" : "off";
+    if (!want) continue;
+    beam(world, ship, roots, rbs, dt, ev);
+  }
+}
+
+function beam(world: World, ship: RB, roots: Map<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void): void {
+  const t = ship.body.tractor!;
+  const { origin, axis } = tractorFrame(ship.body);
+  const half = sinCos(t.arc / 2).c;
+  const own = roots.get(ship.body.id);
+  // Pieces in the wedge, by assembly, in body order (deterministic).
+  const inBeam = new Map<string, RB[]>();
+  for (const r of rbs) {
+    if (r.invMass === 0 || roots.get(r.body.id) === own) continue;
+    const d = sub(r.body.position, origin);
+    const dist = length(d);
+    if (dist > t.range || dist < 1e-6 || dot(d, axis) < dist * half) continue;
+    const root = roots.get(r.body.id)!;
+    const list = inBeam.get(root) ?? [];
+    list.push(r);
+    inBeam.set(root, list);
+  }
+  if (!inBeam.size) return;
+  const shipGroup = groupOf(rbs, roots, own!);
+  // Capture: the nearest piece of an assembly no heavier and no bigger than the ship, within the tether's length.
+  let best: { r: RB; dist: number } | null = null;
+  for (const [root, pieces] of inBeam) {
+    const g = groupOf(rbs, roots, root);
+    if (g.mass > shipGroup.mass * t.capture || g.extent > shipGroup.extent * (1 + 1e-9)) continue;
+    for (const r of pieces) {
+      const dist = length(sub(r.body.position, origin));
+      if (dist <= t.tether.length && (!best || dist < best.dist)) best = { r, dist };
+    }
+  }
+  if (best) {
+    t.mode = "tether";
+    t.cargo = best.r.body.id;
+    ev("tractor.off", { id: ship.body.id });
+    ev("tether.engage", { id: ship.body.id, cargo: t.cargo, distance: best.dist });
+    return;
+  }
+  const share = t.force / inBeam.size;
+  for (const pieces of inBeam.values()) {
+    const m = pieces.reduce((s, r) => s + r.mass, 0);
+    for (const r of pieces) {
+      const d = sub(origin, r.body.position);
+      const J = scale(d, (share * (r.mass / m) * dt) / length(d));
+      push(r, J, r.body.position);
+      push(ship, scale(J, -1), origin);
+      t.targets.push(r.body.id);
+    }
+  }
+}
+
+function tether(world: World, ship: RB, cargo: RB, roots: Map<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void): void {
+  const t = ship.body.tractor!;
+  const { origin } = tractorFrame(ship.body);
+  const d = sub(cargo.body.position, origin);
+  const dist = length(d);
+  if (dist < 1e-9) return;
+  const n = scale(d, 1 / dist);
+  const a = groupOf(rbs, roots, roots.get(ship.body.id)!);
+  const c = groupOf(rbs, roots, roots.get(cargo.body.id)!);
+  const invMu = invMassAlong(a, origin, n) + invMassAlong(c, cargo.body.position, n);
+  const mu = 1 / invMu;
+  const { stiffness: k, damping: zeta, length: L, maxTension } = t.tether;
+  const damp = 2 * zeta * Math.sqrt(k * mu);
+  // Velocity of each end along n: the ship's origin point and the cargo's centre.
+  const vA = add(ship.body.velocity, { x: -ship.body.angularVelocity * (origin.y - ship.body.position.y), y: ship.body.angularVelocity * (origin.x - ship.body.position.x) });
+  const v = dot(sub(cargo.body.velocity, vA), n);
+  const x = dist - L;
+  // Backward Euler: the force uses the end-of-step stretch and speed.
+  const h = damp + k * dt;
+  let J = (-dt * (k * x + h * v)) / (1 + dt * h * invMu);
+  const limit = maxTension * dt;
+  const broke = Math.abs(J) > limit;
+  if (broke) J = Math.sign(J) * limit;
+  const P = scale(n, J);
+  push(cargo, P, cargo.body.position);
+  push(ship, scale(P, -1), origin);
+  t.tension = -J / dt;
+  if (broke) {
+    ev("tether.break", { id: ship.body.id, cargo: t.cargo ?? "", tension: Math.abs(J) / dt, limit: maxTension });
+    t.mode = "off";
+    t.cargo = undefined;
+  }
+  void world;
+}
