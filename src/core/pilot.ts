@@ -39,8 +39,13 @@ export type PilotGoal =
   /** Hold a position offset from a body, moving with it (AIP-009). */
   | { kind: "station"; body: string; offset: Vec2 };
 
-/** Behaviour modes (AIP-015). "manual": its goal is set from outside. "ignoring": it flies its route and ignores everyone. */
-export type PilotMode = "manual" | "ignoring";
+/**
+ * Behaviour modes (AIP-015). "manual": its goal is set from outside. "ignoring": it flies its route
+ * and ignores everyone. "hunting": it attacks any ship of another side it sees. "cautious": it flies
+ * its route, watches the player when near, and fights back for a minute once fired toward.
+ * "evading": it flies its route and runs from ships of other sides that close on it.
+ */
+export type PilotMode = "manual" | "ignoring" | "hunting" | "cautious" | "evading";
 
 /** What the pilot knows about one engine channel, in the body frame of the pilot's body. */
 export interface ThrustChannel {
@@ -60,8 +65,14 @@ export interface Pilot {
   goal: PilotGoal;
   /** Behaviour mode (AIP-015); default "manual". */
   mode?: PilotMode;
-  /** The route Ignoring mode flies. */
+  /** The route Ignoring, Cautious and Evading fly. */
   route?: { waypoints: Vec2[]; loop?: boolean; speed?: number };
+  /** Its side (AIP-016): it fights other sides. Ships with no pilot are the player's ("player"). Default "enemy". */
+  side?: string;
+  /** How far it sees ships, m (AIP-016). Default 150. */
+  detect?: number;
+  /** State: combat (phase 3): its target, grudge, what it has learned of its gun, and a shot in progress. */
+  combat?: { target?: string; grudgeUntil?: number; offender?: string; muzzle: number; pulse: number; shot?: string; attacking?: boolean; shots: number };
   /** Steps between decisions. */
   interval: number;
   /** State: tick of the next decision. */
@@ -79,8 +90,12 @@ export interface Pilot {
   settled?: boolean;
   /** State: what it is doing, for people (the inspector). */
   intent: string;
+  /** State: Evading is running from someone. */
+  fleeing?: boolean;
+  /** Mad (phase 4): it may turn on its own side. */
+  mad?: boolean;
   /** State: its plan, for the overlay: where it is going, the route, and what it is steering round. */
-  plan?: { target?: Vec2; route?: Vec2[]; avoiding?: Vec2[] };
+  plan?: { target?: Vec2; route?: Vec2[]; avoiding?: Vec2[]; aim?: Vec2; enemy?: Vec2 };
 }
 
 export const PILOT_DEFAULTS: Omit<Pilot, "goal"> = { skill: { flight: 0.7, combat: 0.5 }, interval: 8, next: 0, command: {}, lagged: {}, intent: "" };
@@ -278,6 +293,92 @@ function avoid(v: Vec2, pos: Vec2, own: number, obs: Obstacle[], ahead: number, 
   return { v: out, avoiding };
 }
 
+
+interface Ship {
+  /** A body of it to name and follow it by: its pilot's body, or its first part. */
+  id: string;
+  side: string;
+  centre: Vec2;
+  velocity: Vec2;
+}
+
+/** Every other ship (an assembly with an engine, a gun or a pilot), with its side (AIP-016). */
+function shipsAround(world: World, own: Set<string>): Ship[] {
+  const roots = assemblyRoots(world);
+  const groups = new Map<string, Body[]>();
+  for (const b of world.bodies) {
+    if (own.has(b.id) || b.fixed) continue;
+    const r = roots.get(b.id)!;
+    groups.set(r, [...(groups.get(r) ?? []), b]);
+  }
+  const out: Ship[] = [];
+  for (const bs of groups.values()) {
+    if (!bs.some((b) => b.injector || b.magazine || b.pilot)) continue;
+    const pilot = bs.find((b) => b.pilot);
+    let m = 0;
+    let c = { x: 0, y: 0 };
+    let v = { x: 0, y: 0 };
+    for (const b of bs) {
+      const mb = bodyMass(b);
+      m += mb;
+      c = add(c, scale(b.position, mb));
+      v = add(v, scale(b.velocity, mb));
+    }
+    out.push({ id: (pilot ?? bs[0]).id, side: pilot ? (pilot.pilot!.side ?? "enemy") : "player", centre: scale(c, 1 / m), velocity: scale(v, 1 / m) });
+  }
+  return out;
+}
+
+/** Its gun, from the design: the body with a magazine, its fire channel, and the bore direction in that body's frame. */
+function gunOf(world: World, members: Body[]): { body: Body; channel: string; bore: Vec2 } | null {
+  const b = members.find((x) => x.magazine && x.injector && x.integrity > 0);
+  if (!b) return null;
+  const at = b.magazine!.at;
+  const bore = length(at) > 1e-9 ? scale(at, 1 / length(at)) : { x: 0, y: 1 };
+  return { body: b, channel: b.injector!.channel, bore };
+}
+
+/**
+ * Where to point the bore to hit a target (AIP-011): the shell leaves at `muzzle` speed on top of
+ * the ship's own velocity, so in the ship's frame the target moves at its velocity less ours. `lead`
+ * (0–1, from combat skill) is how much of that motion it allows for. Returns a unit direction.
+ */
+export function aimAt(from: Vec2, ownV: Vec2, target: Vec2, targetV: Vec2, muzzle: number, lead: number): Vec2 {
+  const r = sub(target, from);
+  const w = scale(sub(targetV, ownV), lead);
+  const a = dot(w, w) - muzzle * muzzle;
+  const b = 2 * dot(r, w);
+  const c = dot(r, r);
+  let t = length(r) / muzzle;
+  const disc = b * b - 4 * a * c;
+  if (Math.abs(a) > 1e-9 && disc >= 0) {
+    const sq = Math.sqrt(disc);
+    const ts = [(-b - sq) / (2 * a), (-b + sq) / (2 * a)].filter((x) => x > 0);
+    if (ts.length) t = Math.min(...ts);
+  }
+  const d = add(r, scale(w, t));
+  return scale(d, 1 / (length(d) || 1));
+}
+
+/** A steady, replayable wobble in [-1, 1] from a tick and a name (no draw on the world's random stream). */
+function wobble(tick: number, id: string): number {
+  let h = 2166136261 ^ tick;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return ((h >>> 0) / 4294967295) * 2 - 1;
+}
+
+/** Whether a straight line of fire is clear of everything but the target: no rock or other ship in the way. */
+function clearShot(from: Vec2, dir: Vec2, range: number, obs: Obstacle[], target: Vec2): boolean {
+  for (const o of obs) {
+    if (length(sub(o.centre, target)) < 1e-6 + o.radius && length(sub(o.centre, target)) < 0.5) continue;
+    const r = sub(o.centre, from);
+    const t = dot(r, dir);
+    if (t < 0 || t > range) continue;
+    if (length(sub(r, scale(dir, t))) < o.radius + 0.5 && length(sub(o.centre, target)) > 1) return false;
+  }
+  return true;
+}
+
 /**
  * Runs every pilot for one step (AIP-001, AIP-002): on its decision steps it reads the ship and the
  * world, learns from what its last commands did, decides, and sets its channels. Between decisions
@@ -347,6 +448,117 @@ export function runPilots(world: World, dt: number): void {
     let goal: PilotGoal = p.goal;
     let label = "";
     p.plan = {};
+    // Combat modes (phase 3): sides, sight, a target, and where to aim (AIP-011, AIP-015, AIP-016).
+    const cs = Math.min(1, Math.max(0, p.skill.combat));
+    const ownR = Math.max(...ship.members.map((b) => length(sub(b.position, ship.centre)) + massProps(b.shape, 1).boundingRadius));
+    const gun = gunOf(world, ship.members);
+    p.combat ??= { muzzle: 40, pulse: 0, shots: 0 };
+    const cb = p.combat;
+    // Learn the gun's muzzle speed from its own last shot, once that shell is clear of the barrel.
+    if (cb.shot) {
+      const sh = world.bodies.find((b) => b.id === cb.shot);
+      if (!sh) cb.shot = undefined;
+      else if (gun && length(sub(sh.position, gun.body.position)) > 6) {
+        cb.muzzle = 0.5 * cb.muzzle + 0.5 * length(sub(sh.velocity, ship.velocity));
+        cb.shot = undefined;
+      }
+    }
+    let aim: Vec2 | null = null; // where the bore should point, if fighting
+    let fire = false;
+    const mode = p.mode ?? "manual";
+    if (mode === "hunting" || mode === "cautious" || mode === "evading") {
+      const side = p.side ?? "enemy";
+      const seen = shipsAround(world, ids).filter((x) => length(sub(x.centre, ship.centre)) <= (p.detect ?? 150));
+      const foes = seen.filter((x) => x.side !== side || (mode === "hunting" && p.mad)); // a mad pilot may turn on its own side
+      const nearest = (xs: Ship[]) => xs.reduce<Ship | null>((m, x) => (!m || length(sub(x.centre, ship.centre)) < length(sub(m.centre, ship.centre)) ? x : m), null);
+      // Cautious: a foreign shell whose path passes within 4 ship widths of it, or a hit, starts a minute's rage.
+      if (mode === "cautious") {
+        const own = new Set(ship.members.map((b) => b.id));
+        const mine = gun ? `${gun.body.id}-shell-` : "\u0000";
+        for (const b of world.bodies) {
+          if (!b.id.includes("-shell-") || b.id.startsWith(mine) || own.has(b.id)) continue;
+          const r = sub(b.position, ship.centre);
+          const w = sub(b.velocity, ship.velocity);
+          if (length(w) < 5) continue; // a loaded shell, not one in flight
+          const t = Math.max(0, Math.min(3, -dot(r, w) / dot(w, w)));
+          const hit = world.contacts.some((c) => (c.a === b.id && own.has(c.b)) || (c.b === b.id && own.has(c.a)));
+          if (hit || length(add(r, scale(w, t))) < 4 * 2 * ownR) {
+            cb.grudgeUntil = world.tick + Math.round(60 / dt);
+            const gunId = b.id.slice(0, b.id.indexOf("-shell-"));
+            const owner = shipsAround(world, ids).find((x) => assemblyOf(world, x.id).includes(gunId));
+            cb.offender = owner?.id ?? cb.offender;
+          }
+        }
+      }
+      const angry = mode === "cautious" && cb.grudgeUntil !== undefined && world.tick < cb.grudgeUntil;
+      let target: Ship | null = null;
+      if (mode === "hunting") target = nearest(foes);
+      else if (angry) target = seen.find((x) => x.id === cb.offender) ?? nearest(foes.filter((x) => x.side === "player"));
+      if (target) {
+        // Attack: close to a stand-off distance, matching its motion, then turn and fire.
+        cb.target = target.id;
+        const standoff = 35 + 20 * (1 - cs);
+        const d = sub(target.centre, ship.centre);
+        const dist = length(d);
+        const relV = length(sub(ship.velocity, target.velocity));
+        if (dist < standoff + 20 && relV < 3) cb.attacking = true;
+        else if (dist > standoff + 40 || relV > 6) cb.attacking = false;
+        p.plan.enemy = target.centre;
+        if (cb.attacking && gun) {
+          const muzzleAt = add(gun.body.position, rotate(sinCos(gun.body.angle), gun.body.magazine!.at));
+          let dir = aimAt(muzzleAt, ship.velocity, target.centre, target.velocity, cb.muzzle, 0.3 + 0.7 * cs);
+          // Aim error that grows as combat skill falls: up to about 4°, steady for a second at a time.
+          const e = 0.07 * (1 - cs) * wobble(Math.floor(world.tick / 240), body.id);
+          const qe = sinCos(e);
+          dir = rotate(qe, dir);
+          aim = dir;
+          p.plan.aim = add(muzzleAt, scale(dir, Math.min(dist, 120)));
+          // Fire control (AIP-012): aimed well enough, in range, a shell in the bore, the line clear.
+          const boreWorld = rotate(sinCos(gun.body.angle), gun.bore);
+          const tol = 0.01 + 0.06 * (1 - cs);
+          const loaded = world.bodies.some((b) => b.id === `${gun.body.id}-shell-${gun.body.magazine!.loaded}` && length(sub(b.position, gun.body.position)) < 4);
+          const inRange = dist < 100;
+          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids), target.centre);
+          fire = loaded && inRange && clear && dot(boreWorld, dir) > sinCos(tol).c;
+          label = `${angry ? "fighting back" : "attacking"} ${target.id}${fire ? ", firing" : !loaded ? ", reloading" : !clear ? ", no clear shot" : ""}`;
+          if (fire && cb.pulse <= 0) {
+            cb.pulse = Math.max(1, Math.round(0.1 / (p.interval * dt)));
+            cb.shot = `${gun.body.id}-shell-${gun.body.magazine!.loaded}`;
+            cb.shots += 1;
+          }
+          goal = { kind: "velocity", velocity: target.velocity }; // hold its distance while aiming
+        } else {
+          const away = dist > 1e-6 ? scale(d, -1 / dist) : { x: 0, y: -1 };
+          goal = { kind: "station", body: target.id, offset: scale(away, standoff) };
+          label = `${angry ? "turning on" : "closing on"} ${target.id}`;
+        }
+      } else {
+        cb.target = undefined;
+        cb.attacking = false;
+        const threat = nearest(foes);
+        const tooClose = threat && length(sub(threat.centre, ship.centre)) < 60 && dot(sub(threat.velocity, ship.velocity), sub(ship.centre, threat.centre)) > 0;
+        if (mode === "evading" && threat && (tooClose || (p.fleeing && length(sub(threat.centre, ship.centre)) < 100))) {
+          // Evading: run, straight away from it, until there is room again.
+          p.fleeing = true;
+          const away = sub(ship.centre, threat.centre);
+          goal = { kind: "point", target: add(ship.centre, scale(away, 60 / (length(away) || 1))), stop: false, speed: 6 + 8 * s };
+          label = `evading ${threat.id}`;
+          p.plan.enemy = threat.centre;
+        } else if (mode === "cautious" && !angry && nearest(foes.filter((x) => x.side === "player"))) {
+          // Cautious: the player is near; stop and watch it.
+          const pl = nearest(foes.filter((x) => x.side === "player"))!;
+          const watch = sub(pl.centre, ship.centre);
+          if (length(ship.velocity) > 1) goal = { kind: "velocity", velocity: { x: 0, y: 0 } };
+          else if (gun) aim = scale(watch, 1 / (length(watch) || 1));
+          label = `watching ${pl.id}`;
+          p.plan.enemy = pl.centre;
+        } else {
+          p.fleeing = false;
+          if (p.route && p.goal.kind !== "route") p.goal = { kind: "route", waypoints: p.route.waypoints, loop: p.route.loop ?? true, speed: p.route.speed, index: 0 };
+          goal = p.goal;
+        }
+      }
+    }
     // Navigation: points, routes and stations become a wanted velocity (AIP-008, AIP-009).
     if (goal.kind === "route" && goal.waypoints.length) {
       const i = Math.min(goal.index ?? 0, goal.waypoints.length - 1);
@@ -394,7 +606,6 @@ export function runPilots(world: World, dt: number): void {
     }
     // Steer round whatever is in the way (AIP-010).
     if (goal.kind === "velocity" && p.goal.kind !== "velocity") {
-      const ownR = Math.max(...ship.members.map((b) => length(sub(b.position, ship.centre)) + massProps(b.shape, 1).boundingRadius));
       const mostT = chans.reduce((m, c) => m + c.gain, 0);
       const brake = Math.max(0.3, (authority * mostT) / ship.mass - length(g));
       const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids), 2 + 4 * s, 4 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
@@ -434,6 +645,15 @@ export function runPilots(world: World, dt: number): void {
       p.intent = label || (goal.kind === "hover" ? "hover" : `hold velocity ${v.x.toFixed(1)}, ${v.y.toFixed(1)} m/s`);
     } else p.intent = "idle";
 
+    // Aiming: point the bore along the aim, which means turning the thrust axis by the angle
+    // between bore and thrust axis in the gun's frame (none for Gunship 2).
+    if (aim && gun) {
+      const boreInPilot = rotate(sinCos(gun.body.angle - body.angle), gun.bore);
+      const turn = { c: dot(boreInPilot, axisBody), s: cross(boreInPilot, axisBody) };
+      want = rotate(turn, aim);
+      if (label) p.intent = label;
+    }
+
     // Attitude: a PD law on the heading error (its sine, saturated beyond 90°), as an angular
     // acceleration, then a torque.
     const sinErr = cross(axis, want);
@@ -448,7 +668,7 @@ export function runPilots(world: World, dt: number): void {
     const alpha = Math.max(-aMax, Math.min(aMax, (4 + 4 * s) * (wWant - ship.omega)));
     const torque = ship.inertia * alpha;
     // Thrust only once roughly pointing the right way: full when aligned, none past 60°.
-    const along = goal.kind === "velocity" || goal.kind === "hover" ? Math.max(0, dot(force, axis)) * Math.max(0, (cosErr - 0.5) / 0.5) : 0;
+    const along = !aim && (goal.kind === "velocity" || goal.kind === "hover") ? Math.max(0, dot(force, axis)) * Math.max(0, (cosErr - 0.5) / 0.5) : 0;
     const fBody = scale(axisBody, along * authority);
 
     // Allocate: rows are body-frame force x, y, and torque; torque weighted most.
@@ -464,6 +684,9 @@ export function runPilots(world: World, dt: number): void {
       p.command[c.channel] = u[i];
       world.controls[c.channel] = u[i];
     });
+    // The trigger: a short press, held for the pulse (AIP-012).
+    if (gun) world.controls[gun.channel] = cb.pulse > 0 ? 1 : 0;
+    if (cb.pulse > 0) cb.pulse -= 1;
     p.seen = { tick: world.tick, velocity: ship.velocity, omega: ship.omega, quiet };
   }
 }
