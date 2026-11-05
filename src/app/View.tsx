@@ -19,6 +19,7 @@ import {
   type Parcel,
   type BodyInput,
   type Vec2,
+  pilotChannels,
 } from "../core/index.ts";
 import { panBy, toScreen, toWorld, zoomAt } from "./camera.ts";
 import { SimClient } from "./simClient.ts";
@@ -1015,7 +1016,9 @@ function ChallengeHud() {
 function FlightPad() {
   void version.value;
   const sb = sandbox.value!;
-  const channels = [...new Set(sb.world.links.filter((l) => l.kind === "control").map((l) => (l as { channel: string }).channel))].sort();
+  // Channels an AI pilot flies are its own (AIP-003): no buttons for them.
+  const piloted = new Set(sb.world.bodies.filter((b) => b.pilot).flatMap((b) => pilotChannels(sb.world, b)));
+  const channels = [...new Set(sb.world.links.filter((l) => l.kind === "control").map((l) => (l as { channel: string }).channel))].filter((c) => !piloted.has(c)).sort();
   const held = useRef(new Map<string, { pointer: number; group: number }>());
   const releaseChannel = (ch: string) => {
     const h = held.current.get(ch);

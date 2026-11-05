@@ -3,7 +3,7 @@
 import { add, assemblyRoots, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
-export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "grid";
+export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "pilots" | "grid";
 
 export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: string }[] = [
   { id: "velocity", label: "Velocity", legend: "solid blue arrow" },
@@ -13,6 +13,7 @@ export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: str
   { id: "joints", label: "Joint load", legend: "line thickens with load: blue < 50%, yellow < 80%, orange dashed ≥ 80% of the limit" },
   { id: "links", label: "Links", legend: "feed: purple dashed arrow · control: dotted line to the channel name" },
   { id: "damage", label: "Damage", legend: "bar over each damaged part: its integrity, blue > 50%, yellow > 20%, orange below; wreckage is dark with a cross; a thick orange stroke marks a leaking breach" },
+  { id: "pilots", label: "AI plans", legend: "each AI pilot: dashed line to where it is going, its route's waypoints as rings, and a red ring round what it is steering past" },
   { id: "grid", label: "Grid & axes", legend: "1 m grid, origin axes" },
 ];
 
@@ -663,6 +664,43 @@ function strokeOutline(ctx: Ctx, c: Camera, vp: Viewport, b: Body, anchors: Vec2
   ctx.lineWidth = width;
 }
 
+/** AI pilots' plans (AIP-017): route waypoints, the line to the current target, and what it is steering round. */
+function drawPilots(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  for (const b of world.bodies) {
+    const plan = b.pilot?.plan;
+    if (!plan) continue;
+    const from = toScreen(c, vp, b.position);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = COLORS.tractor;
+    for (const w of plan.route ?? []) {
+      const p = toScreen(c, vp, w);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (plan.target) {
+      const p = toScreen(c, vp, plan.target);
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.tractor;
+      ctx.fill();
+    }
+    ctx.strokeStyle = COLORS.contact;
+    for (const o of plan.avoiding ?? []) {
+      const p = toScreen(c, vp, o);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
@@ -779,6 +817,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       ctx.setLineDash([]);
     }
   }
+
+  if (opts.overlays.has("pilots")) drawPilots(ctx, world, c, vp);
 
   if (opts.overlays.has("forces")) {
     for (const d of world.drags) {

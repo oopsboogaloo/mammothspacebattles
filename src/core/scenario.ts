@@ -234,6 +234,12 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       }
       if (pl.interval !== undefined) num(v, pl.interval, `${pp}.interval`, { int: true, min: 1, max: 240 });
       if (pl.goal !== undefined) validatePilotGoal(v, pl.goal, `${pp}.goal`);
+      if (pl.mode !== undefined && !["manual", "ignoring"].includes(pl.mode as string)) err(v, `${pp}.mode`, 'must be "manual" or "ignoring"');
+      if (pl.route !== undefined) {
+        if (!isObj(pl.route)) err(v, `${pp}.route`, "must be {waypoints, loop?, speed?}");
+        else validateRoute(v, pl.route, `${pp}.route`);
+      }
+      if (pl.mode === "ignoring" && pl.route === undefined) err(v, `${pp}.route`, "Ignoring needs a route");
     }
   }
   if (b.collector !== undefined) {
@@ -295,9 +301,24 @@ function validateMaterial(v: V, m: unknown, path: string): void {
 }
 
 function validatePilotGoal(v: V, g: unknown, path: string): void {
-  if (!isObj(g) || !["heading", "velocity", "hover", "idle"].includes(g.kind as string)) return err(v, path, 'must be {kind: "heading", angle} | {kind: "velocity", velocity} | {kind: "hover"} | {kind: "idle"}');
+  const kinds = ["heading", "velocity", "hover", "idle", "point", "route", "station"];
+  if (!isObj(g) || !kinds.includes(g.kind as string)) return err(v, path, `must be a goal: {kind: ${kinds.map((k) => `"${k}"`).join(" | ")}, …}`);
   if (g.kind === "heading") num(v, g.angle, `${path}.angle`);
   else if (g.kind === "velocity") vec(v, g.velocity, `${path}.velocity`);
+  else if (g.kind === "point") {
+    vec(v, g.target, `${path}.target`);
+    for (const k of ["speed", "tolerance"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { positive: true });
+  } else if (g.kind === "route") validateRoute(v, g, path);
+  else if (g.kind === "station") {
+    str(v, g.body, `${path}.body`);
+    vec(v, g.offset, `${path}.offset`);
+  }
+}
+
+function validateRoute(v: V, r: Record<string, unknown>, path: string): void {
+  if (!Array.isArray(r.waypoints) || !r.waypoints.length) return err(v, `${path}.waypoints`, "must be a list of points");
+  r.waypoints.forEach((w, i) => vec(v, w, `${path}.waypoints[${i}]`));
+  if (r.speed !== undefined) num(v, r.speed, `${path}.speed`, { positive: true });
 }
 
 function validateTractor(v: V, t: unknown, path: string): void {
