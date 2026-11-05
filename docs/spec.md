@@ -716,6 +716,20 @@ Enemy and neutral ships flown by the computer. For now they fly the gunship (Gun
 - **Sectors:** ships will come and go through a sector's exits (to specify). A miner tows its rock to an exit and leaves; it has gone home.
 - **Mad** may hunt its own side.
 
+### 9.11 Combat duel (mini game 3, M8)
+
+Your Gunship 3 against an AI Gunship 3 among the asteroids: the first playable fight.
+
+- **DUEL-001** `[M · M8 · S]` A scenario may declare a duel (`world.duel`): the player's ship and the enemy ships, each named by a body (its hull, or its pilot's body). A ship is out of the fight once that body is gone or nothing still welded to it is a working engine. The player wins when every enemy is out, and loses when they are; the verdict is judged after every step, in the world, and then stays. Events `duel.won` (with a score) and `duel.lost`.
+- **DUEL-002** `[M · M8 · E]` The sandbox shall show each ship's health (the share of its parts still welded to its hull) and the time, and on the verdict a banner (won, with the score, or lost, with why) and a button to fight again.
+- **DUEL-003** `[M · M8 · S]` A duel shall name bodies in the world.
+
+*Model as built (November 2026).*
+- **Score on a win:** up to 500 for health left and up to 500 for speed (none after 2 minutes).
+- **Scenario: *Combat duel (AI-3)*.** The player's ship at the origin; an AI hunter 90 m away (Hunting, combat skill 0.4 and flight skill 0.7 by default, both on sliders), among the four rubble asteroids of AI-2.
+  - *Measured:* against a player who does nothing it closes in, holds off and fires; the first explosive shell that hits knocks the player out, at about 11 s (12 s at combat skill 1), with the ledger clean. About 7 ms a step.
+- **Next:** balance (one hit is often enough: armour, more welds, or smaller blasts), several enemies, and Cautious or Evading ships as bystanders.
+
 ## 10. Performance Requirements
 
 - **NFR-001** `[M · M1 · B]` A benchmark command shall report steps per second for each reference scenario, and CI shall record results per commit.
@@ -888,7 +902,7 @@ Logged November 2026. The work builds towards a few playable mini games, each a 
 |---|---|---|
 | **Mini game 1: Lander** | Land a ship on a pad under gravity (FLT-005). | Done (LAND). |
 | **Mini game 2: Asteroids** | Clear waves of asteroids. | Getting there: breakable rubble asteroids with gold and larger fragments (M7, GS-R, GS-X). Needs waves (a new wave once the field is cleared), scoring, and losing (the ship wrecked). |
-| **Mini game 3: Combat duel** | A duel with an AI ship among the asteroids. | Needs AI pilots (M8, §9.10) up to combat: phases 1–3 of the plan (foundations and flight; navigation; combat with Hunting, Cautious and Evading). |
+| **Mini game 3: Combat duel** | A duel with an AI ship among the asteroids. | First version built (AI-3, §9.11), on AI pilots phases 1–3 (§9.10). |
 | **Main game MVP** | A small economy with a tech and crafting tree; the home base (§9.8c); some kind of sector selection; mining in each sector, with combat threats in the more dangerous sectors. | Needs the rest: Mining and Mad pilots, sectors with exits (ships come and go), spending what is delivered (recipes, buildings, ship upgrades), and the cockpit with its mammoth pilot (§9.9). |
 
 *AI pilot plan (M8), one PR per phase.* 1: foundations (pilots in the step, per-ship channels, learning the ship from its design and correcting in flight, thrust allocation, attitude). 2: navigation and Ignoring (fly to a point, routes, station keeping, collision avoidance, inspector and overlay). 3: combat (detection, sides, leading the target, fire control; Hunting, Cautious, Evading). 4: Mining and Mad (tractor control, a minimal sector exit). 5: skill model and tuning (a delayed view of the world and unsteady hands first; deliberate mistakes later), against the speed budget.

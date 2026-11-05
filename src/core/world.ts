@@ -16,6 +16,7 @@ import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
+import { judgeDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
@@ -306,6 +307,8 @@ export interface World {
   pendingDebug: string[];
   /** A landing challenge, judged after every step (FLT-005). */
   challenge?: Challenge;
+  /** A combat duel, judged after every step (DUEL-001). */
+  duel?: Duel;
   /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
   blasts?: Blast[];
   /** The plume's tail: gas gone from the gas model, fading out (GAS-011): see wisps.ts. */
@@ -367,7 +370,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -397,6 +400,7 @@ export function createWorld(
   world.events = [];
   world.ledger.totals = computeTotals(world);
   if (extra.challenge) world.challenge = startLanding(world, structuredClone(extra.challenge));
+  if (extra.duel) world.duel = startDuel(world, structuredClone(extra.duel));
   return world;
 }
 
@@ -1380,6 +1384,13 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     if (verdict) {
       const st = world.challenge.status;
       pushEvent(world, { tick: world.tick, type: verdict, data: st.score !== undefined ? { reason: st.reason ?? "", score: st.score } : { reason: st.reason ?? "" } });
+    }
+  }
+  if (world.duel) {
+    const verdict = judgeDuel(world, world.duel);
+    if (verdict) {
+      const st = world.duel.status;
+      pushEvent(world, { tick: world.tick, type: `duel.${verdict}`, data: st.score !== undefined ? { reason: st.reason ?? "", score: st.score } : { reason: st.reason ?? "" } });
     }
   }
 }
