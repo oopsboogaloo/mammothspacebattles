@@ -241,7 +241,7 @@ describe("links", () => {
     expect(left.contents![0].mass).toBe(0); // stops when empty
   });
 
-  it("ASM-006 a feed between two loose, spinning, moving stores keeps the energy books: what the merge loses is heat", () => {
+  it("ASM-006 a feed between two loose, spinning, moving stores keeps the energy books: the moving merge loses heat, the spin shift is a transfer", () => {
     const w = createWorld(1, [
       box("left", 1, 1, { position: { x: -3, y: 0 }, velocity: { x: -2, y: 1 }, angularVelocity: 3, contents: [{ resource: "fuel", mass: 8, capacity: 10 }] } as never),
       box("right", 1, 1, { position: { x: 3, y: 0 }, velocity: { x: 2, y: -1 }, angularVelocity: -2, contents: [{ resource: "fuel", mass: 0, capacity: 10 }] } as never),

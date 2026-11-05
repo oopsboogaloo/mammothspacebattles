@@ -16,11 +16,12 @@ import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
-import { burn, clearOf, emptyGas, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
+import { burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
 import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive.ts";
+import { spawnWisps, stepWisps, type Wisp } from "./wisps.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -306,6 +307,8 @@ export interface World {
   challenge?: Challenge;
   /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
   blasts?: Blast[];
+  /** The plume's tail: gas gone from the gas model, fading out (GAS-011): see wisps.ts. */
+  wisps?: Wisp[];
 }
 
 /** Commands are the only way to change a world other than stepping it. */
@@ -452,8 +455,9 @@ export function controlInputs(world: World, bodyId: string): Record<string, numb
  * Feed links move resource mass between stores at up to their rate. The receiving body's
  * velocity is updated so momentum is conserved; the mixing loses a little kinetic energy as heat.
  */
-function runFeeds(world: World, dt: number): boolean {
+function runFeeds(world: World, dt: number): { touchedFixed: boolean; spinShift: number } {
   let touchedFixed = false;
+  let spinShift = 0;
   for (const l of world.links) {
     if (l.kind !== "feed") continue;
     const from = world.bodies.find((b) => b.id === l.from);
@@ -464,22 +468,21 @@ function runFeeds(world: World, dt: number): boolean {
     const dm = Math.min(l.rate * dt, src.mass, Math.max(0, dst.capacity - dst.mass));
     if (!(dm > 0)) continue;
     if (from.fixed || to.fixed) touchedFixed = true;
-    // A store's contents spin with its body (its inertia counts them), so what leaves takes its
-    // share of the spin; what arrives joins the other body's spin, keeping that body's angular
-    // momentum. The kinetic energy the merge loses (moving or spinning) becomes heat.
+    // A store's contents spin with its body (its inertia counts them): both bodies keep their spin,
+    // so the spin energy and angular momentum the mass takes with it shift between them (recorded
+    // as a transfer, with the angular momentum).
     const spin = (x: Body) => 0.5 * massProps(x.shape, bodyMass(x)).inertia * x.angularVelocity * x.angularVelocity;
-    const iTo = massProps(to.shape, bodyMass(to)).inertia;
+    const spin0 = spin(from) + spin(to);
+    const keBefore = 0.5 * dm * (from.velocity.x ** 2 + from.velocity.y ** 2) + 0.5 * bodyMass(to) * (to.velocity.x ** 2 + to.velocity.y ** 2);
     const mTo = bodyMass(to);
-    const keBefore = 0.5 * dm * (from.velocity.x ** 2 + from.velocity.y ** 2) + 0.5 * mTo * (to.velocity.x ** 2 + to.velocity.y ** 2) + spin(from) + spin(to);
     if (!to.fixed) to.velocity = { x: (mTo * to.velocity.x + dm * from.velocity.x) / (mTo + dm), y: (mTo * to.velocity.y + dm * from.velocity.y) / (mTo + dm) };
     src.mass -= dm;
     dst.mass += dm;
-    const iTo1 = massProps(to.shape, bodyMass(to)).inertia;
-    if (!to.fixed && iTo1 > 0) to.angularVelocity *= iTo / iTo1;
-    const keAfter = 0.5 * bodyMass(to) * (to.velocity.x ** 2 + to.velocity.y ** 2) + spin(from) + spin(to);
+    const keAfter = 0.5 * bodyMass(to) * (to.velocity.x ** 2 + to.velocity.y ** 2);
     world.ledger.thermal += Math.max(0, keBefore - keAfter);
+    spinShift += spin(from) + spin(to) - spin0;
   }
-  return touchedFixed;
+  return { touchedFixed, spinShift };
 }
 
 /** Adds parcels for a fill, or refuses it if the parcel limit would be exceeded (PRF-003). */
@@ -1128,15 +1131,16 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   // Feed links move resources between stores. Mass and momentum must not change; angular momentum may,
   // because a store's contents sit at its body's centre (recorded, not checked). So may gravitational
   // potential energy, when the stores are at different heights: that is the feed pumping propellant
-  // up or down (recorded as a transfer, like angular momentum).
+  // up or down, and so may spin energy, as the mass carries its share of a spinning body's spin to
+  // another (both recorded as a transfer, like angular momentum).
   let before = computeTotals(world);
   if (world.links.length) {
-    const touchedFixed = runFeeds(world, dt);
+    const { touchedFixed, spinShift } = runFeeds(world, dt);
     const after = computeTotals(world);
     // Mass moving to or from a fixed body leaves or enters the dynamic totals: attribute all of it then.
     sources.transfer = touchedFixed
       ? diff(before, after)
-      : { ...zeroDelta(), angularMomentum: after.angularMomentum - before.angularMomentum, energy: after.energy.potential - before.energy.potential };
+      : { ...zeroDelta(), angularMomentum: after.angularMomentum - before.angularMomentum, energy: after.energy.potential - before.energy.potential + spinShift };
     before = after;
   }
   if (world.bodies.some((b) => b.magazine)) {
@@ -1275,6 +1279,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
       if (shape) holding.push({ b, plug: plugWall(b, shape), shape });
     }
   }
+  const gasBefore = world.gas.parcels;
   if (world.gas.parcels.length) {
     before = after;
     const plugs = holding.filter((h) => h.plug);
@@ -1305,6 +1310,20 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     for (const id of gas.involved) account.involved.add(id);
     if (r.count) pushEvent(world, { tick: world.tick + 1, type: "gas.left", data: { count: r.count, mass: r.mass } });
   } else world.gas.substeps = 0;
+  // The plume's tail (GAS-011): wisps bounce off bodies with what gas that has left the world
+  // still carries, so what they give is recorded as coming in through the boundary. Then the gas
+  // that has just left the gas model, but not the world, becomes wisps.
+  if (world.wisps?.length) {
+    before = after;
+    stepWisps(world, dt);
+    after = computeTotals(world);
+    addDelta(sources.boundary, diff(before, after));
+  }
+  if (gasBefore.length) {
+    const kept = new Set(world.gas.parcels);
+    const scale = world.gas.scale ?? 1;
+    spawnWisps(world, gasBefore.filter((p) => !kept.has(p)), (p) => temperatureOf(p, scale));
+  }
   mark("gas");
 
   // What the welds supply against each chamber's push on its walls.

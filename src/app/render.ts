@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "pilots" | "grid";
@@ -151,6 +151,8 @@ export function flameColour(T: number): { colour: string; alpha: number; glow: b
 }
 
 const PLUME_BUCKETS = 32;
+/** A tail wisp's blob across as it leaves the gas, m (it grows from there). */
+const WISP_SIZE = 0.8;
 const PLUME_DOWN = 4; // the plume is drawn at a quarter of the resolution, then blurred up
 const SPRITE = 32;
 /** Temperature of plume bucket k, log-spaced from 150 K to 3,000 K. */
@@ -197,7 +199,8 @@ function canPlume(ctx: Ctx): ctx is Ctx & CanvasRenderingContext2D {
  */
 function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: Viewport): void {
   const parcels = world.gas.parcels;
-  if (!parcels.length) return;
+  const wisps = world.wisps ?? [];
+  if (!parcels.length && !wisps.length) return;
   const w = Math.max(1, Math.ceil(vp.width / PLUME_DOWN));
   const h = Math.max(1, Math.ceil(vp.height / PLUME_DOWN));
   buffer ??= document.createElement("canvas");
@@ -243,6 +246,20 @@ function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: V
       b.globalAlpha = f.alpha * Math.min(1, Math.max(0.35, (0.5 / Math.max(size[i], 0.5)) ** 0.5));
       b.drawImage(sp[k], x - R, y - R, 2 * R, 2 * R);
     });
+    // The tail (GAS-011): gas gone from the gas model cools, grows and fades out.
+    for (const wp of wisps) {
+      const fade = wispFade(wp);
+      const k = bucketOf(wp.temperature * (1 - 0.7 * fade));
+      const f = flameColour(bucketT(k));
+      if (f.glow !== glow) continue;
+      const s = toScreen(c, vp, wp.position);
+      const R = Math.max(1.5, WISP_SIZE * (wispRadius(wp) / wp.radius) * c.zoom) / PLUME_DOWN;
+      const x = s.x / PLUME_DOWN;
+      const y = s.y / PLUME_DOWN;
+      if (x < -R || y < -R || x > w + R || y > h + R) continue;
+      b.globalAlpha = 0.6 * f.alpha * (1 - fade);
+      b.drawImage(sp[k], x - R, y - R, 2 * R, 2 * R);
+    }
   }
   // Blur at the small size (cheap), then let the stretch up smooth it further.
   let out: HTMLCanvasElement = buffer;
@@ -295,6 +312,17 @@ function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "tempera
   const plume = style === "plume" && mode === "temperature" && canPlume(ctx);
   drawChambers(ctx, world, c, vp, mode, plume ? "plume" : "dots");
   if (plume) return drawPlume(ctx, world, c, vp);
+  // The tail (GAS-011) as fading dots.
+  for (const wp of world.wisps ?? []) {
+    const s = toScreen(c, vp, wp.position);
+    if (s.x < -20 || s.x > vp.width + 20 || s.y < -20 || s.y > vp.height + 20) continue;
+    ctx.globalAlpha = 0.6 * (1 - wispFade(wp));
+    ctx.fillStyle = temperatureColour(wp.temperature * (1 - 0.7 * wispFade(wp)));
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, Math.max(1.5, wispRadius(wp) * c.zoom), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
   const parcels = world.gas.parcels;
   if (!parcels.length) return;
   // Batch parcels by colour so each colour is one path (2,000 parcels per frame stay cheap).
