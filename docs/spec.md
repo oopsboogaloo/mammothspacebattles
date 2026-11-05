@@ -565,6 +565,16 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
 
 - **Energy residuals in violent crashes.** Found with four Gunship 2 ships firing, when the player's ship ploughed into a target (welds and feed links breaking, leaks, damage). Steps through the crash show energy residuals of 1–4 mJ (tolerance 1 mJ), and one of 344 J in the step where the gun's feed link broke. Mass and momentum stay exact. It happens with or without chambers held as one volume (PRP-011), so it predates them. To investigate: contacts while welds break, leaks, and link breaks in the same step.
 
+- **A home base, and the game loop.** Logged November 2026. With tractors (TRC), mineable asteroids holding gold (AST-006, AST-007) and ships that fly and fight, most of a basic game loop is here. The big missing piece is a base.
+  - *The base asteroid.* A much larger asteroid, with more gravity because it is bigger: the first use of a body's gravity (FLT-011) at a scale where landing and take-off matter. Everything below is grouped together on one side of its surface.
+  - *A landing pad*, for the ship to land on and refuel at (as in LAND).
+  - *An egg-cup collector.* A cup-shaped structure open to the sky. Cargo that comes close to it gets a tether from the collector, the same model as a ship's (TRC-004). The ship can then let go of its own tether, and the collector holds the cargo and reels it in (a tether whose rest length shortens over time) until it settles in the cup, where it is captured and counted. Open questions: does the ship's and the collector's tether on the same cargo pull against each other until the ship lets go, or does the collector wait? What counts as "captured": resting in the cup, or a fixed reel-in?
+  - *Buildings for the look and the loop.* An airport-like control tower, and a dome-like structure, as the first buildings.
+  - *The loop.* The ship flies out to the asteroids, mines valuables, brings them back, and spends them to improve the base or the ship.
+  - *Progression.* The usual crafting tree: more materials unlock new buildings, which unlock new recipes, which need new materials from more dangerous places.
+  - *Ship design is part of it.* Recipes unlock parts, and the player builds and refits ships from them in the sandbox's builder.
+  - Needs, roughly in order: the base asteroid with gravity and the pad; the collector (a fixed tether that reels in, and a capture rule); a store of what has been delivered, kept with the world; then recipes, buildings and part unlocks. More minerals than gold, and asteroids that are harder to reach, come with the tree.
+
 ## 10. Performance Requirements
 
 - **NFR-001** `[M · M1 · B]` A benchmark command shall report steps per second for each reference scenario, and CI shall record results per commit.
