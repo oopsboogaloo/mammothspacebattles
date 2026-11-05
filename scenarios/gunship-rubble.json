@@ -1589,7 +1589,11 @@
         },
         "radius": 4,
         "density": 100,
-        "material": { "name": "rock", "threshold": 10, "toughness": 200 },
+        "material": {
+          "name": "rock",
+          "threshold": 10,
+          "toughness": 200
+        },
         "bond": {
           "$expr": "100000 * bond"
         },
@@ -1602,7 +1606,9 @@
           "y": -0.1
         },
         "angle": 0.8999999999999999,
-        "angularVelocity": 0.05
+        "angularVelocity": 0.05,
+        "gold": 1,
+        "compounds": 2
       },
       {
         "id": "rb",
@@ -1612,7 +1618,11 @@
         },
         "radius": 3.5,
         "density": 100,
-        "material": { "name": "rock", "threshold": 10, "toughness": 200 },
+        "material": {
+          "name": "rock",
+          "threshold": 10,
+          "toughness": 200
+        },
         "bond": {
           "$expr": "100000 * bond"
         },
@@ -1625,7 +1635,9 @@
           "y": 0.05
         },
         "angle": 2.4,
-        "angularVelocity": -0.08
+        "angularVelocity": -0.08,
+        "gold": 1,
+        "compounds": 1
       },
       {
         "id": "rc",
@@ -1635,7 +1647,11 @@
         },
         "radius": 5,
         "density": 100,
-        "material": { "name": "rock", "threshold": 10, "toughness": 200 },
+        "material": {
+          "name": "rock",
+          "threshold": 10,
+          "toughness": 200
+        },
         "bond": {
           "$expr": "100000 * bond"
         },
@@ -1648,7 +1664,9 @@
           "y": -0.15
         },
         "angle": 3.9,
-        "angularVelocity": 0.03
+        "angularVelocity": 0.03,
+        "gold": 1,
+        "compounds": 2
       },
       {
         "id": "rd",
@@ -1658,7 +1676,11 @@
         },
         "radius": 3,
         "density": 100,
-        "material": { "name": "rock", "threshold": 10, "toughness": 200 },
+        "material": {
+          "name": "rock",
+          "threshold": 10,
+          "toughness": 200
+        },
         "bond": {
           "$expr": "100000 * bond"
         },
@@ -1671,7 +1693,9 @@
           "y": 0.2
         },
         "angle": 6.3,
-        "angularVelocity": 0.1
+        "angularVelocity": 0.1,
+        "gold": 1,
+        "compounds": 1
       }
     ]
   },

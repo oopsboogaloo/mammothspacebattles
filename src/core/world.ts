@@ -3,6 +3,7 @@
 // order (DET-004). All edits go through commands (SBX-013), and every change
 // to the conserved totals is attributed in the ledger (LED-001…LED-003).
 
+import { revealCompounds } from "./asteroid.ts";
 import { applyTractors, normalizeTractor, type Tractor, type TractorInput } from "./tractor.ts";
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
 import { bodyMass, type Store } from "./bodies.ts";
@@ -66,6 +67,10 @@ export interface Body {
   explosive?: Explosive;
   /** A tractor beam and tether (TRC): see tractor.ts. */
   tractor?: Tractor;
+  /** What it is made of, if valuable (AST-006): "gold". Drawn in its colour once it can be seen. */
+  mineral?: string;
+  /** Part of a larger asteroid fragment whose seams don't show yet (AST-007): see asteroid.ts. */
+  compound?: { id: string; reveal: number };
 }
 
 /**
@@ -216,9 +221,11 @@ export interface Joint {
   integrity: number;
   /** Last step's load; fraction is the worst of each load ÷ its (damaged) limit. */
   load: { tension: number; compression: number; shear: number; torque: number; fraction: number };
+  /** A hidden seam of a larger asteroid fragment (AST-007): the limits it takes once revealed. */
+  hidden?: JointLimits;
 }
 
-export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity">> & { limits?: Partial<JointLimits> };
+export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity" | "hidden">> & { limits?: Partial<JointLimits> };
 
 /** Zero-mass connections (ASM-006): feed links move a resource between stores; control links carry a channel to a component. */
 export type Link = (
@@ -405,6 +412,7 @@ export function addJoint(world: World, input: JointInput): void {
     impulse: { x: 0, y: 0, angular: 0 },
     integrity: input.integrity ?? 1,
     load: { tension: 0, compression: 0, shear: 0, torque: 0, fraction: 0 },
+    ...(input.hidden ? { hidden: { ...input.hidden } } : {}),
   };
   world.joints = [...world.joints, joint].sort((p, q) => compareIds(p.id, q.id));
 }
@@ -1216,6 +1224,8 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
       sources.transfer.energy += after.energy.potential - before.energy.potential;
     }
   }
+  // Larger asteroid fragments that took enough damage show their seams (AST-007).
+  if (world.bodies.some((b) => b.compound)) revealCompounds(world);
   mark("integrate");
 
   let gasJointImpulse = new Map<string, { x: number; y: number; angular: number }>();

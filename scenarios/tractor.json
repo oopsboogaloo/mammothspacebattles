@@ -1835,7 +1835,7 @@
           "$param": "pieces"
         },
         "radius": 4,
-        "density": 100,
+        "density": 6,
         "material": {
           "name": "rock",
           "threshold": 10,
@@ -1853,7 +1853,9 @@
           "y": -0.1
         },
         "angle": 0.8999999999999999,
-        "angularVelocity": 0.05
+        "angularVelocity": 0.05,
+        "gold": 1,
+        "compounds": 2
       },
       {
         "id": "rb",
@@ -1862,7 +1864,7 @@
           "$param": "pieces"
         },
         "radius": 3.5,
-        "density": 100,
+        "density": 6,
         "material": {
           "name": "rock",
           "threshold": 10,
@@ -1880,7 +1882,9 @@
           "y": 0
         },
         "angle": 0.8999999999999999,
-        "angularVelocity": 0.05
+        "angularVelocity": 0.05,
+        "gold": 1,
+        "compounds": 1
       },
       {
         "id": "rc",
@@ -1889,7 +1893,7 @@
           "$param": "pieces"
         },
         "radius": 3,
-        "density": 100,
+        "density": 6,
         "material": {
           "name": "rock",
           "threshold": 10,
@@ -1907,7 +1911,9 @@
           "y": 0.2
         },
         "angle": 0.8999999999999999,
-        "angularVelocity": 0.05
+        "angularVelocity": 0.05,
+        "gold": 1,
+        "compounds": 2
       },
       {
         "id": "boulder",
@@ -1916,7 +1922,7 @@
           "$param": "pieces"
         },
         "radius": 6,
-        "density": 100,
+        "density": 6,
         "material": {
           "name": "rock",
           "threshold": 10,
@@ -1934,7 +1940,9 @@
           "y": 0
         },
         "angle": 0.8999999999999999,
-        "angularVelocity": 0.05
+        "angularVelocity": 0.05,
+        "gold": 1,
+        "compounds": 1
       }
     ]
   },
