@@ -241,6 +241,19 @@ describe("links", () => {
     expect(left.contents![0].mass).toBe(0); // stops when empty
   });
 
+  it("ASM-006 a feed between two loose, spinning, moving stores keeps the energy books: what the merge loses is heat", () => {
+    const w = createWorld(1, [
+      box("left", 1, 1, { position: { x: -3, y: 0 }, velocity: { x: -2, y: 1 }, angularVelocity: 3, contents: [{ resource: "fuel", mass: 8, capacity: 10 }] } as never),
+      box("right", 1, 1, { position: { x: 3, y: 0 }, velocity: { x: 2, y: -1 }, angularVelocity: -2, contents: [{ resource: "fuel", mass: 0, capacity: 10 }] } as never),
+    ]);
+    stepInPlace(w, [{ type: "link.add", link: { id: "f1", kind: "feed", from: "left", to: "right", resource: "fuel", rate: 5 } }], test);
+    run(w, 240);
+    expect(w.bodies[1].contents![0].mass).toBeGreaterThan(4);
+    expect(w.ledger.violations).toBe(0);
+    expect(w.ledger.maxResidual.energy).toBeLessThan(1e-9);
+    expect(w.ledger.thermal).toBeGreaterThan(0);
+  });
+
   it("ASM-006 a feed link needs a matching store at both ends", () => {
     const w = tanks();
     expect(() => stepInPlace(w, [{ type: "link.add", link: { id: "f", kind: "feed", from: "left", to: "engine", resource: "fuel", rate: 1 } }], test)).toThrow(/store at both ends; engine has none/);

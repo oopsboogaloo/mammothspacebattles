@@ -238,6 +238,8 @@ function loadedRounds(world: World): Set<string> {
 interface Obstacle {
   /** Its assembly. */
   root: string;
+  /** Its mass, kg (fixed bodies: infinite). */
+  mass: number;
   centre: Vec2;
   radius: number;
   velocity: Vec2;
@@ -270,7 +272,7 @@ function obstacles(world: World, own: Set<string>): Obstacle[] {
     c = scale(c, 1 / m);
     let R = 0;
     for (const b of bs) R = Math.max(R, length(sub(b.position, c)) + massProps(b.shape, 1).boundingRadius);
-    out.push({ root, centre: c, radius: R, velocity: scale(v, 1 / m) });
+    out.push({ root, mass: bs.some((b) => b.fixed) ? Infinity : m, centre: c, radius: R, velocity: scale(v, 1 / m) });
   }
   return out;
 }
@@ -394,10 +396,13 @@ function wobble(tick: number, id: string): number {
   return ((h >>> 0) / 4294967295) * 2 - 1;
 }
 
-/** Whether a straight line of fire is clear of everything but the target: no rock or other ship in the way. */
-function clearShot(from: Vec2, dir: Vec2, range: number, obs: Obstacle[], target: string): boolean {
+/**
+ * Whether a straight line of fire is clear of everything but the target: no rock or other ship in
+ * the way. Debris lighter than `light` (bits knocked off, loose shells) is shot through.
+ */
+function clearShot(from: Vec2, dir: Vec2, range: number, obs: Obstacle[], target: string, light: number): boolean {
   for (const o of obs) {
-    if (o.root === target) continue;
+    if (o.root === target || o.mass < light) continue;
     const r = sub(o.centre, from);
     const t = dot(r, dir);
     if (t < 0 || t > range) continue;
@@ -546,7 +551,7 @@ export function runPilots(world: World, dt: number): void {
           const tol = 0.01 + 0.06 * (1 - cs);
           const loaded = loadedRounds(world).has(`${gun.body.id}-shell-${gun.body.magazine!.loaded}`);
           const inRange = dist < 100;
-          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids), target.root);
+          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids), target.root, 0.2 * ship.mass);
           fire = loaded && inRange && clear && dot(boreWorld, dir) > sinCos(tol).c;
           label = `${angry ? "fighting back" : "attacking"} ${target.id}${fire ? ", firing" : !loaded ? ", reloading" : !clear ? ", no clear shot" : ""}`;
           if (fire && cb.pulse <= 0) {

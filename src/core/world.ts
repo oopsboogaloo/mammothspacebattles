@@ -464,12 +464,19 @@ function runFeeds(world: World, dt: number): boolean {
     const dm = Math.min(l.rate * dt, src.mass, Math.max(0, dst.capacity - dst.mass));
     if (!(dm > 0)) continue;
     if (from.fixed || to.fixed) touchedFixed = true;
-    const keBefore = 0.5 * dm * (from.velocity.x ** 2 + from.velocity.y ** 2) + 0.5 * bodyMass(to) * (to.velocity.x ** 2 + to.velocity.y ** 2);
+    // A store's contents spin with its body (its inertia counts them), so what leaves takes its
+    // share of the spin; what arrives joins the other body's spin, keeping that body's angular
+    // momentum. The kinetic energy the merge loses (moving or spinning) becomes heat.
+    const spin = (x: Body) => 0.5 * massProps(x.shape, bodyMass(x)).inertia * x.angularVelocity * x.angularVelocity;
+    const iTo = massProps(to.shape, bodyMass(to)).inertia;
     const mTo = bodyMass(to);
+    const keBefore = 0.5 * dm * (from.velocity.x ** 2 + from.velocity.y ** 2) + 0.5 * mTo * (to.velocity.x ** 2 + to.velocity.y ** 2) + spin(from) + spin(to);
     if (!to.fixed) to.velocity = { x: (mTo * to.velocity.x + dm * from.velocity.x) / (mTo + dm), y: (mTo * to.velocity.y + dm * from.velocity.y) / (mTo + dm) };
     src.mass -= dm;
     dst.mass += dm;
-    const keAfter = 0.5 * bodyMass(to) * (to.velocity.x ** 2 + to.velocity.y ** 2);
+    const iTo1 = massProps(to.shape, bodyMass(to)).inertia;
+    if (!to.fixed && iTo1 > 0) to.angularVelocity *= iTo / iTo1;
+    const keAfter = 0.5 * bodyMass(to) * (to.velocity.x ** 2 + to.velocity.y ** 2) + spin(from) + spin(to);
     world.ledger.thermal += Math.max(0, keBefore - keAfter);
   }
   return touchedFixed;
