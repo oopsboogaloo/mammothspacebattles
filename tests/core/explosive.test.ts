@@ -106,7 +106,7 @@ describe("explosive shells", () => {
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 
-  it("WPN-006 AST-003 on rock, the blast wrecks the pieces at the hit and leaves the far side whole", () => {
+  it("WPN-006 AST-003 on rock, the blast wrecks the pieces at the hit, the bonds break only there, and the far side stays whole", () => {
     const shoot = (rock: boolean) => {
       const raw = readJson(join(ROOT, "scenarios", "gunship-blast.json")) as { world: { asteroids: { material?: unknown }[] } };
       if (!rock) for (const a of raw.world.asteroids) delete a.material;
@@ -123,6 +123,12 @@ describe("explosive shells", () => {
     for (const b of wrecked) expect(Math.hypot(b.position.x - Number(det.data.x), b.position.y - Number(det.data.y))).toBeLessThan(3.5);
     // The far side of the 5 m rock is untouched.
     expect(w.bodies.filter((b) => /^rc-\d+$/.test(b.id) && Math.hypot(b.position.x - Number(det.data.x), b.position.y - Number(det.data.y)) > 5).every((b) => b.integrity === 1)).toBe(true);
+    // Every bond that broke touches a piece at the blast: the rock cracks where it is struck (AST-003).
+    const at = (id: string) => w.bodies.find((b) => b.id === id)!;
+    const near = (id: string) => Math.hypot(at(id).position.x - Number(det.data.x), at(id).position.y - Number(det.data.y)) < 3.5;
+    const breaks = w.events.filter((e) => e.type === "joint.break" && /^r[a-d]-b/.test(String(e.data.id)));
+    expect(breaks.length).toBeGreaterThan(0);
+    for (const e of breaks) expect(near(String(e.data.a)) || near(String(e.data.b))).toBe(true);
     expect(w.ledger.violations).toBe(0);
     // Without a material, nothing on the rock is wrecked.
     expect(shoot(false).bodies.some((b) => /^r[a-d]-\d+$/.test(b.id) && b.integrity < 1)).toBe(false);
