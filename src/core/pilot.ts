@@ -107,7 +107,7 @@ export function normalizePilot(p: PilotInput): Pilot {
 }
 
 /** Exhaust speed the design assumes before the pilot has seen its engines work, m/s: low on purpose. */
-const DESIGN_EXHAUST_SPEED = 100;
+const DESIGN_EXHAUST_SPEED = 50;
 /** Engines take this long to answer a command, s (chamber pressure building). */
 const ENGINE_LAG = 0.08;
 /** Learning rate of the in-flight correction. */
@@ -592,6 +592,7 @@ export function runPilots(world: World, dt: number): void {
         }
       }
     }
+    let holdTight = false;
     // Navigation: points, routes and stations become a wanted velocity (AIP-008, AIP-009).
     if (goal.kind === "route" && goal.waypoints.length) {
       const i = Math.min(goal.index ?? 0, goal.waypoints.length - 1);
@@ -633,6 +634,8 @@ export function runPilots(world: World, dt: number): void {
       const vStop = aBrake * (-tFlip + Math.sqrt(tFlip * tFlip + (2 * r) / aBrake));
       // Keeping station, it closes gently (speed in proportion to the gap), so as not to overshoot a moving mark.
       const speed = goal.kind === "station" ? Math.min(cruise, vStop, 0.3 * dist) : stop ? Math.min(cruise, vStop) : cruise;
+      // Holding at a mark, small drifts matter: every turn to hold the heading also pushes the ship.
+      if (goal.kind === "point" && stop && dist < 2 * tolP) holdTight = true;
       const vWant = dist > 1e-6 ? add(carry, scale(d, speed / dist)) : carry;
       p.plan.target = target;
       goal = { kind: "velocity", velocity: vWant };
@@ -658,7 +661,7 @@ export function runPilots(world: World, dt: number): void {
       // An error along the thrust axis is fixed by throttle alone, and always is. One across it,
       // or one that needs braking, means turning the ship: small ones are let be (a tolerance
       // that shrinks with skill), with hysteresis, or every overshoot would set it turning.
-      const tol = 0.15 + 0.35 * (1 - s);
+      const tol = (0.15 + 0.35 * (1 - s)) * (holdTight ? 0.5 : 1);
       const eAlong = dot(raw, axis);
       const turn = add(sub(raw, scale(axis, eAlong)), scale(axis, Math.min(0, eAlong)));
       if (length(turn) < tol) p.settled = true;
@@ -719,7 +722,7 @@ export function runPilots(world: World, dt: number): void {
       world.controls[c.channel] = u[i];
     });
     // The trigger: a short press, held for the pulse (AIP-012).
-    if (gun && (mode === "hunting" || mode === "cautious")) world.controls[gun.channel] = cb.pulse > 0 ? 1 : 0;
+    if (gun && (mode === "hunting" || mode === "cautious")) world.controls[gun.channel] = p.command[gun.channel] = cb.pulse > 0 ? 1 : 0;
     if (cb.pulse > 0) cb.pulse -= 1;
     p.seen = { tick: world.tick, velocity: ship.velocity, omega: ship.omega, quiet };
   }

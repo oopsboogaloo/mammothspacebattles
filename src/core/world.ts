@@ -22,6 +22,7 @@ import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
 import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive.ts";
 import { spawnWisps, stepWisps, type Wisp } from "./wisps.ts";
+import { removeDestroyed, stepDust, type Dust } from "./dust.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -309,6 +310,8 @@ export interface World {
   blasts?: Blast[];
   /** The plume's tail: gas gone from the gas model, fading out (GAS-011): see wisps.ts. */
   wisps?: Wisp[];
+  /** Dust left by destroyed bodies, drifting and fading (DMG-007): see dust.ts. Only drawn. */
+  dust?: Dust[];
 }
 
 /** Commands are the only way to change a world other than stepping it. */
@@ -1263,6 +1266,14 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   }
   // Larger asteroid fragments that took enough damage show their seams (AST-007).
   if (world.bodies.some((b) => b.compound)) revealCompounds(world);
+  // What has been destroyed leaves the world in a puff of dust (DMG-007).
+  stepDust(world, dt);
+  if (world.bodies.some((b) => b.integrity <= 0 && !b.fixed)) {
+    before = computeTotals(world);
+    removeDestroyed(world);
+    after = computeTotals(world);
+    addDelta(sources.boundary, diff(before, after));
+  }
   mark("integrate");
 
   let gasJointImpulse = new Map<string, { x: number; y: number; angular: number }>();
@@ -1303,7 +1314,9 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     sources.contact.momentumY += gas.externalImpulse.y;
     sources.contact.angularMomentum += gas.angular;
     const r = gas.removed;
-    sources.boundary = { mass: -r.mass, momentumX: -r.momentum.x, momentumY: -r.momentum.y, angularMomentum: -r.angularMomentum, energy: -r.energy };
+    addDelta(sources.boundary, { mass: -r.mass, momentumX: -r.momentum.x, momentumY: -r.momentum.y, angularMomentum: -r.angularMomentum, energy: -r.energy });
+    // Crushed gas the substeps could not resolve: the thermal energy its clamp made up.
+    sources.correction.energy += gas.clamped;
     // Parcels drift during the gas phase, so their potential energy changes there (including
     // parcels that then left, up to where they left).
     sources.field.energy += after.energy.potential - before.energy.potential + gas.removedPotential;

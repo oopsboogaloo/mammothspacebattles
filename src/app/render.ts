@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "pilots" | "grid";
@@ -729,6 +729,30 @@ function drawPilots(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   }
 }
 
+/** Dust colours by what it came from (DMG-007): rock, gold, hull metal. Hot for the first half second. */
+const DUST: Record<DustKind, [number, number, number]> = { rock: [138, 128, 112], gold: [242, 201, 76], metal: [154, 167, 194] };
+const HOT: [number, number, number] = [255, 170, 80];
+
+/** Destroyed bodies' dust (DMG-007): glowing as it bursts, then drifting and fading out. */
+function drawDust(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  const list = world.dust;
+  if (!list?.length) return;
+  for (const d of list) {
+    const s = toScreen(c, vp, d.position);
+    if (s.x < -10 || s.x > vp.width + 10 || s.y < -10 || s.y > vp.height + 10) continue;
+    const hot = Math.max(0, 1 - d.age / 0.6);
+    const base = DUST[d.kind];
+    const rgb = base.map((v, k) => Math.round(v + (HOT[k] - v) * hot));
+    // Full for most of its life, fading over the last third.
+    const left = 1 - d.age / d.life;
+    ctx.globalAlpha = Math.min(1, 3 * left) * (0.55 + 0.45 * hot);
+    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    const r = Math.max(1, d.size * c.zoom);
+    ctx.fillRect(s.x - r / 2, s.y - r / 2, r, r);
+  }
+  ctx.globalAlpha = 1;
+}
+
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
@@ -751,6 +775,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   }
   // Gas under bodies, so walls stay crisp.
   drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
+  drawDust(ctx, world, c, vp);
 
   // Hidden seams of larger asteroid fragments (AST-007): where each weld sits on its bodies.
   const seams = new Map<string, Vec2[]>();

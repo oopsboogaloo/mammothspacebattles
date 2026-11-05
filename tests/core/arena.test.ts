@@ -149,7 +149,7 @@ describe("flight-test arena", () => {
     it("DMG-002 DMG-003 turned down, the ship comes apart on a rock; turned up, it bounces off whole", () => {
       const weak = crash(8, 0.2, 0.1);
       expect(assemblyOf(weak, "hull").length).toBeLessThan(5);
-      expect(weak.bodies.filter((b) => b.integrity === 0).length).toBeGreaterThan(1);
+      expect(weak.events.filter((e) => e.type === "destroyed.removed").length).toBeGreaterThan(1); // parts destroyed, gone in dust
       expect(weak.ledger.violations).toBe(0);
       const strong = crash(8, 50, 100);
       expect(assemblyOf(strong, "hull")).toHaveLength(19);

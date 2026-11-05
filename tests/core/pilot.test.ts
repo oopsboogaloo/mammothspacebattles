@@ -119,14 +119,14 @@ describe("AI pilot foundations", () => {
     expect(hashValue(c)).toBe(hashValue(a));
   }, 300_000);
 
-  it("AIP-001 a wrecked pilot's ship does nothing more", () => {
+  it("AIP-001 DMG-007 a pilot destroyed with its hull lets go of every control and does nothing more", () => {
     const w = ship({ kind: "heading", angle: 0 });
     run(w, 24);
-    hull(w).integrity = 0;
-    const before = { ...w.controls };
+    expect(Object.values(w.controls).some((v) => v > 0)).toBe(true);
+    w.bodies.find((b) => b.id === "hull")!.integrity = 0;
     run(w, 48);
-    expect(hull(w).pilot!.intent).toBe("wrecked");
-    expect(w.controls).toEqual(before);
+    expect(w.bodies.some((b) => b.id === "hull")).toBe(false);
+    for (const ch of ["e1.left", "e1.right"]) expect(w.controls[ch] ?? 0).toBe(0);
   });
 
   it("AIP-018 a pilot's decisions cost well under the budget", () => {
