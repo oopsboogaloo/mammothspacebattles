@@ -1589,6 +1589,7 @@
         },
         "radius": 4,
         "density": 100,
+        "material": { "name": "rock", "threshold": 10, "toughness": 200 },
         "bond": {
           "$expr": "2000 * bond"
         },
@@ -1611,6 +1612,7 @@
         },
         "radius": 3.5,
         "density": 100,
+        "material": { "name": "rock", "threshold": 10, "toughness": 200 },
         "bond": {
           "$expr": "2000 * bond"
         },
@@ -1633,6 +1635,7 @@
         },
         "radius": 5,
         "density": 100,
+        "material": { "name": "rock", "threshold": 10, "toughness": 200 },
         "bond": {
           "$expr": "2000 * bond"
         },
@@ -1655,6 +1658,7 @@
         },
         "radius": 3,
         "density": 100,
+        "material": { "name": "rock", "threshold": 10, "toughness": 200 },
         "bond": {
           "$expr": "2000 * bond"
         },

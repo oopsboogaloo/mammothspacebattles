@@ -105,4 +105,26 @@ describe("explosive shells", () => {
     expect(w.events.some((e) => e.type === "joint.break" && /^r[a-d]-b/.test(String(e.data.id)))).toBe(true); // asteroid bonds broke
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
+
+  it("WPN-006 AST-003 on rock, the blast wrecks the pieces at the hit and leaves the far side whole", () => {
+    const shoot = (rock: boolean) => {
+      const raw = readJson(join(ROOT, "scenarios", "gunship-blast.json")) as { world: { asteroids: { material?: unknown }[] } };
+      if (!rock) for (const a of raw.world.asteroids) delete a.material;
+      const w = initialWorld(parseScenario(raw));
+      const set = (channel: string, value: number) => ({ type: "control.set" as const, channel, value });
+      for (let i = 0; i < 200; i++) stepInPlace(w, i === 24 ? [set("fire", 1)] : i === 40 ? [set("fire", 0)] : [], sandbox);
+      return w;
+    };
+    const w = shoot(true);
+    const det = w.events.find((e) => e.type === "detonation")!;
+    const wrecked = w.bodies.filter((b) => /^r[a-d]-\d+$/.test(b.id) && b.integrity === 0);
+    expect(wrecked.length).toBeGreaterThan(0);
+    // Every wrecked piece is at the blast: within its radius (2 m) plus a piece's size.
+    for (const b of wrecked) expect(Math.hypot(b.position.x - Number(det.data.x), b.position.y - Number(det.data.y))).toBeLessThan(3.5);
+    // The far side of the 5 m rock is untouched.
+    expect(w.bodies.filter((b) => /^rc-\d+$/.test(b.id) && Math.hypot(b.position.x - Number(det.data.x), b.position.y - Number(det.data.y)) > 5).every((b) => b.integrity === 1)).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+    // Without a material, nothing on the rock is wrecked.
+    expect(shoot(false).bodies.some((b) => /^r[a-d]-\d+$/.test(b.id) && b.integrity < 1)).toBe(false);
+  }, 300_000);
 });

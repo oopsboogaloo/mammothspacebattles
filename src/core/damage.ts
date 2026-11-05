@@ -39,6 +39,7 @@ export const MATERIALS: Record<string, Material> = {
   hull: { name: "hull", threshold: 50, toughness: 600 },
   tank: { name: "tank", threshold: 20, toughness: 100 },
   armour: { name: "armour", threshold: 100, toughness: 4000 },
+  rock: { name: "rock", threshold: 10, toughness: 200 },
 };
 
 /** Where a damaged body leaks (DMG-004), in its own frame: a point on its surface and the outward direction. */
