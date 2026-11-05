@@ -277,7 +277,7 @@ test.describe("onboarding and discoverability", () => {
   test("UX-001 the picker lists the starters first, then references, then an empty world", async ({ page }, info) => {
     await page.goto("./");
     const ids = await page.locator(".card .id").allTextContents();
-    expect(ids).toEqual(["SC-01", "SC-02", "SC-03", "FLY", "LAND", "FT", "FT-B", "GUN", "GUN-X", "GS", "GS2", "GS-R", "GS-X", "TRC", "BASE", "AST-C", "RS-02", "RS-03", "RS-04", "RS-05", "RS-05b", "RS-07", "RS-08", "RS-09", "RS-10", "RS-11", "RS-16", "RS-00", "NEW"]);
+    expect(ids).toEqual(["SC-01", "SC-02", "SC-03", "FLY", "LAND", "FT", "FT-B", "GUN", "GUN-X", "GS", "GS2", "GS-R", "GS-X", "TRC", "BASE", "AI-1", "AST-C", "RS-02", "RS-03", "RS-04", "RS-05", "RS-05b", "RS-07", "RS-08", "RS-09", "RS-10", "RS-11", "RS-16", "RS-00", "NEW"]);
     await shot(page, info, "picker");
   });
 

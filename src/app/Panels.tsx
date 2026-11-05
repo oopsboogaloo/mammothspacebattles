@@ -547,6 +547,13 @@ function ContentsSection({ body }: { body: Body }) {
           title={`Beam ${fmt(body.tractor.force, "N")} over ${fmt(body.tractor.range, "m")}; tether ${fmt(body.tractor.tether.length, "m")}, breaks past ${fmt(body.tractor.tether.maxTension, "N")}. Tension is positive when it pulls.`}
         />
       )}
+      {body.pilot && (
+        <Row
+          k="Pilot"
+          v={`${body.pilot.intent || "starting"} · flight ${body.pilot.skill.flight.toFixed(2)}, combat ${body.pilot.skill.combat.toFixed(2)}`}
+          title={`An AI pilot (a computer, for now) flying this ship through its own channels. Commands: ${Object.entries(body.pilot.command).map(([c, u]) => `${c} ${u.toFixed(2)}`).join(", ") || "none yet"}. Learned thrust: ${(body.pilot.model?.channels ?? []).map((c) => `${c.channel} ${fmt(c.gain, "N")}`).join(", ") || "not yet"}.`}
+        />
+      )}
       {body.collector && (
         <Row
           k="Delivered"
@@ -555,7 +562,7 @@ function ContentsSection({ body }: { body: Body }) {
         />
       )}
       {body.magazine && <Row k="Shells" v={`${body.magazine.count} × ${fmt(body.magazine.shell.mass, "kg")}`} title="Shells in the magazine, part of this body's mass until each is loaded." />}
-      {stores.length === 0 && !body.magazine && !body.collector && <span class="muted">No stores.</span>}
+      {stores.length === 0 && !body.magazine && !body.collector && !body.pilot && <span class="muted">No stores.</span>}
       {stores.map((s, i) => (
         <div key={s.resource} class="joint">
           <div class="row">

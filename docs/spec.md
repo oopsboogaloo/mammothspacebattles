@@ -600,7 +600,7 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
   - *Ship design is part of it.* Recipes unlock parts, and the player builds and refits ships from them in the sandbox's builder.
   - Needs, roughly in order: the base asteroid with gravity and the pad; the collector (a fixed tether that reels in, and a capture rule); a store of what has been delivered, kept with the world (these three are built: §9.8c); then recipes, buildings and part unlocks. More minerals than gold, and asteroids that are harder to reach, come with the tree.
 
-### 9.10 AI pilots (M8, specified, not built)
+### 9.10 AI pilots (M8, phase 1 built)
 
 Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but nothing in the pilot may assume that ship: it must be able to fly any ship built from the parts in this spec. Specified November 2026; the plan comes next.
 
@@ -646,6 +646,28 @@ Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but n
   - a cautious ship holds fire until fired on, then returns fire;
   - an evader keeps its distance from a pursuing ship;
   - a mad ship changes mode every 60 s.
+
+*Model as built (phase 1: foundations; `src/core/pilot.ts`).*
+- **Where it lives.** A `pilot` component on one body of a ship (for now: a computer built into it), flying that body's whole assembly. It runs at the start of each step, after the step's commands, every `interval` steps (default 8: 30 decisions a second). It sets only its own channels, so a player's key on the same channel is overridden. Its state (goal, what it has learned, what it last commanded) lives in the world, so saves, replays and branches carry it.
+- **Its channels (AIP-003)** are those whose every control link leads into its own assembly. Scenarios give AI ships their own channel names (`e1.left`); a channel shared with another ship is left alone.
+- **Learning the ship (AIP-004).**
+  - *From the design:* each engine channel (an injector, not on a body with a magazine, so never the cannon's charge) pushes opposite its injector's direction, from its outlet. That gives the direction and the turning arm about the centre of mass.
+  - *Strength:* a deliberate underestimate from the design (the injector's rate × 100 m/s), corrected in flight. Each decision it compares the acceleration and turn it saw (gravity taken out) with what its lagged commands should have given (engines answer in about 0.08 s), and adjusts each active channel's thrust (normalised least mean squares). It skips steps when anything touches the ship, or it is towing.
+  - *Measured:* Gunship 2's left engine gives about 285 N; turning 90°, the pilot learns 284 N from a design guess of 150 N.
+  - *Relearning:* it relearns the geometry when the ship's parts change, keeping what it has learned of channels that remain.
+- **Thrust allocation (AIP-006).** Wanted body-frame force and torque become channel commands in [0, 1] by bounded least squares (clamped coordinate descent), with the torque weighted most. A ship whose engines all push one way can't push sideways, so it turns its thrust axis toward the force it wants and throttles up as it comes round (full when aligned, none past 60°).
+- **Attitude (AIP-007).** A cascaded law: the heading error asks for a turn rate (capped at 0.8–2 rad/s by skill), and the rate error for an angular acceleration (capped at 2–6 rad/s²). Gunship 2 turns by firing one engine, which also pushes it, so gentle turns cost less unwanted thrust. It turns 90° and settles within 2° in 3 s.
+- **Velocity and hover.**
+  - *Gravity:* the force it wants is mass × (a correction toward the wanted velocity − gravity). Gravity is the uniform field plus every source (FLT-011), known from the world as a player's instruments would.
+  - *Throttle errors:* an error along the thrust axis is fixed by throttle alone, always.
+  - *Turning errors:* an error across the axis, or one needing braking, means turning the ship round. It lets small ones be, within a tolerance of 0.15–0.5 m/s by skill, with hysteresis to twice that. Without this, every overshoot set Gunship 2 spinning round to brake, which made the next overshoot.
+  - *Trim:* a slow integral along the thrust axis, built only near the wanted velocity and unwound fast on overshoot, takes out steady errors such as a hover sinking.
+  - *Measured:* it hovers 30 m above the base at under 0.15 m/s, holding height within 1 m, and reaches 5 m/s within its tolerance at flight skill 0.3 and 1.
+- **Skill (AIP-005), so far:** flight skill sets the share of thrust and turn it uses, its gains, turn caps and tolerances. Combat skill waits for phase 3; the human failings model for phase 5.
+- **Commands and sandbox.** `pilot.set` gives a pilot a new goal or skills; it keeps what it has learned. The inspector shows its intent, skills, commands and learned thrust.
+- **Scenario: *AI pilot: first flight (AI-1)*.** A second Gunship 2 (`e1-*`, channels `e1.*`) with a pilot, 40 m over the base, with a timeline of goals: hover; 6 m/s right; 6 m/s left and up; point the nose at the horizon; hover. The player's ship waits on the pad. Slider: AI flight skill.
+- **Cost (AIP-018):** a decision takes far under the 0.2 ms-per-step budget (tested); the scene runs at about 3.5 ms a step with gas.
+- **Next (phase 2):** flying to a point and arriving (planning the turn to brake), routes, station keeping, collision avoidance, the overlay, and Ignoring mode.
 
 *Decided (November 2026).*
 - **Who flies.** The pilot will be a creature, often a small woolly mammoth, sitting in a cockpit: a component still to design (§9.9). Until then the pilot is a computer built into the ship, on the ship as a whole.

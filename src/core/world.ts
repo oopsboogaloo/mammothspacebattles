@@ -4,6 +4,7 @@
 // to the conserved totals is attributed in the ledger (LED-001…LED-003).
 
 import { revealCompounds } from "./asteroid.ts";
+import { normalizePilot, runPilots, type Pilot, type PilotGoal, type PilotInput } from "./pilot.ts";
 import { applyCollectors, collectCaptured, normalizeCollector, type Collector, type CollectorInput } from "./collector.ts";
 import { applyTractors, normalizeTractor, type Tractor, type TractorInput } from "./tractor.ts";
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
@@ -70,6 +71,8 @@ export interface Body {
   tractor?: Tractor;
   /** A base's cargo collector, on a fixed body (BAS): see collector.ts. */
   collector?: Collector;
+  /** An AI pilot flying this body's assembly (AIP): for now a computer built into the ship. See pilot.ts. */
+  pilot?: Pilot;
   /** What it is made of, if valuable (AST-006): "gold". Drawn in its colour once it can be seen. */
   mineral?: string;
   /** Part of a larger asteroid fragment whose seams don't show yet (AST-007): see asteroid.ts. */
@@ -185,8 +188,8 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
 const GOLDEN = 0.6180339887498949;
 
 /** Body as written in scenarios and commands: material fields are optional. */
-export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine" | "tractor" | "collector"> &
-  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput; tractor?: TractorInput; collector?: CollectorInput };
+export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine" | "tractor" | "collector" | "pilot"> &
+  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput; tractor?: TractorInput; collector?: CollectorInput; pilot?: PilotInput };
 
 /** A magazine as written in scenarios: its state starts at zero. */
 export type MagazineInput = Omit<Magazine, "timer" | "loaded"> & Partial<Pick<Magazine, "timer" | "loaded">>;
@@ -321,6 +324,8 @@ export type Command =
   | { type: "joint.add"; joint: JointInput }
   | { type: "joint.remove"; id: string }
   | { type: "joint.set"; id: string; limits: Partial<JointLimits> }
+  /** Gives a pilot a new goal and/or skills (AIP-017); it keeps what it has learned. */
+  | { type: "pilot.set"; id: string; goal?: PilotGoal; skill?: Partial<Pilot["skill"]> }
   /** Removes every joint touching the body: it leaves its assembly with its own momentum. */
   | { type: "body.detach"; id: string }
   | { type: "link.add"; link: LinkInput }
@@ -331,10 +336,11 @@ export type Command =
   | { type: "debug.kick"; id: string; dv: Vec2 };
 
 export function normalizeBody(input: BodyInput): Body {
-  const { injector, magazine, tractor, collector, ...rest } = structuredClone(input);
+  const { injector, magazine, tractor, collector, pilot, ...rest } = structuredClone(input);
   const body: Body = { ...BODY_DEFAULTS, integrity: 1, ...rest };
   if (tractor) body.tractor = normalizeTractor(tractor);
   if (collector) body.collector = normalizeCollector(collector);
+  if (pilot) body.pilot = normalizePilot(pilot);
   if (injector) body.injector = { ...INJECTOR_DEFAULTS, ...injector };
   // A full reload time has passed at the start, so the first shell loads at once.
   if (magazine) body.magazine = { timer: magazine.reload, loaded: 0, ...magazine };
@@ -941,6 +947,18 @@ function applyOne(world: World, cmd: Command, profile?: Profile): void {
       if (!world.joints.some((j) => j.id === cmd.id)) throw new Error(`No joint with id "${cmd.id}"`);
       world.joints = world.joints.filter((j) => j.id !== cmd.id);
       break;
+    case "pilot.set": {
+      const p = findBody(world, cmd.id).pilot;
+      if (!p) throw new Error(`Body "${cmd.id}" has no pilot`);
+      if (cmd.goal) {
+        p.goal = structuredClone(cmd.goal);
+        p.trim = 0;
+        p.settled = false;
+      }
+      if (cmd.skill) p.skill = { ...p.skill, ...cmd.skill };
+      p.next = world.tick; // decide at once
+      break;
+    }
     case "joint.set": {
       const j = world.joints.find((x) => x.id === cmd.id);
       if (!j) throw new Error(`No joint with id "${cmd.id}"`);
@@ -1084,6 +1102,8 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
 
   const fromTick = world.tick;
   applyCommands(world, commands, profile);
+  // AI pilots decide and set their own channels, as a player's keys would (AIP-001, AIP-002).
+  if (world.bodies.some((b) => b.pilot)) runPilots(world, profile.timestep);
   mark("commands");
   const start = world.ledger.totals;
   const sources: Record<Source, Delta> = {

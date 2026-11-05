@@ -223,6 +223,19 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
+  if (b.pilot !== undefined) {
+    const pl = b.pilot;
+    const pp = `${path}.pilot`;
+    if (!isObj(pl)) err(v, pp, "must be {skill?, goal?, interval?}");
+    else {
+      if (pl.skill !== undefined) {
+        if (!isObj(pl.skill)) err(v, `${pp}.skill`, "must be {flight?, combat?}");
+        else for (const k of ["flight", "combat"]) if (pl.skill[k] !== undefined) num(v, pl.skill[k], `${pp}.skill.${k}`, { min: 0, max: 1 });
+      }
+      if (pl.interval !== undefined) num(v, pl.interval, `${pp}.interval`, { int: true, min: 1, max: 240 });
+      if (pl.goal !== undefined) validatePilotGoal(v, pl.goal, `${pp}.goal`);
+    }
+  }
   if (b.collector !== undefined) {
     const c = b.collector;
     const cp = `${path}.collector`;
@@ -279,6 +292,12 @@ function validateMaterial(v: V, m: unknown, path: string): void {
   num(v, m.threshold, `${path}.threshold`, { min: 0 });
   num(v, m.toughness, `${path}.toughness`, { positive: true });
   if (m.name !== undefined) str(v, m.name, `${path}.name`);
+}
+
+function validatePilotGoal(v: V, g: unknown, path: string): void {
+  if (!isObj(g) || !["heading", "velocity", "hover", "idle"].includes(g.kind as string)) return err(v, path, 'must be {kind: "heading", angle} | {kind: "velocity", velocity} | {kind: "hover"} | {kind: "idle"}');
+  if (g.kind === "heading") num(v, g.angle, `${path}.angle`);
+  else if (g.kind === "velocity") vec(v, g.velocity, `${path}.velocity`);
 }
 
 function validateTractor(v: V, t: unknown, path: string): void {
@@ -455,6 +474,14 @@ function validateCommand(v: V, c: unknown, path: string): void {
     case "joint.set":
       str(v, c.id, `${path}.id`);
       return validateLimits(v, c.limits, `${path}.limits`);
+    case "pilot.set":
+      str(v, c.id, `${path}.id`);
+      if (c.goal !== undefined) validatePilotGoal(v, c.goal, `${path}.goal`);
+      if (c.skill !== undefined) {
+        if (!isObj(c.skill)) err(v, `${path}.skill`, "must be {flight?, combat?}");
+        else for (const k of ["flight", "combat"]) if (c.skill[k] !== undefined) num(v, c.skill[k], `${path}.skill.${k}`, { min: 0, max: 1 });
+      }
+      return;
     case "link.add":
       return validateLink(v, c.link, `${path}.link`);
     case "control.set":
