@@ -1,7 +1,7 @@
 // AI pilots, phase 1: foundations (AIP-001…AIP-007, §9.10).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assemblyTotals, getProfile, hashValue, initialWorld, learnShip, parseScenario, pilotChannels, stepInPlace, type PilotGoal, type World } from "../../src/core/index.ts";
+import { aimAt, assemblyTotals, getProfile, hashValue, initialWorld, learnShip, parseScenario, pilotChannels, stepInPlace, type PilotGoal, type World } from "../../src/core/index.ts";
 import { runPilots } from "../../src/core/pilot.ts";
 import { readJson, ROOT } from "../helpers.ts";
 
@@ -232,4 +232,46 @@ describe("AI pilot navigation (phase 2)", () => {
     expect(pilotBody().pilot!.mode).toBe("ignoring");
     expect(w.ledger.violations).toBe(0);
   }, 600_000);
+});
+
+describe("AI pilot combat (phase 3)", () => {
+  it("AIP-011 it leads a moving target: a shell on its aim meets the target, allowing for its own motion; with no lead it aims where the target is", () => {
+    const from = { x: 0, y: 0 };
+    const own = { x: 1, y: -2 };
+    const target = { x: 80, y: 30 };
+    const tv = { x: -3, y: 6 };
+    const muzzle = 45;
+    const d = aimAt(from, own, target, tv, muzzle, 1);
+    expect(Math.hypot(d.x, d.y)).toBeCloseTo(1, 12);
+    // Shell velocity = ours + muzzle along d; find the time it is nearest the target, and check it meets it.
+    const sv = { x: own.x + muzzle * d.x, y: own.y + muzzle * d.y };
+    const r = { x: target.x - from.x, y: target.y - from.y };
+    const w = { x: tv.x - sv.x, y: tv.y - sv.y };
+    const t = -(r.x * w.x + r.y * w.y) / (w.x * w.x + w.y * w.y);
+    expect(t).toBeGreaterThan(0);
+    expect(Math.hypot(r.x + w.x * t, r.y + w.y * t)).toBeLessThan(1e-9);
+    const flat = aimAt(from, own, target, tv, muzzle, 0);
+    expect(flat.x).toBeCloseTo(target.x / Math.hypot(target.x, target.y), 12);
+    expect(flat.y).toBeCloseTo(target.y / Math.hypot(target.x, target.y), 12);
+  });
+
+  it("AIP-015 AIP-016 scenarios take the combat modes, a side and a detection range; Cautious and Evading need a route", () => {
+    const raw = readJson(join(ROOT, "scenarios", "ai-patrol.json")) as { world: { bodies: Record<string, any>[] } }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const pilot = () => raw.world.bodies.find((b) => b.id === "e1-hull")!.pilot;
+    for (const mode of ["hunting", "cautious", "evading"]) {
+      Object.assign(pilot(), { mode, side: "pirates", detect: 120 });
+      expect(() => parseScenario(structuredClone(raw))).not.toThrow();
+    }
+    const route = pilot().route;
+    delete pilot().route;
+    expect(() => parseScenario(structuredClone(raw))).toThrow(); // evading, no route
+    pilot().mode = "hunting";
+    expect(() => parseScenario(structuredClone(raw))).not.toThrow(); // a hunter needs none
+    pilot().route = route;
+    for (const bad of [{ mode: "berserk" }, { detect: -5 }, { side: 3 }]) {
+      const r = structuredClone(raw);
+      Object.assign(r.world.bodies.find((b) => b.id === "e1-hull")!.pilot, bad);
+      expect(() => parseScenario(r)).toThrow();
+    }
+  });
 });

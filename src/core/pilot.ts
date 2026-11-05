@@ -314,7 +314,9 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
   const out: Ship[] = [];
   for (const bs of groups.values()) {
     if (!bs.some((b) => b.injector || b.magazine || b.pilot)) continue;
+    // Named by its pilot's body, else its tractor's (Gunship 2's hull), else its heaviest part.
     const pilot = bs.find((b) => b.pilot);
+    const name = pilot ?? bs.find((b) => b.tractor) ?? bs.reduce((m, b) => (bodyMass(b) > bodyMass(m) ? b : m));
     let m = 0;
     let c = { x: 0, y: 0 };
     let v = { x: 0, y: 0 };
@@ -324,7 +326,7 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
       c = add(c, scale(b.position, mb));
       v = add(v, scale(b.velocity, mb));
     }
-    out.push({ id: (pilot ?? bs[0]).id, side: pilot ? (pilot.pilot!.side ?? "enemy") : "player", centre: scale(c, 1 / m), velocity: scale(v, 1 / m) });
+    out.push({ id: name.id, side: pilot ? (pilot.pilot!.side ?? "enemy") : "player", centre: scale(c, 1 / m), velocity: scale(v, 1 / m) });
   }
   return out;
 }
@@ -585,7 +587,7 @@ export function runPilots(world: World, dt: number): void {
         const host = world.bodies.find((b) => b.id === st.body);
         target = host ? add(host.position, st.offset) : ship.centre;
         carry = host ? host.velocity : carry; // move with it
-        label = `keep station on ${st.body}`;
+        if (!label) label = `keep station on ${st.body}`;
       } else {
         target = goal.target;
         stop = goal.stop !== false;
@@ -668,7 +670,8 @@ export function runPilots(world: World, dt: number): void {
     const alpha = Math.max(-aMax, Math.min(aMax, (4 + 4 * s) * (wWant - ship.omega)));
     const torque = ship.inertia * alpha;
     // Thrust only once roughly pointing the right way: full when aligned, none past 60°.
-    const along = !aim && (goal.kind === "velocity" || goal.kind === "hover") ? Math.max(0, dot(force, axis)) * Math.max(0, (cosErr - 0.5) / 0.5) : 0;
+    // Aiming, it still thrusts along the nose when that helps (as against a shot's recoil).
+    const along = (goal.kind === "velocity" || goal.kind === "hover") ? Math.max(0, dot(force, axis)) * Math.max(0, (cosErr - 0.5) / 0.5) : 0;
     const fBody = scale(axisBody, along * authority);
 
     // Allocate: rows are body-frame force x, y, and torque; torque weighted most.
