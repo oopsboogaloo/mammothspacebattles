@@ -52,7 +52,7 @@ Requirements use EARS:
 Each requirement carries:
 
 - **Priority:** `M` must, `S` should, `C` could.
-- **Milestone:** `M0`–`M7` (§12).
+- **Milestone:** `M0`–`M8` (§12).
 - **Verification:** `U` unit test, `P` property/conservation test, `S` scenario test, `D` determinism test, `E` browser end-to-end test, `B` benchmark, `R` review only.
 
 Format: **ID** `[priority · milestone · verification]` text.
@@ -600,6 +600,62 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
   - *Ship design is part of it.* Recipes unlock parts, and the player builds and refits ships from them in the sandbox's builder.
   - Needs, roughly in order: the base asteroid with gravity and the pad; the collector (a fixed tether that reels in, and a capture rule); a store of what has been delivered, kept with the world (these three are built: §9.8c); then recipes, buildings and part unlocks. More minerals than gold, and asteroids that are harder to reach, come with the tree.
 
+### 9.10 AI pilots (M8, specified, not built)
+
+Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but nothing in the pilot may assume that ship: it must be able to fly any ship built from the parts in this spec. Specified November 2026; the plan comes next.
+
+**Principles**
+- **AIP-001** `[M · M8 · U]` A pilot shall fly only through the ship's control channels, as a player does: the same engines, cannon and tractor, the same physics, no forces or knowledge a player's ship doesn't have. It never moves bodies or changes the world directly.
+- **AIP-002** `[M · M8 · D]` Pilots shall run inside the core's step, as a pure function of the world (their own state included) and the world's PRNG, at a fixed decision rate. A world with pilots replays, scrubs, branches and runs in the worker exactly as one without (DET).
+- **AIP-003** `[M · M8 · U]` Each ship's channels shall be its own (for example `e1.left`), so many ships, flown by pilots or by the player, never share a control.
+- **AIP-004** `[M · M8 · S]` A pilot shall learn the ship it is given before flying it: what each channel does to the ship's acceleration and turn rate, how fast its shells leave the barrel, where its beam and tether are. It finds out by trying its controls in a private copy of the world (calibration), not from the ship's design, so a damaged or unusual ship is learned as it is. It recalibrates when the ship changes (a part lost, a store empty).
+
+**Skills**
+- **AIP-005** `[M · M8 · S]` A pilot shall have a flight skill and a combat skill, each from 0 (novice) to 1 (ace), independent of each other.
+  - *Flight skill* sets: how often it decides (reaction time), how precisely it holds a heading and a speed (control noise), how hard it manoeuvres (share of the ship's thrust and turn rate it uses), how far ahead it looks for collisions, and how well it allows for its own momentum when stopping.
+  - *Combat skill* sets: aim error, how well it leads a moving target (from none to a full intercept solution with the shell's speed and both ships' motion), how tightly it waits for a firing solution before firing, how fast it reacts to being fired on, and how it chooses targets.
+
+**Capabilities** (the building blocks every behaviour uses)
+- **AIP-006** `[M · M8 · S]` *Thrust allocation:* turn a wanted acceleration and turn rate into channel commands between 0 and 1, from the calibration, doing the best the engines allow. Gunship 2 has no side thrusters, so it must turn to point its thrust; another ship might strafe.
+- **AIP-007** `[M · M8 · S]` *Attitude:* turn to and hold a heading, without overshooting more than the flight skill allows.
+- **AIP-008** `[M · M8 · S]` *Fly to a point:* arrive at a point and stop there (or pass through it at a set speed), allowing for gravity, with a speed limit. Within a tolerance that shrinks with flight skill.
+- **AIP-009** `[M · M8 · S]` *Keep station:* hold a position, or an offset from a moving body (escorting, waiting by a rock).
+- **AIP-010** `[M · M8 · S]` *Avoid collisions:* look ahead along its path for bodies (asteroids, other ships, the base) and steer round them. The look-ahead grows with flight skill.
+- **AIP-011** `[M · M8 · S]` *Aim at a moving target:* point the cannon where a shell will meet the target, from both ships' positions and velocities, the measured muzzle speed, and gravity when it matters.
+- **AIP-012** `[M · M8 · S]` *Fire control:* fire only when the aim error is within the skill's tolerance, the target is in range, the line of fire is clear of rocks and friends, and a shell is loaded.
+- **AIP-013** `[M · M8 · S]` *Tractor and tether:* turn the beam onto a chosen piece, hold the button until the tether takes it, tow it to a point without breaking the tether (keeping the force under its limit), and let it go there.
+- **AIP-014** `[S · M8 · S]` *Housekeeping:* watch propellant and shells, and go home (or stop fighting) when low.
+
+**Behaviour modes**
+- **AIP-015** `[M · M8 · S]` A pilot shall have one behaviour mode at a time, set in the scenario and changeable while running:
+  - **Ignoring:** flies a route of waypoints in turn (looping or not), and ignores the player and every other ship, apart from not hitting them.
+  - **Evading:** does what its *underlying* mode says (by default Ignoring), but when the player comes within a threat distance and is closing, it moves away until the distance is safe again, then carries on. Evading is a modifier on another mode.
+  - **Mining:** picks an asteroid, keeps a safe distance from it and shoots it until pieces break off, picks a piece small enough to tow, tethers it and tows it to a drop point (its base or a collector), lets it go, and starts again. All slowly and carefully: low speeds, wide margins.
+  - **Cautious:** goes about its route, but keeps its nose toward the player while the player is near. It fires on the player only after the player has fired toward it: a shell whose path passes within a set distance of it, or any hit. It holds that grudge for a time, then calms down.
+  - **Hunting:** attacks any ship it sees that isn't on its side, and pursues it: closes to firing range, keeps there, and fires.
+  - **Mad:** irrational. It changes to a random other mode every minute (from the world's PRNG, so replays agree).
+- **AIP-016** `[M · M8 · S]` *Seeing:* a pilot knows about ships and rocks within its sensor range. Sides: each ship belongs to a side (the player's, or a named faction); Hunting attacks other sides only, and Cautious and Evading react to the player.
+
+**Sandbox and tests**
+- **AIP-017** `[M · M8 · E]` The sandbox shall show each pilot's mode, skills and current intention (target, waypoint, state) in the inspector, and optionally draw its plan (route, aim point, line of fire) as an overlay. Mode and skills can be changed live.
+- **AIP-018** `[M · M8 · B]` Pilots shall be cheap: their decisions cost under 0.2 ms per ship per step on average, calibration excepted (done once, or rarely, and spread over steps).
+- **AIP-019** `[M · M8 · S]` Each capability and each mode shall have a scenario test with a measurable pass, for example:
+  - fly through five waypoints within a tolerance;
+  - hit a target drifting across at a set speed in a set share of shots, rising with combat skill;
+  - a miner delivers a rock to a collector;
+  - a cautious ship holds fire until fired on, then returns fire;
+  - an evader keeps its distance from a pursuing ship;
+  - a mad ship changes mode every 60 s.
+
+*Open questions (to settle in the plan).*
+- Is a pilot a component on a ship body (like a tractor), so it is lost if that part is wrecked (a cockpit, §9.9)? Or is it attached to the assembly?
+- Calibration in a private copy of the world is honest and general, but costs a copy and some steps. Is learning from the ship's geometry an acceptable shortcut for intact ships?
+- Should pilots have perfect sight within range, or need a line of sight past rocks?
+- How exactly "fired toward it" is judged for Cautious, and how long a grudge lasts.
+- Should skills also slow its reaction to a new threat (human-like delay), and should it make mistakes on purpose at low skill?
+- Mining's drop point: its own base's collector when there is one, else a set point?
+- Can Mad pick Hunting against its own side?
+
 ## 10. Performance Requirements
 
 - **NFR-001** `[M · M1 · B]` A benchmark command shall report steps per second for each reference scenario, and CI shall record results per commit.
@@ -777,6 +833,7 @@ Each milestone ends with: all its `M` requirements passing their stated verifica
 | **M5 Damage** | Integrity, damage rules, leaks, armour | RS-11 passes. |
 | **M6 Weapons** | Gas-driven cannon, shells, fuzes, explosions | RS-12, RS-13 pass. |
 | **M7 Asteroids** | Aggregate asteroid generator and fracture | RS-14 passes. |
+| **M8 AI pilots** | Pilots that fly any ship through its controls: calibration, thrust allocation, flying, aiming, firing, tractor; skills; modes Ignoring, Evading, Mining, Cautious, Hunting, Mad (§9.10) | Every AIP scenario test passes. A Hunting Gunship 2 fights the player in the sandbox. |
 
 ## 13. Deferred: Game Layer
 
