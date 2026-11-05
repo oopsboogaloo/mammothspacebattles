@@ -601,6 +601,10 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
           if (a.velocity !== undefined) vec(v, a.velocity, `${p}.velocity`);
           for (const k of ["angle", "angularVelocity"]) if (a[k] !== undefined) num(v, a[k], `${p}.${k}`);
           if (a.material !== undefined) validateMaterial(v, a.material, `${p}.material`);
+          for (const k of ["gold", "compounds"]) if (a[k] !== undefined) num(v, a[k], `${p}.${k}`, { int: true, min: 0, max: 50 });
+          if (a.compoundSize !== undefined) num(v, a.compoundSize, `${p}.compoundSize`, { int: true, min: 2, max: 20 });
+          for (const k of ["goldDensity", "seamStrength"]) if (a[k] !== undefined) num(v, a[k], `${p}.${k}`, { positive: true });
+          if (a.reveal !== undefined) num(v, a.reveal, `${p}.reveal`, { min: 0, max: 1 });
         });
     }
     if (data.world.links !== undefined) {

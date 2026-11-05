@@ -35,6 +35,8 @@ export const COLORS = {
   label: "#E6EAF2",
   wreck: "#0C0F18",
   tractor: "#5CE1C6",
+  gold: "#8A6A1F",
+  goldStroke: "#F2C94C",
 } as const;
 
 export interface RulerView {
@@ -612,6 +614,38 @@ function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   }
 }
 
+/** Strokes a body's edges except those on a hidden seam, which are painted over in its fill so the fragment reads as one. */
+function strokeOutline(ctx: Ctx, c: Camera, vp: Viewport, b: Body, anchors: Vec2[], fill: string): void {
+  const q = sinCos(b.angle);
+  const vs = localVertices(b.shape);
+  const onSeam = (p: Vec2, r: Vec2) => {
+    const d = { x: r.x - p.x, y: r.y - p.y };
+    const l2 = d.x * d.x + d.y * d.y;
+    return anchors.some((a) => {
+      const t = Math.max(0, Math.min(1, ((a.x - p.x) * d.x + (a.y - p.y) * d.y) / l2));
+      return Math.hypot(p.x + t * d.x - a.x, p.y + t * d.y - a.y) < 1e-3 * Math.sqrt(l2) + 1e-6;
+    });
+  };
+  const stroke = ctx.strokeStyle;
+  const width = ctx.lineWidth;
+  for (const hide of [true, false]) {
+    ctx.beginPath();
+    vs.forEach((v, i) => {
+      const w = vs[(i + 1) % vs.length];
+      if (onSeam(v, w) !== hide) return;
+      const s0 = toScreen(c, vp, add(b.position, rotate(q, v)));
+      const s1 = toScreen(c, vp, add(b.position, rotate(q, w)));
+      ctx.moveTo(s0.x, s0.y);
+      ctx.lineTo(s1.x, s1.y);
+    });
+    ctx.strokeStyle = hide ? fill : stroke;
+    ctx.lineWidth = hide ? 2 : width;
+    ctx.stroke();
+  }
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = width;
+}
+
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
@@ -635,17 +669,30 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   // Gas under bodies, so walls stay crisp.
   drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
 
+  // Hidden seams of larger asteroid fragments (AST-007): where each weld sits on its bodies.
+  const seams = new Map<string, Vec2[]>();
+  for (const j of world.joints) {
+    if (!j.hidden) continue;
+    seams.set(j.a, [...(seams.get(j.a) ?? []), j.anchorA]);
+    seams.set(j.b, [...(seams.get(j.b) ?? []), j.anchorB]);
+  }
   for (const b of world.bodies) {
     const selected = opts.selection.has(b.id);
     const hover = opts.hover === b.id;
+    // Gold shows once it can be seen: not while hidden inside a larger fragment (AST-006).
+    const gold = b.mineral === "gold" && !b.compound;
+    const fill = b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : b.fixed ? COLORS.fixed : COLORS.body;
     bodyPath(ctx, c, vp, b);
-    ctx.fillStyle = b.integrity <= 0 ? COLORS.wreck : b.fixed ? COLORS.fixed : COLORS.body;
+    ctx.fillStyle = fill;
     ctx.fill();
     ctx.lineWidth = selected ? 3 : hover ? 2 : 1.25;
-    ctx.strokeStyle = selected ? COLORS.selected : hover ? COLORS.hover : b.fixed ? COLORS.fixedStroke : COLORS.bodyStroke;
+    ctx.strokeStyle = selected ? COLORS.selected : hover ? COLORS.hover : gold ? COLORS.goldStroke : b.fixed ? COLORS.fixedStroke : COLORS.bodyStroke;
     ctx.setLineDash(b.fixed && !selected ? [6, 4] : []);
-    ctx.stroke();
+    const hidden = seams.get(b.id);
+    if (hidden && b.shape.kind !== "disc" && !selected) strokeOutline(ctx, c, vp, b, hidden, fill);
+    else ctx.stroke();
     ctx.setLineDash([]);
+    if (b.compound && !selected) continue; // no orientation mark or label to give its pieces away
     // Orientation mark: centre to the body's local +x edge, so rotation is visible.
     const q = sinCos(b.angle);
     const reach = b.shape.kind === "disc" ? b.shape.radius : b.shape.kind === "box" ? b.shape.width / 2 : massProps(b.shape, b.mass).boundingRadius;
@@ -888,6 +935,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
 function drawDamage(ctx: Ctx, world: World, c: Camera, vp: Viewport, bars: boolean): void {
   const taken: { x: number; y: number }[] = []; // bar + label boxes drawn so far, 76 × 12 px
   for (const b of world.bodies) {
+    if (b.compound) continue; // a larger fragment's pieces stay hidden until its seams show (AST-007)
     const s = toScreen(c, vp, b.position);
     const r = Math.max(6, (b.shape.kind === "disc" ? b.shape.radius : massProps(b.shape, b.mass).boundingRadius) * c.zoom * 0.5);
     if (b.integrity <= 0) {

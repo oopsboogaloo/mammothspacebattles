@@ -6,12 +6,19 @@
 // stronger than a short one, and with a declared bond strength. Breaking bonds and splitting
 // into separate parts are the ordinary weld rules (ASM-004, ASM-005). The same seed always
 // gives the same asteroid.
+//
+// Minerals and larger fragments (AST-006, AST-007). `gold` pieces, chosen at random, are gold:
+// denser than rock and much tougher, drawn gold. `compounds` larger fragments are each a few
+// neighbouring pieces welded with hidden seams, `seamStrength` times as strong as a bond: they
+// hold together and are drawn as one piece. Once a larger fragment has lost `reveal` of its
+// integrity (by mass), one of its pieces is wrecked, or one of its seams breaks, its seams show and take ordinary bond
+// limits, so it can break up further. A gold piece inside one is drawn as rock until then.
 
 import { add, cross, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { createRng, nextFloat } from "./prng.ts";
 import { polygonArea, polygonCentroid } from "./shapes.ts";
 import type { Material } from "./damage.ts";
-import type { BodyInput, JointInput } from "./world.ts";
+import type { Body, BodyInput, JointInput, World } from "./world.ts";
 
 export interface AsteroidSpec {
   /** Prefix for the pieces' ids: `<id>-0`, `<id>-1`, …; bonds are `<id>-b<i>-<j>`. */
@@ -27,6 +34,18 @@ export interface AsteroidSpec {
   bond: number;
   /** How the pieces take damage (DMG-002). Without one, hits never weaken the bonds. */
   material?: Material;
+  /** Gold pieces, chosen at random (AST-006). Default 0. */
+  gold?: number;
+  /** A gold piece's density as a multiple of the rock's. Default 2. */
+  goldDensity?: number;
+  /** Larger fragments with hidden seams (AST-007). Default 0. */
+  compounds?: number;
+  /** Pieces in each larger fragment. Default 3. */
+  compoundSize?: number;
+  /** A hidden seam's strength as a multiple of an ordinary bond's. Default 20. */
+  seamStrength?: number;
+  /** Fraction of a larger fragment's integrity (by mass) it loses before its seams show. Default 0.25. */
+  reveal?: number;
   position: Vec2;
   velocity?: Vec2;
   angle?: number;
@@ -174,5 +193,80 @@ export function generateAsteroid(spec: AsteroidSpec): { bodies: BodyInput[]; joi
         limits: { tension: spec.bond * len, compression: 4 * spec.bond * len, shear: spec.bond * len, torque: (spec.bond * len * len) / 4 },
       });
     }
+  // Larger fragments: grow each from a random piece through its bonds (drawn after the shape, so
+  // the same seed gives the same outline and pieces with or without them).
+  const pick = (n: number) => Math.min(n - 1, Math.floor(nextFloat(rng) * n));
+  const id = (i: number) => `${spec.id}-${i}`;
+  const near = new Map<string, string[]>();
+  for (const j of joints) {
+    near.set(j.a, [...(near.get(j.a) ?? []), j.b]);
+    near.set(j.b, [...(near.get(j.b) ?? []), j.a]);
+  }
+  const byId = new Map(bodies.map((b) => [b.id, b]));
+  const used = new Set<string>();
+  const size = Math.max(2, Math.floor(spec.compoundSize ?? 3));
+  for (let c = 0; c < Math.floor(spec.compounds ?? 0); c++) {
+    const free = keep.map(id).filter((x) => !used.has(x));
+    if (!free.length) break;
+    const group = [free[pick(free.length)]];
+    while (group.length < size) {
+      const edge = [...new Set(group.flatMap((g) => near.get(g) ?? []))].filter((x) => !used.has(x) && !group.includes(x)).sort();
+      if (!edge.length) break;
+      group.push(edge[pick(edge.length)]);
+    }
+    if (group.length < 2) continue;
+    const k = spec.seamStrength ?? 20;
+    let seams = 0;
+    for (const j of joints) {
+      if (!group.includes(j.a) || !group.includes(j.b)) continue;
+      const l = j.limits as Required<NonNullable<JointInput["limits"]>>;
+      j.hidden = { ...l };
+      j.limits = { tension: l.tension * k, compression: l.compression * k, shear: l.shear * k, torque: l.torque * k };
+      seams++;
+    }
+    const compound = { id: `${spec.id}-c${c}`, reveal: spec.reveal ?? 0.25, seams };
+    for (const g of group) {
+      used.add(g);
+      byId.get(g)!.compound = { ...compound };
+    }
+  }
+  // Gold: denser and much tougher than the rock round it.
+  for (let g = 0; g < Math.floor(spec.gold ?? 0); g++) {
+    const rock = keep.map(id).filter((x) => !byId.get(x)!.mineral);
+    if (!rock.length) break;
+    const b = byId.get(rock[pick(rock.length)])!;
+    b.mineral = "gold";
+    b.mass *= spec.goldDensity ?? 2;
+    if (spec.material) b.material = { name: "gold", threshold: spec.material.threshold * 5, toughness: spec.material.toughness * 10 };
+  }
   return { bodies, joints };
+}
+
+/**
+ * Shows the seams of larger fragments that have taken enough damage (AST-007): their hidden
+ * welds take ordinary limits, and their pieces, gold included, are drawn as they are. Returns
+ * the ids revealed; raises `compound.reveal`. Changes no motion, so the ledger is unaffected.
+ */
+export function revealCompounds(world: World): string[] {
+  const groups = new Map<string, Body[]>();
+  for (const b of world.bodies) if (b.compound) groups.set(b.compound.id, [...(groups.get(b.compound.id) ?? []), b]);
+  const out: string[] = [];
+  for (const [cid, members] of groups) {
+    const mass = members.reduce((s, b) => s + b.mass, 0);
+    const lost = members.reduce((s, b) => s + b.mass * (1 - b.integrity), 0) / mass;
+    const ids = new Set(members.map((b) => b.id));
+    // A seam that broke (overload, or a piece detached) splits it open too.
+    const { reveal, seams } = members[0].compound!;
+    const split = seams !== undefined && world.joints.filter((j) => j.hidden && ids.has(j.a) && ids.has(j.b)).length < seams;
+    if (!(lost >= reveal) && !members.some((b) => b.integrity <= 0) && !split) continue;
+    for (const j of world.joints) {
+      if (!j.hidden || !(ids.has(j.a) || ids.has(j.b))) continue;
+      j.limits = j.hidden;
+      delete j.hidden;
+    }
+    for (const b of members) delete b.compound;
+    world.events.push({ tick: world.tick, type: "compound.reveal", data: { id: cid, pieces: members.length, gold: members.some((b) => b.mineral === "gold") } });
+    out.push(cid);
+  }
+  return out;
 }
