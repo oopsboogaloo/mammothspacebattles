@@ -234,6 +234,42 @@ describe("AI pilot navigation (phase 2)", () => {
   }, 600_000);
 });
 
+/**
+ * Two Gunship 2s in empty space: the player's (its own ids and channels) at `player`, pointing up,
+ * and an AI one (ids e1-*, channels e1.*) at `ai`, with a pilot in `mode`.
+ */
+function duel(o: { mode: string; ai?: { x: number; y: number }; player?: { x: number; y: number; vx?: number; vy?: number }; combat?: number; route?: boolean }): World {
+  const raw = readJson(join(ROOT, "scenarios", "base.json")) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  type B = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const shift = (p: B, dx: number, dy: number) => ({ x: typeof p.x === "number" ? p.x + dx : { $expr: `(${p.x.$expr}) + ${dx}` }, y: typeof p.y === "number" ? p.y + dy : { $expr: `(${p.y.$expr}) + ${dy}` } });
+  const parts: B[] = raw.world.bodies.filter((b: B) => !b.fixed);
+  const ids = new Set(parts.map((b) => b.id));
+  const pl = o.player ?? { x: 0, y: 0 };
+  const ai = o.ai ?? { x: 0, y: 60 };
+  const player = parts.map((b) => ({ ...structuredClone(b), position: shift(b.position, pl.x, pl.y), velocity: { x: pl.vx ?? 0, y: pl.vy ?? 0 } }));
+  const enemy = parts.map((b) => {
+    const c = structuredClone(b);
+    c.id = `e1-${b.id}`;
+    c.position = shift(b.position, ai.x, ai.y);
+    if (c.injector) c.injector.channel = `e1.${c.injector.channel}`;
+    if (c.tractor) c.tractor.channel = `e1.${c.tractor.channel}`;
+    return c;
+  });
+  enemy.find((b) => b.id === "e1-hull")!.pilot = { skill: { flight: 0.7, combat: o.combat ?? 0.5 }, mode: o.mode, goal: { kind: "idle" }, ...(o.route !== false && o.mode !== "hunting" ? { route: { waypoints: [ai, { x: ai.x + 1, y: ai.y }], loop: true } } : {}) };
+  const joints = raw.world.joints.filter((j: B) => ids.has(j.a));
+  const links = raw.world.links.filter((l: B) => ids.has(l.to));
+  raw.world.bodies = [...player, ...enemy];
+  raw.world.joints = [...joints, ...joints.map((j: B) => ({ ...j, id: `e1-${j.id}`, a: `e1-${j.a}`, b: `e1-${j.b}` }))];
+  raw.world.links = [...links, ...links.map((l: B) => ({ ...l, id: `e1-${l.id}`, to: `e1-${l.to}`, ...(l.from ? { from: `e1-${l.from}` } : {}), ...(l.channel ? { channel: `e1.${l.channel}` } : {}) }))];
+  raw.world.gravity = { x: 0, y: 0 };
+  raw.world.asteroids = [];
+  delete raw.world.bounds;
+  Object.assign(raw, { timeline: [], probes: [], assertions: [] });
+  delete raw.ui;
+  return initialWorld(parseScenario(raw));
+}
+const enemyPilot = (w: World) => w.bodies.find((b) => b.id === "e1-hull")!.pilot!;
+
 describe("AI pilot combat (phase 3)", () => {
   it("AIP-011 it leads a moving target: a shell on its aim meets the target, allowing for its own motion; with no lead it aims where the target is", () => {
     const from = { x: 0, y: 0 };
@@ -274,4 +310,26 @@ describe("AI pilot combat (phase 3)", () => {
       expect(() => parseScenario(r)).toThrow();
     }
   });
+
+  it("AIP-003 it never touches a gun whose fire channel another ship shares, and only a fighting pilot works its own trigger", () => {
+    const w = ship({ kind: "idle" });
+    w.links.push({ id: "x", kind: "control", channel: "e1.fire", to: "elsewhere", integrity: 1 } as never);
+    hull(w).pilot!.mode = "hunting";
+    w.controls["e1.fire"] = 0.7;
+    run(w, 24);
+    expect(w.controls["e1.fire"]).toBe(0.7);
+    const m = ship({ kind: "idle" }); // manual, owning its gun: it leaves the trigger to whoever set it
+    m.controls["e1.fire"] = 0.7;
+    run(m, 24);
+    expect(m.controls["e1.fire"]).toBe(0.7);
+  });
+
+  it("AIP-015 a Cautious pilot is not provoked by a ship closing on it with a shell only loaded, not fired", () => {
+    const w = duel({ mode: "cautious", ai: { x: 0, y: 30 }, player: { x: 0, y: 0, vy: 8 } });
+    run(w, 240);
+    expect(w.events.some((e) => e.type === "loaded" && e.data.id === "breech")).toBe(true);
+    expect(enemyPilot(w).combat?.grudgeUntil).toBeUndefined();
+    expect(enemyPilot(w).intent).toMatch(/watching hull/);
+  }, 120_000);
 });
+

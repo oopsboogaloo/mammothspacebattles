@@ -222,7 +222,22 @@ function allocate(A: number[][], b: number[], w: number[], n: number): number[] 
   return u;
 }
 
+/** Shells sitting loaded in a gun (the latest a magazine loaded, still in its bore): part of their ship, not shots or obstacles. */
+function loadedRounds(world: World): Set<string> {
+  const out = new Set<string>();
+  for (const g of world.bodies) {
+    const mag = g.magazine;
+    if (!mag || mag.loaded < 1) continue;
+    const id = `${g.id}-shell-${mag.loaded}`;
+    const sh = world.bodies.find((b) => b.id === id);
+    if (sh && length(sub(sh.position, g.position)) < length(mag.at) + 2) out.add(id);
+  }
+  return out;
+}
+
 interface Obstacle {
+  /** Its assembly. */
+  root: string;
   centre: Vec2;
   radius: number;
   velocity: Vec2;
@@ -234,13 +249,15 @@ function obstacles(world: World, own: Set<string>): Obstacle[] {
   const groups = new Map<string, Body[]>();
   // Its own shells, loaded or fired (and their fragments), are named after its magazines: not obstacles.
   const shells = world.bodies.filter((b) => own.has(b.id) && b.magazine).map((b) => `${b.id}-shell-`);
+  // Any ship's loaded round sits in its bore, inside that ship's outline.
+  const loaded = loadedRounds(world);
   for (const b of world.bodies) {
-    if (own.has(b.id) || shells.some((pre) => b.id.startsWith(pre))) continue;
+    if (own.has(b.id) || loaded.has(b.id) || shells.some((pre) => b.id.startsWith(pre))) continue;
     const r = roots.get(b.id)!;
     groups.set(r, [...(groups.get(r) ?? []), b]);
   }
   const out: Obstacle[] = [];
-  for (const bs of groups.values()) {
+  for (const [root, bs] of groups) {
     let m = 0;
     let c = { x: 0, y: 0 };
     let v = { x: 0, y: 0 };
@@ -253,7 +270,7 @@ function obstacles(world: World, own: Set<string>): Obstacle[] {
     c = scale(c, 1 / m);
     let R = 0;
     for (const b of bs) R = Math.max(R, length(sub(b.position, c)) + massProps(b.shape, 1).boundingRadius);
-    out.push({ centre: c, radius: R, velocity: scale(v, 1 / m) });
+    out.push({ root, centre: c, radius: R, velocity: scale(v, 1 / m) });
   }
   return out;
 }
@@ -295,6 +312,8 @@ function avoid(v: Vec2, pos: Vec2, own: number, obs: Obstacle[], ahead: number, 
 
 
 interface Ship {
+  /** Its assembly. */
+  root: string;
   /** A body of it to name and follow it by: its pilot's body, or its first part. */
   id: string;
   side: string;
@@ -312,7 +331,7 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
     groups.set(r, [...(groups.get(r) ?? []), b]);
   }
   const out: Ship[] = [];
-  for (const bs of groups.values()) {
+  for (const [root, bs] of groups) {
     if (!bs.some((b) => b.injector || b.magazine || b.pilot)) continue;
     // Named by its pilot's body, else its tractor's (Gunship 2's hull), else its heaviest part.
     const pilot = bs.find((b) => b.pilot);
@@ -326,14 +345,15 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
       c = add(c, scale(b.position, mb));
       v = add(v, scale(b.velocity, mb));
     }
-    out.push({ id: name.id, side: pilot ? (pilot.pilot!.side ?? "enemy") : "player", centre: scale(c, 1 / m), velocity: scale(v, 1 / m) });
+    out.push({ root, id: name.id, side: pilot ? (pilot.pilot!.side ?? "enemy") : "player", centre: scale(c, 1 / m), velocity: scale(v, 1 / m) });
   }
   return out;
 }
 
 /** Its gun, from the design: the body with a magazine, its fire channel, and the bore direction in that body's frame. */
-function gunOf(world: World, members: Body[]): { body: Body; channel: string; bore: Vec2 } | null {
-  const b = members.find((x) => x.magazine && x.injector && x.integrity > 0);
+function gunOf(world: World, members: Body[], channels: string[]): { body: Body; channel: string; bore: Vec2 } | null {
+  // Only a gun whose fire channel is the pilot's own (AIP-003): never another ship's.
+  const b = members.find((x) => x.magazine && x.injector && x.integrity > 0 && channels.includes(x.injector.channel));
   if (!b) return null;
   const at = b.magazine!.at;
   const bore = length(at) > 1e-9 ? scale(at, 1 / length(at)) : { x: 0, y: 1 };
@@ -370,13 +390,13 @@ function wobble(tick: number, id: string): number {
 }
 
 /** Whether a straight line of fire is clear of everything but the target: no rock or other ship in the way. */
-function clearShot(from: Vec2, dir: Vec2, range: number, obs: Obstacle[], target: Vec2): boolean {
+function clearShot(from: Vec2, dir: Vec2, range: number, obs: Obstacle[], target: string): boolean {
   for (const o of obs) {
-    if (length(sub(o.centre, target)) < 1e-6 + o.radius && length(sub(o.centre, target)) < 0.5) continue;
+    if (o.root === target) continue;
     const r = sub(o.centre, from);
     const t = dot(r, dir);
     if (t < 0 || t > range) continue;
-    if (length(sub(r, scale(dir, t))) < o.radius + 0.5 && length(sub(o.centre, target)) > 1) return false;
+    if (length(sub(r, scale(dir, t))) < o.radius + 0.5) return false;
   }
   return true;
 }
@@ -453,7 +473,7 @@ export function runPilots(world: World, dt: number): void {
     // Combat modes (phase 3): sides, sight, a target, and where to aim (AIP-011, AIP-015, AIP-016).
     const cs = Math.min(1, Math.max(0, p.skill.combat));
     const ownR = Math.max(...ship.members.map((b) => length(sub(b.position, ship.centre)) + massProps(b.shape, 1).boundingRadius));
-    const gun = gunOf(world, ship.members);
+    const gun = gunOf(world, ship.members, pilotChannels(world, body));
     p.combat ??= { muzzle: 40, pulse: 0, shots: 0 };
     const cb = p.combat;
     // Learn the gun's muzzle speed from its own last shot, once that shell is clear of the barrel.
@@ -477,8 +497,9 @@ export function runPilots(world: World, dt: number): void {
       if (mode === "cautious") {
         const own = new Set(ship.members.map((b) => b.id));
         const mine = gun ? `${gun.body.id}-shell-` : "\u0000";
+        const loaded = loadedRounds(world); // still in a gun: not fired
         for (const b of world.bodies) {
-          if (!b.id.includes("-shell-") || b.id.startsWith(mine) || own.has(b.id)) continue;
+          if (!b.id.includes("-shell-") || b.id.startsWith(mine) || own.has(b.id) || loaded.has(b.id)) continue;
           const r = sub(b.position, ship.centre);
           const w = sub(b.velocity, ship.velocity);
           if (length(w) < 5) continue; // a loaded shell, not one in flight
@@ -518,9 +539,9 @@ export function runPilots(world: World, dt: number): void {
           // Fire control (AIP-012): aimed well enough, in range, a shell in the bore, the line clear.
           const boreWorld = rotate(sinCos(gun.body.angle), gun.bore);
           const tol = 0.01 + 0.06 * (1 - cs);
-          const loaded = world.bodies.some((b) => b.id === `${gun.body.id}-shell-${gun.body.magazine!.loaded}` && length(sub(b.position, gun.body.position)) < 4);
+          const loaded = loadedRounds(world).has(`${gun.body.id}-shell-${gun.body.magazine!.loaded}`);
           const inRange = dist < 100;
-          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids), target.centre);
+          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids), target.root);
           fire = loaded && inRange && clear && dot(boreWorld, dir) > sinCos(tol).c;
           label = `${angry ? "fighting back" : "attacking"} ${target.id}${fire ? ", firing" : !loaded ? ", reloading" : !clear ? ", no clear shot" : ""}`;
           if (fire && cb.pulse <= 0) {
@@ -688,7 +709,7 @@ export function runPilots(world: World, dt: number): void {
       world.controls[c.channel] = u[i];
     });
     // The trigger: a short press, held for the pulse (AIP-012).
-    if (gun) world.controls[gun.channel] = cb.pulse > 0 ? 1 : 0;
+    if (gun && (mode === "hunting" || mode === "cautious")) world.controls[gun.channel] = cb.pulse > 0 ? 1 : 0;
     if (cb.pulse > 0) cb.pulse -= 1;
     p.seen = { tick: world.tick, velocity: ship.velocity, omega: ship.omega, quiet };
   }
