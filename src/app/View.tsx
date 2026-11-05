@@ -823,7 +823,7 @@ export function View() {
 
   return (
     <div
-      class={`view${sb?.world.challenge ? " has-hud" : ""}`}
+      class={`view${sb?.world.challenge || sb?.world.duel ? " has-hud" : ""}`}
       ref={wrap}
       data-testid="view"
       onPointerDown={onPointerDown}
@@ -847,7 +847,7 @@ export function View() {
           </div>
         </div>
       )}
-      {lookFor && !lookForHidden && sb?.world.challenge?.status.phase !== "landed" && sb?.world.challenge?.status.phase !== "crashed" && (
+      {lookFor && !lookForHidden && sb?.world.challenge?.status.phase !== "landed" && sb?.world.challenge?.status.phase !== "crashed" && (sb?.world.duel?.status.phase ?? "fighting") === "fighting" && (
         <div class="lookfor" data-testid="look-for">
           <strong>What to look for</strong>
           {lookFor}
@@ -876,6 +876,7 @@ export function View() {
         </div>
       )}
       {sb?.world.challenge && <ChallengeHud />}
+      {sb?.world.duel && <DuelHud />}
       {sb && <FlightPad />}
       {Object.keys(bindings.value).length > 0 && sb && (
         <div class="keylegend" aria-label="Key bindings" data-testid="key-legend">
@@ -967,6 +968,44 @@ let padGroup = 7_000_000;
  * be flown by touch with no keyboard. Each button tracks its own pointer, so two thumbs can hold
  * two engines at once. A bound key's letter is shown on its button.
  */
+/** Combat duel readout and verdict (DUEL-002): both ships' health, then won or lost. */
+function DuelHud() {
+  const sb = sandbox.value!;
+  void version.value;
+  const d = sb.world.duel!;
+  const s = d.status;
+  const pct = (x: number) => `${Math.round(100 * x)}%`;
+  const retry = () => {
+    if (openScenario(sb.raw, scenarioKey.value, sb.scenario.values, { keepOverlays: true })) playing.value = true;
+  };
+  return (
+    <>
+      <div class="hud" role="group" aria-label="Duel readout" data-testid="duel-hud">
+        <span class={s.player < 0.5 ? "over" : ""} title="Share of your ship's parts still welded on">
+          <i>You</i> {pct(s.player)}
+        </span>
+        {d.goal.enemies.map((e) => (
+          <span key={e} title={`Share of ${e}'s parts still welded on`}>
+            <i>{d.goal.enemies.length > 1 ? e : "Enemy"}</i> {pct(s.enemies[e] ?? 0)}
+          </span>
+        ))}
+        <span>
+          <i>Time</i> {sb.world.time.toFixed(0)} s
+        </span>
+      </div>
+      {s.phase !== "fighting" && (
+        <div class={`verdict ${s.phase}`} role="status" aria-live="polite" data-testid="duel-verdict">
+          <strong>{s.phase === "won" ? `You won · score ${s.score}` : "You lost"}</strong>
+          <div>{s.reason}</div>
+          <button class="btn primary" onPointerDown={(e) => e.stopPropagation()} onClick={retry} data-testid="duel-retry">
+            Fight again
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 /** Landing challenge readout and verdict (FLT-009). */
 function ChallengeHud() {
   const sb = sandbox.value!;

@@ -8,6 +8,7 @@ import { resolvePath } from "./path.ts";
 import { resolveProbe } from "./probes.ts";
 import { generateAsteroid, type AsteroidSpec } from "./asteroid.ts";
 import type { LandingGoal } from "./landing.ts";
+import type { DuelGoal } from "./duel.ts";
 import { PROFILES, getProfile } from "./profile.ts";
 import { polygonProblem } from "./shapes.ts";
 import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type GasFill, type JointInput, type LinkInput, type Vec2, type World } from "./world.ts";
@@ -62,7 +63,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; asteroids?: AsteroidSpec[] };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; asteroids?: AsteroidSpec[] };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -454,6 +455,17 @@ function validateChallenge(v: V, c: unknown, bodies: unknown, path: string): voi
   num(v, c.maxTilt, `${path}.maxTilt`, { min: 0, max: 180 });
 }
 
+function validateDuel(v: V, c: unknown, bodies: unknown, path: string): void {
+  if (!isObj(c)) return err(v, path, "must be an object {kind, player, enemies}");
+  if (c.kind !== "duel") return err(v, `${path}.kind`, 'must be "duel"');
+  const ids = new Set((Array.isArray(bodies) ? bodies.filter(isObj) : []).map((b) => b.id));
+  if (!ids.has(c.player)) err(v, `${path}.player`, "must be the id of a body in the world");
+  if (!Array.isArray(c.enemies) || !c.enemies.length) return err(v, `${path}.enemies`, "must be a list of body ids");
+  c.enemies.forEach((e, i) => {
+    if (!ids.has(e)) err(v, `${path}.enemies[${i}]`, "must be the id of a body in the world");
+  });
+}
+
 function validateCommand(v: V, c: unknown, path: string): void {
   if (!isObj(c)) return err(v, path, "must be an object");
   switch (c.type) {
@@ -679,6 +691,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     }
     if (data.world.bounds !== undefined) validateBounds(v, data.world.bounds, "$.world.bounds");
     if (data.world.challenge !== undefined) validateChallenge(v, data.world.challenge, data.world.bodies, "$.world.challenge");
+    if (data.world.duel !== undefined) validateDuel(v, data.world.duel, data.world.bodies, "$.world.duel");
   }
 
   let endSteps = Infinity;
@@ -788,7 +801,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel },
     getProfile(scn.profile),
   );
 }

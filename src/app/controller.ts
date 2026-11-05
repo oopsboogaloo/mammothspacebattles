@@ -88,7 +88,7 @@ export interface StepRun {
 export function runSteps(world: World, plan: StepPlan, n: number, opts: { deadline?: () => boolean; stopOnVerdict?: boolean } = {}): StepRun {
   const run = startRun(world, plan);
   while (run.steps < n) {
-    const flying = world.challenge?.status.phase === "flying";
+    const flying = undecided(world);
     stepInPlace(world, plan.timeline.get(world.tick) ?? [], plan.profile);
     if (afterStep(run, plan, flying, opts)) break;
   }
@@ -105,11 +105,16 @@ export async function runStepsAsync(
 ): Promise<StepRun> {
   const run = startRun(world, plan);
   while (run.steps < n) {
-    const flying = world.challenge?.status.phase === "flying";
+    const flying = undecided(world);
     await stepInPlaceAsync(world, plan.timeline.get(world.tick) ?? [], plan.profile, runGas);
     if (afterStep(run, plan, flying, opts)) break;
   }
   return run;
+}
+
+/** A challenge or duel still to be decided (a run with `stopOnVerdict` stops when it is). */
+function undecided(world: World): boolean {
+  return world.challenge?.status.phase === "flying" || world.duel?.status.phase === "fighting";
 }
 
 function startRun(world: World, plan: StepPlan): StepRun {
@@ -130,7 +135,7 @@ function afterStep(run: StepRun, plan: StepPlan, flying: boolean, opts: { deadli
     const v = resolveProbe(world, s.path);
     run.samples[s.id].push(typeof v === "number" ? v : NaN);
   }
-  if (opts.stopOnVerdict && flying && world.challenge?.status.phase !== "flying") {
+  if (opts.stopOnVerdict && flying && !undecided(world)) {
     run.verdict = true;
     return true;
   }
