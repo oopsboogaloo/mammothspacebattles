@@ -149,7 +149,8 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
 
     if (t.mode === "tether") {
       const cargo = t.cargo ? byId.get(t.cargo) : undefined;
-      if (pressed || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id)) {
+      // A fresh press lets go; so does losing the control link (TRC-001), the cargo, or the ship's tail.
+      if (pressed || !linked || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id)) {
         ev("tether.release", { id: b.id, cargo: t.cargo ?? "" });
         t.mode = "off";
         t.cargo = undefined;
@@ -157,6 +158,8 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
         continue;
       }
       tether(world, ship, cargo, roots, rbs, dt, ev);
+      // A tether that broke with the control still on stays off until a fresh press (TRC-005, TRC-006).
+      if (t.mode !== "tether") t.latched = on;
       continue;
     }
 

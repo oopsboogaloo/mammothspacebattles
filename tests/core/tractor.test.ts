@@ -127,6 +127,27 @@ describe("tractor beam", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("TRC-005 TRC-006 a tether that breaks with the button held is not taken again until a fresh press", () => {
+    // Close cargo, a weak tether: it breaks at once, and must not re-engage while T stays held.
+    const w = world([ball("ball", 1, 50, 0, -22)], { tether: { maxTension: 500 } });
+    run(w, 240, () => set(1));
+    const engaged = w.events.filter((e) => e.type === "tether.engage").length;
+    expect(w.events.some((e) => e.type === "tether.break")).toBe(true);
+    expect(engaged).toBe(1);
+    expect(at(w, "ship").tractor!.mode).toBe("off");
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("TRC-001 losing the control link lets the cargo go", () => {
+    const w = world([ball("ball", 1, 50, 0, -33)]);
+    engage(w);
+    expect(at(w, "ship").tractor!.mode).toBe("tether");
+    w.links = [];
+    run(w, 2);
+    expect(at(w, "ship").tractor!.mode).toBe("off");
+    expect(w.events.some((e) => e.type === "tether.release")).toBe(true);
+  });
+
   it("TRC-001 a tractor without its control link does nothing", () => {
     const w = createWorld(1, [ship(), ball("ball", 1, 50, 0, -40)]);
     run(w, 30, () => set(1));
