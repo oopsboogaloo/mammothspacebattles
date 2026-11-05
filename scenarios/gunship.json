@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "gunship",
   "title": "Gunship",
-  "description": "The flight-test ship with a gas cannon on its nose, among three drifting, unmanned ships and three asteroids. F fires: the breech burns its charge of hydrogen and oxygen and the gas drives the shell out, and the ship recoils. A magazine in the breech loads the next shell once the bore is clear and the reload time has passed, and the ship's tank refills the charge. Like the engines, the cannon burns its propellant with a 20\u00d7 economy. The shells are part of the ship's mass until they are fired. The asteroids pull every ship and shell gently. Every ship, yours included, has the same material and weld strength, so a weak mount can tear the cannon off under its own recoil. Q and E fire the engines, which have three times FT's thrust to carry the cannon.",
+  "description": "The flight-test ship with a gas cannon on its nose, among three drifting, unmanned ships and three asteroids. F fires: the breech burns its charge of hydrogen and oxygen and the gas drives the shell out, and the ship recoils. A magazine in the breech loads the next shell once the bore is clear and the reload time has passed, and the ship's tank refills the charge. Like the engines, the cannon burns its propellant with a 20× economy. The shells are part of the ship's mass until they are fired. The asteroids pull every ship and shell gently. Every ship, yours included, has the same material and weld strength, so a weak mount can tear the cannon off under its own recoil. Q and E fire the engines, which have three times FT's thrust to carry the cannon.",
   "profile": "sandbox",
   "seed": 31,
   "world": {
@@ -863,6 +863,18 @@
             },
             "restitution": 0,
             "friction": 0.05
+          },
+          "stop": {
+            "shape": {
+              "kind": "box",
+              "width": 0.38,
+              "height": 0.06
+            },
+            "mass": 0.3,
+            "at": {
+              "x": 0,
+              "y": 0.735
+            }
           }
         }
       },
@@ -5594,7 +5606,7 @@
     {
       "id": "material",
       "label": "Material strength",
-      "unit": "\u00d7",
+      "unit": "×",
       "min": 0.05,
       "max": 50,
       "step": 0.05,
@@ -5603,7 +5615,7 @@
     {
       "id": "welds",
       "label": "Weld strength",
-      "unit": "\u00d7",
+      "unit": "×",
       "min": 0.01,
       "max": 100,
       "step": 0.01,

@@ -235,6 +235,15 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       vec(v, m.at, `${mp}.at`);
       num(v, m.angle, `${mp}.angle`);
       num(v, m.reload, `${mp}.reload`, { min: 0 });
+      if (m.stop !== undefined) {
+        if (!isObj(m.stop)) err(v, `${mp}.stop`, "must be {shape, mass, at, angle?}");
+        else {
+          validateShape(v, m.stop.shape, `${mp}.stop.shape`);
+          num(v, m.stop.mass, `${mp}.stop.mass`, { positive: true });
+          vec(v, m.stop.at, `${mp}.stop.at`);
+          if (m.stop.angle !== undefined) num(v, m.stop.angle, `${mp}.stop.angle`);
+        }
+      }
     }
   }
   if (b.material !== undefined) {

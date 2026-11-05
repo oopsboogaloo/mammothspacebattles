@@ -78,6 +78,12 @@ export interface Magazine {
   angle: number;
   /** Seconds after firing stops before the next shell loads. */
   reload: number;
+  /**
+   * A stop that holds a loaded shell in the bore: a block welded in front of it, in this body's frame.
+   * It comes out of this body's own mass when a shell loads, and goes back into it when the fire
+   * command arrives, just before the charge fires, so the shell can't roll out but can be fired.
+   */
+  stop?: { shape: Shape; mass: number; at: Vec2; angle?: number };
   /** State: seconds since the last load; shells loaded so far (names the next). */
   timer: number;
   loaded: number;
@@ -804,6 +810,61 @@ function runMagazines(world: World, dt: number): void {
     b.velocity = { x: (m0 * b.velocity.x - ms * shell.velocity.x) / m1, y: (m0 * b.velocity.y - ms * shell.velocity.y) / m1 };
     addBody(world, shell); // already normalised: normalising again changes nothing
     pushEvent(world, { tick: world.tick, type: "loaded", data: { id: b.id, shell: id, left: mag.count } });
+    if (mag.stop) deployStop(world, b, mag.stop);
+  }
+}
+
+const stopId = (b: Body) => `${b.id}-stop`;
+
+/** Puts a magazine's stop in front of the loaded shell: its mass comes out of the body's own, moving with it. */
+function deployStop(world: World, b: Body, stop: NonNullable<Magazine["stop"]>): void {
+  const id = stopId(b);
+  if (world.bodies.some((x) => x.id === id) || !(b.mass > stop.mass)) return;
+  const q = sinCos(b.angle);
+  const r = rotate(q, stop.at);
+  const body = normalizeBody({ id, shape: structuredClone(stop.shape), mass: stop.mass, position: add(b.position, r), velocity: { x: 0, y: 0 }, angle: b.angle + (stop.angle ?? 0), angularVelocity: b.angularVelocity, restitution: 0, friction: 0.3 });
+  // As a shell loads: the body keeps the momentum the stop doesn't take.
+  const m0 = bodyMass(b);
+  body.velocity = add(b.velocity, { x: -b.angularVelocity * (body.position.y - b.position.y), y: b.angularVelocity * (body.position.x - b.position.x) });
+  b.mass -= stop.mass;
+  const m1 = bodyMass(b);
+  b.velocity = { x: (m0 * b.velocity.x - stop.mass * body.velocity.x) / m1, y: (m0 * b.velocity.y - stop.mass * body.velocity.y) / m1 };
+  addBody(world, body);
+  addJoint(world, { id: `${id}-weld`, a: b.id, b: id, anchorA: { ...stop.at }, anchorB: { x: 0, y: 0 }, limits: { tension: 1e7, compression: 1e7, shear: 1e7, torque: 1e7 } });
+}
+
+/**
+ * Takes a magazine's stop back into its body when the fire command arrives (before the charge fires
+ * this step). Momentum is kept exactly; what kinetic energy the merge loses becomes heat.
+ */
+function retractStops(world: World): void {
+  for (const b of world.bodies) {
+    const mag = b.magazine;
+    const inj = b.injector;
+    if (!mag?.stop || !inj || !((world.controls[inj.channel] ?? 0) > 0)) continue;
+    const id = stopId(b);
+    const stop = world.bodies.find((x) => x.id === id);
+    const weld = world.joints.find((j) => j.id === `${id}-weld`);
+    if (!stop || !weld) continue; // broken off: it is debris now
+    const ke = (x: Body) => {
+      const m = bodyMass(x);
+      return 0.5 * m * (x.velocity.x ** 2 + x.velocity.y ** 2) + 0.5 * massProps(x.shape, m).inertia * x.angularVelocity ** 2;
+    };
+    const before = ke(b) + ke(stop);
+    const m0 = bodyMass(b);
+    const I0 = massProps(b.shape, m0).inertia;
+    const r = sub(stop.position, b.position);
+    const Ls = cross(r, scale(stop.velocity, stop.mass)) + massProps(stop.shape, stop.mass).inertia * stop.angularVelocity;
+    b.mass += stop.mass;
+    const m1 = bodyMass(b);
+    const I1 = massProps(b.shape, m1).inertia;
+    // Momentum, and angular momentum about b's centre, of the two together.
+    b.velocity = { x: (m0 * b.velocity.x + stop.mass * stop.velocity.x) / m1, y: (m0 * b.velocity.y + stop.mass * stop.velocity.y) / m1 };
+    b.angularVelocity = (I0 * b.angularVelocity + Ls) / I1;
+    world.joints = world.joints.filter((j) => j !== weld);
+    world.bodies = world.bodies.filter((x) => x !== stop);
+    world.ledger.thermal += before - ke(b);
+    pushEvent(world, { tick: world.tick, type: "unlatched", data: { id: b.id } });
   }
 }
 
@@ -1027,6 +1088,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   }
   if (world.bodies.some((b) => b.magazine)) {
     const t0 = computeTotals(world);
+    retractStops(world);
     runMagazines(world, dt);
     const t1 = computeTotals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;

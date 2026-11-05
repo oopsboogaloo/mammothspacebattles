@@ -159,3 +159,32 @@ describe("gunship 2 (GS2)", () => {
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 });
+
+describe("magazine stop", () => {
+  it("WPN-001 a stop holds the loaded shell in the bore through hard turns, and retracts when the fire command comes", () => {
+    const w = initialWorld(parseScenario(readJson(join(ROOT, "scenarios", "gunship-2.json"))));
+    const set = (channel: string, value: number) => ({ type: "control.set" as const, channel, value });
+    const breech = () => w.bodies.find((b) => b.id === "breech")!;
+    const dryBefore = breech().mass;
+    stepInPlace(w, [set("left", 1)], sandbox);
+    const stop = w.bodies.find((b) => b.id === "breech-stop")!;
+    expect(stop).toBeDefined(); // deployed with the first shell, out of the breech's own mass
+    expect(breech().mass).toBeCloseTo(dryBefore - stop.mass, 12);
+    // Along the bore, from the breech: where the shell sits.
+    const along = () => {
+      const b = breech();
+      const s = w.bodies.find((x) => x.id === "breech-shell-1")!;
+      return -Math.sin(b.angle) * (s.position.x - b.position.x) + Math.cos(b.angle) * (s.position.y - b.position.y);
+    };
+    // Hard turns one way, then the other, without firing: the shell stays put.
+    for (let i = 1; i < 720; i++) stepInPlace(w, i === 360 ? [set("left", 0), set("right", 1)] : [], sandbox);
+    expect(Math.abs(along() - 0.55)).toBeLessThan(0.25);
+    expect(w.bodies.filter((b) => b.id.startsWith("breech-shell"))).toHaveLength(1); // none lost, none reloaded
+    // Fire: the stop goes back into the breech, and the shell leaves fast.
+    for (let i = 0; i < 240; i++) stepInPlace(w, i === 0 ? [set("right", 0), set("fire", 1)] : i === 12 ? [set("fire", 0)] : [], sandbox);
+    expect(w.events.some((e) => e.type === "unlatched")).toBe(true);
+    const s = w.bodies.find((b) => b.id === "breech-shell-1")!;
+    expect(Math.hypot(s.velocity.x - breech().velocity.x, s.velocity.y - breech().velocity.y)).toBeGreaterThan(30);
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+});
