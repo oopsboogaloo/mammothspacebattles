@@ -62,7 +62,11 @@ jobs:
           for i in 1 2 3; do
             timeout 600 pnpm exec playwright install --with-deps ${{ matrix.browser }} && exit 0
             echo "Install attempt $i failed or timed out; retrying"
+            # A timed-out install leaves its apt-get running, holding the dpkg lock: stop it first.
+            sudo pkill -9 -x apt-get || true
+            sudo pkill -9 -x dpkg || true
             sleep $((i * 15))
+            sudo dpkg --configure -a || true
           done
           exit 1
       - name: Browser tests (SBX-041)
