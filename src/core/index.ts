@@ -7,6 +7,7 @@ export * from "./formula.ts";
 export * from "./gas.ts";
 export { canHold, vesselPressure, vesselShape, type Vessel, type VesselShape } from "./vessel.ts";
 export { explosiveEnergy, GURNEY, MAX_FRAGMENTS, type Blast, type Explosive } from "./explosive.ts";
+export { learnShip, PILOT_DEFAULTS, pilotChannels, type Pilot, type PilotGoal, type PilotInput, type ThrustChannel } from "./pilot.ts";
 export { COLLECTOR_DEFAULTS, collectorMouth, type Collector, type CollectorInput } from "./collector.ts";
 export { TRACTOR_DEFAULTS, tractorFrame, type Tether, type Tractor, type TractorInput } from "./tractor.ts";
 export * from "./joints.ts";

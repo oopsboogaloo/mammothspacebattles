@@ -26,6 +26,7 @@ const ORDER: [string, string][] = [
   ["gunship-blast", "GS-X"],
   ["tractor", "TRC"],
   ["base", "BASE"],
+  ["ai-flight", "AI-1"],
   ["asteroid-collision", "AST-C"],
   ["rs02-off-centre-impact", "RS-02"],
   ["rs03-bullet-thin-wall", "RS-03"],
