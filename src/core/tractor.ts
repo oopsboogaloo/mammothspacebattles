@@ -68,7 +68,7 @@ export const TRACTOR_DEFAULTS: Omit<Tractor, "channel" | "origin" | "direction">
   arc: Math.PI / 6,
   force: 400,
   capture: 1.2,
-  tether: { length: 20, stiffness: 2000, damping: 0.7, maxTension: 20000 },
+  tether: { length: 15, stiffness: 2000, damping: 0.7, maxTension: 20000 },
   mode: "off",
   held: false,
   latched: false,

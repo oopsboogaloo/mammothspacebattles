@@ -3524,7 +3524,7 @@
       "min": 5,
       "max": 50,
       "step": 1,
-      "default": 20
+      "default": 15
     },
     {
       "id": "maxTension",
