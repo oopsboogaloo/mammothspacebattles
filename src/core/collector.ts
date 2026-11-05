@@ -6,7 +6,7 @@
 // on its nearest piece. The tether is the ship's spring model (TRC-004), much softer, so it gives
 // way to a ship still holding the same cargo: both act, and all three are connected. Its rest
 // length starts at the distance it was taken at and shortens at `reel` m/s. Reeled in all the way,
-// with the piece within `capture` of the mouth, the cargo is captured: the whole assembly leaves
+// with the piece's edge within `capture` of the mouth, the cargo is captured: the whole assembly leaves
 // the world, and its mass is added to what the collector has delivered, by mineral ("rock" for
 // none). A force past `maxTension` breaks the tether.
 //
@@ -15,6 +15,7 @@
 
 import { add, cross, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { assemblyRoots } from "./joints.ts";
+import { bodyMass } from "./bodies.ts";
 import { groupOf, invMassAlong, push } from "./tractor.ts";
 import type { RB } from "./physics.ts";
 import type { Body, World } from "./world.ts";
@@ -32,7 +33,7 @@ export interface Collector {
   damping: number;
   /** Reel-in speed, m/s. */
   reel: number;
-  /** Captured once reeled in with the piece within this of the mouth, m. */
+  /** Captured once reeled in with the piece's edge within this of the mouth, m. */
   capture: number;
   /** Largest force before the tether breaks, N. */
   maxTension: number;
@@ -120,7 +121,9 @@ export function applyCollectors(world: World, rbs: RB[], dt: number): { impulse:
     c.length = Math.max(0, c.length - c.reel * dt);
     const d = sub(cargo.body.position, mouth);
     const dist = length(d);
-    if (c.length === 0 && dist <= c.capture) {
+    // In all the way: its centre within `capture` of the mouth, plus its own reach, so a big piece
+    // resting in the bowl counts.
+    if (c.length === 0 && dist <= c.capture + cargo.radius) {
       c.captured = c.cargo;
       continue;
     }
@@ -171,9 +174,10 @@ export function collectCaptured(world: World): boolean {
     for (const b of world.bodies) {
       if (!gone.has(b.id)) continue;
       const kind = b.mineral ?? "rock";
-      kinds[kind] = (kinds[kind] ?? 0) + b.mass;
-      c.delivered[kind] = (c.delivered[kind] ?? 0) + b.mass;
-      mass += b.mass;
+      const m = bodyMass(b); // stores and all: everything that leaves the world is delivered
+      kinds[kind] = (kinds[kind] ?? 0) + m;
+      c.delivered[kind] = (c.delivered[kind] ?? 0) + m;
+      mass += m;
     }
     world.bodies = world.bodies.filter((b) => !gone.has(b.id));
     world.joints = world.joints.filter((j) => !gone.has(j.a) && !gone.has(j.b));

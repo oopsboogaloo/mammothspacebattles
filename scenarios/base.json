@@ -1163,7 +1163,7 @@
           "x": 0,
           "y": 0
         },
-        "angle": -0.35,
+        "angle": 0.35,
         "angularVelocity": 0,
         "restitution": 0.1,
         "friction": 0.8
@@ -1185,7 +1185,7 @@
           "x": 0,
           "y": 0
         },
-        "angle": 0.35,
+        "angle": -0.35,
         "angularVelocity": 0,
         "restitution": 0.1,
         "friction": 0.8

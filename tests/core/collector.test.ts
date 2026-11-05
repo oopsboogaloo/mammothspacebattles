@@ -12,8 +12,8 @@ const ball = (id: string, radius: number, mass: number, x: number, y: number, ov
 const cup = (over: Record<string, unknown> = {}): BodyInput[] =>
   [
     { ...box("cup-floor", 6, 0.6, { fixed: true, position: { x: 0, y: 0 } }), collector: { mouth: { x: 0, y: 1.5 }, ...over } },
-    box("cup-left", 0.6, 4, { fixed: true, position: { x: -3.6, y: 1.6 }, angle: -0.35 } as never),
-    box("cup-right", 0.6, 4, { fixed: true, position: { x: 3.6, y: 1.6 }, angle: 0.35 } as never),
+    box("cup-left", 0.6, 4, { fixed: true, position: { x: -3.6, y: 1.6 }, angle: 0.35 } as never),
+    box("cup-right", 0.6, 4, { fixed: true, position: { x: 3.6, y: 1.6 }, angle: -0.35 } as never),
   ] as never;
 const collector = (w: World) => at(w, "cup-floor")!.collector!;
 const run = (w: World, steps: number, cmds: (i: number) => Command[] = () => []) => {
@@ -71,6 +71,15 @@ describe("collector", () => {
     for (let i = 0; i < 9600 && at(w, "nugget"); i++) stepInPlace(w, [], sandbox);
     expect(at(w, "nugget")).toBeUndefined();
     expect(collector(w).delivered.gold).toBe(20);
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("BAS-004 cargo as big as the cup takes reaches the bowl and is captured; stores count in what is delivered", () => {
+    const w = createWorld(1, [...cup(), ball("big", 2.9, 30, 0, 7), ball("tank", 0.5, 1, -6, 6, { contents: [{ resource: "h2", mass: 9, capacity: 9 }] })]);
+    for (let i = 0; i < 24000 && (at(w, "big") || at(w, "tank")); i++) stepInPlace(w, [], sandbox);
+    expect(at(w, "big")).toBeUndefined();
+    expect(at(w, "tank")).toBeUndefined();
+    expect(collector(w).delivered.rock).toBeCloseTo(40, 9); // 30 kg, and the tank's 1 kg with its 9 kg of hydrogen
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 
