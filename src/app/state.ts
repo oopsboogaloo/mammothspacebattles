@@ -65,6 +65,8 @@ export const gasOptions = signal<{ mode: "fill" | "clear"; temperature: number; 
 });
 /** How parcels are coloured (SBX-035). */
 export const gasColour = signal<"temperature" | "composition">("temperature");
+/** Gas drawn as a glowing plume, or as dots (SBX-035). */
+export const gasStyle = signal<"plume" | "dots">("plume");
 /** Keyboard key (lower case) → control channel (SBX-020). */
 export const bindings = signal<Record<string, string>>(prefs.bindings ?? {});
 /** Key waiting to be captured for a channel, while the user presses "Bind key". */

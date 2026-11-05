@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fitBounds, toScreen, toWorld, worldBounds, zoomAt } from "../../src/app/camera.ts";
 import { fmt, plain } from "../../src/app/format.ts";
-import { assemblyCentres, renderFrame, wrapImages, type Ctx } from "../../src/app/render.ts";
+import { assemblyCentres, flameColour, GLOW_FROM, renderFrame, wrapImages, type Ctx } from "../../src/app/render.ts";
 import { createWorld, getProfile, stepInPlace } from "../../src/core/index.ts";
 import { box, disc } from "../helpers.ts";
 
@@ -120,5 +120,28 @@ describe("number formatting", () => {
     expect(fmt(-2.5, "m/s", 5)).toBe("-2.5000 m/s");
     expect(plain(2.5)).toBe("2.5");
     expect(plain(1)).toBe("1");
+  });
+});
+
+describe("gas plume", () => {
+  it("SBX-035 the plume's colours: hot gas glows white-yellow through orange and red, cooler gas is faint grey smoke", () => {
+    const rgb = (T: number) => flameColour(T).colour.slice(4, -1).split(",").map(Number);
+    expect(flameColour(3000).glow).toBe(true);
+    expect(rgb(3000)[2]).toBeGreaterThan(180); // near white
+    expect(flameColour(1300).glow).toBe(true);
+    expect(rgb(1300)[0]).toBeGreaterThan(rgb(1300)[2] + 100); // red-orange
+    expect(flameColour(GLOW_FROM - 1).glow).toBe(false);
+    const grey = rgb(400);
+    expect(Math.max(...grey) - Math.min(...grey)).toBeLessThan(20); // grey
+    expect(flameColour(400).alpha).toBeLessThan(flameColour(2500).alpha); // smoke is fainter than flame
+    expect(flameColour(2500).alpha).toBeGreaterThan(flameColour(1200).alpha); // hotter glows brighter
+  });
+
+  it("TST-011 SBX-035 a context that can't draw the plume (a recorder) gets dots, so rendering stays testable", () => {
+    const w = createWorld(1, []);
+    w.gas.parcels = [{ id: 1, mass: 0.001, composition: { h2o: 1 }, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, thermal: 3, radius: 0.05 }];
+    const { ctx, calls } = recorder();
+    renderFrame(ctx, w, { x: 0, y: 0, zoom: 100 }, { width: 200, height: 200 }, { overlays: new Set(), selection: new Set(), hover: null, gasStyle: "plume" });
+    expect(calls.some((c) => c.startsWith("arc(100,100"))).toBe(true);
   });
 });

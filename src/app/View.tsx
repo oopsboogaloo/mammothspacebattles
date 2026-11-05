@@ -25,7 +25,7 @@ import { SimClient } from "./simClient.ts";
 import { fmt } from "./format.ts";
 import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
 import { ENGINE, engineFor, HULL, TANK, withFreshChannels } from "./parts.ts";
-import { COLORS, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, type PortMarker, type Preview, type RulerView } from "./render.ts";
+import { COLORS, FLAME, GLOW_FROM, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, temperatureFraction, type PortMarker, type Preview, type RulerView } from "./render.ts";
 import {
   achieved,
   bump,
@@ -38,6 +38,7 @@ import {
   followId,
   freshId,
   gasColour,
+  gasStyle,
   gasOptions,
   hover,
   overlays,
@@ -294,6 +295,7 @@ export function View() {
         ports: portMarkers.current,
         highlight: highlight.current ?? undefined,
         gasColour: gasColour.value,
+        gasStyle: gasStyle.value,
         pad: sb.world.challenge?.goal.pad,
         // In a challenge the parts' ids are clutter: the pad is marked instead.
         labels: !sb.world.challenge && sb.scenario.ui?.labels !== false,
@@ -910,10 +912,14 @@ export function View() {
   );
 }
 
-/** Colour scale for gas parcels, with the temperature / composition switch (SBX-035). */
+/** Colour scale for gas parcels, with the temperature / composition and plume / dots switches (SBX-035). */
 function GasScale() {
   const mode = gasColour.value;
+  const style = gasStyle.value;
   const ticks = [50, 100, 300, 1000, 3000];
+  const plume = style === "plume" && mode === "temperature";
+  // The plume's legend: flame colours on the same log scale, smoke below GLOW_FROM.
+  const flameRamp = FLAME.map(([t, col]) => `${col} ${(temperatureFraction(t) * 100).toFixed(1)}%`).join(", ");
   return (
     <div class="gas-scale" aria-label="Gas colour scale" data-testid="gas-scale" onPointerDown={(e) => e.stopPropagation()}>
       <div class="gas-scale-head">
@@ -921,10 +927,15 @@ function GasScale() {
         <button class="btn small" onClick={() => (gasColour.value = mode === "temperature" ? "composition" : "temperature")} data-testid="gas-colour" title="Colour parcels by temperature or by composition">
           {mode === "temperature" ? "Temperature" : "Composition"}
         </button>
+        {mode === "temperature" && (
+          <button class="btn small" onClick={() => (gasStyle.value = style === "plume" ? "dots" : "plume")} data-testid="gas-style" title="Draw the gas as a glowing plume, or as one dot per parcel" aria-pressed={style === "plume"}>
+            {style === "plume" ? "Plume" : "Dots"}
+          </button>
+        )}
       </div>
       {mode === "temperature" ? (
         <>
-          <div class="gas-ramp" style={{ background: `linear-gradient(to right, ${T_RAMP.join(", ")})` }} />
+          <div class="gas-ramp" style={{ background: plume ? `linear-gradient(to right, ${flameRamp})` : `linear-gradient(to right, ${T_RAMP.join(", ")})` }} />
           <div class="gas-ticks">
             {ticks.map((t) => (
               <span key={t} style={{ left: `${(Math.log(t / T_MIN) / Math.log(T_MAX / T_MIN)) * 100}%` }}>
@@ -932,7 +943,7 @@ function GasScale() {
               </span>
             ))}
           </div>
-          <div class="muted">kelvin, log scale · darker is colder</div>
+          <div class="muted">{plume ? `kelvin, log scale · glows above ${GLOW_FROM} K, grey smoke below` : "kelvin, log scale · darker is colder"}</div>
         </>
       ) : (
         <div class="gas-species">

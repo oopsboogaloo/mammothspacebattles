@@ -296,6 +296,11 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **SBX-033** `[M · M1 · E]` The sandbox shall show live graphs of ledger totals and probes, with a selectable time window, hover readout, and a cursor synced to the scrub bar.
 - **SBX-034** `[M · M1 · E]` When a conservation violation occurs, the sandbox shall increment the top-bar badge. Clicking an entry shall jump to that step and select the entities involved.
 - **SBX-035** `[S · M3 · E]` The sandbox shall render gas parcels coloured by temperature or composition (selectable), with a colour scale shown.
+  - *Plume (added 2026-11):* by default, gas coloured by temperature is drawn as a plume rather than dots.
+    - **Drawing:** each parcel is a soft blob as wide as the space its parcel has (from a count of parcels on a 0.4 m grid), drawn at a quarter of the screen's resolution, blurred, and stretched over the scene. Gas that has spread out draws bigger and fainter.
+    - **Colours:** hot gas glows and adds light, white-yellow above about 2,700 K through orange and red; gas below 800 K is faint grey smoke laid over the scene.
+    - **Switch and fallback:** the switch beside the colour scale gives dots. Composition colours, and canvases that can't draw images (test recorders), use dots.
+    - **Cost:** it is drawing only: physics and replays are unchanged. In headless Chromium without a GPU, Gunship 2 firing draws at 47 fps as a plume against 54 as dots.
 - **SBX-036** `[M · M1 · E]` Hovering any entity shall show a compact readout of its type, mass, speed and spin.
 - **SBX-037** `[S · M1 · E]` The sandbox shall keep an event log (collisions above a threshold, joint breaks, ignitions, violations). Clicking an event jumps to its step.
 - **SBX-038** `[M · M1 · R]` Overlays and status colours shall be distinguishable by colour-blind users, using a colour-blind-safe palette plus shape or line-style redundancy.
