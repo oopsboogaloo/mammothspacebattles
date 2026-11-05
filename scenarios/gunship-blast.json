@@ -1614,7 +1614,7 @@
         "density": 100,
         "material": { "name": "rock", "threshold": 10, "toughness": 200 },
         "bond": {
-          "$expr": "2000 * bond"
+          "$expr": "100000 * bond"
         },
         "position": {
           "x": -12,
@@ -1637,7 +1637,7 @@
         "density": 100,
         "material": { "name": "rock", "threshold": 10, "toughness": 200 },
         "bond": {
-          "$expr": "2000 * bond"
+          "$expr": "100000 * bond"
         },
         "position": {
           "x": 14,
@@ -1660,7 +1660,7 @@
         "density": 100,
         "material": { "name": "rock", "threshold": 10, "toughness": 200 },
         "bond": {
-          "$expr": "2000 * bond"
+          "$expr": "100000 * bond"
         },
         "position": {
           "x": 2,
@@ -1683,7 +1683,7 @@
         "density": 100,
         "material": { "name": "rock", "threshold": 10, "toughness": 200 },
         "bond": {
-          "$expr": "2000 * bond"
+          "$expr": "100000 * bond"
         },
         "position": {
           "x": -24,
