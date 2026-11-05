@@ -608,7 +608,7 @@ Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but n
 - **AIP-001** `[M · M8 · U]` A pilot shall fly only through the ship's control channels, as a player does: the same engines, cannon and tractor, the same physics, no forces or knowledge a player's ship doesn't have. It never moves bodies or changes the world directly.
 - **AIP-002** `[M · M8 · D]` Pilots shall run inside the core's step, as a pure function of the world (their own state included) and the world's PRNG, at a fixed decision rate. A world with pilots replays, scrubs, branches and runs in the worker exactly as one without (DET).
 - **AIP-003** `[M · M8 · U]` Each ship's channels shall be its own (for example `e1.left`), so many ships, flown by pilots or by the player, never share a control.
-- **AIP-004** `[M · M8 · S]` A pilot shall learn the ship it is given before flying it: what each channel does to the ship's acceleration and turn rate, how fast its shells leave the barrel, where its beam and tether are. It finds out by trying its controls in a private copy of the world (calibration), not from the ship's design, so a damaged or unusual ship is learned as it is. It recalibrates when the ship changes (a part lost, a store empty).
+- **AIP-004** `[M · M8 · S]` A pilot shall learn the ship it is given before flying it: what each channel does to the ship's acceleration and turn rate, how fast its shells leave the barrel, where its beam and tether are. It learns this from the ship's design (its parts, engines, cannon and tractor, and where they sit about the centre of mass), and learns again when the ship changes (a part lost, a store empty). Trying its controls in a private copy of the world (calibration) is a fallback for ships whose design doesn't say enough.
 
 **Skills**
 - **AIP-005** `[M · M8 · S]` A pilot shall have a flight skill and a combat skill, each from 0 (novice) to 1 (ace), independent of each other.
@@ -630,11 +630,11 @@ Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but n
 - **AIP-015** `[M · M8 · S]` A pilot shall have one behaviour mode at a time, set in the scenario and changeable while running:
   - **Ignoring:** flies a route of waypoints in turn (looping or not), and ignores the player and every other ship, apart from not hitting them.
   - **Evading:** does what its *underlying* mode says (by default Ignoring), but when the player comes within a threat distance and is closing, it moves away until the distance is safe again, then carries on. Evading is a modifier on another mode.
-  - **Mining:** picks an asteroid, keeps a safe distance from it and shoots it until pieces break off, picks a piece small enough to tow, tethers it and tows it to a drop point (its base or a collector), lets it go, and starts again. All slowly and carefully: low speeds, wide margins.
-  - **Cautious:** goes about its route, but keeps its nose toward the player while the player is near. It fires on the player only after the player has fired toward it: a shell whose path passes within a set distance of it, or any hit. It holds that grudge for a time, then calms down.
+  - **Mining:** picks an asteroid, keeps a safe distance from it and shoots it until pieces break off, picks a piece small enough to tow, tethers it and tows it to the sector's exit, and leaves with it: it has gone home. All slowly and carefully: low speeds, wide margins.
+  - **Cautious:** goes about its route, but keeps its nose toward the player while the player is near. It fires on the player only after the player has fired toward it: a player's shell whose path passes within 4 ship widths of it, or any hit. The rage lasts a minute, then it calms down.
   - **Hunting:** attacks any ship it sees that isn't on its side, and pursues it: closes to firing range, keeps there, and fires.
-  - **Mad:** irrational. It changes to a random other mode every minute (from the world's PRNG, so replays agree).
-- **AIP-016** `[M · M8 · S]` *Seeing:* a pilot knows about ships and rocks within its sensor range. Sides: each ship belongs to a side (the player's, or a named faction); Hunting attacks other sides only, and Cautious and Evading react to the player.
+  - **Mad:** irrational. It changes to a random other mode every minute (from the world's PRNG, so replays agree), and may turn on its own side.
+- **AIP-016** `[M · M8 · S]` *Seeing:* a pilot knows about ships and rocks within its detection radius, rocks or no rocks in the way. Sides: each ship belongs to a side (the player's, or a named faction); Hunting attacks other sides only, and Cautious and Evading react to the player. (Later, line of sight, so that hiding behind rocks becomes stealth play.)
 
 **Sandbox and tests**
 - **AIP-017** `[M · M8 · E]` The sandbox shall show each pilot's mode, skills and current intention (target, waypoint, state) in the inspector, and optionally draw its plan (route, aim point, line of fire) as an overlay. Mode and skills can be changed live.
@@ -647,14 +647,14 @@ Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but n
   - an evader keeps its distance from a pursuing ship;
   - a mad ship changes mode every 60 s.
 
-*Open questions (to settle in the plan).*
-- Is a pilot a component on a ship body (like a tractor), so it is lost if that part is wrecked (a cockpit, §9.9)? Or is it attached to the assembly?
-- Calibration in a private copy of the world is honest and general, but costs a copy and some steps. Is learning from the ship's geometry an acceptable shortcut for intact ships?
-- Should pilots have perfect sight within range, or need a line of sight past rocks?
-- How exactly "fired toward it" is judged for Cautious, and how long a grudge lasts.
-- Should skills also slow its reaction to a new threat (human-like delay), and should it make mistakes on purpose at low skill?
-- Mining's drop point: its own base's collector when there is one, else a set point?
-- Can Mad pick Hunting against its own side?
+*Decided (November 2026).*
+- **Who flies.** The pilot will be a creature, often a small woolly mammoth, sitting in a cockpit: a component still to design (§9.9). Until then the pilot is a computer built into the ship, on the ship as a whole.
+- **Learning a ship** from its design is fine (AIP-004).
+- **Seeing** is a detection radius to start; line of sight later, for stealth play (AIP-016).
+- **Fired toward:** a shell passing within 4 ship widths. A cautious ship's rage lasts a minute.
+- **Human failings:** low skill should both react slowly and make mistakes on purpose. How to model these simply is for the design: options include deciding from a delayed view of the world, deciding less often, noise on aim and controls, and occasional deliberate errors (misjudged distance, firing early), each scaled by (1 − skill) and drawn from the world's PRNG.
+- **Sectors:** ships will come and go through a sector's exits (to specify). A miner tows its rock to an exit and leaves; it has gone home.
+- **Mad** may hunt its own side.
 
 ## 10. Performance Requirements
 
