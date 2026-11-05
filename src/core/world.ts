@@ -70,7 +70,7 @@ export interface Body {
   /** What it is made of, if valuable (AST-006): "gold". Drawn in its colour once it can be seen. */
   mineral?: string;
   /** Part of a larger asteroid fragment whose seams don't show yet (AST-007): see asteroid.ts. */
-  compound?: { id: string; reveal: number };
+  compound?: { id: string; reveal: number; seams?: number };
 }
 
 /**

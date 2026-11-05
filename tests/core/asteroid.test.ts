@@ -138,6 +138,18 @@ describe("asteroid minerals and larger fragments", () => {
     expect(revealCompounds(w)).toEqual([]); // nothing left to show
   });
 
+  it("AST-007 a larger fragment whose hidden seam breaks shows its seams, with no damage to its pieces", () => {
+    // No material: damage can never reveal it, so a broken seam must.
+    const a = generateAsteroid({ ...rich, material: undefined });
+    const w = createWorld(1, a.bodies, { x: 0, y: 0 }, { joints: a.joints });
+    const seam = w.joints.find((j) => j.hidden)!;
+    const cid = w.bodies.find((b) => b.id === seam.a)!.compound!.id;
+    w.joints = w.joints.filter((j) => j !== seam); // as if it broke under load
+    stepInPlace(w, [], sandbox);
+    expect(w.bodies.some((b) => b.compound?.id === cid)).toBe(false);
+    expect(w.events.some((e) => e.type === "compound.reveal" && e.data.id === cid)).toBe(true);
+  });
+
   it("AST-006 AST-007 the asteroid scenarios carry gold and larger fragments", () => {
     for (const file of ["gunship-rubble", "gunship-blast", "tractor"]) {
       const w = initialWorld(parseScenario(readJson(join(ROOT, "scenarios", `${file}.json`))));

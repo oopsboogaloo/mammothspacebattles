@@ -11,7 +11,7 @@
 // denser than rock and much tougher, drawn gold. `compounds` larger fragments are each a few
 // neighbouring pieces welded with hidden seams, `seamStrength` times as strong as a bond: they
 // hold together and are drawn as one piece. Once a larger fragment has lost `reveal` of its
-// integrity (by mass), or one of its pieces is wrecked, its seams show and take ordinary bond
+// integrity (by mass), one of its pieces is wrecked, or one of its seams breaks, its seams show and take ordinary bond
 // limits, so it can break up further. A gold piece inside one is drawn as rock until then.
 
 import { add, cross, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
@@ -215,17 +215,19 @@ export function generateAsteroid(spec: AsteroidSpec): { bodies: BodyInput[]; joi
       group.push(edge[pick(edge.length)]);
     }
     if (group.length < 2) continue;
-    const compound = { id: `${spec.id}-c${c}`, reveal: spec.reveal ?? 0.25 };
-    for (const g of group) {
-      used.add(g);
-      byId.get(g)!.compound = { ...compound };
-    }
     const k = spec.seamStrength ?? 20;
+    let seams = 0;
     for (const j of joints) {
       if (!group.includes(j.a) || !group.includes(j.b)) continue;
       const l = j.limits as Required<NonNullable<JointInput["limits"]>>;
       j.hidden = { ...l };
       j.limits = { tension: l.tension * k, compression: l.compression * k, shear: l.shear * k, torque: l.torque * k };
+      seams++;
+    }
+    const compound = { id: `${spec.id}-c${c}`, reveal: spec.reveal ?? 0.25, seams };
+    for (const g of group) {
+      used.add(g);
+      byId.get(g)!.compound = { ...compound };
     }
   }
   // Gold: denser and much tougher than the rock round it.
@@ -252,8 +254,11 @@ export function revealCompounds(world: World): string[] {
   for (const [cid, members] of groups) {
     const mass = members.reduce((s, b) => s + b.mass, 0);
     const lost = members.reduce((s, b) => s + b.mass * (1 - b.integrity), 0) / mass;
-    if (!(lost >= members[0].compound!.reveal) && !members.some((b) => b.integrity <= 0)) continue;
     const ids = new Set(members.map((b) => b.id));
+    // A seam that broke (overload, or a piece detached) splits it open too.
+    const { reveal, seams } = members[0].compound!;
+    const split = seams !== undefined && world.joints.filter((j) => j.hidden && ids.has(j.a) && ids.has(j.b)).length < seams;
+    if (!(lost >= reveal) && !members.some((b) => b.integrity <= 0) && !split) continue;
     for (const j of world.joints) {
       if (!j.hidden || !(ids.has(j.a) || ids.has(j.b))) continue;
       j.limits = j.hidden;
