@@ -61,3 +61,20 @@ test("FLT-002 Gunship 2 opens with its engines either side of the hull and the c
   expect(breech.position.y).toBeLessThan(1.5);
   await shot(page, info, "gunship-2");
 });
+
+test("WPN-005 WPN-006 the explosive cannon test: the shell bursts on the ship into fragments and a flash of gas, and wrecks parts", async ({ page }, info) => {
+  await openStarter(page, "cannon-explosive");
+  // Step to past the strike (fired at step 120, it strikes at about 288, the gas comes out a step later).
+  for (let i = 0; i < 31; i++) await page.getByTestId("step10").click();
+  await waitForTick(page, 310);
+  const w = await page.evaluate(() => {
+    const s = (window as unknown as { __msb: { sandbox: () => { world: { events: { type: string; data: Record<string, unknown> }[]; bodies: { id: string }[]; gas: { parcels: { composition: Record<string, number> }[] }; ledger: { violations: number } } } } }).__msb.sandbox().world;
+    return { det: s.events.filter((e) => e.type === "detonation").length, destroyed: s.events.filter((e) => e.type === "destroyed").length, fragments: s.bodies.filter((b) => /^shell-f\d+$/.test(b.id)).length, blast: s.gas.parcels.filter((p) => p.composition.co2).length, violations: s.ledger.violations };
+  });
+  expect(w.det).toBe(1);
+  expect(w.fragments).toBe(6);
+  expect(w.blast).toBeGreaterThan(0);
+  expect(w.destroyed).toBeGreaterThan(2);
+  expect(w.violations).toBe(0);
+  await shot(page, info, "cannon-explosive-burst");
+});

@@ -221,6 +221,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
     }
   }
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
+  if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.magazine !== undefined) {
     const m = b.magazine;
     const mp = `${path}.magazine`;
@@ -231,6 +232,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       else {
         validateShape(v, m.shell.shape, `${mp}.shell.shape`);
         num(v, m.shell.mass, `${mp}.shell.mass`, { positive: true });
+        if (m.shell.explosive !== undefined) validateExplosive(v, m.shell.explosive, m.shell.mass, `${mp}.shell.explosive`);
       }
       vec(v, m.at, `${mp}.at`);
       num(v, m.angle, `${mp}.angle`);
@@ -265,6 +267,15 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       if (okM && okC && (s.mass as number) > (s.capacity as number)) err(v, `${sp}.mass`, "must not exceed capacity");
     });
   }
+}
+
+function validateExplosive(v: V, e: unknown, mass: unknown, path: string): void {
+  if (!isObj(e)) return err(v, path, "must be {charge, heat?, fragments?, radius?, arm?}");
+  if (num(v, e.charge, `${path}.charge`, { positive: true }) && typeof mass === "number" && (e.charge as number) > mass) err(v, `${path}.charge`, "must not exceed the shell's mass");
+  if (e.heat !== undefined) num(v, e.heat, `${path}.heat`, { positive: true });
+  if (e.fragments !== undefined) num(v, e.fragments, `${path}.fragments`, { int: true, min: 0, max: 8 });
+  if (e.radius !== undefined) num(v, e.radius, `${path}.radius`, { positive: true });
+  if (e.arm !== undefined) num(v, e.arm, `${path}.arm`, { min: 0 });
 }
 
 function validateInjector(v: V, i: unknown, path: string): void {

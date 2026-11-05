@@ -6,6 +6,7 @@ export * from "./damage.ts";
 export * from "./formula.ts";
 export * from "./gas.ts";
 export { canHold, vesselPressure, vesselShape, type Vessel, type VesselShape } from "./vessel.ts";
+export { explosiveEnergy, GURNEY, MAX_FRAGMENTS, type Blast, type Explosive } from "./explosive.ts";
 export * from "./joints.ts";
 export * from "./landing.ts";
 export * from "./bodies.ts";

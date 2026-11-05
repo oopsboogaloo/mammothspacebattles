@@ -16,6 +16,7 @@ import { burn, clearOf, emptyGas, igniteAndBurn, clusterGas, makeFill, mixture, 
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
+import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -60,6 +61,8 @@ export interface Body {
   breach?: Breach;
   /** Shells it carries and loads into place one at a time (WPN, first look). */
   magazine?: Magazine;
+  /** An explosive charge that detonates on impact (WPN): see explosive.ts. */
+  explosive?: Explosive;
 }
 
 /**
@@ -285,6 +288,8 @@ export interface World {
   pendingDebug: string[];
   /** A landing challenge, judged after every step (FLT-005). */
   challenge?: Challenge;
+  /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
+  blasts?: Blast[];
 }
 
 /** Commands are the only way to change a world other than stepping it. */
@@ -368,7 +373,7 @@ export function createWorld(
   return world;
 }
 
-function compareIds(a: string, b: string): number {
+export function compareIds(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
@@ -795,6 +800,8 @@ function runMagazines(world: World, dt: number): void {
     const id = `${b.id}-shell-${mag.loaded + 1}`;
     // The shell as it will be: a polygon is moved to its centroid, so check the bore where it really lands.
     const shell = normalizeBody({ ...structuredClone(mag.shell), id, position: add(b.position, rotate(q, mag.at)), velocity: { x: 0, y: 0 }, angle, angularVelocity: b.angularVelocity });
+    // An explosive shell remembers its gun, and arms once it has left it.
+    if (shell.explosive) shell.explosive = { ...shell.explosive, from: b.id, armed: false };
     // Loading into an occupied bore would push bodies apart violently: wait until it is clear.
     const placedShell = { shape: shell.shape, position: shell.position, rot: sinCos(angle) };
     if (world.bodies.some((o) => { const m = collide(placedShell, { shape: o.shape, position: o.position, rot: sinCos(o.angle) }, 0, 0); return m !== null && m.points.some((p) => p.separation < -1e-3); })) continue;
@@ -1183,6 +1190,19 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   after = computeTotals(world);
   sources.correction.angularMomentum = after.angularMomentum - before.angularMomentum;
   sources.correction.energy = after.energy.total - before.energy.total;
+
+  // Explosive shells that struck something detonate (WPN): fragments and blast gas take the charge's
+  // energy exactly. Angular momentum and potential energy shift a little as the shell's mass leaves
+  // its centre; that is recorded as a transfer.
+  if (world.bodies.some((b) => b.explosive) || world.blasts?.length) {
+    before = after;
+    const released = releaseBlasts(world, dt);
+    if (detonate(world, world.joints.length ? assemblyRoots(world) : null, dt).length + released) {
+      after = computeTotals(world);
+      sources.transfer.angularMomentum += after.angularMomentum - before.angularMomentum;
+      sources.transfer.energy += after.energy.potential - before.energy.potential;
+    }
+  }
   mark("integrate");
 
   let gasJointImpulse = new Map<string, { x: number; y: number; angular: number }>();
