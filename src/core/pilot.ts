@@ -321,7 +321,7 @@ interface Ship {
   velocity: Vec2;
 }
 
-/** Every other ship (an assembly with an engine, a gun or a pilot), with its side (AIP-016). */
+/** Every other ship, with its side (AIP-016). */
 function shipsAround(world: World, own: Set<string>): Ship[] {
   const roots = assemblyRoots(world);
   const groups = new Map<string, Body[]>();
@@ -332,7 +332,12 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
   }
   const out: Ship[] = [];
   for (const [root, bs] of groups) {
-    if (!bs.some((b) => b.injector || b.magazine || b.pilot)) continue;
+    // A ship, until cockpits exist: a working pilot or tractor (Gunship 2's hull), or a working engine
+    // and gun together. A gun or engine broken off on its own is debris.
+    const works = (x: Body) => x.integrity > 0;
+    const engine = bs.some((x) => works(x) && x.injector && !x.magazine);
+    const gun = bs.some((x) => works(x) && x.magazine && x.injector);
+    if (!bs.some((x) => works(x) && (x.pilot || x.tractor)) && !(engine && gun)) continue;
     // Named by its pilot's body, else its tractor's (Gunship 2's hull), else its heaviest part.
     const pilot = bs.find((b) => b.pilot);
     const name = pilot ?? bs.find((b) => b.tractor) ?? bs.reduce((m, b) => (bodyMass(b) > bodyMass(m) ? b : m));
