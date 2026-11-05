@@ -6,6 +6,7 @@
 import { cross, dot, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
 import { parcelChemical, storeEnergy } from "./gas.ts";
+import { explosiveEnergy, type Explosive } from "./explosive.ts";
 import { massProps } from "./shapes.ts";
 import type { World } from "./world.ts";
 
@@ -105,12 +106,27 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
         chemical += e.chemical;
       }
     }
+    // An explosive charge holds chemical energy until it detonates (WPN), shells in a magazine included.
+    if (b.explosive) chemical += explosiveEnergy(b.explosive, world.gas.scale ?? 1);
+    const magShell = b.magazine?.shell as { explosive?: Explosive } | undefined;
+    if (magShell?.explosive && b.magazine) chemical += b.magazine.count * explosiveEnergy(magShell.explosive, world.gas.scale ?? 1);
     // So does gas held in an engine's chamber.
     const vessel = b.injector?.vessel;
     if (vessel) {
       thermal += vessel.thermal;
       chemical += parcelChemical(vessel, world.gas.scale ?? 1);
     }
+  }
+  // Blast gas held for a step (WPN) is a point mass with its energy as heat.
+  for (const bl of world.blasts ?? []) {
+    const v = bl.velocity;
+    mass += bl.mass;
+    px += bl.mass * v.x;
+    py += bl.mass * v.y;
+    L += bl.mass * cross(bl.position, v);
+    ke += 0.5 * bl.mass * dot(v, v);
+    pe -= bl.mass * dot(g, bl.position);
+    thermal += bl.energy;
   }
   // Gas parcels are point masses with thermal energy.
   for (const p of world.gas.parcels) {

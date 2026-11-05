@@ -16,6 +16,7 @@ import { burn, clearOf, emptyGas, igniteAndBurn, clusterGas, makeFill, mixture, 
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
+import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -60,6 +61,8 @@ export interface Body {
   breach?: Breach;
   /** Shells it carries and loads into place one at a time (WPN, first look). */
   magazine?: Magazine;
+  /** An explosive charge that detonates on impact (WPN): see explosive.ts. */
+  explosive?: Explosive;
 }
 
 /**
@@ -78,6 +81,12 @@ export interface Magazine {
   angle: number;
   /** Seconds after firing stops before the next shell loads. */
   reload: number;
+  /**
+   * A stop that holds a loaded shell in the bore: a block welded in front of it, in this body's frame.
+   * It comes out of this body's own mass when a shell loads, and goes back into it when the fire
+   * command arrives, just before the charge fires, so the shell can't roll out but can be fired.
+   */
+  stop?: { shape: Shape; mass: number; at: Vec2; angle?: number };
   /** State: seconds since the last load; shells loaded so far (names the next). */
   timer: number;
   loaded: number;
@@ -279,6 +288,8 @@ export interface World {
   pendingDebug: string[];
   /** A landing challenge, judged after every step (FLT-005). */
   challenge?: Challenge;
+  /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
+  blasts?: Blast[];
 }
 
 /** Commands are the only way to change a world other than stepping it. */
@@ -362,7 +373,7 @@ export function createWorld(
   return world;
 }
 
-function compareIds(a: string, b: string): number {
+export function compareIds(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
@@ -789,6 +800,8 @@ function runMagazines(world: World, dt: number): void {
     const id = `${b.id}-shell-${mag.loaded + 1}`;
     // The shell as it will be: a polygon is moved to its centroid, so check the bore where it really lands.
     const shell = normalizeBody({ ...structuredClone(mag.shell), id, position: add(b.position, rotate(q, mag.at)), velocity: { x: 0, y: 0 }, angle, angularVelocity: b.angularVelocity });
+    // An explosive shell remembers its gun, and arms once it has left it.
+    if (shell.explosive) shell.explosive = { ...shell.explosive, from: b.id, armed: false };
     // Loading into an occupied bore would push bodies apart violently: wait until it is clear.
     const placedShell = { shape: shell.shape, position: shell.position, rot: sinCos(angle) };
     if (world.bodies.some((o) => { const m = collide(placedShell, { shape: o.shape, position: o.position, rot: sinCos(o.angle) }, 0, 0); return m !== null && m.points.some((p) => p.separation < -1e-3); })) continue;
@@ -804,6 +817,63 @@ function runMagazines(world: World, dt: number): void {
     b.velocity = { x: (m0 * b.velocity.x - ms * shell.velocity.x) / m1, y: (m0 * b.velocity.y - ms * shell.velocity.y) / m1 };
     addBody(world, shell); // already normalised: normalising again changes nothing
     pushEvent(world, { tick: world.tick, type: "loaded", data: { id: b.id, shell: id, left: mag.count } });
+    if (mag.stop) deployStop(world, b, mag.stop);
+  }
+}
+
+const stopId = (b: Body) => `${b.id}-stop`;
+
+/** Puts a magazine's stop in front of the loaded shell: its mass comes out of the body's own, moving with it. */
+function deployStop(world: World, b: Body, stop: NonNullable<Magazine["stop"]>): void {
+  const id = stopId(b);
+  if (world.bodies.some((x) => x.id === id) || !(b.mass > stop.mass)) return;
+  const q = sinCos(b.angle);
+  const r = rotate(q, stop.at);
+  const body = normalizeBody({ id, shape: structuredClone(stop.shape), mass: stop.mass, position: add(b.position, r), velocity: { x: 0, y: 0 }, angle: b.angle + (stop.angle ?? 0), angularVelocity: b.angularVelocity, restitution: 0, friction: 0.3 });
+  // As a shell loads: the body keeps the momentum the stop doesn't take.
+  const m0 = bodyMass(b);
+  body.velocity = add(b.velocity, { x: -b.angularVelocity * (body.position.y - b.position.y), y: b.angularVelocity * (body.position.x - b.position.x) });
+  b.mass -= stop.mass;
+  const m1 = bodyMass(b);
+  b.velocity = { x: (m0 * b.velocity.x - stop.mass * body.velocity.x) / m1, y: (m0 * b.velocity.y - stop.mass * body.velocity.y) / m1 };
+  addBody(world, body);
+  addJoint(world, { id: `${id}-weld`, a: b.id, b: id, anchorA: { ...stop.at }, anchorB: { x: 0, y: 0 }, limits: { tension: 1e7, compression: 1e7, shear: 1e7, torque: 1e7 } });
+}
+
+/**
+ * Takes a magazine's stop back into its body when the body is about to fire (commanded, linked and
+ * fuelled: before the charge fires this step). Momentum is kept exactly. Spin keeps the stop's motion
+ * relative to the body, so it doesn't depend on how fast the two drift together; the small change in
+ * angular momentum, as the stop's mass moves to the body's centre, is recorded as a transfer, as when
+ * a shell loads. What kinetic energy the merge loses becomes heat.
+ */
+function retractStops(world: World): void {
+  for (const b of world.bodies) {
+    const mag = b.magazine;
+    if (!mag?.stop || !b.injector || !injectorStatus(world, b).firing) continue;
+    const id = stopId(b);
+    const stop = world.bodies.find((x) => x.id === id);
+    const weld = world.joints.find((j) => j.id === `${id}-weld`);
+    if (!stop || !weld) continue; // broken off: it is debris now
+    const ke = (x: Body) => {
+      const m = bodyMass(x);
+      return 0.5 * m * (x.velocity.x ** 2 + x.velocity.y ** 2) + 0.5 * massProps(x.shape, m).inertia * x.angularVelocity ** 2;
+    };
+    const before = ke(b) + ke(stop);
+    const m0 = bodyMass(b);
+    const I0 = massProps(b.shape, m0).inertia;
+    const r = sub(stop.position, b.position);
+    const Ls = cross(r, scale(sub(stop.velocity, b.velocity), stop.mass)) + massProps(stop.shape, stop.mass).inertia * stop.angularVelocity;
+    b.mass += stop.mass;
+    const m1 = bodyMass(b);
+    const I1 = massProps(b.shape, m1).inertia;
+    // Momentum, and angular momentum about b's centre, of the two together.
+    b.velocity = { x: (m0 * b.velocity.x + stop.mass * stop.velocity.x) / m1, y: (m0 * b.velocity.y + stop.mass * stop.velocity.y) / m1 };
+    b.angularVelocity = (I0 * b.angularVelocity + Ls) / I1;
+    world.joints = world.joints.filter((j) => j !== weld);
+    world.bodies = world.bodies.filter((x) => x !== stop);
+    world.ledger.thermal += before - ke(b);
+    pushEvent(world, { tick: world.tick, type: "unlatched", data: { id: b.id } });
   }
 }
 
@@ -1027,6 +1097,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   }
   if (world.bodies.some((b) => b.magazine)) {
     const t0 = computeTotals(world);
+    retractStops(world);
     runMagazines(world, dt);
     const t1 = computeTotals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
@@ -1119,6 +1190,19 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   after = computeTotals(world);
   sources.correction.angularMomentum = after.angularMomentum - before.angularMomentum;
   sources.correction.energy = after.energy.total - before.energy.total;
+
+  // Explosive shells that struck something detonate (WPN): fragments and blast gas take the charge's
+  // energy exactly. Angular momentum and potential energy shift a little as the shell's mass leaves
+  // its centre; that is recorded as a transfer.
+  if (world.bodies.some((b) => b.explosive) || world.blasts?.length) {
+    before = after;
+    const released = releaseBlasts(world, dt);
+    if (detonate(world, world.joints.length ? assemblyRoots(world) : null, dt).length + released) {
+      after = computeTotals(world);
+      sources.transfer.angularMomentum += after.angularMomentum - before.angularMomentum;
+      sources.transfer.energy += after.energy.potential - before.energy.potential;
+    }
+  }
   mark("integrate");
 
   let gasJointImpulse = new Map<string, { x: number; y: number; angular: number }>();

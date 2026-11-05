@@ -121,45 +121,54 @@ export function applyDamage(world: World): void {
     p.w += w;
   }
   const byId = new Map(world.bodies.map((b) => [b.id, b]));
-  const destroyed: string[] = [];
   for (const p of pairs.values()) {
     const at = { x: p.x / p.w, y: p.y / p.w };
     for (const id of [p.a, p.b]) {
       const body = byId.get(id);
-      const m = body?.material;
-      if (!body || !m || body.integrity <= 0) continue;
-      const share = p.energy / 2;
-      const loss = Math.min(body.integrity, Math.max(0, share - m.threshold) / m.toughness);
-      if (!(loss > 0)) continue;
-      body.integrity = body.integrity - loss < GONE ? 0 : body.integrity - loss;
-      // The first hit on a body holding gas opens its breach there (DMG-004).
-      if (!body.breach && gasStores(body).capacity > 0) {
-        const q = sinCos(body.angle);
-        const local = invRotate(q, sub(at, body.position));
-        const d = length(local);
-        body.breach = { point: local, normal: d > 1e-9 ? scale(local, 1 / d) : { x: 0, y: 1 }, credit: 0, count: 0 };
-      }
-      world.events.push({ tick: world.tick, type: "damage", data: { id, loss, integrity: body.integrity, energy: share } });
-      const r = radius(body);
-      for (const j of world.joints) {
-        if (j.a !== id && j.b !== id) continue;
-        const anchor = anchorAt(body, j.a === id ? j.anchorA : j.anchorB);
-        const near = Math.max(0, 1 - length(sub(anchor, at)) / r);
-        j.integrity = Math.max(0, j.integrity - loss * near);
-        if (j.integrity < GONE) j.integrity = 0;
-      }
-      for (const l of world.links) {
-        if (l.to !== id && !(l.kind === "feed" && l.from === id)) continue;
-        l.integrity = Math.max(0, l.integrity - loss);
-        if (l.integrity < GONE) l.integrity = 0;
-      }
-      if (body.integrity === 0) {
-        destroyed.push(id);
-        world.events.push({ tick: world.tick, type: "destroyed", data: { id } });
-      }
+      if (body) damageBody(world, body, p.energy / 2, at);
     }
   }
-  // Wreckage holds nothing, however it got to 0: a hit, or integrity set by hand (DMG-003, DMG-006).
+  breakWreckage(world);
+}
+
+/**
+ * One hit (DMG-002 steps 2–4): `energy` J delivered to `body` at world point `at`. Its integrity, the
+ * welds near the point and its links lose (energy − threshold) ÷ toughness; the first hit on a body
+ * holding gas opens its breach there. Contacts and blasts (WPN) both damage through this.
+ */
+export function damageBody(world: World, body: Body, energy: number, at: Vec2): void {
+  const m = body.material;
+  if (!m || body.integrity <= 0) return;
+  const id = body.id;
+  const loss = Math.min(body.integrity, Math.max(0, energy - m.threshold) / m.toughness);
+  if (!(loss > 0)) return;
+  body.integrity = body.integrity - loss < GONE ? 0 : body.integrity - loss;
+  // The first hit on a body holding gas opens its breach there (DMG-004).
+  if (!body.breach && gasStores(body).capacity > 0) {
+    const q = sinCos(body.angle);
+    const local = invRotate(q, sub(at, body.position));
+    const d = length(local);
+    body.breach = { point: local, normal: d > 1e-9 ? scale(local, 1 / d) : { x: 0, y: 1 }, credit: 0, count: 0 };
+  }
+  world.events.push({ tick: world.tick, type: "damage", data: { id, loss, integrity: body.integrity, energy } });
+  const r = radius(body);
+  for (const j of world.joints) {
+    if (j.a !== id && j.b !== id) continue;
+    const anchor = anchorAt(body, j.a === id ? j.anchorA : j.anchorB);
+    const near = Math.max(0, 1 - length(sub(anchor, at)) / r);
+    j.integrity = Math.max(0, j.integrity - loss * near);
+    if (j.integrity < GONE) j.integrity = 0;
+  }
+  for (const l of world.links) {
+    if (l.to !== id && !(l.kind === "feed" && l.from === id)) continue;
+    l.integrity = Math.max(0, l.integrity - loss);
+    if (l.integrity < GONE) l.integrity = 0;
+  }
+  if (body.integrity === 0) world.events.push({ tick: world.tick, type: "destroyed", data: { id } });
+}
+
+/** Wreckage holds nothing, however it got to 0: a hit, or integrity set by hand (DMG-003, DMG-006). */
+export function breakWreckage(world: World): void {
   const gone = new Set(world.bodies.filter((b) => b.integrity <= 0).map((b) => b.id));
   if (!gone.size && !world.joints.some((j) => j.integrity <= 0) && !world.links.some((l) => l.integrity <= 0)) return;
   const brokenJoints = world.joints.filter((j) => j.integrity === 0 || gone.has(j.a) || gone.has(j.b));
