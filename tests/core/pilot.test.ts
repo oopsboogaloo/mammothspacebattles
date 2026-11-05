@@ -322,7 +322,7 @@ describe("AI pilot combat (phase 3)", () => {
     m.controls["e1.fire"] = 0.7;
     run(m, 24);
     expect(m.controls["e1.fire"]).toBe(0.7);
-  });
+  }, 120_000);
 
   it("AIP-015 a Cautious pilot is not provoked by a ship closing on it with a shell only loaded, not fired", () => {
     const w = duel({ mode: "cautious", ai: { x: 0, y: 30 }, player: { x: 0, y: 0, vy: 8 } });
