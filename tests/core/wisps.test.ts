@@ -7,7 +7,7 @@ import { box, readJson, ROOT } from "../helpers.ts";
 const parcel = (x: number, vx: number): Parcel => ({ id: 1, mass: 0.004, composition: { h2o: 1 }, position: { x, y: 0 }, velocity: { x: vx, y: 0 }, thermal: 1, radius: 0.035 }) as Parcel;
 
 describe("plume tail (GAS-011)", () => {
-  it("a wisp moves on, grows and fades out over its life, its mass fading with it", () => {
+  it("GAS-011 a wisp moves on, grows and fades out over its life, its mass fading with it", () => {
     const w = createWorld(1, []);
     spawnWisps(w, [parcel(0, 10)], () => 1500);
     const wp = w.wisps![0];
@@ -19,7 +19,7 @@ describe("plume tail (GAS-011)", () => {
     expect(w.wisps).toEqual([]);
   });
 
-  it("wisps bounce off a body and push it, with the push recorded as coming in through the boundary", () => {
+  it("GAS-011 wisps bounce off a body and push it, with the push recorded as coming in through the boundary", () => {
     const w = createWorld(1, [box("plate", 0.2, 4, { mass: 1, position: { x: 2, y: 0 } } as never)]);
     spawnWisps(w, Array.from({ length: 50 }, (_, i) => ({ ...parcel(0, 20), id: i, position: { x: 0, y: -1 + i * 0.04 } })), () => 1500);
     for (let i = 0; i < 60; i++) stepInPlace(w, [], getProfile("test"));
@@ -31,7 +31,7 @@ describe("plume tail (GAS-011)", () => {
     expect(plate.velocity.x).toBeLessThan((1.3 * 50 * 0.004 * 20) / 1);
   });
 
-  it("a gunship's exhaust leaves a tail of wisps that fades out within a second of the engines stopping, ledger clean", () => {
+  it("GAS-011 a gunship's exhaust leaves a tail of wisps that fades out within a second of the engines stopping, ledger clean", () => {
     const raw = readJson(join(ROOT, "scenarios", "gunship-2.json")) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
     Object.assign(raw, { timeline: [], probes: [], assertions: [] });
     const w = initialWorld(parseScenario(raw));
