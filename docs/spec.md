@@ -820,6 +820,21 @@ The simplest possible rocket has no fuel, no chemistry, no injector and no contr
 
 ## 12. Milestones
 
+### 12.1 Roadmap: mini games, then the main game
+
+Logged November 2026. The work builds towards a few playable mini games, each a slice of the bigger game, and then a minimum viable version of the main game that combines them.
+
+| Step | What it is | State, and what it needs |
+|---|---|---|
+| **Mini game 1: Lander** | Land a ship on a pad under gravity (FLT-005). | Done (LAND). |
+| **Mini game 2: Asteroids** | Clear waves of asteroids. | Getting there: breakable rubble asteroids with gold and larger fragments (M7, GS-R, GS-X). Needs waves (a new wave once the field is cleared), scoring, and losing (the ship wrecked). |
+| **Mini game 3: Combat duel** | A duel with an AI ship among the asteroids. | Needs AI pilots (M8, §9.10) up to combat: phases 1–3 of the plan (foundations and flight; navigation; combat with Hunting, Cautious and Evading). |
+| **Main game MVP** | A small economy with a tech and crafting tree; the home base (§9.8c); some kind of sector selection; mining in each sector, with combat threats in the more dangerous sectors. | Needs the rest: Mining and Mad pilots, sectors with exits (ships come and go), spending what is delivered (recipes, buildings, ship upgrades), and the cockpit with its mammoth pilot (§9.9). |
+
+*AI pilot plan (M8), one PR per phase.* 1: foundations (pilots in the step, per-ship channels, learning the ship from its design and correcting in flight, thrust allocation, attitude). 2: navigation and Ignoring (fly to a point, routes, station keeping, collision avoidance, inspector and overlay). 3: combat (detection, sides, leading the target, fire control; Hunting, Cautious, Evading). 4: Mining and Mad (tractor control, a minimal sector exit). 5: skill model and tuning (a delayed view of the world and unsteady hands first; deliberate mistakes later), against the speed budget.
+
+### 12.2 Milestones
+
 Each milestone ends with: all its `M` requirements passing their stated verification (tests for `U`/`P`/`S`/`D`/`E`/`B`, a recorded review for `R`), its reference scenarios loadable in the sandbox, and a short demo note.
 
 | Milestone | Delivers | Exit criteria |
