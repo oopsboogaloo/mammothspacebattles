@@ -609,9 +609,9 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
   - *Ship design is part of it.* Recipes unlock parts, and the player builds and refits ships from them in the sandbox's builder.
   - Needs, roughly in order: the base asteroid with gravity and the pad; the collector (a fixed tether that reels in, and a capture rule); a store of what has been delivered, kept with the world (these three are built: §9.8c); then recipes, buildings and part unlocks. More minerals than gold, and asteroids that are harder to reach, come with the tree.
 
-### 9.10 AI pilots (M8, phases 1–2 built)
+### 9.10 AI pilots (M8, phases 1–3 built)
 
-Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but nothing in the pilot may assume that ship: it must be able to fly any ship built from the parts in this spec. Specified November 2026; the plan comes next.
+Enemy and neutral ships flown by the computer. For now they fly the gunship (Gunship 3 since November 2026), but nothing in the pilot may assume that ship: it must be able to fly any ship built from the parts in this spec. Specified November 2026; the plan comes next.
 
 **Principles**
 - **AIP-001** `[M · M8 · U]` A pilot shall fly only through the ship's control channels, as a player does: the same engines, cannon and tractor, the same physics, no forces or knowledge a player's ship doesn't have. It never moves bodies or changes the world directly.
@@ -694,7 +694,18 @@ Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but n
 - **Overlay (AIP-017).** "AI plans": each pilot's waypoints as rings, a dashed line to where it is going, and a red ring round what it is steering past. The flight pad no longer shows buttons for channels a pilot flies.
 - **Scenario: *AI pilot: patrol among the rocks (AI-2)*.** An AI Gunship 2 in Ignoring mode flies a loop of five waypoints through TRC's rubble asteroids, routed close to the rocks and past the player's ship. Sliders: AI flight skill, cruise speed.
   - *Measured:* at flight skill 0.3, 0.7 and 1, it goes round the whole loop and on in 60 s, with no contact with anything and no ledger violations, at about 6 ms a step with gas.
-- **Next (phase 3):** combat: detection radius and sides, aiming at a moving target (lead), fire control, and the Hunting, Cautious and Evading modes.
+
+*Model as built (phase 3: combat, November 2026).*
+- **Sides and seeing (AIP-016).** A pilot's `side` defaults to "enemy"; a ship with no pilot is the player's. It sees ships within `detect` (150 m). A ship, until cockpits exist, is an assembly with a working pilot or tractor, or a working engine and gun together: a gun or engine broken off on its own is debris.
+- **Its gun.** The body with a magazine whose fire channel is its own (AIP-003): never a channel shared with another ship. Only Hunting and Cautious work the trigger.
+- **Aiming (AIP-011).** The bore points where a shell meets the target: a quadratic intercept from both ships' positions and velocities and the muzzle speed, which it learns from its own shots (starting from 40 m/s; Gunship 2 measured 45). It allows for 30–100% of the target's motion by combat skill, plus an aim error of up to 4° at skill 0, steady for a second at a time. To point the bore it turns the thrust axis by the angle between them in the design (none for the gunships). While aiming it still thrusts along the nose, which holds its distance against the recoil.
+- **Fire control (AIP-012).** It fires a 0.1 s pulse when a shell is loaded, the target is within 100 m, the aim is within 0.6°–4° by skill, and the line of fire is clear of everything but the target. Debris lighter than a fifth of its own ship doesn't count, and nor does a round still loaded in a bore.
+- **Hunting.** It closes on the nearest foe to a stand-off of 35–55 m (by skill), matching its velocity, then attacks: aims and fires. It breaks off past the stand-off plus 40 m, or above 6 m/s relative.
+  - *Measured* (Gunship 2s, 45 m apart, 10 s): 3–6 shots and 2–3 hits at combat skill 0, 0.5 and 1, against a target still or drifting at 3 m/s; ledger clean.
+- **Cautious.** It flies its route; with the player within sight it stops and watches them. A foreign shell in flight whose path passes within 4 ship widths in the next 3 s, or a hit, starts a minute's rage: it attacks whoever fired.
+- **Evading.** It flies its route, and runs (straight away, at 6–14 m/s by flight skill) from a foe within 60 m that is closing, until it is 100 m clear.
+- **Found on the way.** Fuel fed out of a spinning tank carried spin energy that went unrecorded (a 3 mJ violation each step once a ship broke up); it is now a recorded transfer.
+- **Next:** the combat-duel scenario (mini game 3), then phase 4 (Mining, Mad, the tractor and sector exits).
 
 *Decided (November 2026).*
 - **Who flies.** The pilot will be a creature, often a small woolly mammoth, sitting in a cockpit: a component still to design (§9.9). Until then the pilot is a computer built into the ship, on the ship as a whole.

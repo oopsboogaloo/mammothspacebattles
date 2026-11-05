@@ -331,5 +331,20 @@ describe("AI pilot combat (phase 3)", () => {
     expect(enemyPilot(w).combat?.grudgeUntil).toBeUndefined();
     expect(enemyPilot(w).intent).toMatch(/watching hull/);
   }, 120_000);
+
+  it("AIP-011 AIP-012 AIP-015 a Hunting pilot closes on the player's ship, aims, fires and hits it, with the ledger clean", () => {
+    const w = duel({ mode: "hunting", ai: { x: 0, y: 45 }, combat: 1 });
+    const player = () => new Set(w.bodies.filter((b) => !b.id.startsWith("e1-")).map((b) => b.id));
+    let hit = false;
+    for (let i = 0; i < 2400 && !hit; i++) {
+      stepInPlace(w, [], sandbox);
+      const own = player();
+      hit = w.events.some((e) => e.tick === w.tick - 1 && (e.type === "detonation" || e.type === "collision") && /^e1-breech-shell-/.test(String(e.data.id ?? e.data.a) + String(e.data.b ?? "")) && (own.has(String(e.data.a)) || own.has(String(e.data.b)) || e.type === "detonation"));
+    }
+    expect(enemyPilot(w).combat!.shots).toBeGreaterThan(0);
+    expect(enemyPilot(w).combat!.muzzle).toBeGreaterThan(60); // learned from its shots: Gunship 3 fires at about 96 m/s
+    expect(hit).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+  }, 600_000);
 });
 
