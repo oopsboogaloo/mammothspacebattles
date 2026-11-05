@@ -81,12 +81,12 @@ describe("landing challenge", () => {
       let R = lift ? 1 : 0;
       if (err > 1) [L, R] = [1, lift && err < 4 ? 1 : 0];
       if (err < -1) [L, R] = [lift && err > -4 ? 1 : 0, 1];
-      if (s.altitude < 0.35) [L, R] = [0, 0];
+      if (s.altitude < 0.3) [L, R] = [0, 0];
       return set(L, R);
     });
     const s = w.challenge!.status;
     expect(s.phase, s.reason).toBe("landed");
-    expect(s.touchdown).toBeLessThan(1.5);
+    expect(s.touchdown, `touchdown ${s.touchdown}`).toBeLessThan(1.3);
     expect(Math.abs(s.tilt)).toBeLessThan(12);
     expect(s.score).toBeGreaterThan(0);
     expect(s.score).toBeLessThanOrEqual(1000);

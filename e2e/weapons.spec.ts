@@ -8,9 +8,11 @@ test("WPN-001 the cannon test fires on its own at 0.5 s, and the shell flies at 
   await openStarter(page, "cannon-test");
   await expect(page.getByTestId("look-for")).toContainText("cannon fires");
   await page.getByTestId("play").click();
-  await waitForTick(page, 150, 90_000);
+  // It fires at step 120 and is clear of the barrel by step 180, so wait past that: the pause can
+  // land at once (results arrive from the simulation worker in runs).
+  await waitForTick(page, 200, 90_000);
   await page.getByTestId("play").click();
-  // The run may get well past step 150 before the pause lands (Firefox did), and by about step 290
+  // The run may get well past step 200 before the pause lands (Firefox did), and by about step 290
   // the shell has hit the ship and slowed. So: it left the barrel, and it was fast, either still in
   // flight or when it struck.
   const s = (await body(page, "shell"))!;

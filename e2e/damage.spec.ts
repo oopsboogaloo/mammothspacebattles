@@ -5,17 +5,10 @@ import { body, openStarter, shot, toPage, waitForTick } from "./helpers.ts";
 test("DMG-003 DMG-004 DMG-005 RS-11 runs on screen: the bare tank is wrecked, the armoured one isn't, and the inspector shows why", async ({ page }, info) => {
   await openStarter(page, "rs11-armour-ram");
   await expect(page.getByTestId("overlay-damage")).toHaveAttribute("aria-pressed", "true"); // the scenario turns it on
-  await page.getByTestId("play").click();
-  await waitForTick(page, 72, 60_000);
-  await page.getByTestId("play").click();
-  // Pausing takes effect on the next frame: wait until the run has stopped before aiming at the
-  // wreck, which drifts as it leaks.
-  const tick = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { tick: number } } } }).__msb.sandbox().world.tick);
-  await expect.poll(async () => {
-    const a = await tick();
-    await page.waitForTimeout(100);
-    return (await tick()) === a;
-  }).toBe(true);
+  // Step to an exact tick rather than play and pause: a pause lands later on a slow machine, and the
+  // wreck, flying off at about 13 m/s, can be off screen by then.
+  for (let i = 0; i < 8; i++) await page.getByTestId("step10").click();
+  await waitForTick(page, 80);
   expect((await body(page, "tank-a"))!.integrity).toBe(0);
   expect((await body(page, "tank-b"))!.integrity).toBe(1);
   expect((await body(page, "armour"))!.integrity).toBeLessThan(1);

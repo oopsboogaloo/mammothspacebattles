@@ -17,7 +17,7 @@ describe("benchmark command", () => {
       // The six subsystems, plus the gas step's own phases (gas.*) where there is gas.
       const keys = Object.keys(row.subsystemsMs);
       expect(keys.filter((k) => !k.startsWith("gas."))).toEqual(["commands", "forces", "contacts", "integrate", "gas", "ledger"]);
-      if (row.parcels > 0) expect(keys.filter((k) => k.startsWith("gas."))).toEqual(["gas.setup", "gas.contacts", "gas.neighbours", "gas.density", "gas.impulses", "gas.move", "gas.finish"]);
+      if (row.parcels > 0) expect(keys.filter((k) => k.startsWith("gas.")).sort()).toEqual(["gas.clusters", "gas.contacts", "gas.density", "gas.finish", "gas.impulses", "gas.move", "gas.neighbours", "gas.setup"]);
       expect(row.parcels).toBeGreaterThanOrEqual(0);
     }
     expect(r.stdout).toMatch(/rs00-workload/);
