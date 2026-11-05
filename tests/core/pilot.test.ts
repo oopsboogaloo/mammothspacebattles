@@ -145,3 +145,91 @@ describe("AI pilot foundations", () => {
     expect(perDecision / p.interval).toBeLessThan(0.2);
   });
 });
+
+describe("AI pilot navigation (phase 2)", () => {
+  const near = (w: World, p: { x: number; y: number }) => {
+    const c = assemblyTotals(w, "hull")!.centre;
+    return Math.hypot(c.x - p.x, c.y - p.y);
+  };
+
+  it("AIP-008 it flies to a point 60 m off and stops there, turning round to brake in time", () => {
+    const target = { x: 60, y: 2.6 };
+    const w = ship({ kind: "point", target });
+    let far = 0;
+    for (let i = 0; i < 3600; i++) {
+      stepInPlace(w, [], sandbox);
+      far = Math.max(far, assemblyTotals(w, "hull")!.centre.x);
+    }
+    expect(near(w, target)).toBeLessThan(2);
+    const v = assemblyTotals(w, "hull")!.velocity;
+    expect(Math.hypot(v.x, v.y)).toBeLessThan(0.5);
+    expect(far).toBeLessThan(target.x + 4); // no great overshoot
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("AIP-008 under the base's gravity it flies across and holds there", () => {
+    const target = { x: 40, y: 32 };
+    const w = ship({ kind: "point", target }, { gravity: true });
+    run(w, 4800);
+    expect(near(w, target)).toBeLessThan(3);
+    const v = assemblyTotals(w, "hull")!.velocity;
+    expect(Math.hypot(v.x, v.y)).toBeLessThan(0.5);
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("AIP-009 it keeps station on a drifting body", () => {
+    const w = ship(null);
+    // Heavy, so the ship's exhaust doesn't push it about.
+    const buoy = { id: "buoy", shape: { kind: "disc", radius: 0.5 }, mass: 1000, position: { x: 30, y: 10 }, velocity: { x: 1.5, y: 0.5 }, angle: 0, angularVelocity: 0 };
+    stepInPlace(w, [{ type: "body.add", body: buoy as never }], sandbox);
+    hull(w).pilot = { ...structuredClone(ship({ kind: "idle" }).bodies.find((b) => b.id === "hull")!.pilot!), goal: { kind: "station", body: "buoy", offset: { x: -12, y: 0 } } };
+    run(w, 2400); // 10 s to get there
+    let worst = 0;
+    let dv = 0;
+    for (let i = 0; i < 2400; i++) {
+      stepInPlace(w, [], sandbox);
+      const b = w.bodies.find((x) => x.id === "buoy")!;
+      worst = Math.max(worst, near(w, { x: b.position.x - 12, y: b.position.y }));
+      const v = assemblyTotals(w, "hull")!.velocity;
+      dv += Math.hypot(v.x - b.velocity.x, v.y - b.velocity.y) / 2400;
+    }
+    expect(worst).toBeLessThan(3.5);
+    expect(dv).toBeLessThan(0.6);
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("AIP-010 sent through a rock, it steers round it and never touches it", () => {
+    const w = ship({ kind: "point", target: { x: 80, y: 2.6 } });
+    const rock = { id: "rock", shape: { kind: "disc", radius: 5 }, mass: 2000, position: { x: 40, y: 2.6 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 };
+    stepInPlace(w, [{ type: "body.add", body: rock as never }], sandbox);
+    let touched = false;
+    let steered = false;
+    for (let i = 0; i < 6000; i++) {
+      stepInPlace(w, [], sandbox);
+      touched ||= w.contacts.some((c) => c.a === "rock" || c.b === "rock");
+      steered ||= (hull(w).pilot!.plan?.avoiding?.length ?? 0) > 0;
+    }
+    expect(steered).toBe(true);
+    expect(touched).toBe(false);
+    expect(near(w, { x: 80, y: 2.6 })).toBeLessThan(3);
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("AIP-015 AIP-010 in Ignoring mode it patrols its route through the asteroids, touching nothing, and keeps going round", () => {
+    const w = initialWorld(parseScenario(readJson(join(ROOT, "scenarios", "ai-patrol.json"))));
+    const pilotBody = () => w.bodies.find((b) => b.id === "e1-hull")!;
+    const own = new Set(w.bodies.filter((b) => b.id.startsWith("e1-")).map((b) => b.id));
+    const reached = new Set<number>();
+    let contacts = 0;
+    for (let i = 0; i < 14400; i++) {
+      stepInPlace(w, [], sandbox);
+      const g = pilotBody().pilot!.goal;
+      if (g.kind === "route") reached.add(g.index ?? 0);
+      contacts += w.contacts.filter((c) => own.has(c.a) !== own.has(c.b) && !/e1-breech-shell/.test(c.a + c.b)).length;
+    }
+    expect([...reached].sort()).toEqual([0, 1, 2, 3, 4]); // round the loop and back to the start
+    expect(contacts).toBe(0);
+    expect(pilotBody().pilot!.mode).toBe("ignoring");
+    expect(w.ledger.violations).toBe(0);
+  }, 600_000);
+});

@@ -23,11 +23,24 @@
 
 import { add, cross, dot, expD, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
-import { assemblyOf } from "./joints.ts";
+import { assemblyOf, assemblyRoots } from "./joints.ts";
 import { massProps } from "./shapes.ts";
 import type { Body, World } from "./world.ts";
 
-export type PilotGoal = { kind: "heading"; angle: number } | { kind: "velocity"; velocity: Vec2 } | { kind: "hover" } | { kind: "idle" };
+export type PilotGoal =
+  | { kind: "heading"; angle: number }
+  | { kind: "velocity"; velocity: Vec2 }
+  | { kind: "hover" }
+  | { kind: "idle" }
+  /** Fly to a point and stop there, or pass through it at cruise speed (AIP-008). */
+  | { kind: "point"; target: Vec2; stop?: boolean; speed?: number; tolerance?: number }
+  /** Fly a list of waypoints in turn, looping or not; `index` is the one it is heading for (state). */
+  | { kind: "route"; waypoints: Vec2[]; loop?: boolean; speed?: number; index?: number }
+  /** Hold a position offset from a body, moving with it (AIP-009). */
+  | { kind: "station"; body: string; offset: Vec2 };
+
+/** Behaviour modes (AIP-015). "manual": its goal is set from outside. "ignoring": it flies its route and ignores everyone. */
+export type PilotMode = "manual" | "ignoring";
 
 /** What the pilot knows about one engine channel, in the body frame of the pilot's body. */
 export interface ThrustChannel {
@@ -45,6 +58,10 @@ export interface Pilot {
   /** Flight and combat skill, 0 (novice) to 1 (ace) (AIP-005). Phase 1 uses flight skill only. */
   skill: { flight: number; combat: number };
   goal: PilotGoal;
+  /** Behaviour mode (AIP-015); default "manual". */
+  mode?: PilotMode;
+  /** The route Ignoring mode flies. */
+  route?: { waypoints: Vec2[]; loop?: boolean; speed?: number };
   /** Steps between decisions. */
   interval: number;
   /** State: tick of the next decision. */
@@ -62,6 +79,8 @@ export interface Pilot {
   settled?: boolean;
   /** State: what it is doing, for people (the inspector). */
   intent: string;
+  /** State: its plan, for the overlay: where it is going, the route, and what it is steering round. */
+  plan?: { target?: Vec2; route?: Vec2[]; avoiding?: Vec2[] };
 }
 
 export const PILOT_DEFAULTS: Omit<Pilot, "goal"> = { skill: { flight: 0.7, combat: 0.5 }, interval: 8, next: 0, command: {}, lagged: {}, intent: "" };
@@ -188,6 +207,77 @@ function allocate(A: number[][], b: number[], w: number[], n: number): number[] 
   return u;
 }
 
+interface Obstacle {
+  centre: Vec2;
+  radius: number;
+  velocity: Vec2;
+}
+
+/** Everything the pilot must not hit, as circles: each other assembly (moving or fixed) round its parts. */
+function obstacles(world: World, own: Set<string>): Obstacle[] {
+  const roots = assemblyRoots(world);
+  const groups = new Map<string, Body[]>();
+  // Its own shells, loaded or fired (and their fragments), are named after its magazines: not obstacles.
+  const shells = world.bodies.filter((b) => own.has(b.id) && b.magazine).map((b) => `${b.id}-shell-`);
+  for (const b of world.bodies) {
+    if (own.has(b.id) || shells.some((pre) => b.id.startsWith(pre))) continue;
+    const r = roots.get(b.id)!;
+    groups.set(r, [...(groups.get(r) ?? []), b]);
+  }
+  const out: Obstacle[] = [];
+  for (const bs of groups.values()) {
+    let m = 0;
+    let c = { x: 0, y: 0 };
+    let v = { x: 0, y: 0 };
+    for (const b of bs) {
+      const mb = b.fixed ? 1 : bodyMass(b);
+      m += mb;
+      c = add(c, scale(b.position, mb));
+      v = add(v, scale(b.fixed ? { x: 0, y: 0 } : b.velocity, mb));
+    }
+    c = scale(c, 1 / m);
+    let R = 0;
+    for (const b of bs) R = Math.max(R, length(sub(b.position, c)) + massProps(b.shape, 1).boundingRadius);
+    out.push({ centre: c, radius: R, velocity: scale(v, 1 / m) });
+  }
+  return out;
+}
+
+/**
+ * Steers a wanted velocity round obstacles (AIP-010): for each, where the ship would pass it within
+ * `ahead` seconds on that velocity, and if closer than its clearance, it adds a sideways push away,
+ * and holds its closing speed to what it could still stop from (braking at `brake` after a half
+ * turn of `flip` seconds). Returns the new velocity and the centres of what it is avoiding.
+ */
+function avoid(v: Vec2, pos: Vec2, own: number, obs: Obstacle[], ahead: number, margin: number, brake: number, flip: number): { v: Vec2; avoiding: Vec2[] } {
+  let out = v;
+  const avoiding: Vec2[] = [];
+  for (const o of obs) {
+    const r = sub(o.centre, pos);
+    const clear = o.radius + own + margin;
+    const dist = length(r);
+    if (dist - clear > length(sub(v, o.velocity)) * ahead + clear) continue; // far out of reach
+    const w = sub(out, o.velocity); // our motion relative to it
+    const ww = dot(w, w);
+    const t = ww > 1e-9 ? Math.min(ahead, Math.max(0, dot(r, w) / ww)) : 0;
+    const closest = sub(scale(w, t), r); // from it to us, at the closest approach
+    const miss = length(closest);
+    if (miss >= clear) continue;
+    avoiding.push(o.centre);
+    // Away from it, sideways to the motion: the closest-approach direction, or across the motion if dead on.
+    const away = miss > 1e-6 ? scale(closest, 1 / miss) : length(w) > 1e-9 ? scale({ x: -w.y, y: w.x }, 1 / length(w)) : scale(r, -1 / (dist || 1));
+    const urgency = (2 * (clear - miss)) / Math.max(0.5, t);
+    out = add(out, scale(away, urgency));
+    // And never close on it faster than it could still stop in the room left: the turn, then the burn.
+    const rHat = scale(r, 1 / (dist || 1));
+    const closing = dot(sub(out, o.velocity), rHat);
+    const room = Math.max(0, dist - clear);
+    const allowed = brake * (-flip + Math.sqrt(flip * flip + (2 * room) / brake));
+    if (closing > allowed) out = sub(out, scale(rHat, closing - allowed));
+  }
+  return { v: out, avoiding };
+}
+
 /**
  * Runs every pilot for one step (AIP-001, AIP-002): on its decision steps it reads the ship and the
  * world, learns from what its last commands did, decides, and sets its channels. Between decisions
@@ -252,14 +342,74 @@ export function runPilots(world: World, dt: number): void {
     const axis = rotate(q, axisBody); // where the engines push, in the world
     let force = { x: 0, y: 0 };
     let want = axis; // unit vector the thrust axis should point along
-    const goal = p.goal;
+    // Ignoring (AIP-015): it flies its route, whatever else is about.
+    if (p.mode === "ignoring" && p.route && p.goal.kind !== "route") p.goal = { kind: "route", waypoints: p.route.waypoints, loop: p.route.loop ?? true, speed: p.route.speed, index: 0 };
+    let goal: PilotGoal = p.goal;
+    let label = "";
+    p.plan = {};
+    // Navigation: points, routes and stations become a wanted velocity (AIP-008, AIP-009).
+    if (goal.kind === "route" && goal.waypoints.length) {
+      const i = Math.min(goal.index ?? 0, goal.waypoints.length - 1);
+      const last = i === goal.waypoints.length - 1 && !goal.loop;
+      const at = goal.waypoints[i];
+      const tolR = 2 + 2 * (1 - s);
+      if (length(sub(at, ship.centre)) < tolR * 2 && !last) goal.index = (i + 1) % goal.waypoints.length;
+      p.plan.route = goal.waypoints;
+      label = `route: waypoint ${(goal.index ?? i) + 1} of ${goal.waypoints.length}`;
+      goal = { kind: "point", target: goal.waypoints[goal.index ?? i], stop: last, speed: goal.speed };
+    }
+    if (goal.kind === "point" || goal.kind === "station") {
+      const most = chans.reduce((m, c) => m + c.gain, 0);
+      // How hard it can brake: its share of the thrust, less gravity; and how long a half turn takes.
+      const aBrake = Math.max(0.3, (authority * most) / ship.mass - length(g));
+      const tFlip = Math.PI / (0.8 + 1.2 * s) + 0.3;
+      let target: Vec2;
+      let carry = { x: 0, y: 0 };
+      let stop = true;
+      let cruise = 4 + 8 * s;
+      let tolP = 1 + 2 * (1 - s);
+      if (goal.kind === "station") {
+        const st = goal;
+        const host = world.bodies.find((b) => b.id === st.body);
+        target = host ? add(host.position, st.offset) : ship.centre;
+        carry = host ? host.velocity : carry; // move with it
+        label = `keep station on ${st.body}`;
+      } else {
+        target = goal.target;
+        stop = goal.stop !== false;
+        cruise = goal.speed ?? cruise;
+        tolP = goal.tolerance ?? tolP;
+        if (!label) label = `fly to ${target.x.toFixed(0)}, ${target.y.toFixed(0)}`;
+      }
+      const d = sub(target, ship.centre);
+      const dist = length(d);
+      // The fastest it can go and still stop in the distance left: the half turn, then the burn.
+      const r = Math.max(0, dist - 0.5 * tolP); // aim inside the tolerance
+      const vStop = aBrake * (-tFlip + Math.sqrt(tFlip * tFlip + (2 * r) / aBrake));
+      // Keeping station, it closes gently (speed in proportion to the gap), so as not to overshoot a moving mark.
+      const speed = goal.kind === "station" ? Math.min(cruise, vStop, 0.3 * dist) : stop ? Math.min(cruise, vStop) : cruise;
+      const vWant = dist > 1e-6 ? add(carry, scale(d, speed / dist)) : carry;
+      p.plan.target = target;
+      goal = { kind: "velocity", velocity: vWant };
+    }
+    // Steer round whatever is in the way (AIP-010).
+    if (goal.kind === "velocity" && p.goal.kind !== "velocity") {
+      const ownR = Math.max(...ship.members.map((b) => length(sub(b.position, ship.centre)) + massProps(b.shape, 1).boundingRadius));
+      const mostT = chans.reduce((m, c) => m + c.gain, 0);
+      const brake = Math.max(0.3, (authority * mostT) / ship.mass - length(g));
+      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids), 2 + 4 * s, 4 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
+      if (steered.avoiding.length) label += ", steering round";
+      p.plan.avoiding = steered.avoiding;
+      goal = { kind: "velocity", velocity: steered.v };
+    }
     if (goal.kind === "heading") {
       const h = sinCos(goal.angle);
       want = { x: h.c, y: h.s };
       p.intent = `hold heading ${goal.angle.toFixed(2)} rad`;
     } else if (goal.kind === "velocity" || goal.kind === "hover") {
       const v = goal.kind === "velocity" ? goal.velocity : { x: 0, y: 0 };
-      const k = 0.8 + 1.2 * s; // 1/s
+      // Slower than the turning loop, which it steers: a turn takes about a second.
+      const k = 0.4 + 0.6 * s; // 1/s
       const raw = sub(v, ship.velocity);
       // An error along the thrust axis is fixed by throttle alone, and always is. One across it,
       // or one that needs braking, means turning the ship: small ones are let be (a tolerance
@@ -271,17 +421,17 @@ export function runPilots(world: World, dt: number): void {
       else if (length(turn) > 2 * tol) p.settled = false;
       const e = add(scale(axis, Math.max(0, eAlong)), p.settled ? { x: 0, y: 0 } : turn);
       // A slow integral of the error along the thrust axis, so a steady one (a hover sinking on a
-      // misjudged engine) is worked off by throttle. Signed, so an overshoot winds it back down;
+      // misjudged engine) is worked off by throttle. Under gravity only: in open space it just overshoots. Signed, so an overshoot winds it back down;
       // never negative, since it can only add throttle; and only near the wanted velocity, or it
       // would wind up while accelerating toward it.
-      if (length(raw) < 1) p.trim = Math.min(2, Math.max(0, (p.trim ?? 0) + (eAlong < 0 ? 4 : 1) * eAlong * p.interval * dt)); // unwinds fast on overshoot
+      if (length(raw) < 1 && length(g) > 0.05) p.trim = Math.min(2, Math.max(0, (p.trim ?? 0) + (eAlong < 0 ? 4 : 1) * eAlong * p.interval * dt)); // unwinds fast on overshoot
       const a = add(scale(e, k), scale(axis, 0.3 * k * (p.trim ?? 0)));
       force = scale(sub(a, g), ship.mass); // what the engines must supply, gravity included
       // Point the thrust axis along the force only when there is a force worth pointing for: a
       // few percent of what the engines can give. Below that, chasing its direction just spins.
       const most = chans.reduce((m, c) => m + c.gain, 0);
       if (length(force) > 0.03 * most) want = scale(force, 1 / length(force));
-      p.intent = goal.kind === "hover" ? "hover" : `hold velocity ${v.x.toFixed(1)}, ${v.y.toFixed(1)} m/s`;
+      p.intent = label || (goal.kind === "hover" ? "hover" : `hold velocity ${v.x.toFixed(1)}, ${v.y.toFixed(1)} m/s`);
     } else p.intent = "idle";
 
     // Attitude: a PD law on the heading error (its sine, saturated beyond 90°), as an angular

@@ -600,7 +600,7 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
   - *Ship design is part of it.* Recipes unlock parts, and the player builds and refits ships from them in the sandbox's builder.
   - Needs, roughly in order: the base asteroid with gravity and the pad; the collector (a fixed tether that reels in, and a capture rule); a store of what has been delivered, kept with the world (these three are built: §9.8c); then recipes, buildings and part unlocks. More minerals than gold, and asteroids that are harder to reach, come with the tree.
 
-### 9.10 AI pilots (M8, phase 1 built)
+### 9.10 AI pilots (M8, phases 1–2 built)
 
 Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but nothing in the pilot may assume that ship: it must be able to fly any ship built from the parts in this spec. Specified November 2026; the plan comes next.
 
@@ -667,7 +667,25 @@ Enemy and neutral ships flown by the computer. For now they fly Gunship 2, but n
 - **Commands and sandbox.** `pilot.set` gives a pilot a new goal or skills; it keeps what it has learned. The inspector shows its intent, skills, commands and learned thrust.
 - **Scenario: *AI pilot: first flight (AI-1)*.** A second Gunship 2 (`e1-*`, channels `e1.*`) with a pilot, 40 m over the base, with a timeline of goals: hover; 6 m/s right; 6 m/s left and up; point the nose at the horizon; hover. The player's ship waits on the pad. Slider: AI flight skill.
 - **Cost (AIP-018):** a decision takes far under the 0.2 ms-per-step budget (tested); the scene runs at about 3.5 ms a step with gas.
-- **Next (phase 2):** flying to a point and arriving (planning the turn to brake), routes, station keeping, collision avoidance, the overlay, and Ignoring mode.
+
+*Model as built (phase 2: navigation and Ignoring).*
+- **Fly to a point (AIP-008).** It flies at the fastest speed it could still stop from in the distance left: a half turn (π ÷ its turn-rate cap, plus 0.3 s), then braking at its share of the thrust less gravity. It aims to stop inside its tolerance (1–3 m by skill). It can also pass through a point at cruise speed (4–12 m/s by skill, or set).
+  - *Measured:* 60 m off in open space, it stops within 2 m with no overshoot past 4 m. Under the base's gravity, 40 m across, it settles within 3 m.
+  - *The fix that made this work:* the velocity loop's gain had to come down below the turning loop's (0.4–1 per second against a turn of about a second). Otherwise, near the mark under gravity, it kept flipping round.
+- **Routes.** Waypoints in turn, passed through at cruise speed; the last one is stopped at unless the route loops. A waypoint counts as reached within twice its tolerance (4–8 m).
+- **Keep station (AIP-009).** It holds an offset from a body, moving with it, and closes on the mark gently (speed ∝ the gap). On a mark drifting at 1.6 m/s it stays within 3.5 m and on average within 0.6 m/s of its speed.
+  - *Throttle trim:* it now works only under gravity. In open space it wound up and overshot.
+- **Avoid collisions (AIP-010).**
+  - *Obstacles:* every other assembly, fixed or not, as a circle round its parts. Its own shells, loaded or fired, and their fragments are recognised by name and ignored.
+  - *Looking ahead:* along the velocity it wants, over 2–6 s by skill. Anything it would pass closer than the clearance (both sizes plus 2–4 m) gets two responses:
+    - a sideways push away from the closest approach;
+    - a cap on the speed it may close on it at: what it could still stop from in the room left.
+  - *First tries:* the push alone was too weak against a 9 m/s approach, and the AI ship hit the player's. Ignoring anything inside its own outline, meant to skip its loaded shell, also ignored a ship that came that close.
+- **Ignoring mode (AIP-015).** `mode: "ignoring"` with a `route`: it flies the route, looping, and ignores everyone, apart from steering round them.
+- **Overlay (AIP-017).** "AI plans": each pilot's waypoints as rings, a dashed line to where it is going, and a red ring round what it is steering past. The flight pad no longer shows buttons for channels a pilot flies.
+- **Scenario: *AI pilot: patrol among the rocks (AI-2)*.** An AI Gunship 2 in Ignoring mode flies a loop of five waypoints through TRC's rubble asteroids, routed close to the rocks and past the player's ship. Sliders: AI flight skill, cruise speed.
+  - *Measured:* at flight skill 0.3, 0.7 and 1, it goes round the whole loop and on in 60 s, with no contact with anything and no ledger violations, at about 6 ms a step with gas.
+- **Next (phase 3):** combat: detection radius and sides, aiming at a moving target (lead), fire control, and the Hunting, Cautious and Evading modes.
 
 *Decided (November 2026).*
 - **Who flies.** The pilot will be a creature, often a small woolly mammoth, sitting in a cockpit: a component still to design (§9.9). Until then the pilot is a computer built into the ship, on the ship as a whole.

@@ -336,6 +336,7 @@ export const ACTIONS: Action[] = [
   { id: "overlay.forces", label: "Overlay: forces", run: () => toggleOverlay("forces"), enabled: inSandbox },
   { id: "overlay.joints", label: "Overlay: joint load", run: () => toggleOverlay("joints"), enabled: inSandbox },
   { id: "overlay.links", label: "Overlay: links", run: () => toggleOverlay("links"), enabled: inSandbox },
+  { id: "overlay.pilots", label: "Overlay: AI plans", run: () => toggleOverlay("pilots"), enabled: inSandbox },
   { id: "detach", label: "Detach selection from its assembly", run: () => detachSelection(), enabled: hasSelection },
   { id: "overlay.grid", label: "Overlay: grid & axes", run: () => toggleOverlay("grid"), enabled: inSandbox },
   { id: "palette", label: "Command palette", keys: "Ctrl+K", run: () => (cmdkOpen.value = true) },
