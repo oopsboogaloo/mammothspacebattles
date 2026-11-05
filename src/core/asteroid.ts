@@ -10,6 +10,7 @@
 import { add, cross, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { createRng, nextFloat } from "./prng.ts";
 import { polygonArea, polygonCentroid } from "./shapes.ts";
+import type { Material } from "./damage.ts";
 import type { BodyInput, JointInput } from "./world.ts";
 
 export interface AsteroidSpec {
@@ -24,6 +25,8 @@ export interface AsteroidSpec {
   density: number;
   /** Bond strength: tension and shear a bond carries per metre of shared edge, N/m. */
   bond: number;
+  /** How the pieces take damage (DMG-002). Without one, hits never weaken the bonds. */
+  material?: Material;
   position: Vec2;
   velocity?: Vec2;
   angle?: number;
@@ -144,6 +147,7 @@ export function generateAsteroid(spec: AsteroidSpec): { bodies: BodyInput[]; joi
       angularVelocity: w,
       restitution: 0.1,
       friction: 0.6,
+      ...(spec.material ? { material: { ...spec.material } } : {}),
     });
   });
   // Bonds along shared edges: the vertices of piece i that lie on its border with piece j.

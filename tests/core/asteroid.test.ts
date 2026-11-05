@@ -66,4 +66,13 @@ describe("asteroid generator", () => {
     }
     expect(paths.sort()).toEqual(["$.world.asteroids[0].pieces", "$.world.asteroids[1].radius"]);
   });
+
+  it("AST-003 DMG-002 an asteroid's pieces carry its material, which is validated", () => {
+    const made = generateAsteroid({ ...spec, material: { name: "rock", threshold: 10, toughness: 200 } });
+    expect(made.bodies.every((b) => b.material?.toughness === 200)).toBe(true);
+    expect(generateAsteroid(spec).bodies.every((b) => b.material === undefined)).toBe(true);
+    const raw = readJson(join(ROOT, "scenarios", "asteroid-collision.json")) as { world: { asteroids: Record<string, unknown>[] } };
+    raw.world.asteroids[0].material = { threshold: 10, toughness: 0 };
+    expect(() => parseScenario(raw)).toThrow(/asteroids\[0\]\.material\.toughness/);
+  });
 });

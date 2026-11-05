@@ -248,14 +248,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       }
     }
   }
-  if (b.material !== undefined) {
-    if (!isObj(b.material)) err(v, `${path}.material`, "must be an object {threshold, toughness}");
-    else {
-      num(v, b.material.threshold, `${path}.material.threshold`, { min: 0 });
-      num(v, b.material.toughness, `${path}.material.toughness`, { positive: true });
-      if (b.material.name !== undefined) str(v, b.material.name, `${path}.material.name`);
-    }
-  }
+  if (b.material !== undefined) validateMaterial(v, b.material, `${path}.material`);
   if (b.contents !== undefined) {
     if (!Array.isArray(b.contents)) return err(v, `${path}.contents`, "must be an array of stores");
     b.contents.forEach((s, i) => {
@@ -267,6 +260,13 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       if (okM && okC && (s.mass as number) > (s.capacity as number)) err(v, `${sp}.mass`, "must not exceed capacity");
     });
   }
+}
+
+function validateMaterial(v: V, m: unknown, path: string): void {
+  if (!isObj(m)) return err(v, path, "must be an object {threshold, toughness}");
+  num(v, m.threshold, `${path}.threshold`, { min: 0 });
+  num(v, m.toughness, `${path}.toughness`, { positive: true });
+  if (m.name !== undefined) str(v, m.name, `${path}.name`);
 }
 
 function validateExplosive(v: V, e: unknown, mass: unknown, path: string): void {
@@ -582,6 +582,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
           vec(v, a.position, `${p}.position`);
           if (a.velocity !== undefined) vec(v, a.velocity, `${p}.velocity`);
           for (const k of ["angle", "angularVelocity"]) if (a[k] !== undefined) num(v, a[k], `${p}.${k}`);
+          if (a.material !== undefined) validateMaterial(v, a.material, `${p}.material`);
         });
     }
     if (data.world.links !== undefined) {
