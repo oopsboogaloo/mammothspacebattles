@@ -3,6 +3,7 @@
 // order (DET-004). All edits go through commands (SBX-013), and every change
 // to the conserved totals is attributed in the ledger (LED-001…LED-003).
 
+import { applyTractors, normalizeTractor, type Tractor, type TractorInput } from "./tractor.ts";
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
 import { bodyMass, type Store } from "./bodies.ts";
 import { assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
@@ -63,6 +64,8 @@ export interface Body {
   magazine?: Magazine;
   /** An explosive charge that detonates on impact (WPN): see explosive.ts. */
   explosive?: Explosive;
+  /** A tractor beam and tether (TRC): see tractor.ts. */
+  tractor?: Tractor;
 }
 
 /**
@@ -174,8 +177,8 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
 const GOLDEN = 0.6180339887498949;
 
 /** Body as written in scenarios and commands: material fields are optional. */
-export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine"> &
-  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput };
+export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine" | "tractor"> &
+  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput; tractor?: TractorInput };
 
 /** A magazine as written in scenarios: its state starts at zero. */
 export type MagazineInput = Omit<Magazine, "timer" | "loaded"> & Partial<Pick<Magazine, "timer" | "loaded">>;
@@ -318,8 +321,9 @@ export type Command =
   | { type: "debug.kick"; id: string; dv: Vec2 };
 
 export function normalizeBody(input: BodyInput): Body {
-  const { injector, magazine, ...rest } = structuredClone(input);
+  const { injector, magazine, tractor, ...rest } = structuredClone(input);
   const body: Body = { ...BODY_DEFAULTS, integrity: 1, ...rest };
+  if (tractor) body.tractor = normalizeTractor(tractor);
   if (injector) body.injector = { ...INJECTOR_DEFAULTS, ...injector };
   // A full reload time has passed at the start, so the first shell loads at once.
   if (magazine) body.magazine = { timer: magazine.reload, loaded: 0, ...magazine };
@@ -1079,6 +1083,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     correction: zeroDelta(),
     boundary: zeroDelta(),
     supply: zeroDelta(),
+    tractor: zeroDelta(),
   };
 
   // Feed links move resources between stores. Mass and momentum must not change; angular momentum may,
@@ -1149,6 +1154,14 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   applyDrags(world, rbs, dt);
   after = computeTotals(world);
   addDelta(sources.user, diff(before, after));
+
+  // Tractor beams and tethers (TRC): equal and opposite pulls, so only energy changes, which the ship supplies.
+  if (world.bodies.some((b) => b.tractor)) {
+    before = after;
+    applyTractors(world, rbs, dt);
+    after = computeTotals(world);
+    sources.tractor.energy = after.energy.total - before.energy.total;
+  }
   mark("forces");
 
   // Contacts: kinetic energy lost becomes heat.

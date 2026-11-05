@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, type Body, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "grid";
@@ -34,6 +34,7 @@ export const COLORS = {
   preview: "#F2C94C",
   label: "#E6EAF2",
   wreck: "#0C0F18",
+  tractor: "#5CE1C6",
 } as const;
 
 export interface RulerView {
@@ -561,6 +562,56 @@ function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string): v
   ctx.fillText("PAD", (a.x + z.x) / 2, a.y - 4);
 }
 
+/** Tractor beams as a faint wedge, and tethers as a line that warms from teal to red as it nears breaking (TRC). */
+function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  for (const b of world.bodies) {
+    const t = b.tractor;
+    if (!t || t.mode === "off") continue;
+    const { origin, axis } = tractorFrame(b);
+    const o = toScreen(c, vp, origin);
+    if (t.mode === "beam") {
+      const a0 = Math.atan2(axis.y, axis.x);
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y);
+      const n = 16;
+      for (let i = 0; i <= n; i++) {
+        const a = a0 - t.arc / 2 + (t.arc * i) / n;
+        const p = toScreen(c, vp, { x: origin.x + t.range * Math.cos(a), y: origin.y + t.range * Math.sin(a) });
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = "rgba(92, 225, 198, 0.12)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(92, 225, 198, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      continue;
+    }
+    const cargo = world.bodies.find((x) => x.id === t.cargo);
+    if (!cargo) continue;
+    const p = toScreen(c, vp, cargo.position);
+    const f = Math.min(1, Math.abs(t.tension) / t.tether.maxTension);
+    // Teal (slack or light) through amber to red (about to break).
+    const r = Math.round(92 + f * (255 - 92));
+    const gr = Math.round(225 - f * (225 - 80));
+    const bl = Math.round(198 - f * (198 - 70));
+    ctx.strokeStyle = `rgb(${r}, ${gr}, ${bl})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash(t.tension < 0 ? [6, 4] : []);
+    ctx.beginPath();
+    ctx.moveTo(o.x, o.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const q of [o, p]) {
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.tractor;
+      ctx.fill();
+    }
+  }
+}
+
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
@@ -615,6 +666,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       ctx.fillText(b.id, s0.x, s0.y + Math.max(8, reach * c.zoom * 0.35));
     }
   }
+  drawTractors(ctx, world, c, vp);
   if (opts.pad) drawPad(ctx, world, c, vp, opts.pad);
   drawDamage(ctx, world, c, vp, opts.overlays.has("damage"));
 

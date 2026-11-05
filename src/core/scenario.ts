@@ -222,6 +222,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   }
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
+  if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
   if (b.magazine !== undefined) {
     const m = b.magazine;
     const mp = `${path}.magazine`;
@@ -267,6 +268,23 @@ function validateMaterial(v: V, m: unknown, path: string): void {
   num(v, m.threshold, `${path}.threshold`, { min: 0 });
   num(v, m.toughness, `${path}.toughness`, { positive: true });
   if (m.name !== undefined) str(v, m.name, `${path}.name`);
+}
+
+function validateTractor(v: V, t: unknown, path: string): void {
+  if (!isObj(t)) return err(v, path, "must be {channel, origin, direction, range?, arc?, force?, tether?}");
+  str(v, t.channel, `${path}.channel`);
+  vec(v, t.origin, `${path}.origin`);
+  vec(v, t.direction, `${path}.direction`);
+  if (isObj(t.direction) && t.direction.x === 0 && t.direction.y === 0) err(v, `${path}.direction`, "must not be zero");
+  if (t.range !== undefined) num(v, t.range, `${path}.range`, { positive: true });
+  if (t.arc !== undefined) num(v, t.arc, `${path}.arc`, { positive: true, max: Math.PI });
+  if (t.force !== undefined) num(v, t.force, `${path}.force`, { min: 0 });
+  if (t.capture !== undefined) num(v, t.capture, `${path}.capture`, { min: 0 });
+  if (t.tether !== undefined) {
+    if (!isObj(t.tether)) return err(v, `${path}.tether`, "must be {length?, stiffness?, damping?, maxTension?}");
+    for (const k of ["length", "stiffness", "maxTension"]) if (t.tether[k] !== undefined) num(v, t.tether[k], `${path}.tether.${k}`, { positive: true });
+    if (t.tether.damping !== undefined) num(v, t.tether.damping, `${path}.tether.damping`, { min: 0 });
+  }
 }
 
 function validateExplosive(v: V, e: unknown, mass: unknown, path: string): void {

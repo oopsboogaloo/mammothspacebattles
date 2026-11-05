@@ -525,6 +525,27 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **Speed.** Finding which side of a weld each part is on searched every joint from every part. With 200 bonds that was 13 ms a step. Each part's welds are now listed once per pass, and the search stops as soon as it closes a loop: 1.8 ms. The collision scenario runs at about 2.3 ms a step. The rubble scenario runs at 5–10 ms a step while firing: its 100 bonds are solved every step.
 - **Not yet.** Spin shedding (AST-004) needs loads for welds in loops. Dust (AST-005) needs pressureless particles.
 
+### 9.8b Tractor beam and tether (M7)
+
+Salvage: a ship pulls loose objects in with a beam and tows them home on a tether, to use or to sell.
+
+- **TRC-001** `[M · M7 · U]` A ship's tractor shall project a beam while its control is on: a wedge (default 30°, 50 m) from a declared point, along a declared direction in the ship's frame. Without its control link, or once its body is wreckage, it does nothing.
+- **TRC-002** `[M · M7 · P]` The beam shall pull every free assembly in the wedge toward its origin with a total force (default 400 N) shared equally between them, and pull the ship toward each with an equal and opposite force, so momentum and angular momentum are unchanged.
+- **TRC-003** `[M · M7 · S]` When an assembly no bigger than the ship and at most a declared multiple of its mass (default 1.2) comes within the tether's length (default 30 m), the beam shall stop and a tether shall take its piece nearest the ship. Heavier or bigger assemblies are only pulled.
+- **TRC-004** `[M · M7 · P]` The tether shall be a stiff, damped spring (Hooke's law) of the declared length between the ship and the cargo's centre of mass, acting along the line between them only, so the cargo swings freely round the ship and stays within about a metre of that length under normal flying.
+- **TRC-005** `[M · M7 · U]` Pressing the control again shall let the cargo go. The beam shall not return until the control has been released and pressed afresh.
+- **TRC-006** `[M · M7 · U]` A tether whose force passes its declared maximum shall break, raising `tether.break`.
+
+*Model as built (first look).*
+- **Where it acts.** Tractors run once per step, after gravity and before contacts, as velocity changes on both ends. Each pull is a pair along the line between its two points, so momentum and angular momentum are exact. The ship and the cargo are assemblies; the welds share each pull in the contact solve, so a hard yank loads them.
+- **Beam.** Pieces count when their centre of mass is in the wedge. Each assembly in the beam gets an equal share of the force, split between its pieces in the wedge by mass. Fixed bodies and the ship's own assembly are ignored; gas is not pulled.
+- **Tether.** A spring of constant `stiffness` (default 2,000 N/m) with damping `damping` × critical (default 0.7) for the two assemblies' effective mass along the line. It is solved implicitly (backward Euler), with the effective mass of both whole assemblies, so it is stable however stiff. It pushes as well as pulls, so cargo caught while closing fast is held off at its length rather than hitting the ship. Past `maxTension` (default 20,000 N; 10,000 N in TRC), pulling or pushing, it carries its maximum for that step and breaks.
+- **Ledger.** The ship powers the beam and the tether. The kinetic energy they add or take (the spring's stored energy and its damping included) is recorded under a new ledger source, `tractor`. Mass, momentum and angular momentum stay checked as before.
+- **Events.** `tractor.on`, `tractor.off`, `tether.engage` (with the distance), `tether.release`, `tether.break` (with the force).
+- **On screen.** The beam is a faint teal wedge. The tether is a line that warms from teal to red as its force nears the limit, dashed while it pushes. The inspector shows the mode, the cargo and the force.
+- **Scenario: *Gunship 2: tractor beam and tether (TRC)*.** Gunship 2 (80 kg, 3.3 m from its centre of mass to its far edge) with a tractor at its tail, aimed backwards, on T. To pick up: an 80 kg ball half the ship's size, a 40 kg asteroid fragment, and an 18 kg derelict of three welded parts. A 6 m rock is too heavy to tow, so the beam pulls the ship to it. Three rubble asteroids to fly round, and a fixed base platform to bring cargo back to. Sliders for the beam force, tether length and breaking force. No gravity.
+- **Measured.** Holding T from the start, the beam takes the ball on the tether at 30 m after 1.6 s. While it settles and then tows the ball under full thrust for 1.25 s, the ball stays between 29.2 and 30.2 m, with the ledger clean. The step takes about 4 ms.
+
 ### 9.9 Logged for later (not scheduled)
 
 Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and it still fed both engines while the ship still answered the keys. Today a link (ASM-006) joins its two ends wherever they are: it breaks only if an end is wrecked or the link's own integrity reaches 0. Nothing here has requirement IDs or a milestone yet.
