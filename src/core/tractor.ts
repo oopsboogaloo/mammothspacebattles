@@ -68,7 +68,7 @@ export const TRACTOR_DEFAULTS: Omit<Tractor, "channel" | "origin" | "direction">
   arc: Math.PI / 6,
   force: 400,
   capture: 1.2,
-  tether: { length: 30, stiffness: 2000, damping: 0.7, maxTension: 20000 },
+  tether: { length: 20, stiffness: 2000, damping: 0.7, maxTension: 20000 },
   mode: "off",
   held: false,
   latched: false,
@@ -91,7 +91,7 @@ export function tractorFrame(b: Body): { origin: Vec2; axis: Vec2 } {
   return { origin: add(b.position, rotate(q, b.tractor!.origin)), axis: n > 0 ? scale(d, 1 / n) : { x: 0, y: -1 } };
 }
 
-interface Group {
+export interface Group {
   root: string;
   pieces: RB[];
   mass: number;
@@ -101,7 +101,7 @@ interface Group {
   extent: number;
 }
 
-function groupOf(rbs: RB[], roots: Map<string, string>, root: string): Group {
+export function groupOf(rbs: RB[], roots: Map<string, string>, root: string): Group {
   const pieces = rbs.filter((r) => roots.get(r.body.id) === root);
   const p = assemblyProps(pieces.map((r) => ({ mass: r.mass, inertia: r.inertia, position: r.body.position })));
   let extent = 0;
@@ -114,13 +114,13 @@ function groupOf(rbs: RB[], roots: Map<string, string>, root: string): Group {
 }
 
 /** Applies an impulse at a point of a body (velocity only; the welds share it in the solve). */
-function push(r: RB, J: Vec2, at: Vec2): void {
+export function push(r: RB, J: Vec2, at: Vec2): void {
   r.body.velocity = add(r.body.velocity, scale(J, r.invMass));
   r.body.angularVelocity += r.invInertia * cross(sub(at, r.body.position), J);
 }
 
 /** 1 / effective mass of an assembly along unit n at point p. */
-function invMassAlong(g: Group, p: Vec2, n: Vec2): number {
+export function invMassAlong(g: Group, p: Vec2, n: Vec2): number {
   const rn = cross(sub(p, g.com), n);
   return 1 / g.mass + (g.inertia > 0 ? (rn * rn) / g.inertia : 0);
 }

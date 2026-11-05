@@ -536,7 +536,7 @@ Salvage: a ship pulls loose objects in with a beam and tows them home on a tethe
 
 - **TRC-001** `[M · M7 · U]` A ship's tractor shall project a beam while its control is on: a wedge (default 30°, 50 m) from a declared point, along a declared direction in the ship's frame. Without its control link, or once its body is wreckage, it does nothing.
 - **TRC-002** `[M · M7 · P]` The beam shall pull every free assembly in the wedge toward its origin with a total force (default 400 N) shared equally between them, and pull the ship toward each with an equal and opposite force, so momentum and angular momentum are unchanged.
-- **TRC-003** `[M · M7 · S]` When an assembly no bigger than the ship and at most a declared multiple of its mass (default 1.2) comes within the tether's length (default 30 m), the beam shall stop and a tether shall take its piece nearest the ship. Heavier or bigger assemblies are only pulled.
+- **TRC-003** `[M · M7 · S]` When an assembly no bigger than the ship and at most a declared multiple of its mass (default 1.2) comes within the tether's length (default 20 m), the beam shall stop and a tether shall take its piece nearest the ship. Heavier or bigger assemblies are only pulled.
 - **TRC-004** `[M · M7 · P]` The tether shall be a stiff, damped spring (Hooke's law) of the declared length between the ship and the cargo's centre of mass, acting along the line between them only, so the cargo swings freely round the ship and stays within about a metre of that length under normal flying.
 - **TRC-005** `[M · M7 · U]` Pressing the control again shall let the cargo go. The beam shall not return until the control has been released and pressed afresh.
 - **TRC-006** `[M · M7 · U]` A tether whose force passes its declared maximum shall break, raising `tether.break`.
@@ -549,7 +549,32 @@ Salvage: a ship pulls loose objects in with a beam and tows them home on a tethe
 - **Events.** `tractor.on`, `tractor.off`, `tether.engage` (with the distance), `tether.release`, `tether.break` (with the force).
 - **On screen.** The beam is a faint teal wedge. The tether is a line that warms from teal to red as its force nears the limit, dashed while it pushes. The inspector shows the mode, the cargo and the force.
 - **Scenario: *Gunship 2: tractor beam and tether (TRC)*.** Gunship 2 (80 kg, 3.3 m from its centre of mass to its far edge) with a tractor at its tail, aimed backwards, on T. To pick up: an 80 kg ball half the ship's size, a 40 kg asteroid fragment, and an 18 kg derelict of three welded parts. A 6 m rock is too heavy to tow, so the beam pulls the ship to it. Three rubble asteroids to fly round, and a fixed base platform to bring cargo back to. Sliders for the beam force, tether length and breaking force. No gravity.
-- **Measured.** Holding T from the start, the beam takes the ball on the tether at 30 m after 1.6 s. While it settles and then tows the ball under full thrust for 1.25 s, the ball stays between 29.2 and 30.2 m, with the ledger clean. The step takes about 4 ms.
+- **Measured.** Holding T from the start, the beam takes the ball on the tether at 20 m after 2.2 s (with a 30 m tether, as first built: 1.6 s, and the ball stayed between 29.2 and 30.2 m under full thrust), with the ledger clean. The step takes about 4 ms.
+
+### 9.8c Home base (M7)
+
+The first piece of the game loop (§9.9): a base to bring what is mined back to.
+
+- **BAS-001** `[M · M7 · S]` A base shall be a large asteroid with its own gravity (FLT-011), stronger the bigger it is, with a landing pad, an egg-cup collector, a control tower and a dome grouped on one side of its surface.
+- **BAS-002** `[M · M7 · U]` A collector shall take loose cargo (no ship parts, small enough for its cup) that comes within its reach on a tether of its own, one piece at a time, the nearest first.
+- **BAS-003** `[M · M7 · U]` While a ship still holds the same cargo, both tethers shall act, so ship, cargo and collector are connected; the collector's tether shall have much more give than the ship's.
+- **BAS-004** `[M · M7 · U]` The collector shall reel its cargo in. Reeled in all the way, the cargo is captured: it leaves the world and its mass is counted as delivered, by mineral.
+
+*Model as built (first look).*
+- **Collector (`src/core/collector.ts`).** A component on a fixed body, with a `mouth` (the reel point, low in the cup).
+  - *Taking cargo:* it takes the nearest piece of any free assembly with no ship parts (tractor, injector, magazine, collector) and no larger than `maxExtent` (default 3 m) that comes within `range` of the mouth (default 10 m). Its rest length starts at that distance, so taking it is no jolt.
+  - *Tether:* the ship's implicit spring (TRC-004) with the collector's end fixed: `stiffness` 200 N/m (a tenth of a ship's), damping at critical. It breaks past `maxTension` (5,000 N).
+  - *Reeling and capture:* the rest length shortens at `reel` (2 m/s). At zero, with the piece within `capture` (2 m) of the mouth, the whole assembly is captured: taken out at the end of the step, with its welds and links. Its mass is added to the collector's `delivered`, by mineral (`rock` for none). Events: `collector.engage`, `collector.break`, `cargo.collected`.
+  - *Ledger:* the collector is fixed, so its pull is external. Its impulse and angular impulse, with the energy it adds or takes, go under `tractor`. Captured cargo leaving the world goes under `boundary`, like gas leaving.
+  - *Reach:* first built with a 25 m reach, it took the loose shell in the parked ship's barrel 17 m away and tipped the ship over. 10 m keeps it to the cup.
+- **Scenario: *Home base: mine and deliver (BASE)*.**
+  - *The base asteroid:* a fixed 60 m rock (16-sided, flat-topped) with `gravity` mu 5,408 m³/s², core 10 m: about 1.9 m/s² at the surface, against Gunship 2's 6.9 m/s² at full thrust.
+  - *On its 60 m plateau:* the pad at the centre, where gravity is straight down (off-centre, the plateau slopes against the pull and a parked ship slid). The egg cup (stem, floor, flared walls) to the right; a control tower and a dome to the left.
+  - *Mining asteroids:* three rubble asteroids (TRC's light rock, gold and larger fragments) on circular orbits 140, 175 and 210 m from the base's centre, at 5–6 m/s.
+  - *The ship:* Gunship 2 with the tractor on T, parked on the pad.
+  - *Sliders and graphs:* sliders for the collector's reach and reel speed. Graphs of gold and rock delivered.
+  - *Measured:* the parked ship stays put for 10 s, and the orbits hold to within 3% over that time. A step takes about 3 ms. The ledger is clean.
+- **Not yet.** The base is fixed and indestructible, and buildings are plain fixed bodies with no function. Delivered material is counted but can't be spent. Recipes, building and ship upgrades are the next steps (§9.9).
 
 ### 9.9 Logged for later (not scheduled)
 
@@ -573,7 +598,7 @@ Found flying FT-B. A crash broke the tank off the ship, damaged but whole, and i
   - *The loop.* The ship flies out to the asteroids, mines valuables, brings them back, and spends them to improve the base or the ship.
   - *Progression.* The usual crafting tree: more materials unlock new buildings, which unlock new recipes, which need new materials from more dangerous places.
   - *Ship design is part of it.* Recipes unlock parts, and the player builds and refits ships from them in the sandbox's builder.
-  - Needs, roughly in order: the base asteroid with gravity and the pad; the collector (a fixed tether that reels in, and a capture rule); a store of what has been delivered, kept with the world; then recipes, buildings and part unlocks. More minerals than gold, and asteroids that are harder to reach, come with the tree.
+  - Needs, roughly in order: the base asteroid with gravity and the pad; the collector (a fixed tether that reels in, and a capture rule); a store of what has been delivered, kept with the world (these three are built: §9.8c); then recipes, buildings and part unlocks. More minerals than gold, and asteroids that are harder to reach, come with the tree.
 
 ## 10. Performance Requirements
 

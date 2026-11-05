@@ -4,6 +4,7 @@
 // to the conserved totals is attributed in the ledger (LED-001…LED-003).
 
 import { revealCompounds } from "./asteroid.ts";
+import { applyCollectors, collectCaptured, normalizeCollector, type Collector, type CollectorInput } from "./collector.ts";
 import { applyTractors, normalizeTractor, type Tractor, type TractorInput } from "./tractor.ts";
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
 import { bodyMass, type Store } from "./bodies.ts";
@@ -67,6 +68,8 @@ export interface Body {
   explosive?: Explosive;
   /** A tractor beam and tether (TRC): see tractor.ts. */
   tractor?: Tractor;
+  /** A base's cargo collector, on a fixed body (BAS): see collector.ts. */
+  collector?: Collector;
   /** What it is made of, if valuable (AST-006): "gold". Drawn in its colour once it can be seen. */
   mineral?: string;
   /** Part of a larger asteroid fragment whose seams don't show yet (AST-007): see asteroid.ts. */
@@ -182,8 +185,8 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
 const GOLDEN = 0.6180339887498949;
 
 /** Body as written in scenarios and commands: material fields are optional. */
-export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine" | "tractor"> &
-  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput; tractor?: TractorInput };
+export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine" | "tractor" | "collector"> &
+  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput; tractor?: TractorInput; collector?: CollectorInput };
 
 /** A magazine as written in scenarios: its state starts at zero. */
 export type MagazineInput = Omit<Magazine, "timer" | "loaded"> & Partial<Pick<Magazine, "timer" | "loaded">>;
@@ -328,9 +331,10 @@ export type Command =
   | { type: "debug.kick"; id: string; dv: Vec2 };
 
 export function normalizeBody(input: BodyInput): Body {
-  const { injector, magazine, tractor, ...rest } = structuredClone(input);
+  const { injector, magazine, tractor, collector, ...rest } = structuredClone(input);
   const body: Body = { ...BODY_DEFAULTS, integrity: 1, ...rest };
   if (tractor) body.tractor = normalizeTractor(tractor);
+  if (collector) body.collector = normalizeCollector(collector);
   if (injector) body.injector = { ...INJECTOR_DEFAULTS, ...injector };
   // A full reload time has passed at the start, so the first shell loads at once.
   if (magazine) body.magazine = { timer: magazine.reload, loaded: 0, ...magazine };
@@ -1163,12 +1167,14 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   after = computeTotals(world);
   addDelta(sources.user, diff(before, after));
 
-  // Tractor beams and tethers (TRC): equal and opposite pulls, so only energy changes, which the ship supplies.
-  if (world.bodies.some((b) => b.tractor)) {
+  // Tractor beams and tethers (TRC): equal and opposite pulls, so only energy changes, which the ship
+  // supplies. A base's collector (BAS) is fixed: its pull is external, recorded with its impulse.
+  if (world.bodies.some((b) => b.tractor || b.collector)) {
     before = after;
     applyTractors(world, rbs, dt);
+    const ext = applyCollectors(world, rbs, dt);
     after = computeTotals(world);
-    sources.tractor.energy = after.energy.total - before.energy.total;
+    sources.tractor = { mass: 0, momentumX: ext.impulse.x, momentumY: ext.impulse.y, angularMomentum: ext.angular, energy: after.energy.total - before.energy.total };
   }
   mark("forces");
 
@@ -1285,6 +1291,14 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
 
   for (const d of world.drags) {
     if (!world.bodies.some((b) => b.id === d.id)) world.drags = world.drags.filter((x) => x.id !== d.id);
+  }
+
+  // Cargo a collector reeled all the way in leaves the world, delivered (BAS-004).
+  if (world.bodies.some((b) => b.collector?.captured)) {
+    const t0 = computeTotals(world);
+    collectCaptured(world);
+    after = computeTotals(world);
+    addDelta(sources.boundary, diff(t0, after));
   }
 
   // A wrapped world (FLT-012): what crosses an edge comes back in at the other one.

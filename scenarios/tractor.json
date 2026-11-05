@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "tractor",
   "title": "Gunship 2: tractor beam and tether",
-  "description": "Gunship 2 with a tractor beam: hold T and a 30\u00b0 beam reaches 50 m out behind the ship, pulling on what it touches with a total force shared between them, and pulling the ship back just as hard. An object no bigger than the ship and no more than 1.2 times its mass that comes within 30 m is taken on a tether: a stiff, damped spring that holds it at 30 m and lets it swing round the ship. Press T again to let it go. Too hard a pull breaks the tether. To pick up: an asteroid fragment, a derelict ship, and a dense ball as heavy as the ship and half its size; the big rock is too heavy to tow, so the beam pulls the ship to it instead. Rubble asteroids to fly round, and a base platform to bring cargo back to. No gravity.",
+  "description": "Gunship 2 with a tractor beam: hold T and a 30\u00b0 beam reaches 50 m out behind the ship, pulling on what it touches with a total force shared between them, and pulling the ship back just as hard. An object no bigger than the ship and no more than 1.2 times its mass that comes within 20 m is taken on a tether: a stiff, damped spring that holds it at 20 m and lets it swing round the ship. Press T again to let it go. Too hard a pull breaks the tether. To pick up: an asteroid fragment, a derelict ship, and a dense ball as heavy as the ship and half its size; the big rock is too heavy to tow, so the beam pulls the ship to it instead. Rubble asteroids to fly round, and a base platform to bring cargo back to. No gravity.",
   "profile": "sandbox",
   "seed": 41,
   "world": {
@@ -1980,7 +1980,7 @@
     }
   ],
   "ui": {
-    "lookFor": "Fly with Q and E, fire with F. Hold T to beam: the wedge behind the ship pulls what it touches toward you, and you toward it. Bring the ball, the fragment or the derelict within 30 m and the tether takes it; it swings round you on a 30 m line. Tow it to the base, then press T again to let it go. The big rock is too heavy to tow: the beam pulls you to it.",
+    "lookFor": "Fly with Q and E, fire with F. Hold T to beam: the wedge behind the ship pulls what it touches toward you, and you toward it. Bring the ball, the fragment or the derelict within 20 m and the tether takes it; it swings round you on a 20 m line. Tow it to the base, then press T again to let it go. The big rock is too heavy to tow: the beam pulls you to it.",
     "overlays": [
       "velocity",
       "damage"
@@ -2102,7 +2102,7 @@
       "min": 5,
       "max": 50,
       "step": 1,
-      "default": 30
+      "default": 20
     },
     {
       "id": "maxTension",

@@ -547,8 +547,15 @@ function ContentsSection({ body }: { body: Body }) {
           title={`Beam ${fmt(body.tractor.force, "N")} over ${fmt(body.tractor.range, "m")}; tether ${fmt(body.tractor.tether.length, "m")}, breaks past ${fmt(body.tractor.tether.maxTension, "N")}. Tension is positive when it pulls.`}
         />
       )}
+      {body.collector && (
+        <Row
+          k="Delivered"
+          v={Object.keys(body.collector.delivered).length ? Object.entries(body.collector.delivered).map(([k, m]) => `${k} ${fmt(m, "kg")}`).join(", ") : "nothing yet"}
+          title={`Cargo reeled into the cup and captured, by mineral. ${body.collector.cargo ? `Reeling in ${body.collector.cargo}.` : "Idle."}`}
+        />
+      )}
       {body.magazine && <Row k="Shells" v={`${body.magazine.count} × ${fmt(body.magazine.shell.mass, "kg")}`} title="Shells in the magazine, part of this body's mass until each is loaded." />}
-      {stores.length === 0 && !body.magazine && <span class="muted">No stores.</span>}
+      {stores.length === 0 && !body.magazine && !body.collector && <span class="muted">No stores.</span>}
       {stores.map((s, i) => (
         <div key={s.resource} class="joint">
           <div class="row">
