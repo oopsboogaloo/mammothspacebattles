@@ -15,6 +15,7 @@
       th { font-weight: 500; color: #8b95a5; font-size: 13px; }
       tr.me td { background: #16202c; }
       .go { color: #5fd38a; }
+      a { color: #8ab4ff; }
       .nogo { color: #ff6b6b; }
       #status { padding: 8px 10px; border-radius: 6px; background: #16202c; }
       #status.error, #status.unavailable { background: #3a1d1d; }
@@ -24,19 +25,19 @@
     </style>
   </head>
   <body>
-    <h1>GPU gas spike</h1>
-    <p class="muted">Phase 0 of the GPU gas plan: a WebGPU grid sort and SPH pressure, run in the simulation worker, timed per substep. Keep the screen on and the tab in front; it takes about a minute.</p>
+    <h1 id="title">GPU gas spike</h1>
+    <p class="muted">The GPU gas plan's spikes: a WebGPU grid sort and SPH pressure, run in the simulation worker, timed per substep. Keep the screen on and the tab in front; it takes a minute or two.</p>
     <p id="status"></p>
     <p id="adapter" class="muted"></p>
     <p id="check"></p>
     <table>
-      <thead><tr><th>Parcels</th><th>µs / substep</th><th>sort</th><th>density + force</th><th>µs per 10k</th><th>neighbours</th></tr></thead>
+      <thead id="head"></thead>
       <tbody id="rows"></tbody>
     </table>
     <div id="estimate"></div>
     <p><button id="copy">Copy results</button></p>
     <textarea id="report" readonly aria-label="Results to send"></textarea>
-    <p class="muted">Each substep is one submit's share of 7 dispatches (clear, count, two scans, scatter, density, force). Times are wall clock round a batch of substeps and a 16-byte read-back, as the game would run them. "Sort" and "density + force" are each run alone.</p>
+    <p class="muted">Spike 2 runs each cluster in one work-group, every substep of a batch in one dispatch, with barriers between the stages (clear, count, running total, scatter, density, force, substep length); clusters run side by side. Spike 1 (<a href="?spike=1">?spike=1</a>) runs each substep as 7 dispatches. Times are wall clock round a batch of substeps and a small read-back, as the game would run them.</p>
     <script type="module" src="/src/app/gpu/page.ts"></script>
   </body>
 </html>

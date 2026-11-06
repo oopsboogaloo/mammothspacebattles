@@ -100,6 +100,9 @@ run WebGPU (SwiftShader) for correctness. No-go as designed.
 
 ### Phase 0b: Spike 2, one work-group per cluster, ~1 PR
 
+Built (the spike page's default; [`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md) §7); awaiting
+runs on the iPad and the desktop.
+
 - On the spike page, a fused mode: each gas cluster (NFR-004) runs in one work-group, looping over
   all its substeps (sort, density, force, move) with work-group barriers, so a step is one dispatch.
   Clusters run side by side; each can take its own substeps.
@@ -159,6 +162,18 @@ run WebGPU (SwiftShader) for correctness. No-go as designed.
 2. **Determinism:** keep it for everything except GPU gas (recommended), or drop it everywhere.
 3. **Ledger:** keep checking gas with tolerances (recommended), or stop auditing gas.
 4. **Start with Phase 0** before committing to the rest.
+
+## Ideas weighed (6 November 2026)
+
+Measured in the reference battle on the CPU gas (Node), after Phase 0.
+
+| Idea | Finding | Status |
+|---|---|---|
+| **Speed limit on parcels** | The substep follows sound speed + parcel speed (here up to 161 + 278 m/s). A 200 m/s limit gives 31 → 27 substeps a step, clipping 9% of parcels; 100 m/s gives 21, clipping 57%. Even with every parcel still, sound alone needs 13, so 2.4× at most. It cuts thrust (exhaust is about 160 m/s), deletes momentum, penalises fast ships and weakens blasts. | Rejected |
+| **Pulsed engines** | 4 steps on, 4 off: still 5 clusters, the biggest half the size; parcels, cost and thrust all halve, like half throttle; substeps barely fall (30 → 28). The puffs don't separate into clusters. | No performance gain |
+| **Hard split of a big cluster** (each piece sees the others a step late) | News travels up to about 1.6 m a step at the cut; pushes stop being equal and opposite, so momentum leaks; waves partly reflect at the cut. | Rejected |
+| **Split with overlapping borders** (each piece also steps a border strip of its neighbours' parcels; borders swapped every k substeps) | Exact for its own parcels for k substeps if the strip is k reaches wide. Costs duplicate work in the strips (about 50–70% for a 10 m plume in 4 pieces at k = 8) and a few GPU-wide waits a step, not about 430. | Fallback in Phase 0b for one oversized cluster |
+| **Sources don't mix** (gas interacts only with gas from the same source: a ship, a shell burst, a tank leak) | Gas still pushes every body, and a ship's own plumes still interact; crossing plumes pass through each other. Cluster size is bounded by one ship's gas (the Mammoth's, about 1,400 parcels at 4×), and finding clusters becomes nearly free (6.1 of 22.5 ms a step on the CPU in the reference battle). It would apply to the CPU gas too, to keep the two in step. | **Kept as an option for later**; sources mix for now |
 
 ## Risks
 

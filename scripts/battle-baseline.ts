@@ -5,7 +5,7 @@
 // substep fell to its floor (more than 200 substeps; see `clamped`); "all" is every step.
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getProfile, initialWorld, parseScenario, stepInPlace, timelineByStep } from "../src/core/index.ts";
+import { gasClusters, getProfile, initialWorld, parseScenario, stepInPlace, timelineByStep, wallBodies } from "../src/core/index.ts";
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: string) => {
@@ -30,13 +30,24 @@ interface StepRow {
 const rows: StepRow[] = [];
 const out: Record<string, number> = {};
 const clock = () => performance.now();
+// Gas clusters (NFR-004) every 20 steps from step 60, sizes largest first: what a GPU work-group per
+// cluster would each have to step (docs/gpu-gas-plan.md, Phase 0b).
+const clusterSamples: number[][] = [];
 for (let s = 0; s < steps; s++) {
   for (const k of Object.keys(out)) delete out[k];
   const t0 = clock();
   stepInPlace(world, byStep.get(s) ?? [], profile, { clock, out });
   const ms = clock() - t0;
   rows.push({ ms, gasMs: out.gas ?? 0, parcels: world.gas.parcels.length, substeps: world.gas.substeps, phases: { ...out } });
+  if (s >= 60 && s % 20 === 0)
+    clusterSamples.push(gasClusters(world.gas.parcels, wallBodies(world.bodies), world.joints, profile.timestep).map((c) => c.parcels.length).sort((a, b) => b - a));
 }
+const ranks = Math.max(...clusterSamples.map((c) => c.length));
+const clusters = {
+  count: Math.round((10 * clusterSamples.reduce((a, c) => a + c.length, 0)) / clusterSamples.length) / 10,
+  /** Mean size of the largest, second largest, … cluster. */
+  sizes: Array.from({ length: ranks }, (_, r) => Math.round(clusterSamples.reduce((a, c) => a + (c[r] ?? 0), 0) / clusterSamples.length)),
+};
 
 const CLAMP = 200;
 const summary = (rs: StepRow[]) => {
@@ -76,7 +87,7 @@ const result = {
   stepsPerSecond: Math.round(1 / profile.timestep),
   detonations,
   clamped: clamped.length ? { count: clamped.length, from: clamped[0], to: clamped[clamped.length - 1] } : null,
-  steady: summary(steady),
+  steady: { ...summary(steady), clusters },
   all: summary(rows),
 };
 console.log(JSON.stringify(result, null, 2));

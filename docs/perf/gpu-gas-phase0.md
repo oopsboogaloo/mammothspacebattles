@@ -153,6 +153,25 @@ game unique, and the aim is to make that gas affordable without faking it. Next 
 (first row above), timed on the same devices. If it brings a substep near 10–20 µs, Phase 1 goes
 ahead in that form; if not, the large-time-step gas is tried on the CPU against today's.
 
+## 7. Spike 2: one work-group per cluster (built, awaiting device runs)
+
+The spike page now runs Spike 2 by default (`src/app/gpu/fused.ts`; Spike 1 with `?spike=1`).
+
+- **One work-group per cluster.** Each cluster's parcels are a range of the state buffers with
+  their own hashed table. Its threads loop through every substep of a batch, waiting only for
+  each other (barriers) between the stages: clear, count, running total, scatter, density,
+  pushes and move, then the next substep length from the cluster's fastest gas.
+- **One dispatch per batch.** No GPU-wide waits; clusters run side by side on different compute units.
+- **What it times:** clusters of 250, 500, 1,000, 1,500 and 3,000 parcels; 1, 5 and 10 at once;
+  256 threads a work-group, and 1,024 where the device allows. Per substep, all clusters together.
+- **The battle's clusters** (`reference-battle-baseline.json`, `steady.clusters`): 5, of about 335,
+  292, 115, 103 and 48 parcels. At 4× detail the largest is about 1,340.
+- **The estimate it shows:** the battle at 1×, 2× and 4× detail, timed by its largest cluster at
+  √detail × 30.4 substeps, × 2.47 for walls and the rest, against ½ and ¼ of a 1/240 s step.
+- **Checked against the CPU** as Spike 1 is (three clusters of different sizes): density within
+  3×10⁻⁷ and momentum drift 2×10⁻⁹ on SwiftShader in CI.
+- **Pass mark:** a substep near 10–20 µs at the largest cluster's size (docs/gpu-gas-plan.md, Phase 0b).
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
