@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import baseline from "../../docs/perf/reference-battle-baseline.json";
 import { estimate, estimateFused, restFactor, substepUs } from "../../src/app/gpu/estimate.ts";
+import { sharedBytes } from "../../src/app/gpu/fused.ts";
 import { initialWorld, parseScenario } from "../../src/core/index.ts";
 import { readJson, ROOT } from "../helpers.ts";
 
@@ -77,6 +78,15 @@ describe("GPU gas budget estimate, one work-group per cluster (Spike 2)", () => 
 
   it("gives no estimate before any run", () => {
     expect(estimateFused(baseline, [])).toBeNull();
+  });
+});
+
+describe("Spike 2b work-group memory", () => {
+  it("the battle's largest cluster at 4× detail fits 32 KB (Apple's limit) at 1,024 threads; 3,000 parcels does not", () => {
+    const biggest = 4 * baseline.steady.clusters.sizes[0];
+    const table = (n: number) => 2 ** Math.ceil(Math.log2(Math.max(n, 1024)));
+    expect(sharedBytes(1024, biggest, table(biggest))).toBeLessThanOrEqual(32 * 1024);
+    expect(sharedBytes(1024, 3000, table(3000))).toBeGreaterThan(32 * 1024);
   });
 });
 

@@ -5,14 +5,14 @@
 // Timing is wall clock round a batch, as the real backend will run: one submit of K substeps in
 // one compute pass, then a small read-back (the substep count) that waits for the GPU. Per-pass GPU
 // timestamps are not used: browsers round them to 100 µs unless a developer flag is on.
-import type { FusedResult } from "./fused.ts";
+import type { FusedMode, FusedResult } from "./fused.ts";
 import { clearWgsl, countWgsl, densityWgsl, forceWgsl, scanBlocksWgsl, scanLocalWgsl, scatterWgsl, SCAN_BLOCK, WG } from "./shaders.ts";
 
 export interface SpikeOptions {
   /** 1: one dispatch per pass (shaders.ts); 2: one work-group per cluster, one dispatch per batch (fused.ts). */
   spike: 1 | 2;
   /** Spike 2: parcels per cluster, clusters side by side, work-group sizes (those the device allows). */
-  fused: { sizes: number[]; clusters: number[]; wgs: number[] };
+  fused: { sizes: number[]; clusters: number[]; wgs: number[]; modes: FusedMode[] };
   /** Parcel counts to time. */
   sizes: number[];
   /** Substeps per batch (one submit): 4 steps × about 60 substeps at 4× detail. */
@@ -22,7 +22,9 @@ export interface SpikeOptions {
 }
 export const DEFAULT_SPIKE: SpikeOptions = {
   spike: 2,
-  fused: { sizes: [250, 500, 1000, 1500, 3000], clusters: [1, 5, 10], wgs: [256, 1024] },
+  // Spike 2b by default: the work-group-memory kernel at the battle's 5 clusters (Spike 2 showed 1,
+  // 5 and 10 clusters cost the same).
+  fused: { sizes: [250, 500, 1000, 1500, 3000], clusters: [5], wgs: [256, 1024], modes: ["shared"] },
   sizes: [1000, 4000, 10000, 25000, 50000, 100000],
   batch: 240,
   reps: 5,
@@ -58,6 +60,8 @@ export interface AdapterReport {
   maxStorageBuffersPerShaderStage: number;
   /** Threads a work-group may have (WebGPU guarantees 256). */
   maxComputeInvocationsPerWorkgroup: number;
+  /** Work-group memory, bytes (WebGPU guarantees 16 KB). */
+  maxComputeWorkgroupStorageSize: number;
 }
 export type SpikeEvent =
   | { kind: "adapter"; adapter: AdapterReport; where: "worker" | "page" }
@@ -114,6 +118,7 @@ export async function openDevice(gpu: GPU): Promise<{ device: GPUDevice; adapter
       maxStorageBuffersPerShaderStage: Math.min(10, a.limits.maxStorageBuffersPerShaderStage),
       maxComputeInvocationsPerWorkgroup: threads,
       maxComputeWorkgroupSizeX: threads,
+      maxComputeWorkgroupStorageSize: a.limits.maxComputeWorkgroupStorageSize,
     },
   });
   const info = a.info;
@@ -127,6 +132,7 @@ export async function openDevice(gpu: GPU): Promise<{ device: GPUDevice; adapter
       fallback: !!(info as { isFallbackAdapter?: boolean } | undefined)?.isFallbackAdapter,
       maxStorageBuffersPerShaderStage: a.limits.maxStorageBuffersPerShaderStage,
       maxComputeInvocationsPerWorkgroup: threads,
+      maxComputeWorkgroupStorageSize: a.limits.maxComputeWorkgroupStorageSize,
     },
   };
 }
@@ -440,16 +446,21 @@ export async function runSpike(gpu: GPU, opts: SpikeOptions, emit: (e: SpikeEven
     emit({ kind: "progress", message: "Checking the GPU's results against the CPU…" });
     if (opts.spike === 2) {
       const { checkFused, timeFused } = await import("./fused.ts");
-      emit({ kind: "check", check: await checkFused(device) });
+      const modes = opts.fused.modes.length ? opts.fused.modes : (["shared"] as FusedMode[]);
+      // The first mode's kernel is checked against the CPU; Spike 2's kernel too if it is timed.
+      const checks = await Promise.all(modes.map((m) => checkFused(device, 256, m)));
+      const bad = checks.find((c) => !c.pass);
+      emit({ kind: "check", check: bad ? { ...bad, message: `${modes[checks.indexOf(bad)]} kernel: ${bad.message}` } : checks[0] });
       const wgs = opts.fused.wgs.filter((w) => w <= adapter.maxComputeInvocationsPerWorkgroup);
       // Every layout at the guaranteed 256 threads first, so a larger size the GPU refuses can't spoil them.
-      for (const w of wgs)
-        for (const n of opts.fused.sizes)
-          for (const k of opts.fused.clusters) {
-            if (lost) throw new Error(`GPU device lost: ${lost}`);
-            emit({ kind: "progress", message: `Timing ${k} × ${n.toLocaleString("en")} parcels, ${w} threads each…` });
-            emit({ kind: "fused", result: await timeFused(device, n, k, w, opts.batch, opts.reps) });
-          }
+      for (const m of modes)
+        for (const w of wgs)
+          for (const n of opts.fused.sizes)
+            for (const k of opts.fused.clusters) {
+              if (lost) throw new Error(`GPU device lost: ${lost}`);
+              emit({ kind: "progress", message: `Timing ${k} × ${n.toLocaleString("en")} parcels, ${w} threads each, ${m === "shared" ? "work-group memory" : "main memory"}…` });
+              emit({ kind: "fused", result: await timeFused(device, n, k, w, opts.batch, opts.reps, m) });
+            }
       device.destroy();
       emit({ kind: "done" });
       return;

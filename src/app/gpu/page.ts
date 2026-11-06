@@ -1,12 +1,14 @@
 // The GPU gas spike page (gpu-spike.html, docs/gpu-gas-plan.md Phase 0 and 0b). Runs the WebGPU gas
 // in the simulation worker (on the page if the worker has no WebGPU), shows the times and the
 // reference battle against the budget, and gives the results as text to copy and send.
-//   (default)          Spike 2: one work-group per cluster, every substep in one dispatch
+//   (default)          Spike 2b: one work-group per cluster, every substep in one dispatch, the
+//                      neighbour search in work-group memory
+//   ?mode=global       Spike 2 (neighbour search from GPU main memory); ?mode=global,shared both
 //   ?spike=1           Spike 1: one dispatch per pass
 //   ?quick=1           a short run (CI): the correctness check and two small layouts
 //   ?sizes=500,1500  ?clusters=1,5  ?wgs=256  ?batch=240  ?where=page
 import baseline from "../../../docs/perf/reference-battle-baseline.json";
-import type { FusedResult } from "./fused.ts";
+import type { FusedMode, FusedResult } from "./fused.ts";
 import { estimate, estimateFused, type DeviceClass, type Estimate, type FusedEstimate } from "./estimate.ts";
 import { DEFAULT_SPIKE, runSpike, type AdapterReport, type CheckResult, type SizeResult, type SpikeEvent, type SpikeOptions } from "./spike.ts";
 
@@ -14,12 +16,14 @@ const q = new URLSearchParams(location.search);
 const quick = q.get("quick") === "1";
 const list = (name: string) => q.get(name)?.split(",").map(Number).filter((n) => n > 0);
 const spike: 1 | 2 = q.get("spike") === "1" ? 1 : 2;
+const modes = (q.get("mode") ?? "").split(",").filter((m): m is FusedMode => m === "global" || m === "shared");
 const opts: SpikeOptions = {
   spike,
   fused: {
     sizes: list("sizes") ?? (quick ? [250, 1000] : DEFAULT_SPIKE.fused.sizes),
     clusters: list("clusters") ?? (quick ? [5] : DEFAULT_SPIKE.fused.clusters),
     wgs: list("wgs") ?? (quick ? [256] : DEFAULT_SPIKE.fused.wgs),
+    modes: modes.length ? modes : DEFAULT_SPIKE.fused.modes,
   },
   sizes: list("sizes") ?? (quick ? [1000, 4000] : DEFAULT_SPIKE.sizes),
   batch: Number(q.get("batch")) || (quick ? 20 : DEFAULT_SPIKE.batch),
@@ -102,8 +106,9 @@ function renderSpike2() {
         const good = rs.filter((r) => Number.isFinite(r.us));
         if (!good.length) return `<td><b class="nogo">failed</b></td>`;
         const best = good.reduce((a, b) => (b.us < a.us ? b : a));
-        const others = rs.filter((r) => r !== best).map((r) => `${r.wgs}: ${Number.isFinite(r.us) ? fmt(r.us) : "failed"}`);
-        return `<td><b>${fmt(best.us)}</b> <span class="muted">(${best.wgs}${others.length ? `; ${others.join(", ")}` : ""})</span></td>`;
+        const tag = (r: FusedResult) => `${r.wgs}${opts.fused.modes.length > 1 ? (r.mode === "shared" ? " wg" : " main") : ""}`;
+        const others = rs.filter((r) => r !== best).map((r) => `${tag(r)}: ${Number.isFinite(r.us) ? fmt(r.us) : "failed"}`);
+        return `<td><b>${fmt(best.us)}</b> <span class="muted">(${tag(best)}${others.length ? `; ${others.join(", ")}` : ""})</span></td>`;
       });
       return `<tr><td>${n.toLocaleString("en")}</td>${cells.join("")}</tr>`;
     })
@@ -125,12 +130,13 @@ function renderSpike2() {
 }
 
 function render() {
-  $("title").textContent = spike === 2 ? "GPU gas spike 2: one work-group per cluster" : "GPU gas spike 1: one dispatch per pass";
+  $("title").textContent =
+    spike === 1 ? "GPU gas spike 1: one dispatch per pass" : opts.fused.modes.includes("shared") ? "GPU gas spike 2b: one work-group per cluster, in work-group memory" : "GPU gas spike 2: one work-group per cluster";
   $("status").textContent = state.message;
   $("status").className = state.status;
   const a = state.adapter;
   $("adapter").textContent = a
-    ? `${[a.vendor, a.architecture, a.device, a.description].filter(Boolean).join(" · ") || "unnamed adapter"}${a.fallback ? " (software fallback: not for timing)" : ""}, up to ${a.maxComputeInvocationsPerWorkgroup} threads a work-group — in the ${state.where}`
+    ? `${[a.vendor, a.architecture, a.device, a.description].filter(Boolean).join(" · ") || "unnamed adapter"}${a.fallback ? " (software fallback: not for timing)" : ""}, up to ${a.maxComputeInvocationsPerWorkgroup} threads and ${Math.round(a.maxComputeWorkgroupStorageSize / 1024)} KB a work-group — in the ${state.where}`
     : "";
   const c = state.check;
   $("check").innerHTML = c
