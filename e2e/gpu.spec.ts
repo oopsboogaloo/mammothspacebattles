@@ -7,7 +7,8 @@ import { chromium, expect, test } from "@playwright/test";
 type Spike = { status: string; message: string; where: string; check: { pass: boolean; message: string }; sizes: unknown[]; fused: unknown[]; estimate: unknown; fusedEstimate: unknown };
 
 for (const [name, query, rows] of [
-  ["Spike 2: one work-group per cluster, every substep in one dispatch", "quick=1", "fused"],
+  ["Spike 2b: one work-group per cluster, the neighbour search in work-group memory", "quick=1", "fused"],
+  ["Spike 2: one work-group per cluster, the neighbour search from GPU main memory", "quick=1&mode=global", "fused"],
   ["Spike 1: one dispatch per pass", "spike=1&quick=1", "sizes"],
 ] as const) {
   test(`the GPU gas spike page, ${name}, runs in the simulation worker and matches the CPU`, async ({ browserName, baseURL }) => {

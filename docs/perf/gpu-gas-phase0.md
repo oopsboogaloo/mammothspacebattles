@@ -210,6 +210,24 @@ The reference battle, gas a step (budget 1.04 ms laptop or desktop, 2.08 ms phon
    cluster fits easily; at 4× (about 1,340 parcels) the full state does not fit Apple's 32 KB, so
    only what the neighbour search reads most (positions and cells) would live there.
 
+## 8. Spike 2b: the neighbour search in work-group memory (built, awaiting device runs)
+
+The spike page now runs Spike 2b by default (`?mode=global` for Spike 2, `?mode=global,shared` for both).
+
+- **Same loop as Spike 2**, one work-group per cluster, every substep in one dispatch.
+- **In work-group memory** (on-chip): each cluster's sorted positions (8 bytes a parcel) and its
+  neighbour table, counted then turned into starts in place (4 bytes a slot, slots ≥ parcels).
+  Every candidate neighbour is tested from there; GPU main memory is read only for real neighbours
+  (mass, smoothing length, velocity, density) and once a parcel a stage.
+- **No cell check per candidate:** the 3 × 3 cells' slots are deduplicated, so each parcel is
+  visited once and the distance test alone decides.
+- **Size limit:** 8 × parcels + 4 × slots + 4 × threads bytes must fit the GPU's work-group memory
+  (16 KB guaranteed; 32 KB on Apple, SwiftShader and most desktop GPUs). The battle's largest
+  cluster at 4× detail (about 1,340 parcels) needs about 23 KB at 1,024 threads; 3,000 parcels does
+  not fit, and that layout shows as failed with the reason.
+- **Timed:** clusters of 250–3,000 parcels, 5 at once, 256 and 1,024 threads. Checked against the
+  CPU like the others (density within 3×10⁻⁷, momentum drift 6×10⁻⁹ on SwiftShader).
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
