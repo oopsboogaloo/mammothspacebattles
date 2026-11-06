@@ -611,8 +611,9 @@ export function runPilots(world: World, dt: number): void {
     }
     if (goal.kind === "point" || goal.kind === "station") {
       const most = chans.reduce((m, c) => m + c.gain, 0);
-      // How hard it can brake: its share of the thrust, less gravity; and how long a half turn takes.
-      const aBrake = Math.max(0.3, (authority * most) / ship.mass - length(g));
+      // How hard it plans to brake: half its share of the thrust (the velocity loop near the mark
+      // doesn't ask for all of it), less gravity; and how long a half turn takes.
+      const aBrake = Math.max(0.3, (0.5 * authority * most) / ship.mass - length(g));
       const tFlip = Math.PI / (0.8 + 1.2 * s) + 0.3;
       let target: Vec2;
       let carry = { x: 0, y: 0 };
@@ -641,7 +642,13 @@ export function runPilots(world: World, dt: number): void {
       const speed = goal.kind === "station" ? Math.min(cruise, vStop, 0.3 * dist) : stop ? Math.min(cruise, vStop) : cruise;
       // Holding at a mark, small drifts matter: every turn to hold the heading also pushes the ship.
       if (goal.kind === "point" && stop && dist < 2 * tolP) holdTight = true;
-      const vWant = dist > 1e-6 ? add(carry, scale(d, speed / dist)) : carry;
+      let vWant = dist > 1e-6 ? add(carry, scale(d, speed / dist)) : carry;
+      // Closing on a stop faster than planned: ask for that excess again, so it brakes hard along
+      // the line (the velocity loop alone eases off as it nears the mark, and overshoots).
+      if (goal.kind === "point" && stop && dist > 1e-6) {
+        const closing = dot(sub(ship.velocity, carry), scale(d, 1 / dist));
+        if (closing > speed) vWant = sub(vWant, scale(d, (closing - speed) / dist));
+      }
       p.plan.target = target;
       goal = { kind: "velocity", velocity: vWant };
     }
