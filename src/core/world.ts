@@ -16,7 +16,7 @@ import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
-import { judgeDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
+import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
@@ -1380,6 +1380,16 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     addDelta(sources.boundary, diff(t0, after));
   }
 
+  // A duel (DUEL-001, DUEL-004): kills, and knocked-out ships coming back, which takes their
+  // remains out and brings a fresh copy in through the boundary.
+  if (world.duel) {
+    const t0 = computeTotals(world);
+    if (runDuel(world, world.duel, dt)) {
+      after = computeTotals(world);
+      addDelta(sources.boundary, diff(t0, after));
+    }
+  }
+
   // A wrapped world (FLT-012): what crosses an edge comes back in at the other one.
   if (world.bounds.wrap) {
     const t0 = computeTotals(world);
@@ -1400,13 +1410,6 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     if (verdict) {
       const st = world.challenge.status;
       pushEvent(world, { tick: world.tick, type: verdict, data: st.score !== undefined ? { reason: st.reason ?? "", score: st.score } : { reason: st.reason ?? "" } });
-    }
-  }
-  if (world.duel) {
-    const verdict = judgeDuel(world, world.duel);
-    if (verdict) {
-      const st = world.duel.status;
-      pushEvent(world, { tick: world.tick, type: `duel.${verdict}`, data: st.score !== undefined ? { reason: st.reason ?? "", score: st.score } : { reason: st.reason ?? "" } });
     }
   }
 }

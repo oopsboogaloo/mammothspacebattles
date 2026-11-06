@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "ai-duel",
   "title": "Combat duel",
-  "description": "Mini game 3: your Gunship 3 against an AI Gunship 3 in Hunting mode, 90 m off to one side, among rubble asteroids. The AI sees you within 150 m, closes to a stand-off of 35-55 m (by its combat skill), matches your motion, leads its aim and fires explosive shells when it has a clear shot. Knock out its engines or its hull to win; lose yours and you lose. Destroyed parts burst into dust. Rocks block shots both ways. Sliders: the AI's combat and flight skill.",
+  "description": "Mini game 3: your Gunship 3 against an AI Gunship 3 in Hunting mode, 90 m off to one side, among rubble asteroids. The AI sees you within 150 m, closes to a stand-off of 35-55 m (by its combat skill), matches your motion, leads its aim and fires explosive shells when it has a clear shot. Knock out its engines or its hull for a kill; first to 3 kills wins. A knocked-out ship bursts into dust and a fresh one appears 90 m from the survivor; the verdict waits 3 s so the explosions can be enjoyed. Destroyed parts burst into dust. Rocks block shots both ways. Sliders: the AI's combat and flight skill.",
   "profile": "sandbox",
   "seed": 73,
   "world": {
@@ -3233,7 +3233,12 @@
       "player": "hull",
       "enemies": [
         "e1-hull"
-      ]
+      ],
+      "kills": {
+        "$param": "kills"
+      },
+      "respawn": 90,
+      "delay": 3
     }
   },
   "timeline": [],
@@ -3258,7 +3263,7 @@
     }
   ],
   "ui": {
-    "lookFor": "Fly with Q and E, fire with F. The AI Gunship (e1) is hunting you: it closes in, holds off at a few dozen metres and fires explosive shells, leading its aim. Keep moving, use the rocks for cover, and shoot back. The readout shows both ships' health; knock out its engines or hull to win.",
+    "lookFor": "Fly with Q and E, fire with F. The AI Gunship (e1) is hunting you: it closes in, holds off at a few dozen metres and fires explosive shells, leading its aim. Keep moving, use the rocks for cover, and shoot back. The readout shows both ships' health and the kills: knock out its engines or hull for a kill, first to 3 wins. A new enemy appears away from you after each kill.",
     "overlays": [
       "velocity"
     ],
@@ -3433,6 +3438,15 @@
       "max": 1,
       "step": 0.05,
       "default": 0.4
+    },
+    {
+      "id": "kills",
+      "label": "Kills to win",
+      "unit": "",
+      "min": 1,
+      "max": 9,
+      "step": 1,
+      "default": 3
     }
   ]
 }

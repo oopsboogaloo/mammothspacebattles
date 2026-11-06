@@ -471,6 +471,9 @@ function validateDuel(v: V, c: unknown, bodies: unknown, path: string): void {
   c.enemies.forEach((e, i) => {
     if (!ids.has(e)) err(v, `${path}.enemies[${i}]`, "must be the id of a body in the world");
   });
+  if (c.kills !== undefined) num(v, c.kills, `${path}.kills`, { int: true, min: 1, max: 99 });
+  if (c.respawn !== undefined) num(v, c.respawn, `${path}.respawn`, { positive: true });
+  if (c.delay !== undefined) num(v, c.delay, `${path}.delay`, { min: 0 });
 }
 
 function validateCommand(v: V, c: unknown, path: string): void {

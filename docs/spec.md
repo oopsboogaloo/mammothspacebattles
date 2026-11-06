@@ -724,9 +724,10 @@ Your Gunship 3 against an AI Gunship 3 among the asteroids: the first playable f
 - **DUEL-001** `[M · M8 · S]` A scenario may declare a duel (`world.duel`): the player's ship and the enemy ships, each named by a body (its hull, or its pilot's body). A ship is out of the fight once that body is gone or nothing still welded to it is a working engine. The player wins when every enemy is out, and loses when they are; the verdict is judged after every step, in the world, and then stays. Events `duel.won` (with a score) and `duel.lost`.
 - **DUEL-002** `[M · M8 · E]` The sandbox shall show each ship's health (the share of its parts still welded to its hull) and the time, and on the verdict a banner (won, with the score, or lost, with why) and a button to fight again.
 - **DUEL-003** `[M · M8 · S]` A duel shall name bodies in the world.
+- **DUEL-004** `[M · M8 · S]` A duel may be first to a number of kills (`kills`). Until then a knocked-out ship comes back: what is left of it bursts into dust, and a fresh copy, as it was at the start, appears at rest `respawn` m (default 90) from the surviving ship, at the first clear spot (first on the side it died on). The verdict waits `delay` s (default 3) after the deciding kill. Respawns are recorded as crossing the boundary. *AI-3 is first to 3 (slider), with a 3 s delay.*
 
 *Model as built (November 2026).*
-- **Score on a win:** up to 500 for health left and up to 500 for speed (none after 2 minutes).
+- **Score on a win:** 1,000 a kill, less 500 for each time you were knocked out, plus up to 500 for speed (none after 5 minutes).
 - **Scenario: *Combat duel (AI-3)*.** The player's ship at the origin; an AI hunter 90 m away, off to one side so that the first shot is not a free hit (Hunting, combat skill 0.4 and flight skill 0.7 by default, both on sliders), among the four rubble asteroids of AI-2.
   - *Measured:* against a player who does nothing it closes in, holds off and fires; the first explosive shell that hits knocks the player out, at about 18 s (a rock blocks its shot at first), with the ledger clean. About 5.5 ms a step with the railgun (WPN-008); with the gas cannon, firing while thrusting could take 5–18 s a step.
 - **Next:** balance (one hit is often enough: armour, more welds, or smaller blasts), several enemies, and Cautious or Evading ships as bystanders.

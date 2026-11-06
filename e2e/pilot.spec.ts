@@ -40,18 +40,17 @@ test("AIP-015 AIP-017 the patrolling AI ship flies its route through the rocks, 
   await shot(page, info, "ai-patrol");
 });
 
-test("DUEL-001 DUEL-002 the duel on screen: both ships' health, the AI hunts down a player who does nothing, and Fight again starts over", async ({ page }, info) => {
+test("DUEL-001 DUEL-002 DUEL-004 the duel on screen: both ships' health and the kills; the AI knocks out a player who does nothing, who comes back for the next round", async ({ page }, info) => {
   test.setTimeout(360_000);
   await openStarter(page, "ai-duel");
   const hud = page.getByTestId("duel-hud");
   await expect(hud).toContainText("You 100%");
   await expect(hud).toContainText("Enemy 100%");
+  await expect(page.getByTestId("duel-kills")).toContainText("0–0 of 3");
   // The AI knocks out an idle player at about 17.7 s (step 4,240), once it has a clear shot past a rock.
   for (let i = 0; i < 440; i++) await page.getByTestId("step10").click();
-  const verdict = page.getByTestId("duel-verdict");
-  await expect(verdict).toContainText("You lost", { timeout: 60_000 });
-  await shot(page, info, "duel-lost");
-  await page.getByTestId("duel-retry").click();
-  await expect(verdict).toHaveCount(0);
-  await expect(hud).toContainText("You 100%");
+  await expect(page.getByTestId("duel-kills")).toContainText("0–1 of 3", { timeout: 60_000 });
+  await expect(hud).toContainText("You 100%"); // back, fresh
+  await expect(page.getByTestId("duel-verdict")).toHaveCount(0);
+  await shot(page, info, "duel-respawn");
 });
