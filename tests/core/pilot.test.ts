@@ -324,10 +324,9 @@ describe("AI pilot combat (phase 3)", () => {
     expect(m.controls["e1.fire"]).toBe(0.7);
   }, 120_000);
 
-  it("AIP-015 a Cautious pilot is not provoked by a ship closing on it with a shell only loaded, not fired", () => {
+  it("AIP-015 a Cautious pilot is not provoked by an armed ship closing on it without firing", () => {
     const w = duel({ mode: "cautious", ai: { x: 0, y: 30 }, player: { x: 0, y: 0, vy: 8 } });
     run(w, 240);
-    expect(w.events.some((e) => e.type === "loaded" && e.data.id === "breech")).toBe(true);
     expect(enemyPilot(w).combat?.grudgeUntil).toBeUndefined();
     expect(enemyPilot(w).intent).toMatch(/watching hull/);
   }, 120_000);

@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "gunship-3",
   "title": "Gunship 3",
-  "description": "Gunship 3, among four rubble asteroids. Its engines burn lean: each exhaust parcel is four times heavier and leaves at about half the speed (100 m/s against 195), so each engine pushes about twice as hard (570 N): 12.8 m/s\u00b2 at full thrust, against Gunship 2's 7.2. Its welds are twice as strong. Its cannon fires 1 kg explosive shells at about 96 m/s (Gunship 2: 2 kg solid shells at 45 m/s), carries 40 and reloads in a quarter of a second. Its tractor's tether is 15 m. The exhaust no longer vanishes where the gas model lets it go: it carries on for a second as a tail that cools, spreads and fades, and still bounces off what it meets.",
+  "description": "Gunship 3, among four rubble asteroids. Its engines burn lean: each exhaust parcel is four times heavier and leaves at about half the speed (100 m/s against 195), so each engine pushes about twice as hard (570 N): 12.8 m/s\u00b2 at full thrust, against Gunship 2's 7.2. Its welds are twice as strong. Its railgun launches 1 kg explosive shells at 96 m/s, the instant F is pressed (Gunship 2's gas cannon: 2 kg solid shells at 45 m/s), carries 40 and reloads in a quarter of a second. Its tractor's tether is 15 m. The exhaust no longer vanishes where the gas model lets it go: it carries on for a second as a tail that cools, spreads and fades, and still bounces off what it meets.",
   "profile": "sandbox",
   "seed": 31,
   "world": {
@@ -790,56 +790,6 @@
             "$expr": "600 * material"
           }
         },
-        "contents": [
-          {
-            "resource": "h2",
-            "mass": {
-              "$expr": "charge / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge / 9 / 20"
-            }
-          },
-          {
-            "resource": "o2",
-            "mass": {
-              "$expr": "charge * 8 / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge * 8 / 9 / 20"
-            }
-          }
-        ],
-        "injector": {
-          "channel": "fire",
-          "rate": {
-            "$expr": "charge / 0.05"
-          },
-          "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
-          },
-          "economy": 20,
-          "outlet": {
-            "x": 0,
-            "y": 0.2
-          },
-          "direction": {
-            "x": 0,
-            "y": 1
-          },
-          "width": 0.3,
-          "speed": 10,
-          "parcelMass": 0.001,
-          "radius": 0.035,
-          "igniter": true,
-          "chamber": {
-            "width": 0.4,
-            "length": {
-              "$expr": "barrel"
-            }
-          }
-        },
         "magazine": {
           "count": {
             "$param": "ammo"
@@ -849,7 +799,9 @@
           },
           "at": {
             "x": 0,
-            "y": 0.5499999999999998
+            "y": {
+              "$expr": "barrel + 0.45"
+            }
           },
           "angle": 0,
           "shell": {
@@ -875,16 +827,10 @@
               }
             }
           },
-          "stop": {
-            "shape": {
-              "kind": "box",
-              "width": 0.38,
-              "height": 0.06
-            },
-            "mass": 0.3,
-            "at": {
-              "x": 0,
-              "y": 0.735
+          "railgun": {
+            "channel": "fire",
+            "speed": {
+              "$param": "muzzle"
             }
           }
         }
@@ -1561,26 +1507,6 @@
         "to": "engine-r"
       },
       {
-        "id": "feed-h2-gun",
-        "kind": "feed",
-        "from": "tank",
-        "to": "breech",
-        "resource": "h2",
-        "rate": {
-          "$expr": "charge / 9 / 20 / 0.5"
-        }
-      },
-      {
-        "id": "feed-o2-gun",
-        "kind": "feed",
-        "from": "tank",
-        "to": "breech",
-        "resource": "o2",
-        "rate": {
-          "$expr": "charge * 8 / 9 / 20 / 0.5"
-        }
-      },
-      {
         "id": "ctl-fire",
         "kind": "control",
         "channel": "fire",
@@ -1752,7 +1678,7 @@
     }
   ],
   "ui": {
-    "lookFor": "Fly with Q and E; F fires an explosive shell. It answers the throttle much more briskly than Gunship 2, and the plume trails out behind it and fades. Hit an asteroid: the shell bursts and the pieces near the hit break off. Try the charge, the blast and the weld strength.",
+    "lookFor": "Fly with Q and E; F fires an explosive shell. It answers the throttle much more briskly than Gunship 2, and the plume trails out behind it and fades. Hit an asteroid: the shell bursts and the pieces near the hit break off. Try the launch speed, the blast and the weld strength.",
     "overlays": [
       "velocity",
       "damage"
@@ -1777,13 +1703,13 @@
   },
   "parameters": [
     {
-      "id": "charge",
-      "label": "Propellant charge",
-      "unit": "kg",
-      "min": 0.01,
-      "max": 0.5,
-      "step": 0.01,
-      "default": 0.4
+      "id": "muzzle",
+      "label": "Railgun launch speed",
+      "unit": "m/s",
+      "min": 20,
+      "max": 200,
+      "step": 2,
+      "default": 96
     },
     {
       "id": "shellMass",

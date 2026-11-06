@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "ai-duel",
   "title": "Combat duel",
-  "description": "Mini game 3: your Gunship 3 against an AI Gunship 3 in Hunting mode, among rubble asteroids. The AI sees you within 150 m, closes to a stand-off of 35-55 m (by its combat skill), matches your motion, leads its aim and fires explosive shells when it has a clear shot. Knock out its engines or its hull to win; lose yours and you lose. Destroyed parts burst into dust. Rocks block shots both ways. Sliders: the AI's combat and flight skill.",
+  "description": "Mini game 3: your Gunship 3 against an AI Gunship 3 in Hunting mode, 90 m off to one side, among rubble asteroids. The AI sees you within 150 m, closes to a stand-off of 35-55 m (by its combat skill), matches your motion, leads its aim and fires explosive shells when it has a clear shot. Knock out its engines or its hull to win; lose yours and you lose. Destroyed parts burst into dust. Rocks block shots both ways. Sliders: the AI's combat and flight skill.",
   "profile": "sandbox",
   "seed": 73,
   "world": {
@@ -817,56 +817,6 @@
             "$expr": "600 * material"
           }
         },
-        "contents": [
-          {
-            "resource": "h2",
-            "mass": {
-              "$expr": "charge / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge / 9 / 20"
-            }
-          },
-          {
-            "resource": "o2",
-            "mass": {
-              "$expr": "charge * 8 / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge * 8 / 9 / 20"
-            }
-          }
-        ],
-        "injector": {
-          "channel": "fire",
-          "rate": {
-            "$expr": "charge / 0.05"
-          },
-          "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
-          },
-          "economy": 20,
-          "outlet": {
-            "x": 0,
-            "y": 0.2
-          },
-          "direction": {
-            "x": 0,
-            "y": 1
-          },
-          "width": 0.3,
-          "speed": 10,
-          "parcelMass": 0.001,
-          "radius": 0.035,
-          "igniter": true,
-          "chamber": {
-            "width": 0.4,
-            "length": {
-              "$expr": "barrel"
-            }
-          }
-        },
         "magazine": {
           "count": {
             "$param": "ammo"
@@ -876,7 +826,9 @@
           },
           "at": {
             "x": 0,
-            "y": 0.5499999999999998
+            "y": {
+              "$expr": "barrel + 0.45"
+            }
           },
           "angle": 0,
           "shell": {
@@ -902,16 +854,10 @@
               }
             }
           },
-          "stop": {
-            "shape": {
-              "kind": "box",
-              "width": 0.38,
-              "height": 0.06
-            },
-            "mass": 0.3,
-            "at": {
-              "x": 0,
-              "y": 0.735
+          "railgun": {
+            "channel": "fire",
+            "speed": {
+              "$param": "muzzle"
             }
           }
         }
@@ -993,8 +939,8 @@
         },
         "mass": 0.5,
         "position": {
-          "x": -1.8999999999999986,
-          "y": 89.9
+          "x": 78.1,
+          "y": 39.900000000000006
         },
         "velocity": {
           "x": 0,
@@ -1023,8 +969,8 @@
         },
         "mass": 0.5,
         "position": {
-          "x": 1.0,
-          "y": 89.9
+          "x": 81.0,
+          "y": 39.900000000000006
         },
         "velocity": {
           "x": 0,
@@ -1053,8 +999,8 @@
         },
         "mass": 0.5,
         "position": {
-          "x": -1.0,
-          "y": 89.9
+          "x": 79.0,
+          "y": 39.900000000000006
         },
         "velocity": {
           "x": 0,
@@ -1083,8 +1029,8 @@
         },
         "mass": 0.5,
         "position": {
-          "x": 1.8999999999999986,
-          "y": 89.9
+          "x": 81.9,
+          "y": 39.900000000000006
         },
         "velocity": {
           "x": 0,
@@ -1113,8 +1059,8 @@
         },
         "mass": 1.0,
         "position": {
-          "x": -1.4500000000000028,
-          "y": 90.4
+          "x": 78.55,
+          "y": 40.400000000000006
         },
         "velocity": {
           "x": 0,
@@ -1181,8 +1127,8 @@
         },
         "mass": 1.0,
         "position": {
-          "x": 1.4500000000000028,
-          "y": 90.4
+          "x": 81.45,
+          "y": 40.400000000000006
         },
         "velocity": {
           "x": 0,
@@ -1249,8 +1195,8 @@
         },
         "mass": 8.0,
         "position": {
-          "x": 0,
-          "y": 90.0
+          "x": 80,
+          "y": 40.0
         },
         "velocity": {
           "x": 0,
@@ -1336,8 +1282,8 @@
         },
         "mass": 0.4,
         "position": {
-          "x": -2.2023810000000026,
-          "y": 89.47857100000002
+          "x": 77.797619,
+          "y": 39.47857100000002
         },
         "velocity": {
           "x": 0,
@@ -1382,8 +1328,8 @@
         },
         "mass": 0.4,
         "position": {
-          "x": 2.2023810000000026,
-          "y": 89.47857100000002
+          "x": 82.202381,
+          "y": 39.47857100000002
         },
         "velocity": {
           "x": 0,
@@ -1428,8 +1374,8 @@
         },
         "mass": 0.3,
         "position": {
-          "x": -1.7749999999999986,
-          "y": 89.10000000000001
+          "x": 78.225,
+          "y": 39.10000000000001
         },
         "velocity": {
           "x": 0,
@@ -1474,8 +1420,8 @@
         },
         "mass": 0.3,
         "position": {
-          "x": 1.125,
-          "y": 89.10000000000001
+          "x": 81.125,
+          "y": 39.10000000000001
         },
         "velocity": {
           "x": 0,
@@ -1520,8 +1466,8 @@
         },
         "mass": 0.3,
         "position": {
-          "x": -1.125,
-          "y": 89.10000000000001
+          "x": 78.875,
+          "y": 39.10000000000001
         },
         "velocity": {
           "x": 0,
@@ -1566,8 +1512,8 @@
         },
         "mass": 0.3,
         "position": {
-          "x": 1.7749999999999986,
-          "y": 89.10000000000001
+          "x": 81.775,
+          "y": 39.10000000000001
         },
         "velocity": {
           "x": 0,
@@ -1596,8 +1542,8 @@
         },
         "mass": 2.0,
         "position": {
-          "x": 0,
-          "y": 89.25
+          "x": 80,
+          "y": 39.25
         },
         "velocity": {
           "x": 0,
@@ -1638,8 +1584,8 @@
         },
         "mass": 0.3,
         "position": {
-          "x": -1.7749999999999986,
-          "y": 89.45000000000002
+          "x": 78.225,
+          "y": 39.45000000000002
         },
         "velocity": {
           "x": 0,
@@ -1668,8 +1614,8 @@
         },
         "mass": 0.3,
         "position": {
-          "x": 1.125,
-          "y": 89.45000000000002
+          "x": 81.125,
+          "y": 39.45000000000002
         },
         "velocity": {
           "x": 0,
@@ -1698,8 +1644,8 @@
         },
         "mass": 0.3,
         "position": {
-          "x": -1.125,
-          "y": 89.45000000000002
+          "x": 78.875,
+          "y": 39.45000000000002
         },
         "velocity": {
           "x": 0,
@@ -1728,8 +1674,8 @@
         },
         "mass": 0.3,
         "position": {
-          "x": 1.7749999999999986,
-          "y": 89.45000000000002
+          "x": 81.775,
+          "y": 39.45000000000002
         },
         "velocity": {
           "x": 0,
@@ -1758,8 +1704,8 @@
         },
         "mass": 2.0,
         "position": {
-          "x": 0.0,
-          "y": 90.60000000000001
+          "x": 80.0,
+          "y": 40.60000000000001
         },
         "velocity": {
           "x": 0,
@@ -1788,8 +1734,8 @@
         },
         "mass": 15,
         "position": {
-          "x": 0,
-          "y": 90.85000000000001
+          "x": 80,
+          "y": 40.85000000000001
         },
         "velocity": {
           "x": 0,
@@ -1808,56 +1754,6 @@
             "$expr": "600 * material"
           }
         },
-        "contents": [
-          {
-            "resource": "h2",
-            "mass": {
-              "$expr": "charge / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge / 9 / 20"
-            }
-          },
-          {
-            "resource": "o2",
-            "mass": {
-              "$expr": "charge * 8 / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge * 8 / 9 / 20"
-            }
-          }
-        ],
-        "injector": {
-          "channel": "e1.fire",
-          "rate": {
-            "$expr": "charge / 0.05"
-          },
-          "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
-          },
-          "economy": 20,
-          "outlet": {
-            "x": 0,
-            "y": 0.2
-          },
-          "direction": {
-            "x": 0,
-            "y": 1
-          },
-          "width": 0.3,
-          "speed": 10,
-          "parcelMass": 0.001,
-          "radius": 0.035,
-          "igniter": true,
-          "chamber": {
-            "width": 0.4,
-            "length": {
-              "$expr": "barrel"
-            }
-          }
-        },
         "magazine": {
           "count": {
             "$param": "ammo"
@@ -1867,7 +1763,9 @@
           },
           "at": {
             "x": 0,
-            "y": 0.5499999999999998
+            "y": {
+              "$expr": "barrel + 0.45"
+            }
           },
           "angle": 0,
           "shell": {
@@ -1893,16 +1791,10 @@
               }
             }
           },
-          "stop": {
-            "shape": {
-              "kind": "box",
-              "width": 0.38,
-              "height": 0.06
-            },
-            "mass": 0.3,
-            "at": {
-              "x": 0,
-              "y": 0.735
+          "railgun": {
+            "channel": "e1.fire",
+            "speed": {
+              "$param": "muzzle"
             }
           }
         }
@@ -1918,9 +1810,9 @@
         },
         "mass": 4,
         "position": {
-          "x": -0.25,
+          "x": 79.75,
           "y": {
-            "$expr": "(((((1.1 + barrel / 2) + 1.9700000000000002) + 40) + -45.0) + 27.353173) + 65.57682700000001"
+            "$expr": "((((((1.1 + barrel / 2) + 1.9700000000000002) + 40) + -45.0) + 27.353173) + 65.57682700000001) + -50"
           }
         },
         "velocity": {
@@ -1952,9 +1844,9 @@
         },
         "mass": 4,
         "position": {
-          "x": 0.25,
+          "x": 80.25,
           "y": {
-            "$expr": "(((((1.1 + barrel / 2) + 1.9700000000000002) + 40) + -45.0) + 27.353173) + 65.57682700000001"
+            "$expr": "((((((1.1 + barrel / 2) + 1.9700000000000002) + 40) + -45.0) + 27.353173) + 65.57682700000001) + -50"
           }
         },
         "velocity": {
@@ -3134,26 +3026,6 @@
         "to": "engine-r"
       },
       {
-        "id": "feed-h2-gun",
-        "kind": "feed",
-        "from": "tank",
-        "to": "breech",
-        "resource": "h2",
-        "rate": {
-          "$expr": "charge / 9 / 20 / 0.5"
-        }
-      },
-      {
-        "id": "feed-o2-gun",
-        "kind": "feed",
-        "from": "tank",
-        "to": "breech",
-        "resource": "o2",
-        "rate": {
-          "$expr": "charge * 8 / 9 / 20 / 0.5"
-        }
-      },
-      {
         "id": "ctl-fire",
         "kind": "control",
         "channel": "fire",
@@ -3208,26 +3080,6 @@
         "kind": "control",
         "channel": "e1.right",
         "to": "e1-engine-r"
-      },
-      {
-        "id": "e1-feed-h2-gun",
-        "kind": "feed",
-        "from": "e1-tank",
-        "to": "e1-breech",
-        "resource": "h2",
-        "rate": {
-          "$expr": "charge / 9 / 20 / 0.5"
-        }
-      },
-      {
-        "id": "e1-feed-o2-gun",
-        "kind": "feed",
-        "from": "e1-tank",
-        "to": "e1-breech",
-        "resource": "o2",
-        "rate": {
-          "$expr": "charge * 8 / 9 / 20 / 0.5"
-        }
       },
       {
         "id": "e1-ctl-fire",
@@ -3430,13 +3282,13 @@
   },
   "parameters": [
     {
-      "id": "charge",
-      "label": "Propellant charge",
-      "unit": "kg",
-      "min": 0.01,
-      "max": 0.5,
-      "step": 0.01,
-      "default": 0.4
+      "id": "muzzle",
+      "label": "Railgun launch speed",
+      "unit": "m/s",
+      "min": 20,
+      "max": 200,
+      "step": 2,
+      "default": 96
     },
     {
       "id": "shellMass",

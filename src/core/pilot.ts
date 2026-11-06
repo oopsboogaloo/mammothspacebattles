@@ -25,6 +25,7 @@ import { add, cross, dot, expD, length, rotate, scale, sinCos, sub, type Vec2 } 
 import { bodyMass } from "./bodies.ts";
 import { assemblyOf, assemblyRoots } from "./joints.ts";
 import { massProps } from "./shapes.ts";
+import { railgunReady } from "./railgun.ts";
 import type { Body, World } from "./world.ts";
 
 export type PilotGoal =
@@ -359,12 +360,14 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
 
 /** Its gun, from the design: the body with a magazine, its fire channel, and the bore direction in that body's frame. */
 function gunOf(world: World, members: Body[], channels: string[]): { body: Body; channel: string; bore: Vec2 } | null {
-  // Only a gun whose fire channel is the pilot's own (AIP-003): never another ship's.
-  const b = members.find((x) => x.magazine && x.injector && x.integrity > 0 && channels.includes(x.injector.channel));
+  // Only a gun whose fire channel is the pilot's own (AIP-003): never another ship's. A gas
+  // cannon fires through its injector's channel; a railgun (WPN-008) through its own.
+  const fireChannel = (x: Body) => x.magazine?.railgun?.channel ?? x.injector?.channel;
+  const b = members.find((x) => x.magazine && fireChannel(x) && x.integrity > 0 && channels.includes(fireChannel(x)!));
   if (!b) return null;
   const at = b.magazine!.at;
   const bore = length(at) > 1e-9 ? scale(at, 1 / length(at)) : { x: 0, y: 1 };
-  return { body: b, channel: b.injector!.channel, bore };
+  return { body: b, channel: fireChannel(b)!, bore };
 }
 
 /**
@@ -486,6 +489,8 @@ export function runPilots(world: World, dt: number): void {
     const gun = gunOf(world, ship.members, pilotChannels(world, body));
     p.combat ??= { muzzle: 40, pulse: 0, shots: 0 };
     const cb = p.combat;
+    // A railgun's launch speed is in its design; a gas cannon's is learned from its shots.
+    if (gun?.body.magazine?.railgun && !cb.shots) cb.muzzle = gun.body.magazine.railgun.speed;
     // Learn the gun's muzzle speed from its own last shot, once that shell is clear of the barrel.
     if (cb.shot) {
       const sh = world.bodies.find((b) => b.id === cb.shot);
@@ -549,7 +554,7 @@ export function runPilots(world: World, dt: number): void {
           // Fire control (AIP-012): aimed well enough, in range, a shell in the bore, the line clear.
           const boreWorld = rotate(sinCos(gun.body.angle), gun.bore);
           const tol = 0.01 + 0.06 * (1 - cs);
-          const loaded = loadedRounds(world).has(`${gun.body.id}-shell-${gun.body.magazine!.loaded}`);
+          const loaded = gun.body.magazine!.railgun ? railgunReady(gun.body) : loadedRounds(world).has(`${gun.body.id}-shell-${gun.body.magazine!.loaded}`);
           const inRange = dist < 100;
           const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids), target.root, 0.2 * ship.mass);
           fire = loaded && inRange && clear && dot(boreWorld, dir) > sinCos(tol).c;
