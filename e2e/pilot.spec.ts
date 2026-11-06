@@ -47,8 +47,8 @@ test("DUEL-001 DUEL-002 DUEL-004 the duel on screen: both ships' health and the 
   await expect(hud).toContainText("You 100%");
   await expect(hud).toContainText("Enemy 100%");
   await expect(page.getByTestId("duel-kills")).toContainText("0–0 of 3");
-  // The AI knocks out an idle player at about 17.7 s (step 4,240), once it has a clear shot past a rock.
-  for (let i = 0; i < 440; i++) await page.getByTestId("step10").click();
+  // The AI knocks out an idle player at about 11 s; by 12.5 s the player is back.
+  for (let i = 0; i < 300; i++) await page.getByTestId("step10").click();
   await expect(page.getByTestId("duel-kills")).toContainText("0–1 of 3", { timeout: 60_000 });
   await expect(hud).toContainText("You 100%"); // back, fresh
   await expect(page.getByTestId("duel-verdict")).toHaveCount(0);

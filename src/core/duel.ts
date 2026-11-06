@@ -7,7 +7,7 @@
 // welded to can push it (no working engine). That is a kill for the other side. First to `kills`
 // wins; until then a ship that is out comes back (DUEL-004): what is left of it bursts into dust,
 // and a fresh copy of it, as it was at the start, appears at rest `respawn` metres from the ship
-// that survived, at the first clear spot. The verdict waits `delay` seconds after the deciding
+// that survived, at the first clear spot off its line of fire. The verdict waits `delay` seconds after the deciding
 // kill, so the explosions can be enjoyed. A ship's health is the share of its parts still welded
 // to its hull. The step records what a respawn takes away and brings in as crossing the boundary.
 
@@ -118,19 +118,22 @@ function respawn(world: World, d: Duel, id: string, near: Vec2, from: Vec2): voi
   const lives = (d.status.lives[id] = (d.status.lives[id] ?? 0) + 1);
   const ids = new Set(t.bodies.map((b) => b.id));
   removeBodies(world, ids, "duel.wreck");
-  // At `respawn` metres from the survivor: first on the side it died on, then round in eighths.
+  // At `respawn` metres from the survivor, off the line it was firing along (shells still in flight
+  // there would meet the new ship): first square to it, then round, the line itself last.
   const dist = d.goal.respawn ?? 90;
   const away = sub(from, near);
   const dir = length(away) > 1e-6 ? scale(away, 1 / length(away)) : { x: 0, y: 1 };
   const clear = (p: Vec2) => world.bodies.every((b) => length(sub(b.position, p)) > t.radius + massProps(b.shape, 1).boundingRadius + 3);
-  let at = add(near, scale(dir, dist));
-  for (let k = 0; k < 16; k++) {
-    const p = add(near, scale(rotate(sinCos((k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 4)), dir), dist * (k < 8 ? 1 : 1.5)));
-    if (clear(p)) {
-      at = p;
-      break;
+  const bearings = [2, -2, 3, -3, 1, -1, 4, 0].map((k) => (k * Math.PI) / 4);
+  let at = add(near, scale(rotate(sinCos(bearings[0]), dir), dist));
+  search: for (const reach of [dist, 1.5 * dist])
+    for (const a of bearings) {
+      const p = add(near, scale(rotate(sinCos(a), dir), reach));
+      if (clear(p)) {
+        at = p;
+        break search;
+      }
     }
-  }
   const shift = sub(at, t.centre);
   for (const tb of t.bodies) {
     const b = structuredClone(tb);
