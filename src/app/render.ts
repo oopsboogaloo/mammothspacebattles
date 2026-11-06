@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "pilots" | "grid";
@@ -637,7 +637,11 @@ function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
     }
     const cargo = world.bodies.find((x) => x.id === t.cargo);
     if (!cargo) continue;
-    const p = toScreen(c, vp, cargo.position);
+    // The tether runs between the two centres of mass (TRC-004).
+    const ends = [assemblyTotals(world, b.id), assemblyTotals(world, cargo.id)];
+    if (!ends[0] || !ends[1]) continue;
+    const o2 = toScreen(c, vp, ends[0].centre);
+    const p = toScreen(c, vp, ends[1].centre);
     const f = Math.min(1, Math.abs(t.tension) / t.tether.maxTension);
     // Teal (slack or light) through amber to red (about to break).
     const r = Math.round(92 + f * (255 - 92));
@@ -647,11 +651,11 @@ function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
     ctx.lineWidth = 2;
     ctx.setLineDash(t.tension < 0 ? [6, 4] : []);
     ctx.beginPath();
-    ctx.moveTo(o.x, o.y);
+    ctx.moveTo(o2.x, o2.y);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
     ctx.setLineDash([]);
-    for (const q of [o, p]) {
+    for (const q of [o2, p]) {
       ctx.beginPath();
       ctx.arc(q.x, q.y, 4, 0, Math.PI * 2);
       ctx.fillStyle = COLORS.tractor;

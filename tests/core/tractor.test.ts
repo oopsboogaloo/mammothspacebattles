@@ -10,14 +10,8 @@ const ship = (over: Record<string, unknown> = {}): BodyInput =>
   ({ ...box("ship", 3, 4, { mass: 50, position: { x: 0, y: 0 } }), tractor: { channel: "tractor", origin: { x: 0, y: -2 }, direction: { x: 0, y: -1 }, ...over } }) as never;
 const world = (others: BodyInput[], over: Record<string, unknown> = {}): World => createWorld(1, [ship(over), ...others], { x: 0, y: 0 }, { links: [{ id: "c", kind: "control", channel: "tractor", to: "ship" }] });
 const at = (w: World, id: string) => w.bodies.find((b) => b.id === id)!;
-/** Distance from the beam's origin (the ship's tail) to a body. */
-const reach = (w: World, id: string) => {
-  const s = at(w, "ship");
-  const c = Math.cos(s.angle);
-  const n = Math.sin(s.angle);
-  const o = { x: s.position.x + 2 * n, y: s.position.y - 2 * c };
-  return Math.hypot(at(w, id).position.x - o.x, at(w, id).position.y - o.y);
-};
+/** Distance from the ship's centre of mass to a body's (each is one body here): what the tether holds. */
+const reach = (w: World, id: string) => Math.hypot(at(w, id).position.x - at(w, "ship").position.x, at(w, id).position.y - at(w, "ship").position.y);
 const ball = (id: string, radius: number, mass: number, x: number, y: number): BodyInput => ({ ...disc(id, { mass, position: { x, y } } as never), shape: { kind: "disc", radius } }) as never;
 /** Holds the button until the tether takes something (at most `max` steps), then releases it. */
 const engage = (w: World, max = 4000) => {
@@ -76,7 +70,7 @@ describe("tractor beam", () => {
     expect(big.events.some((e) => e.type === "tether.engage")).toBe(false); // …and was never taken
   });
 
-  it("TRC-004 the tether holds the cargo at 15 m as it swings round the ship, and the ledger stays exact", () => {
+  it("TRC-004 the tether holds the cargo at 15 m from the ship's centre of mass as it swings round, never spinning the ship, and the ledger stays exact", () => {
     const w = world([ball("ball", 1, 50, 0, -18)]);
     engage(w);
     expect(at(w, "ship").tractor!.mode).toBe("tether");
@@ -85,11 +79,15 @@ describe("tractor beam", () => {
     stepInPlace(w, [{ type: "body.impulse", id: "ball", impulse: { x: 400, y: 0 }, point: at(w, "ball").position }], sandbox);
     let lo = Infinity;
     let hi = 0;
+    let spin = 0;
     for (let i = 0; i < 2400; i++) {
       stepInPlace(w, [], sandbox);
       lo = Math.min(lo, reach(w, "ball"));
       hi = Math.max(hi, reach(w, "ball"));
+      spin = Math.max(spin, Math.abs(at(w, "ship").angularVelocity));
     }
+    // Between the centres of mass, it pulls along the line through the ship's: it never spins it.
+    expect(spin).toBeLessThan(1e-9);
     expect(lo).toBeGreaterThan(14);
     expect(hi).toBeLessThan(16);
     // It went a long way round: the line from ship to ball turned.
@@ -113,7 +111,7 @@ describe("tractor beam", () => {
   });
 
   it("TRC-006 past its maximum tension the tether breaks", () => {
-    const w = world([ball("ball", 1, 50, 0, -18)], { tether: { maxTension: 2000 } });
+    const w = world([ball("ball", 1, 50, 0, -16)], { tether: { maxTension: 2000 } }); // reaches 15 m slowly enough not to snap it
     engage(w);
     run(w, 960);
     expect(at(w, "ship").tractor!.mode).toBe("tether");

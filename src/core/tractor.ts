@@ -8,9 +8,9 @@
 // angular momentum are unchanged (Newton's third law).
 //
 // When an assembly no bigger than the ship and at most `capture` times its mass comes within the tether's length,
-// the beam stops and a tether takes the nearest of its pieces: a stiff, damped spring of rest length
-// `length` between the origin and that piece's centre of mass. It pulls and pushes along that line
-// only, so the cargo swings freely round the ship. Past `maxTension` it breaks. Pressing the
+// the beam stops and a tether takes it: a stiff, damped spring of rest length `length` between the
+// ship's centre of mass and the cargo's. It pulls and pushes along that line only, so the cargo
+// swings freely round the ship and never spins it. Past `maxTension` it breaks. Pressing the
 // control again lets go; the beam comes back only once the control has been released.
 //
 // The spring is implicit (backward Euler along the line), with the effective mass of both whole
@@ -190,15 +190,16 @@ function beam(world: World, ship: RB, roots: Map<string, string>, rbs: RB[], dt:
   }
   if (!inBeam.size) return;
   const shipGroup = groupOf(rbs, roots, own!);
-  // Capture: the nearest piece of an assembly no heavier and no bigger than the ship, within the tether's length.
+  // Capture: an assembly no heavier and no bigger than the ship whose centre of mass is within the
+  // tether's length of the ship's; the nearest. The tether takes its nearest piece in the beam.
   let best: { r: RB; dist: number } | null = null;
   for (const [root, pieces] of inBeam) {
     const g = groupOf(rbs, roots, root);
     if (g.mass > shipGroup.mass * t.capture || g.extent > shipGroup.extent * (1 + 1e-9)) continue;
-    for (const r of pieces) {
-      const dist = length(sub(r.body.position, origin));
-      if (dist <= t.tether.length && (!best || dist < best.dist)) best = { r, dist };
-    }
+    const dist = length(sub(g.com, shipGroup.com));
+    if (dist > t.tether.length || (best && dist >= best.dist)) continue;
+    const near = pieces.reduce((m, r) => (length(sub(r.body.position, origin)) < length(sub(m.body.position, origin)) ? r : m));
+    best = { r: near, dist };
   }
   if (best) {
     t.mode = "tether";
@@ -220,22 +221,32 @@ function beam(world: World, ship: RB, roots: Map<string, string>, rbs: RB[], dt:
   }
 }
 
+/** An assembly's velocity: its momentum over its mass. */
+function groupVelocity(g: Group): Vec2 {
+  let p = { x: 0, y: 0 };
+  for (const r of g.pieces) p = add(p, scale(r.body.velocity, r.mass));
+  return scale(p, 1 / g.mass);
+}
+
+/**
+ * The tether (TRC-004): a spring between the ship's centre of mass and the cargo's, so it pulls
+ * along the line through both and turns neither: the cargo swings round the ship without spinning
+ * it. Each pull is applied at the centre of mass (to a part of each assembly; the welds share it).
+ */
 function tether(world: World, ship: RB, cargo: RB, roots: Map<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void): void {
   const t = ship.body.tractor!;
-  const { origin } = tractorFrame(ship.body);
-  const d = sub(cargo.body.position, origin);
+  const a = groupOf(rbs, roots, roots.get(ship.body.id)!);
+  const c = groupOf(rbs, roots, roots.get(cargo.body.id)!);
+  const d = sub(c.com, a.com);
   const dist = length(d);
   if (dist < 1e-9) return;
   const n = scale(d, 1 / dist);
-  const a = groupOf(rbs, roots, roots.get(ship.body.id)!);
-  const c = groupOf(rbs, roots, roots.get(cargo.body.id)!);
-  const invMu = invMassAlong(a, origin, n) + invMassAlong(c, cargo.body.position, n);
+  // Through both centres of mass: each end's effective mass is its whole mass.
+  const invMu = 1 / a.mass + 1 / c.mass;
   const mu = 1 / invMu;
   const { stiffness: k, damping: zeta, length: L, maxTension } = t.tether;
   const damp = 2 * zeta * Math.sqrt(k * mu);
-  // Velocity of each end along n: the ship's origin point and the cargo's centre.
-  const vA = add(ship.body.velocity, { x: -ship.body.angularVelocity * (origin.y - ship.body.position.y), y: ship.body.angularVelocity * (origin.x - ship.body.position.x) });
-  const v = dot(sub(cargo.body.velocity, vA), n);
+  const v = dot(sub(groupVelocity(c), groupVelocity(a)), n);
   const x = dist - L;
   // Backward Euler: the force uses the end-of-step stretch and speed.
   const h = damp + k * dt;
@@ -244,8 +255,8 @@ function tether(world: World, ship: RB, cargo: RB, roots: Map<string, string>, r
   const broke = Math.abs(J) > limit;
   if (broke) J = Math.sign(J) * limit;
   const P = scale(n, J);
-  push(cargo, P, cargo.body.position);
-  push(ship, scale(P, -1), origin);
+  push(cargo, P, c.com);
+  push(ship, scale(P, -1), a.com);
   t.tension = -J / dt;
   if (broke) {
     ev("tether.break", { id: ship.body.id, cargo: t.cargo ?? "", tension: Math.abs(J) / dt, limit: maxTension });
