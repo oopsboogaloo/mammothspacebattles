@@ -728,7 +728,7 @@ Your Gunship 3 against an AI Gunship 3 among the asteroids: the first playable f
 *Model as built (November 2026).*
 - **Score on a win:** up to 500 for health left and up to 500 for speed (none after 2 minutes).
 - **Scenario: *Combat duel (AI-3)*.** The player's ship at the origin; an AI hunter 90 m away, off to one side so that the first shot is not a free hit (Hunting, combat skill 0.4 and flight skill 0.7 by default, both on sliders), among the four rubble asteroids of AI-2.
-  - *Measured:* against a player who does nothing it closes in, holds off and fires; the first explosive shell that hits knocks the player out, at about 11 s (12 s at combat skill 1), with the ledger clean. About 7 ms a step.
+  - *Measured:* against a player who does nothing it closes in, holds off and fires; the first explosive shell that hits knocks the player out, at about 18 s (a rock blocks its shot at first), with the ledger clean. About 5.5 ms a step with the railgun (WPN-008); with the gas cannon, firing while thrusting could take 5–18 s a step.
 - **Next:** balance (one hit is often enough: armour, more welds, or smaller blasts), several enemies, and Cautious or Evading ships as bystanders.
 
 ## 10. Performance Requirements
