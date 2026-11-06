@@ -20,19 +20,19 @@ In empty space with no gravity, everything but the ship removed:
 |---|---|---|---|---|---|
 | Scenario | `land-twin-engine` | `gunship` | `gunship-2` | `gunship-3`; also base, tractor, AI-1/2/3 | `mammoth` |
 | **Mass**, fuelled | 25.8 kg | 108.2 kg | 78.2 kg | 90.8 kg | 279 kg |
-| **Thrust per engine** | 81 N | 285 N | 283 N | 580 N | about 450 N (four engines) |
-| **Acceleration**, both engines | 6.3 m/s² | 5.3 m/s² | 7.2 m/s² | 12.8 m/s² | 6.5 m/s² (all four) |
-| **Turn**, one engine for 0.5 s | 1.30 rad/s | 1.32 rad/s | 2.59 rad/s | 4.67 rad/s | 0.55 rad/s (one side: two engines) |
+| **Thrust per engine** | 81 N | 285 N | 283 N | 580 N | about 445 N (four engines) |
+| **Acceleration**, both engines | 6.3 m/s² | 5.3 m/s² | 7.2 m/s² | 12.8 m/s² | 6.4 m/s² (all four) |
+| **Turn**, one engine for 0.5 s | 1.30 rad/s | 1.32 rad/s | 2.59 rad/s | 4.67 rad/s | 0.60 rad/s (one side: two engines) |
 | Engines from the middle | 1.0 m | 1.0 m | 1.45 m | 1.45 m | 7.0 m front, 5.5 m rear |
 | Wing span | 3.0 m | 3.0 m | 3.9 m | 3.9 m | none; outriggers about 15 m across |
-| Gas flow per engine | 0.5 kg/s | 1.5 kg/s | 1.5 kg/s | 6 kg/s | 2.6 kg/s |
-| Exhaust parcel | 1 g | 1 g | 1 g | 4 g | 4 g |
+| Gas flow per engine | 0.5 kg/s | 1.5 kg/s | 1.5 kg/s | 6 kg/s | 2.75 kg/s |
+| Exhaust parcel | 1 g | 1 g | 1 g | 4 g | 12 g (fewer parcels: faster to simulate) |
 | Mixture, H₂ : O₂ by mass | 1 : 8 | 1 : 8 | 1 : 8 | 1 : 47 (lean) | 1 : 8 |
-| Exhaust speed | 172 m/s | 181 m/s | 197 m/s | 99 m/s | 179 m/s |
+| Exhaust speed | 172 m/s | 181 m/s | 197 m/s | 99 m/s | 160 m/s |
 | Exhaust temperature | about 1,600 K (glows) | about 1,600 K | about 1,600 K | about 580 K (grey, below the 800 K glow) | about 1,600 K |
 | Propellant | 8.1 kg | 8.1 kg | 8.1 kg | 8.1 kg | 27 kg in two tanks |
 | Fuel economy (FLT-010 cheat) | 1× | 20× | 20× | 80× | 20× |
-| Full-thrust burn time | about 8 s | about 54 s | about 54 s | about 54 s | about 50 s |
+| Full-thrust burn time | about 8 s | about 54 s | about 54 s | about 54 s | about 49 s |
 | Welds (tension / torque) | 10⁶ N / 10⁶ N·m: unbreakable | 5,000 N / 2,000 N·m | 5,000 N / 2,000 N·m | 10,000 N / 4,000 N·m | 40,000 N / 16,000–48,000 N·m |
 | Parts can be damaged | no | yes (hull, tank materials) | yes | yes | yes |
 | Gun | none | gas cannon, 2 kg shells, 0.1 kg charge, about 44 m/s, 30 shells, 1 s reload | gas cannon, as GS, 15 shells | railgun, 1 kg explosive shells at 96 m/s, 40 shells, 0.25 s reload | railgun, 0.5 kg explosive shells at 96 m/s, 40 shells, 0.25 s reload |
