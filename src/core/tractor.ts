@@ -50,6 +50,11 @@ export interface Tractor {
   /** Heaviest cargo the tether takes, as a multiple of the ship's mass (its size must not exceed the ship's). */
   capture: number;
   tether: Tether;
+  /**
+   * The body that makes the tether (TRC-007), if it is a separate part: no tether while it is
+   * gone, broken, or no longer welded to the tractor's ship. The beam works without it.
+   */
+  tetherFrom?: string;
   /** State: what it is doing now. */
   mode: "off" | "beam" | "tether";
   /** State: the control was on last step (to see a fresh press). */
@@ -149,8 +154,9 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
 
     if (t.mode === "tether") {
       const cargo = t.cargo ? byId.get(t.cargo) : undefined;
-      // A fresh press lets go; so does losing the control link (TRC-001), the cargo, or the ship's tail.
-      if (pressed || !linked || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id)) {
+      // A fresh press lets go; so does losing the control link (TRC-001), the cargo, the ship's tail,
+      // or the tether's generator (TRC-007).
+      if (pressed || !linked || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id) || !tetherWorks(b, byId, roots)) {
         ev("tether.release", { id: b.id, cargo: t.cargo ?? "" });
         t.mode = "off";
         t.cargo = undefined;
@@ -167,11 +173,19 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
     if (want !== (t.mode === "beam")) ev(want ? "tractor.on" : "tractor.off", { id: b.id });
     t.mode = want ? "beam" : "off";
     if (!want) continue;
-    beam(world, ship, roots, rbs, dt, ev);
+    beam(world, ship, roots, rbs, dt, ev, tetherWorks(b, byId, roots));
   }
 }
 
-function beam(world: World, ship: RB, roots: Map<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void): void {
+/** The tether's generator, if it has one, is there, working, and on the tractor's ship (TRC-007). */
+function tetherWorks(b: Body, byId: Map<string, RB>, roots: Map<string, string>): boolean {
+  const id = b.tractor!.tetherFrom;
+  if (id === undefined) return true;
+  const g = byId.get(id);
+  return !!g && g.body.integrity > 0 && roots.get(id) === roots.get(b.id);
+}
+
+function beam(world: World, ship: RB, roots: Map<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void, canTether: boolean): void {
   const t = ship.body.tractor!;
   const { origin, axis } = tractorFrame(ship.body);
   const half = sinCos(t.arc / 2).c;
@@ -194,6 +208,7 @@ function beam(world: World, ship: RB, roots: Map<string, string>, rbs: RB[], dt:
   // tether's length of the ship's; the nearest. The tether takes its nearest piece in the beam.
   let best: { r: RB; dist: number } | null = null;
   for (const [root, pieces] of inBeam) {
+    if (!canTether) break;
     const g = groupOf(rbs, roots, root);
     if (g.mass > shipGroup.mass * t.capture || g.extent > shipGroup.extent * (1 + 1e-9)) continue;
     const dist = length(sub(g.com, shipGroup.com));

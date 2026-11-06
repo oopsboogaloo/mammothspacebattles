@@ -342,6 +342,7 @@ function validateTractor(v: V, t: unknown, path: string): void {
   if (t.arc !== undefined) num(v, t.arc, `${path}.arc`, { positive: true, max: Math.PI });
   if (t.force !== undefined) num(v, t.force, `${path}.force`, { min: 0 });
   if (t.capture !== undefined) num(v, t.capture, `${path}.capture`, { min: 0 });
+  if (t.tetherFrom !== undefined) str(v, t.tetherFrom, `${path}.tetherFrom`);
   if (t.tether !== undefined) {
     if (!isObj(t.tether)) return err(v, `${path}.tether`, "must be {length?, stiffness?, damping?, maxTension?}");
     for (const k of ["length", "stiffness", "maxTension"]) if (t.tether[k] !== undefined) num(v, t.tether[k], `${path}.tether.${k}`, { positive: true });
@@ -665,6 +666,10 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
         if (ids.has(b.id)) err(v, `$.world.bodies[${i}].id`, `duplicate id "${b.id}"`);
         ids.add(b.id);
       }
+    });
+    data.world.bodies.forEach((b, i) => {
+      const from = isObj(b) && isObj(b.tractor) ? b.tractor.tetherFrom : undefined;
+      if (typeof from === "string" && !ids.has(from)) err(v, `$.world.bodies[${i}].tractor.tetherFrom`, "must be the id of a body in the world");
     });
     if (data.world.gravity !== undefined) vec(v, data.world.gravity, "$.world.gravity");
     if (data.world.joints !== undefined) {

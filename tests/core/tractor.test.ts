@@ -1,4 +1,4 @@
-// Tractor beam and tether (TRC-001…TRC-006).
+// Tractor beam and tether (TRC-001…TRC-007).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { computeTotals, createWorld, getProfile, initialWorld, parseScenario, ScenarioError, stepInPlace, type BodyInput, type Command, type World } from "../../src/core/index.ts";
@@ -175,4 +175,39 @@ describe("tractor beam", () => {
     expect(t.cargo).toBe("ball");
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
+
+  it("TRC-007 a tractor with its own tether generator makes no tether without it, and lets go when it is lost", () => {
+    // The generator welded to the ship's side.
+    const withGen = (welded: boolean): World =>
+      createWorld(1, [ship({ tetherFrom: "gen" }), box("gen", 1, 1, { mass: 5, position: { x: welded ? 2 : 30, y: 0 } }), ball("ball", 1, 40, 0, -18)], { x: 0, y: 0 }, {
+        links: [{ id: "c", kind: "control", channel: "tractor", to: "ship" }],
+        joints: welded ? [{ id: "j", a: "ship", b: "gen", anchorA: { x: 1.5, y: 0 }, anchorB: { x: -0.5, y: 0 } }] : [],
+      });
+    const w = withGen(true);
+    engage(w);
+    expect(at(w, "ship").tractor!.mode).toBe("tether");
+    run(w, 60);
+    at(w, "gen").integrity = 0; // wrecked: it leaves the world
+    run(w, 2);
+    expect(w.bodies.some((b) => b.id === "gen")).toBe(false);
+    expect(at(w, "ship").tractor!.mode).toBe("off");
+    expect(w.events.some((e) => e.type === "tether.release")).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+
+    // A generator not on the ship: the beam pulls the ball right in, but no tether is made.
+    const loose = withGen(false);
+    let near = Infinity;
+    run(loose, 1500, () => {
+      near = Math.min(near, reach(loose, "ball"));
+      return set(1);
+    });
+    expect(near).toBeLessThan(10);
+    expect(loose.events.some((e) => e.type === "tether.engage")).toBe(false);
+    expect(at(loose, "ship").tractor!.targets).toContain("ball");
+
+    // It must name a body in the world.
+    const raw = { schema: 1, name: "t", seed: 1, world: { bodies: [{ ...ship({ tetherFrom: "nope" }) }] }, end: { steps: 1 } };
+    expect(() => parseScenario(raw)).toThrow(/tetherFrom/);
+    expect(() => parseScenario(raw)).toThrow(ScenarioError);
+  });
 });
