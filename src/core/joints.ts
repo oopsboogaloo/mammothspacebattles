@@ -59,10 +59,51 @@ interface JointSolver {
   L: number;
 }
 
+/**
+ * What the welds join, worked out once and kept until a body or weld is added, removed or
+ * replaced: each body's assembly root, each assembly's members, each body's welds, and each weld's
+ * far side. Every step asked for these many times over (the solver, gas, pilots, tractors, loads),
+ * rebuilding them each time. A cache entry is checked against the bodies' ids and the welds' ids
+ * and ends, in order, so any change to either rebuilds it.
+ */
+interface Topology {
+  bodyIds: string[];
+  joints: { id: string; a: string; b: string }[];
+  jointKeys: string[];
+  roots: ReadonlyMap<string, string>;
+  members?: Map<string, string[]>;
+  adj?: Adjacency;
+  sides: Map<string, Set<string>>;
+}
+const topologies = new WeakMap<object, Topology>();
+
+function topology(world: Pick<World, "bodies" | "joints">): Topology {
+  const { bodies, joints } = world;
+  const t = topologies.get(joints);
+  if (t && t.bodyIds.length === bodies.length && t.joints.length === joints.length) {
+    let same = true;
+    for (let i = 0; i < bodies.length && same; i++) same = bodies[i].id === t.bodyIds[i];
+    for (let i = 0; i < joints.length && same; i++) {
+      const j = joints[i];
+      same = j === t.joints[i] && j.id + "\u0000" + j.a + "\u0000" + j.b === t.jointKeys[i];
+    }
+    if (same) return t;
+  }
+  const fresh: Topology = {
+    bodyIds: bodies.map((b) => b.id),
+    joints: [...joints],
+    jointKeys: joints.map((j) => j.id + "\u0000" + j.a + "\u0000" + j.b),
+    roots: buildRoots(bodies, joints),
+    sides: new Map(),
+  };
+  topologies.set(joints, fresh);
+  return fresh;
+}
+
 /** Union-find over joints: body id → id of its assembly's root (the smallest id in it). */
-export function assemblyRoots(world: World): Map<string, string> {
+function buildRoots(bodies: readonly { id: string }[], joints: readonly { a: string; b: string }[]): Map<string, string> {
   const parent = new Map<string, string>();
-  for (const b of world.bodies) parent.set(b.id, b.id);
+  for (const b of bodies) parent.set(b.id, b.id);
   const find = (x: string): string => {
     let r = x;
     while (parent.get(r) !== r) r = parent.get(r)!;
@@ -74,7 +115,7 @@ export function assemblyRoots(world: World): Map<string, string> {
     }
     return r;
   };
-  for (const j of world.joints) {
+  for (const j of joints) {
     if (!parent.has(j.a) || !parent.has(j.b)) continue;
     const ra = find(j.a);
     const rb = find(j.b);
@@ -88,11 +129,25 @@ export function assemblyRoots(world: World): Map<string, string> {
   return out;
 }
 
+/** Body id → id of its assembly's root (the smallest id in it). Shared: callers must not change it. */
+export function assemblyRoots(world: Pick<World, "bodies" | "joints">): ReadonlyMap<string, string> {
+  return topology(world).roots;
+}
+
 /** The ids of every body in `id`'s assembly, sorted. */
 export function assemblyOf(world: World, id: string): string[] {
-  const roots = assemblyRoots(world);
-  const root = roots.get(id);
-  return [...roots.entries()].filter(([, r]) => r === root).map(([b]) => b).sort();
+  const t = topology(world);
+  if (!t.members) {
+    t.members = new Map();
+    for (const [b, r] of t.roots) {
+      const list = t.members.get(r);
+      if (list) list.push(b);
+      else t.members.set(r, [b]);
+    }
+    for (const list of t.members.values()) list.sort();
+  }
+  const root = t.roots.get(id);
+  return root === undefined ? [] : [...t.members.get(root)!];
 }
 
 export interface AssemblyProps {
@@ -280,12 +335,12 @@ export function finishJoints(js: JointSolver[], acc: ConstraintAccount): Map<str
   return capped;
 }
 
-type Adjacency = Map<string, Joint[]>;
+type Adjacency = Map<string, { id: string; a: string; b: string }[]>;
 
 /** Each body's joints, built once per pass (searching every joint from every body was slow with many welds). */
-function adjacency(world: World): Adjacency {
+function adjacency(joints: readonly { id: string; a: string; b: string }[]): Adjacency {
   const adj: Adjacency = new Map();
-  for (const j of world.joints) {
+  for (const j of joints) {
     for (const id of [j.a, j.b]) {
       const list = adj.get(id);
       if (list) list.push(j);
@@ -293,6 +348,17 @@ function adjacency(world: World): Adjacency {
     }
   }
   return adj;
+}
+
+/** The bodies on b's side of a joint (or, in a loop, a set holding a), kept with the topology. */
+function farSide(t: Topology, j: Joint): Set<string> {
+  let side = t.sides.get(j.id);
+  if (!side) {
+    t.adj ??= adjacency(t.joints);
+    side = sideOf(t.adj, j.b, j.id, j.a);
+    t.sides.set(j.id, side);
+  }
+  return side;
 }
 
 /**
@@ -325,7 +391,7 @@ function sideOf(adj: Adjacency, start: string, skip: string, stop: string): Set<
  */
 export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<string, Vec2>, capped: ReadonlyMap<string, JointImpulse>): void {
   const broken = new Set<string>();
-  const adj = adjacency(world);
+  const t = topology(world);
   const byId = new Map(world.bodies.map((b) => [b.id, b]));
   for (const j of world.joints) {
     const A = byId.get(j.a);
@@ -336,7 +402,7 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     let P = { x: own.x, y: own.y };
     let T = own.angular;
     if (rigidImpulse.size && rigidImpulse.has(j.b)) {
-      const side = sideOf(adj, j.b, j.id, j.a);
+      const side = farSide(t, j);
       if (!side.has(j.a)) {
         const pB = add(B.position, rotate(sinCos(B.angle), j.anchorB));
         for (const id of side) {
@@ -384,14 +450,14 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
  * directly. Stored on the joint for the next step's evaluation (ASM-004 under thrust, RS-10).
  */
 export function recordGasLoads(world: World, supplied: Map<string, { x: number; y: number; angular: number }>): void {
-  const adj = adjacency(world);
+  const t = topology(world);
   const byId = new Map(world.bodies.map((b) => [b.id, b]));
   for (const j of world.joints) {
     j.gasImpulse = undefined;
     if (!supplied.size || !supplied.has(j.b)) continue;
     const B = byId.get(j.b);
     if (!B) continue;
-    const side = sideOf(adj, j.b, j.id, j.a);
+    const side = farSide(t, j);
     if (side.has(j.a)) continue; // a loop: the solver shares it
     const pB = add(B.position, rotate(sinCos(B.angle), j.anchorB));
     let x = 0;

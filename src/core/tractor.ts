@@ -106,7 +106,7 @@ export interface Group {
   extent: number;
 }
 
-export function groupOf(rbs: RB[], roots: Map<string, string>, root: string): Group {
+export function groupOf(rbs: RB[], roots: ReadonlyMap<string, string>, root: string): Group {
   const pieces = rbs.filter((r) => roots.get(r.body.id) === root);
   const p = assemblyProps(pieces.map((r) => ({ mass: r.mass, inertia: r.inertia, position: r.body.position })));
   let extent = 0;
@@ -178,14 +178,14 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
 }
 
 /** The tether's generator, if it has one, is there, working, and on the tractor's ship (TRC-007). */
-function tetherWorks(b: Body, byId: Map<string, RB>, roots: Map<string, string>): boolean {
+function tetherWorks(b: Body, byId: Map<string, RB>, roots: ReadonlyMap<string, string>): boolean {
   const id = b.tractor!.tetherFrom;
   if (id === undefined) return true;
   const g = byId.get(id);
   return !!g && g.body.integrity > 0 && roots.get(id) === roots.get(b.id);
 }
 
-function beam(world: World, ship: RB, roots: Map<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void, canTether: boolean): void {
+function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void, canTether: boolean): void {
   const t = ship.body.tractor!;
   const { origin, axis } = tractorFrame(ship.body);
   const half = sinCos(t.arc / 2).c;
@@ -248,7 +248,7 @@ function groupVelocity(g: Group): Vec2 {
  * along the line through both and turns neither: the cargo swings round the ship without spinning
  * it. Each pull is applied at the centre of mass (to a part of each assembly; the welds share it).
  */
-function tether(world: World, ship: RB, cargo: RB, roots: Map<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void): void {
+function tether(world: World, ship: RB, cargo: RB, roots: ReadonlyMap<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void): void {
   const t = ship.body.tractor!;
   const a = groupOf(rbs, roots, roots.get(ship.body.id)!);
   const c = groupOf(rbs, roots, roots.get(cargo.body.id)!);
