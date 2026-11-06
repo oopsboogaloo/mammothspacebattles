@@ -1,7 +1,12 @@
 # GPU gas, Phase 0: reference battle and WebGPU spike
 
-Phase 0 of the GPU gas plan (`docs/gpu-gas-plan.md`, PR #48). Measured 6 November 2026.
-The verdict waits on the phone and laptop runs of the spike page.
+Phase 0 of the GPU gas plan (`docs/gpu-gas-plan.md`). Measured 6 November 2026 on the development
+container (CPU baseline) and three devices (the spike page): an iPad Pro, and a desktop's built-in
+Intel graphics and NVIDIA RTX 40-series card.
+
+**Verdict: no-go for the plan as written** (Phase 1 as designed), on all three devices. The GPU is
+not short of throughput; the cost is the number of substeps, each with a fixed price. The direction
+is kept (see §6): next is Spike 2, the same gas laid out for the GPU.
 
 ## 1. Reference battle (the baseline)
 
@@ -67,32 +72,90 @@ Where the gas time goes, ms a step:
 
 **In CI** (headless Chromium, `--enable-unsafe-webgpu`, SwiftShader in the worker), `e2e/gpu.spec.ts` checks the shaders. Results: density within 4×10⁻⁷, momentum drift 4×10⁻⁹. Software timings (7–21 ms a substep) mean nothing.
 
-## 3. Estimate against the budget, before device numbers
+## 3. Device results
 
-The budget per substep is small:
-- the reference battle at 4× detail is about 3,700 parcels at 61 substeps a step;
-- the full gas is 2.47 × the spike's passes.
+Raw runs: `gpu-spike-results.json`. Each row: µs a substep (all 7 passes), wall clock round a
+240-substep submit and a 16-byte read-back, median of 5. Every device ran it in the simulation
+worker, and every run matched the CPU (density within 3–4×10⁻⁷, momentum drift 1–5×10⁻⁹).
 
-| | Gas budget a step | Spike budget a substep |
-|---|---|---|
-| Mid-range phone (½ step) | 2.08 ms | **14 µs** |
-| Laptop (¼ step) | 1.04 ms | **6.9 µs** |
+| Parcels | iPad Pro (Apple GPU) | Desktop, Intel UHD 770 (built-in) | Desktop, NVIDIA RTX 40 |
+|---|---|---|---|
+| 1,000 | 183 | 387 | 268* |
+| 4,000 | 250 | 685 | **140** |
+| 10,000 | 483 | 1,535 | 176 |
+| 25,000 | 1,000 | 3,852 | 192 |
+| 50,000 | 1,679 | 6,568 | 223 |
+| 100,000 | 3,667 | 11,317 | 310 |
 
-The spike runs 7 dispatches a substep. Measurements across four GPU vendors and three browsers put WebGPU's marginal cost per dispatch at 24–36 µs on Vulkan and 32–71 µs on Metal ([arXiv 2604.02344](https://arxiv.org/abs/2604.02344)). By those figures a substep costs 170–500 µs before any parcel is moved: 12–70× over budget, at any parcel count.
+\* Measured first, likely before the card left its idle clocks; the 4,000 row is its floor.
 
-**Expected verdict: no-go for the plan as written.** The per-substep fixed cost, not parcel throughput, sets the cost. The spike's 1,000-parcel row measures that fixed cost on each device, and the page's verdict is the real answer.
+Split at 4,000 parcels (sort alone / density + force alone, µs): iPad 33 / 175, Intel 36 / 377,
+RTX 17 / 86.
 
-Levers, if the devices confirm it:
+**The reference battle at 4× detail** (3,536 parcels, peak 3,736; 61 substeps a step; full gas
+2.47 × these passes), gas a step:
 
-| Lever | Effect on dispatches a step |
-|---|---|
-| Sort once a step (cells with a skin), not every substep | 7 → 2 a substep |
-| Density folded into the force pass (density from the last substep) | 2 → 1 a substep |
-| Fewer substeps: keep today's parcel size near ships, finer only where cheap; or per-parcel substeps on the GPU | 61 → 30 or fewer |
-| Smaller budget share, or 2× detail instead of 4× | — |
+| Device | Gas a step | Budget | Over by |
+|---|---|---|---|
+| iPad Pro | 37 ms | 1.04 ms (counted as laptop-class) – 2.08 ms | 18–35× |
+| Desktop, Intel built-in | 99 ms | 1.04 ms | 95× |
+| Desktop, RTX 40 | 23 ms | 1.04 ms | 22× |
 
-None of these fixes the 6.3 ms non-gas step: that needs its own work before real time is possible.
+For scale, today's CPU gas takes 22.5 ms a step at 1× detail; at 4× it would be about 8× that
+(4× the parcels, 2× the substeps).
+
+Note: Chrome on Windows chose the built-in Intel graphics until Windows' graphics setting for
+Chrome was set to High performance; the page's `powerPreference: "high-performance"` was ignored.
+The game will need to show which adapter it got.
+
+## 4. What we learned
+
+1. **Correctness is not the problem.** The same formulas in float32 on four GPUs (with CI's
+   SwiftShader) match the CPU's float64 to 4×10⁻⁷, with momentum conserved to 10⁻⁹. CI can test the
+   shaders in headless Chromium (`--enable-unsafe-webgpu`, SwiftShader in the worker), not time them.
+2. **Throughput is not the problem either, on a big card.** On the RTX, 25× the parcels (4,000 →
+   100,000) cost 2.2× the time: about 3 ns a parcel a substep, against 840 ns on the CPU. The iPad
+   and Intel scale with parcels more (37 and 113 ns a parcel at 100,000).
+3. **The cost is the number of substeps, each with a fixed price.** One substep is 7 dispatches
+   that must run in order, each draining the GPU before the next starts. At low parcel counts the
+   density and force passes are also slow per thread (each thread walks ~30 neighbours in 9 cells,
+   one after another, on a GPU mostly idle). The floor: about 140 µs a substep on the RTX, 183–250 µs
+   on the iPad, 390–690 µs on Intel.
+4. **The budget leaves about 7 µs a substep.** A quarter of a 1/240 s step is 1.04 ms; over 61
+   substeps that is 17 µs for all the gas, 7 µs for these passes. The gas takes 61 × 240 = 14,600
+   substeps a game second; at 140 µs each that is 2 s of GPU time a second.
+5. **The pre-measurement guess was right in verdict, wrong in cause.** Published WebGPU dispatch
+   costs of 24–71 µs ([arXiv 2604.02344](https://arxiv.org/abs/2604.02344)) overstated it here: the
+   sort's 5 dispatches took 17–36 µs in all, 3–7 µs each. The floor is mostly the dependent density
+   and force passes.
+6. **The sort is cheap** (17–36 µs at 4,000 parcels). Re-sorting less often would save little.
+7. **The CPU's step outside the gas is over budget on its own:** 6.3 ms against 4.2 ms a step for
+   real time (forces, contacts, integration, ledger). That needs its own work whatever the gas does.
+8. **Games that ship particle fluids** (Cryostasis's SPH water on PhysX, NVIDIA FleX, Google's
+   LiquidFun) use them for liquids and effects, at one solver update a frame. Position-based fluids
+   (FleX) and MLS-MPM (webgpu-ocean) were adopted because they stay stable at large time steps. We
+   found no shipped game where gas pressure on walls makes a craft's thrust, which is what makes
+   this game unusual, and why its gas takes tiny steps.
+
+## 5. Options
+
+| Option | Keeps today's gas model | What it attacks | Risk |
+|---|---|---|---|
+| **Spike 2: one work-group per gas cluster, all substeps in one dispatch** | Yes | The fixed price of a substep (no GPU-wide waits; clusters run side by side; each its own substeps) | One work-group has ≤ 256–1,024 threads, so a 4,000-parcel cluster runs ~15 parcels a thread in turn |
+| A gas method with large time steps (position-based or MLS-MPM, adapted to hot compressible gas on walls) | No | The number of substeps (~20× fewer would fit the RTX budget) | Thrust re-measured and every ship retuned; tried on the CPU first |
+| GPU for looks only (smoke and plume once a frame) over today's CPU gas | Yes | Nothing in the physics | Physics gas stays as costly as now |
+| Shelve GPU gas; speed up the CPU step | Yes | The 6.3 ms outside the gas, the spinning-fragment bug | No new detail |
+
+## 6. Decision and next step
+
+6 November 2026: the GPU direction stays, because real gas making real thrust is what makes the
+game unique, and the aim is to make that gas affordable without faking it. Next is **Spike 2**
+(first row above), timed on the same devices. If it brings a substep near 10–20 µs, Phase 1 goes
+ahead in that form; if not, the large-time-step gas is tried on the CPU against today's.
 
 ## How to send numbers
 
-On each device, open the page in Chrome (Android) or Safari (iOS 26+). Desktop Chrome, Edge or Safari works too. Keep the tab in front for about a minute, press **Copy results** and paste the text back.
+On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
+(Android, Windows, macOS) or Safari or Chrome (iPadOS and iOS 26+). Keep the tab in front for about a
+minute, press **Copy results** and paste the text back. On Windows, check the adapter line names the
+graphics card; if not, set Chrome to High performance in Settings → System → Display → Graphics.

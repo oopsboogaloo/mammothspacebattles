@@ -1,0 +1,209 @@
+{
+ "what": "GPU gas spike (gpu-spike.html) results, Phase 0. Times are µs per substep, wall clock round a 240-substep submit plus a 16-byte read-back, median of 5. Estimate: the reference battle at 4x detail (3,536 parcels, peak 3,736; 60.8 substeps a step; full gas 2.47x the spike's passes), gas ms a step. Budget: 2.08 ms (phone, half a step), 1.04 ms (laptop or desktop, a quarter).",
+ "runs": [
+  {
+   "device": "iPad Pro (M-series), iPadOS 26.6.2, Chrome 156 (WebKit)",
+   "date": "2026-11-06T21:36:39Z",
+   "adapter": {
+    "vendor": "apple",
+    "architecture": "apple"
+   },
+   "where": "worker",
+   "check": {
+    "pass": true,
+    "densityError": 4.18e-07,
+    "momentumDrift": 3.15e-09
+   },
+   "sizes": [
+    {
+     "n": 1000,
+     "batch": 240,
+     "fullUs": 183.3,
+     "sortUs": 33.3,
+     "physicsUs": 116.7,
+     "neighbours": 28
+    },
+    {
+     "n": 4000,
+     "batch": 240,
+     "fullUs": 250,
+     "sortUs": 33.3,
+     "physicsUs": 175,
+     "neighbours": 33.1
+    },
+    {
+     "n": 10000,
+     "batch": 240,
+     "fullUs": 483.3,
+     "sortUs": 45.8,
+     "physicsUs": 270.8,
+     "neighbours": 37.8
+    },
+    {
+     "n": 25000,
+     "batch": 240,
+     "fullUs": 1000,
+     "sortUs": 66.7,
+     "physicsUs": 662.5,
+     "neighbours": 42.8
+    },
+    {
+     "n": 50000,
+     "batch": 240,
+     "fullUs": 1679.2,
+     "sortUs": 104.2,
+     "physicsUs": 1133.3,
+     "neighbours": 41.9
+    },
+    {
+     "n": 100000,
+     "batch": 120,
+     "fullUs": 3666.7,
+     "sortUs": 258.3,
+     "physicsUs": 2366.7,
+     "neighbours": 30.1
+    }
+   ],
+   "estimate": {
+    "gasMs": 36.0,
+    "gasMsPeak": 36.66
+   }
+  },
+  {
+   "device": "Desktop i9-13900K, integrated Intel UHD 770 (Chrome picked it by default), Windows 11, Chrome 157",
+   "date": "2026-11-06T21:41:37Z",
+   "adapter": {
+    "vendor": "intel",
+    "architecture": "gen-12lp"
+   },
+   "where": "worker",
+   "check": {
+    "pass": true,
+    "densityError": 3.94e-07,
+    "momentumDrift": 4.8e-09
+   },
+   "sizes": [
+    {
+     "n": 1000,
+     "batch": 240,
+     "fullUs": 387.1,
+     "sortUs": 29.2,
+     "physicsUs": 216.3,
+     "neighbours": 27.9
+    },
+    {
+     "n": 4000,
+     "batch": 240,
+     "fullUs": 685,
+     "sortUs": 35.8,
+     "physicsUs": 377.1,
+     "neighbours": 33
+    },
+    {
+     "n": 10000,
+     "batch": 240,
+     "fullUs": 1535.4,
+     "sortUs": 82.5,
+     "physicsUs": 770,
+     "neighbours": 38
+    },
+    {
+     "n": 25000,
+     "batch": 120,
+     "fullUs": 3851.7,
+     "sortUs": 155.8,
+     "physicsUs": 2424.2,
+     "neighbours": 36.1
+    },
+    {
+     "n": 50000,
+     "batch": 60,
+     "fullUs": 6568.3,
+     "sortUs": 288.3,
+     "physicsUs": 4311.7,
+     "neighbours": 26.3
+    },
+    {
+     "n": 100000,
+     "batch": 30,
+     "fullUs": 11316.7,
+     "sortUs": 540,
+     "physicsUs": 9063.3,
+     "neighbours": 27.2
+    }
+   ],
+   "estimate": {
+    "gasMs": 95.95,
+    "gasMsPeak": 98.93
+   }
+  },
+  {
+   "device": "Same desktop, NVIDIA RTX 40-series (Lovelace), Windows 11, Chrome 157",
+   "date": "2026-11-06T21:48:33Z",
+   "adapter": {
+    "vendor": "nvidia",
+    "architecture": "lovelace"
+   },
+   "where": "worker",
+   "check": {
+    "pass": true,
+    "densityError": 3.1e-07,
+    "momentumDrift": 1.35e-09
+   },
+   "sizes": [
+    {
+     "n": 1000,
+     "batch": 240,
+     "fullUs": 267.5,
+     "sortUs": 16.7,
+     "physicsUs": 65.4,
+     "neighbours": 28
+    },
+    {
+     "n": 4000,
+     "batch": 240,
+     "fullUs": 139.6,
+     "sortUs": 17.1,
+     "physicsUs": 85.8,
+     "neighbours": 33.2
+    },
+    {
+     "n": 10000,
+     "batch": 240,
+     "fullUs": 176.2,
+     "sortUs": 20.4,
+     "physicsUs": 95.4,
+     "neighbours": 38.3
+    },
+    {
+     "n": 25000,
+     "batch": 240,
+     "fullUs": 191.7,
+     "sortUs": 22.1,
+     "physicsUs": 122.9,
+     "neighbours": 42.7
+    },
+    {
+     "n": 50000,
+     "batch": 240,
+     "fullUs": 223.3,
+     "sortUs": 20.8,
+     "physicsUs": 140,
+     "neighbours": 41.9
+    },
+    {
+     "n": 100000,
+     "batch": 240,
+     "fullUs": 309.6,
+     "sortUs": 21.3,
+     "physicsUs": 181.3,
+     "neighbours": 39.1
+    }
+   ],
+   "estimate": {
+    "gasMs": 23.93,
+    "gasMsPeak": 22.65
+   }
+  }
+ ]
+}
