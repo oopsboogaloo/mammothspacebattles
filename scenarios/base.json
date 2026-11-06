@@ -1907,12 +1907,12 @@
         "radius": 4,
         "density": 6,
         "bond": {
-          "$expr": "100000 * bond"
+          "$expr": "3500 * bond"
         },
         "material": {
           "name": "rock",
-          "threshold": 10,
-          "toughness": 200
+          "threshold": 100,
+          "toughness": 20000
         },
         "gold": 1,
         "compounds": 2,
@@ -1936,12 +1936,12 @@
         "radius": 3.5,
         "density": 6,
         "bond": {
-          "$expr": "100000 * bond"
+          "$expr": "3500 * bond"
         },
         "material": {
           "name": "rock",
-          "threshold": 10,
-          "toughness": 200
+          "threshold": 100,
+          "toughness": 20000
         },
         "gold": 1,
         "compounds": 1,
@@ -1965,12 +1965,12 @@
         "radius": 5,
         "density": 6,
         "bond": {
-          "$expr": "100000 * bond"
+          "$expr": "3500 * bond"
         },
         "material": {
           "name": "rock",
-          "threshold": 10,
-          "toughness": 200
+          "threshold": 100,
+          "toughness": 20000
         },
         "gold": 1,
         "compounds": 2,
