@@ -829,6 +829,8 @@ The plume is kept as parcels: retiring supersonic exhaust once it is clear of th
 
 Together these plausibly give 10× or more with exact replays kept. Cosmetic GPU smoke can come after.
 
+**Superseded direction (November 2026):** exact replay of the gas is to be given up for gas on the GPU (WebGPU), with 4× detail and the rest kept as headroom for battles. See [`docs/gpu-gas-plan.md`](gpu-gas-plan.md); not yet built.
+
 ## 11. Reference Scenarios
 
 These live in `scenarios/` and serve as both tests and sandbox starting points.
