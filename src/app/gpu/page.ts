@@ -60,7 +60,7 @@ function report(): string {
       check: state.check,
       opts: spike === 2 ? { ...opts.fused, batch: opts.batch, reps: opts.reps } : { sizes: opts.sizes, batch: opts.batch, reps: opts.reps },
       sizes: spike === 1 ? state.sizes.map((s) => ({ ...s, fullUs: round(s.fullUs), sortUs: round(s.sortUs), physicsUs: round(s.physicsUs), neighbours: round(s.neighbours) })) : undefined,
-      fused: spike === 2 ? state.fused.map((f) => ({ ...f, us: round(f.us) })) : undefined,
+      fused: spike === 2 ? state.fused.map((f) => ({ ...f, us: Number.isFinite(f.us) ? round(f.us) : null })) : undefined,
       estimate: spike === 1 ? state.estimate : state.fusedEstimate,
       status: state.status,
       message: state.message,
@@ -99,8 +99,10 @@ function renderSpike2() {
       const cells = layouts.map((k) => {
         const rs = state.fused.filter((f) => f.n === n && f.clusters === k);
         if (!rs.length) return "<td></td>";
-        const best = rs.reduce((a, b) => (b.us < a.us ? b : a));
-        const others = rs.filter((r) => r !== best).map((r) => `${r.wgs}: ${fmt(r.us)}`);
+        const good = rs.filter((r) => Number.isFinite(r.us));
+        if (!good.length) return `<td><b class="nogo">failed</b></td>`;
+        const best = good.reduce((a, b) => (b.us < a.us ? b : a));
+        const others = rs.filter((r) => r !== best).map((r) => `${r.wgs}: ${Number.isFinite(r.us) ? fmt(r.us) : "failed"}`);
         return `<td><b>${fmt(best.us)}</b> <span class="muted">(${best.wgs}${others.length ? `; ${others.join(", ")}` : ""})</span></td>`;
       });
       return `<tr><td>${n.toLocaleString("en")}</td>${cells.join("")}</tr>`;

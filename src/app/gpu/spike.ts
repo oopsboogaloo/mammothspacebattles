@@ -442,9 +442,10 @@ export async function runSpike(gpu: GPU, opts: SpikeOptions, emit: (e: SpikeEven
       const { checkFused, timeFused } = await import("./fused.ts");
       emit({ kind: "check", check: await checkFused(device) });
       const wgs = opts.fused.wgs.filter((w) => w <= adapter.maxComputeInvocationsPerWorkgroup);
-      for (const n of opts.fused.sizes)
-        for (const k of opts.fused.clusters)
-          for (const w of wgs) {
+      // Every layout at the guaranteed 256 threads first, so a larger size the GPU refuses can't spoil them.
+      for (const w of wgs)
+        for (const n of opts.fused.sizes)
+          for (const k of opts.fused.clusters) {
             if (lost) throw new Error(`GPU device lost: ${lost}`);
             emit({ kind: "progress", message: `Timing ${k} × ${n.toLocaleString("en")} parcels, ${w} threads each…` });
             emit({ kind: "fused", result: await timeFused(device, n, k, w, opts.batch, opts.reps) });
