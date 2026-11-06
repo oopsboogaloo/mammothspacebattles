@@ -278,6 +278,10 @@ export class FusedGas {
     });
     device.queue.writeBuffer(this.bufs.clusters, 0, cl);
     this.reset();
+    // A GPU can refuse the kernel (e.g. more threads than it allows for this much code): catch that
+    // here (see ready()), or every dispatch would silently do nothing and time as near zero.
+    device.pushErrorScope("internal");
+    device.pushErrorScope("validation");
     const module = device.createShaderModule({ code: fusedWgsl(wgs) });
     this.pipe = device.createComputePipeline({ layout: "auto", compute: { module, entryPoint: "main" } });
     const b = this.bufs;
@@ -285,6 +289,14 @@ export class FusedGas {
       layout: this.pipe.getBindGroupLayout(0),
       entries: [b.params, b.clusters, b.stateA, b.stateB, b.table, b.aux, b.dens, b.stats].map((buffer, binding) => ({ binding, resource: { buffer } })),
     });
+    this.errors = Promise.all([device.popErrorScope(), device.popErrorScope()]);
+  }
+  private errors: Promise<(GPUError | null)[]>;
+
+  /** Throws if the GPU refused the kernel or its buffers. */
+  async ready(): Promise<void> {
+    const errs = (await this.errors).filter((e): e is GPUError => !!e);
+    if (errs.length) throw new Error(`the GPU refused the ${this.wgs}-thread kernel: ${errs.map((e) => e.message).join("; ")}`);
   }
 
   /** Back to the starting clouds. */
@@ -299,9 +311,13 @@ export class FusedGas {
     this.device.queue.writeBuffer(this.bufs.stateA, 0, s);
   }
 
-  /** Runs nsub substeps of every cluster in one dispatch, then waits for the per-cluster stats. */
+  /**
+   * Runs nsub substeps of every cluster in one dispatch, then waits for the per-cluster stats, and
+   * throws unless every cluster reports all nsub substeps run.
+   */
   async run(nsub: number): Promise<number> {
     this.device.queue.writeBuffer(this.bufs.params, 16, new Uint32Array([nsub]));
+    this.device.queue.writeBuffer(this.bufs.stats, 0, new Float32Array(this.bufs.stats.size / 4));
     const enc = this.device.createCommandEncoder();
     const pass = enc.beginComputePass();
     pass.setPipeline(this.pipe);
@@ -313,7 +329,10 @@ export class FusedGas {
     this.device.queue.submit([enc.finish()]);
     await this.bufs.readback.mapAsync(0x1);
     const t = performance.now() - t0;
+    const stats = new Float32Array(this.bufs.readback.getMappedRange().slice(0));
     this.bufs.readback.unmap();
+    for (let k = 0; k < this.counts.length; k++)
+      if (stats[4 * k + 1] !== nsub) throw new Error(`cluster ${k} ran ${stats[4 * k + 1]} of ${nsub} substeps: the GPU did not run the kernel`);
     return t;
   }
 
@@ -353,6 +372,7 @@ function unpack(state: Float32Array, start: number, n: number): { pv: Float32Arr
 export async function checkFused(device: GPUDevice, wgs = 256): Promise<CheckResult> {
   const clouds = [makeCloud(1500, 3), makeCloud(700, 4), makeCloud(300, 5)];
   const gas = new FusedGas(device, clouds, wgs);
+  await gas.ready();
   await gas.run(1);
   const B = await gas.read("stateB");
   const dens = await gas.read("dens");
@@ -389,6 +409,7 @@ export async function checkFused(device: GPUDevice, wgs = 256): Promise<CheckRes
     }
   }
   const g2 = new FusedGas(device, free, wgs);
+  await g2.ready();
   await g2.run(100);
   const A = await g2.read("stateA");
   g2.destroy();
@@ -423,8 +444,10 @@ export interface FusedResult {
   wgs: number;
   /** Substeps in the timed dispatch. */
   batch: number;
-  /** Median wall time per substep, µs (all clusters together). */
+  /** Median wall time per substep, µs (all clusters together); NaN if the run failed. */
   us: number;
+  /** Why the run failed, if it did. */
+  error?: string;
 }
 
 const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -433,14 +456,20 @@ const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.len
 export async function timeFused(device: GPUDevice, n: number, clusters: number, wgs: number, batch: number, reps: number): Promise<FusedResult> {
   const clouds = Array.from({ length: clusters }, (_, k) => makeCloud(n, 1 + k));
   const gas = new FusedGas(device, clouds, wgs);
-  // Warm up; shrink the batch if a dispatch would take over half a second (phones can reset the GPU).
-  const warm = await gas.run(10);
-  while (batch > 10 && (warm / 10) * batch > 500) batch = Math.ceil(batch / 2);
-  const ts: number[] = [];
-  for (let r = 0; r < reps; r++) {
-    gas.reset();
-    ts.push(await gas.run(batch));
+  try {
+    await gas.ready();
+    // Warm up; shrink the batch if a dispatch would take over half a second (phones can reset the GPU).
+    const warm = await gas.run(10);
+    while (batch > 10 && (warm / 10) * batch > 500) batch = Math.ceil(batch / 2);
+    const ts: number[] = [];
+    for (let r = 0; r < reps; r++) {
+      gas.reset();
+      ts.push(await gas.run(batch));
+    }
+    return { n, clusters, wgs, batch, us: (1000 * median(ts)) / batch };
+  } catch (err) {
+    return { n, clusters, wgs, batch, us: NaN, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    gas.destroy();
   }
-  gas.destroy();
-  return { n, clusters, wgs, batch, us: (1000 * median(ts)) / batch };
 }

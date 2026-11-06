@@ -153,7 +153,7 @@ game unique, and the aim is to make that gas affordable without faking it. Next 
 (first row above), timed on the same devices. If it brings a substep near 10–20 µs, Phase 1 goes
 ahead in that form; if not, the large-time-step gas is tried on the CPU against today's.
 
-## 7. Spike 2: one work-group per cluster (built, awaiting device runs)
+## 7. Spike 2: one work-group per cluster
 
 The spike page now runs Spike 2 by default (`src/app/gpu/fused.ts`; Spike 1 with `?spike=1`).
 
@@ -171,6 +171,44 @@ The spike page now runs Spike 2 by default (`src/app/gpu/fused.ts`; Spike 1 with
 - **Checked against the CPU** as Spike 1 is (three clusters of different sizes): density within
   3×10⁻⁷ and momentum drift 2×10⁻⁹ on SwiftShader in CI.
 - **Pass mark:** a substep near 10–20 µs at the largest cluster's size (docs/gpu-gas-plan.md, Phase 0b).
+
+### Spike 2 results (6 November 2026)
+
+µs a substep, all clusters together, 5 clusters side by side (1 and 10 were within ~10% of 5 on
+both devices). Raw runs: `gpu-spike-results.json` (`spike2`).
+
+| Parcels a cluster | iPad Pro, 256 threads | RTX 40, 256 threads | RTX 40, 1,024 threads |
+|---|---|---|---|
+| 250 | 150 | 98 | 81 |
+| 500 | 292 | 189 | 99 |
+| 1,000 | 567 | 410 | 128 |
+| 1,500 | 921 | 684 | 235 |
+| 3,000 | – | 1,453 | 431 |
+
+The reference battle, gas a step (budget 1.04 ms laptop or desktop, 2.08 ms phone):
+
+| Detail | iPad Pro | RTX 40 | Spike 1, for comparison (iPad / RTX) |
+|---|---|---|---|
+| 1× | 14.9 ms | 6.6 ms | – |
+| 2× | 40.9 ms | 11.6 ms | – |
+| 4× | 121 ms | 30.1 ms | 37 / 23 ms |
+
+**What we learned:**
+
+1. **Clusters do run side by side.** 1, 5 and 10 clusters cost the same on both devices.
+2. **But each cluster is slow: no-go, and worse than Spike 1 at 4×.** One parcel a thread still
+   costs about 80 µs a substep on the RTX and about 146 µs on the iPad. Each thread fetches its
+   neighbours from GPU main memory, one dependent load after another (about 80 in density and
+   again in the pushes), and one work-group per cluster leaves too few threads to hide that wait.
+3. **More threads help on the RTX:** 1,024 a work-group is about 3× faster than 256 for clusters
+   of 1,000 or more parcels.
+4. **The iPad refused the 1,024-thread kernel**, and the page timed the empty dispatches as 0–4 µs
+   and showed GO. Fixed: a refused kernel, or a run whose clusters don't report every substep, is
+   now shown as failed and left out of the estimate; 256-thread layouts run first.
+5. **Next lever (Spike 2b): keep each cluster in work-group memory** (on-chip, tens of times
+   faster to reach than main memory). It targets exactly the cost measured here. At 1× detail a
+   cluster fits easily; at 4× (about 1,340 parcels) the full state does not fit Apple's 32 KB, so
+   only what the neighbour search reads most (positions and cells) would live there.
 
 ## How to send numbers
 

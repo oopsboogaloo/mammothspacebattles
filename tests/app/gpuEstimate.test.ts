@@ -64,6 +64,17 @@ describe("GPU gas budget estimate, one work-group per cluster (Spike 2)", () => 
     expect(d4.go.laptop).toBe(d4.gasMs <= 1000 / 240 / 4);
   });
 
+  it("leaves out runs that failed (a refused kernel times as nothing)", () => {
+    const e = estimateFused(baseline, [
+      { n: 250, clusters: 5, wgs: 256, us: 150 },
+      { n: 250, clusters: 5, wgs: 1024, us: NaN },
+      { n: 250, clusters: 5, wgs: 1024, us: 0 },
+    ])!;
+    // Only the good row counts: 150 µs at 250 parcels, scaled to the largest cluster.
+    expect(e.details[0].usPerSubstep).toBeCloseTo((150 * baseline.steady.clusters.sizes[0]) / 250);
+    expect(estimateFused(baseline, [{ n: 250, clusters: 5, wgs: 1024, us: NaN }])).toBeNull();
+  });
+
   it("gives no estimate before any run", () => {
     expect(estimateFused(baseline, [])).toBeNull();
   });

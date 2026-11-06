@@ -145,11 +145,13 @@ export interface FusedEstimate {
  */
 export function estimateFused(b: Baseline, ms: readonly FusedMeasured[]): FusedEstimate | null {
   const c = b.steady.clusters;
-  if (!c || !ms.length) return null;
-  const layouts = [...new Set(ms.map((m) => m.clusters))].sort((x, y) => x - y);
+  const ok = ms.filter((m) => Number.isFinite(m.us) && m.us > 0);
+  if (!c || !ok.length) return null;
+  const layouts = [...new Set(ok.map((m) => m.clusters))].sort((x, y) => x - y);
   const k = layouts.find((l) => l >= c.count) ?? layouts[layouts.length - 1];
   const best = new Map<number, number>();
-  for (const m of ms) if (m.clusters === k) best.set(m.n, Math.min(best.get(m.n) ?? Infinity, m.us));
+  for (const m of ms) if (m.clusters === k && Number.isFinite(m.us) && m.us > 0) best.set(m.n, Math.min(best.get(m.n) ?? Infinity, m.us));
+  if (!best.size) return null;
   const points = [...best].map(([n, us]) => ({ n, fullUs: us }));
   const stepMs = 1000 / b.stepsPerSecond;
   const budgetMs = { phone: BUDGET_SHARE.phone * stepMs, laptop: BUDGET_SHARE.laptop * stepMs };

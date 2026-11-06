@@ -205,5 +205,284 @@
     "gasMsPeak": 22.65
    }
   }
- ]
+ ],
+ "spike2": {
+  "what": "Spike 2 (one work-group per cluster, every substep of a 240-substep batch in one dispatch). µs per substep, all clusters together, median of 5.",
+  "runs": [
+   {
+    "device": "iPad Pro (M-series), iPadOS 26.6.2, Chrome 156 (WebKit)",
+    "date": "2026-11-06T23:12:06Z",
+    "check": {
+     "pass": true,
+     "densityError": 4.15e-07,
+     "momentumDrift": 9.04e-09
+    },
+    "fused": [
+     {
+      "n": 250,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 145.8
+     },
+     {
+      "n": 250,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 150
+     },
+     {
+      "n": 250,
+      "clusters": 10,
+      "wgs": 256,
+      "us": 179.2
+     },
+     {
+      "n": 500,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 291.7
+     },
+     {
+      "n": 500,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 291.7
+     },
+     {
+      "n": 500,
+      "clusters": 10,
+      "wgs": 256,
+      "us": 337.5
+     },
+     {
+      "n": 1000,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 554.2
+     },
+     {
+      "n": 1000,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 566.7
+     },
+     {
+      "n": 1000,
+      "clusters": 10,
+      "wgs": 256,
+      "us": 670.8
+     },
+     {
+      "n": 1500,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 912.5
+     },
+     {
+      "n": 1500,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 920.8
+     }
+    ],
+    "note": "The 1,024-thread runs reported 0-4.2 us: the GPU refused the kernel and the page timed empty dispatches (fixed: refused kernels and incomplete runs are now reported as failed). The run then ended with 'map async was not successful' before the 3,000-parcel layouts. The page's estimate (GO at every detail) used those bogus rows; recomputed from the 256-thread rows at 5 clusters: 1x 14.9 ms, 2x 40.9 ms, 4x 121 ms of gas a step."
+   },
+   {
+    "device": "Desktop, NVIDIA RTX 40-series (Lovelace), Windows 11, Chrome 157",
+    "date": "2026-11-06T23:13:15Z",
+    "check": {
+     "pass": true,
+     "densityError": 3.42e-07,
+     "momentumDrift": 5e-09
+    },
+    "fused": [
+     {
+      "n": 250,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 109.6
+     },
+     {
+      "n": 250,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 97.9
+     },
+     {
+      "n": 250,
+      "clusters": 10,
+      "wgs": 256,
+      "us": 102.1
+     },
+     {
+      "n": 500,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 187.9
+     },
+     {
+      "n": 500,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 189.2
+     },
+     {
+      "n": 500,
+      "clusters": 10,
+      "wgs": 256,
+      "us": 190.4
+     },
+     {
+      "n": 1000,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 401.3
+     },
+     {
+      "n": 1000,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 409.6
+     },
+     {
+      "n": 1000,
+      "clusters": 10,
+      "wgs": 256,
+      "us": 412.5
+     },
+     {
+      "n": 1500,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 680.8
+     },
+     {
+      "n": 1500,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 684.2
+     },
+     {
+      "n": 1500,
+      "clusters": 10,
+      "wgs": 256,
+      "us": 684.6
+     },
+     {
+      "n": 3000,
+      "clusters": 1,
+      "wgs": 256,
+      "us": 1432.5
+     },
+     {
+      "n": 3000,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 1452.5
+     },
+     {
+      "n": 3000,
+      "clusters": 10,
+      "wgs": 256,
+      "us": 1529.2
+     },
+     {
+      "n": 250,
+      "clusters": 1,
+      "wgs": 1024,
+      "us": 113.3
+     },
+     {
+      "n": 250,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 81.3
+     },
+     {
+      "n": 250,
+      "clusters": 10,
+      "wgs": 1024,
+      "us": 77.9
+     },
+     {
+      "n": 500,
+      "clusters": 1,
+      "wgs": 1024,
+      "us": 100
+     },
+     {
+      "n": 500,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 99.2
+     },
+     {
+      "n": 500,
+      "clusters": 10,
+      "wgs": 1024,
+      "us": 100.4
+     },
+     {
+      "n": 1000,
+      "clusters": 1,
+      "wgs": 1024,
+      "us": 118.8
+     },
+     {
+      "n": 1000,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 127.9
+     },
+     {
+      "n": 1000,
+      "clusters": 10,
+      "wgs": 1024,
+      "us": 123.8
+     },
+     {
+      "n": 1500,
+      "clusters": 1,
+      "wgs": 1024,
+      "us": 228.8
+     },
+     {
+      "n": 1500,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 234.6
+     },
+     {
+      "n": 1500,
+      "clusters": 10,
+      "wgs": 1024,
+      "us": 231.7
+     },
+     {
+      "n": 3000,
+      "clusters": 1,
+      "wgs": 1024,
+      "us": 439.6
+     },
+     {
+      "n": 3000,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 431.3
+     },
+     {
+      "n": 3000,
+      "clusters": 10,
+      "wgs": 1024,
+      "us": 434.2
+     }
+    ],
+    "estimate": {
+     "1x": 6.56,
+     "2x": 11.57,
+     "4x": 30.1
+    }
+   }
+  ]
+ }
 }
