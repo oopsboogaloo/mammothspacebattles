@@ -1,6 +1,11 @@
 # GPU gas: implementation plan
 
-Agreed 6 November 2026; nothing here is built yet. The decisions below stand as recommended unless changed.
+Agreed 6 November 2026. The decisions below stand as recommended unless changed.
+
+**Status:** Phase 0 is done ([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md)): no-go for Phase 1
+as designed, on an iPad Pro and on a desktop with an RTX 40-series card. The gas at 4× detail
+takes about 61 substeps a step, and a substep costs at least about 140 µs on the GPU however few the
+parcels; the budget leaves about 7 µs. The direction stays; next is Phase 0b (Spike 2) below.
 
 ## Goal
 
@@ -87,6 +92,20 @@ change until then.
   adapter, if it works there; that decides how CI tests the GPU path).
 - **Exit:** substep cost per 10k parcels on each device; an estimate of the reference battle at
   4× detail against the budget; whether CI can run WebGPU at all.
+
+**Outcome (6 November 2026):** done, see [`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md).
+Substep cost on an iPad Pro, desktop Intel UHD 770 and RTX 40 is 250, 685 and 140 µs at 4,000
+parcels; the reference battle at 4× would take 37, 99 and 23 ms of gas a step against 1–2 ms. CI can
+run WebGPU (SwiftShader) for correctness. No-go as designed.
+
+### Phase 0b: Spike 2, one work-group per cluster, ~1 PR
+
+- On the spike page, a fused mode: each gas cluster (NFR-004) runs in one work-group, looping over
+  all its substeps (sort, density, force, move) with work-group barriers, so a step is one dispatch.
+  Clusters run side by side; each can take its own substeps.
+- Time it for clusters of 500–4,000 parcels, 1–8 at once, on the same devices.
+- **Exit:** a substep near 10–20 µs (go: Phase 1 in this form), or not (try a large-time-step gas
+  on the CPU first).
 
 ### Phase 1: gas core on the GPU, ~2 PRs
 
