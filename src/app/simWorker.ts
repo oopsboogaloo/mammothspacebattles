@@ -90,7 +90,21 @@ async function runGas(job: GasJob) {
   return runGasJob(job, async (jobs) => (jobs.length < 2 ? jobs.map((j) => runClusterJob(j, clock)) : runClusters(jobs)));
 }
 
-self.onmessage = async (e: MessageEvent<RunRequest>) => {
+/** The GPU gas spike page (gpu-spike.html) runs its WebGPU passes here, in the simulation worker. */
+export interface GpuSpikeRequest {
+  type: "gpuSpike";
+  opts: import("./gpu/spike.ts").SpikeOptions;
+}
+async function gpuSpike(req: GpuSpikeRequest) {
+  const post = (event: import("./gpu/spike.ts").SpikeEvent) => (self as unknown as Worker).postMessage({ type: "gpuSpike", event });
+  const gpu = (self.navigator as Navigator & { gpu?: GPU }).gpu;
+  if (!gpu) return post({ kind: "error", message: "no WebGPU in workers" });
+  const { runSpike } = await import("./gpu/spike.ts");
+  await runSpike(gpu, req.opts, post, "worker");
+}
+
+self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
+  if (e.data.type === "gpuSpike") return gpuSpike(e.data);
   const req = e.data;
   HELPERS = Math.min(MAX_HELPERS, req.helpers ?? 0);
   if (req.world) world = req.world;

@@ -1,0 +1,6213 @@
+{
+  "schema": 1,
+  "name": "reference-battle",
+  "title": "Reference battle",
+  "description": "The gas benchmark (docs/gpu-gas-plan.md): four ships firing every engine — the Mammoth, Gunship 3, Gunship 2 and the FLY lander — two explosive shells bursting on rubble asteroids within the same second, and the plumes washing over asteroids behind the ships. Q and E fly the whole fleet. Built by scripts/reference-battle.ts; the gas cost here is the baseline the GPU gas is budgeted against.",
+  "profile": "sandbox",
+  "seed": 48,
+  "world": {
+    "bodies": [
+      {
+        "id": "mam-cockpit",
+        "shape": {
+          "kind": "box",
+          "width": 4,
+          "height": 6
+        },
+        "mass": 80,
+        "position": {
+          "x": -45,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nose",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 2,
+              "y": 0
+            },
+            {
+              "x": 1.9319,
+              "y": 0.5176
+            },
+            {
+              "x": 1.7321,
+              "y": 1
+            },
+            {
+              "x": 1.4142,
+              "y": 1.4142
+            },
+            {
+              "x": 1,
+              "y": 1.7321
+            },
+            {
+              "x": 0.5176,
+              "y": 1.9319
+            },
+            {
+              "x": 0,
+              "y": 2
+            },
+            {
+              "x": -0.5176,
+              "y": 1.9319
+            },
+            {
+              "x": -1,
+              "y": 1.7321
+            },
+            {
+              "x": -1.4142,
+              "y": 1.4142
+            },
+            {
+              "x": -1.7321,
+              "y": 1
+            },
+            {
+              "x": -1.9319,
+              "y": 0.5176
+            },
+            {
+              "x": -2,
+              "y": 0
+            }
+          ]
+        },
+        "mass": 15,
+        "position": {
+          "x": -45,
+          "y": 3
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-generator",
+        "shape": {
+          "kind": "box",
+          "width": 2,
+          "height": 2
+        },
+        "mass": 25,
+        "position": {
+          "x": -46,
+          "y": -4
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-battery",
+        "shape": {
+          "kind": "box",
+          "width": 2,
+          "height": 2
+        },
+        "mass": 25,
+        "position": {
+          "x": -44,
+          "y": -4
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-tank-l",
+        "shape": {
+          "kind": "box",
+          "width": 1.4,
+          "height": 3
+        },
+        "mass": 10,
+        "position": {
+          "x": -47.7,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "tank",
+          "threshold": 80,
+          "toughness": 400
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 1.5,
+            "capacity": 1.5
+          },
+          {
+            "resource": "o2",
+            "mass": 12,
+            "capacity": 12
+          }
+        ]
+      },
+      {
+        "id": "mam-tank-r",
+        "shape": {
+          "kind": "box",
+          "width": 1.4,
+          "height": 3
+        },
+        "mass": 10,
+        "position": {
+          "x": -42.3,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "tank",
+          "threshold": 80,
+          "toughness": 400
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 1.5,
+            "capacity": 1.5
+          },
+          {
+            "resource": "o2",
+            "mass": 12,
+            "capacity": 12
+          }
+        ]
+      },
+      {
+        "id": "mam-strut-front",
+        "shape": {
+          "kind": "box",
+          "width": 15,
+          "height": 0.3
+        },
+        "mass": 8,
+        "position": {
+          "x": -45,
+          "y": 1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-strut-rear",
+        "shape": {
+          "kind": "box",
+          "width": 12,
+          "height": 0.3
+        },
+        "mass": 8,
+        "position": {
+          "x": -45,
+          "y": -2.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-engine-fl",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -52,
+          "y": 0.75
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.05
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.4
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 2.75,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.012,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-chamber-fleft-fl",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -52.45,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-chamber-right-fl",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -51.55,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-throat-fleft-fl",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -52.325,
+          "y": -0.2
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-throat-right-fl",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -51.675,
+          "y": -0.2
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nozzle-fleft-fl",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -52.325,
+          "y": -0.55
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nozzle-right-fl",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -51.675,
+          "y": -0.55
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-engine-rl",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -50.5,
+          "y": -2.75
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.05
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.4
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 2.75,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.012,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-chamber-rleft-rl",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -50.95,
+          "y": -3.25
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-chamber-right-rl",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -50.05,
+          "y": -3.25
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-throat-rleft-rl",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -50.825,
+          "y": -3.7
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-throat-right-rl",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -50.175,
+          "y": -3.7
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nozzle-rleft-rl",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -50.825,
+          "y": -4.05
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nozzle-right-rl",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -50.175,
+          "y": -4.05
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-engine-fr",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -38,
+          "y": 0.75
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.05
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.4
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 2.75,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.012,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-chamber-freft-fr",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -38.45,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-chamber-right-fr",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -37.55,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-throat-freft-fr",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -38.325,
+          "y": -0.2
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-throat-right-fr",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -37.675,
+          "y": -0.2
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nozzle-freft-fr",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -38.325,
+          "y": -0.55
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nozzle-right-fr",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -37.675,
+          "y": -0.55
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-engine-rr",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -39.5,
+          "y": -2.75
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.05
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.4
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 2.75,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.012,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-chamber-rreft-rr",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -39.95,
+          "y": -3.25
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-chamber-right-rr",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -39.05,
+          "y": -3.25
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-throat-rreft-rr",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -39.825,
+          "y": -3.7
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-throat-right-rr",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -39.175,
+          "y": -3.7
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nozzle-rreft-rr",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -39.825,
+          "y": -4.05
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-nozzle-right-rr",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -39.175,
+          "y": -4.05
+        },
+        "velocity": {
+          "x": 1.2,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-breech",
+        "shape": {
+          "kind": "box",
+          "width": 0.6,
+          "height": 0.3
+        },
+        "mass": 10,
+        "position": {
+          "x": -45,
+          "y": 5.15
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        },
+        "magazine": {
+          "count": 40,
+          "reload": 0.25,
+          "at": {
+            "x": 0,
+            "y": 1.81
+          },
+          "angle": 0,
+          "shell": {
+            "shape": {
+              "kind": "box",
+              "width": 0.26,
+              "height": 0.22
+            },
+            "mass": 0.5,
+            "restitution": 0,
+            "friction": 0.05,
+            "explosive": {
+              "charge": 0.3,
+              "fragments": 6,
+              "radius": 2
+            }
+          },
+          "railgun": {
+            "channel": "fire",
+            "speed": 96
+          }
+        }
+      },
+      {
+        "id": "mam-barrel-left",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 1.5
+        },
+        "mass": 1.5,
+        "position": {
+          "x": -45.25,
+          "y": 6.05
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-barrel-right",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 1.5
+        },
+        "mass": 1.5,
+        "position": {
+          "x": -44.75,
+          "y": 6.05
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-tractor",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 10,
+        "position": {
+          "x": -45.6,
+          "y": -5.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        },
+        "tractor": {
+          "channel": "tractor",
+          "origin": {
+            "x": 0,
+            "y": -0.5
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "force": 1600,
+          "range": 70,
+          "tether": {
+            "length": 25,
+            "maxTension": 40000,
+            "stiffness": 8000
+          },
+          "tetherFrom": "mam-tether-gen"
+        }
+      },
+      {
+        "id": "mam-tether-gen",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 10,
+        "position": {
+          "x": -44.4,
+          "y": -5.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-leg-left",
+        "shape": {
+          "kind": "box",
+          "width": 0.3,
+          "height": 1.6
+        },
+        "mass": 3,
+        "position": {
+          "x": -46.75,
+          "y": -5.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "mam-leg-right",
+        "shape": {
+          "kind": "box",
+          "width": 0.3,
+          "height": 1.6
+        },
+        "mass": 3,
+        "position": {
+          "x": -43.25,
+          "y": -5.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": 200,
+          "toughness": 2400
+        }
+      },
+      {
+        "id": "gs3-chamber-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -16.9,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-chamber-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -14,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-chamber-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -16,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-chamber-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -13.1,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-engine-l",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -16.45,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 6,
+          "mixture": {
+            "h2": 0.020833333333333332,
+            "o2": 0.9791666666666666
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.004,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.45
+          },
+          "economy": 80
+        },
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-engine-r",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -13.55,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 6,
+          "mixture": {
+            "h2": 0.020833333333333332,
+            "o2": 0.9791666666666666
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.004,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.45
+          },
+          "economy": 80
+        },
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1
+        },
+        "mass": 8,
+        "position": {
+          "x": -15,
+          "y": 0.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-leg-left",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": 0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": -17.202381,
+          "y": -0.421429
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-leg-right",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": -0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": -12.797619000000001,
+          "y": -0.421429
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-nozzle-left-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -16.775,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-nozzle-left-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -13.875,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-nozzle-right-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -16.125,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-nozzle-right-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -13.225,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 2,
+        "position": {
+          "x": -15,
+          "y": -0.65
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.16875,
+            "capacity": 0.16875
+          },
+          {
+            "resource": "o2",
+            "mass": 7.93125,
+            "capacity": 7.93125
+          }
+        ],
+        "material": {
+          "name": "tank",
+          "threshold": 20,
+          "toughness": 100
+        }
+      },
+      {
+        "id": "gs3-throat-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -16.775,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-throat-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -13.875,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-throat-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -16.125,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-throat-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -13.225,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-wing",
+        "shape": {
+          "kind": "box",
+          "width": 3.9,
+          "height": 0.2
+        },
+        "mass": 2,
+        "position": {
+          "x": -15,
+          "y": 0.7
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-breech",
+        "shape": {
+          "kind": "box",
+          "width": 0.6000000000000001,
+          "height": 0.3
+        },
+        "mass": 15,
+        "position": {
+          "x": -15,
+          "y": 0.9500000000000001
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        },
+        "magazine": {
+          "count": 40,
+          "reload": 0.25,
+          "at": {
+            "x": 0,
+            "y": 2.31
+          },
+          "angle": 0,
+          "shell": {
+            "shape": {
+              "kind": "box",
+              "width": 0.36000000000000004,
+              "height": 0.3
+            },
+            "mass": 1,
+            "restitution": 0,
+            "friction": 0.05,
+            "explosive": {
+              "charge": 0.3,
+              "fragments": 6,
+              "radius": 2
+            }
+          },
+          "railgun": {
+            "channel": "fire",
+            "speed": 96
+          }
+        }
+      },
+      {
+        "id": "gs3-barrel-left",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 2
+        },
+        "mass": 4,
+        "position": {
+          "x": -15.25,
+          "y": 2.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs3-barrel-right",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 2
+        },
+        "mass": 4,
+        "position": {
+          "x": -14.75,
+          "y": 2.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-chamber-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 13.1,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-chamber-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 16,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-chamber-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 14,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-chamber-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 16.9,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-engine-l",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": 13.55,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-engine-r",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": 16.45,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 1.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.45
+          },
+          "economy": 20
+        },
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1
+        },
+        "mass": 8,
+        "position": {
+          "x": 15,
+          "y": 0.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-leg-left",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": 0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": 12.797619000000001,
+          "y": -0.421429
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-leg-right",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.197619,
+              "y": -0.928571
+            },
+            {
+              "x": 0.397619,
+              "y": -0.928571
+            },
+            {
+              "x": -0.252381,
+              "y": 1.021429
+            },
+            {
+              "x": -0.402381,
+              "y": 1.021429
+            }
+          ]
+        },
+        "mass": 0.4,
+        "position": {
+          "x": 17.202381,
+          "y": -0.421429
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.9,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-nozzle-left-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.225,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-nozzle-left-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 16.125,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-nozzle-right-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.875,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-nozzle-right-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 16.775,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 2,
+        "position": {
+          "x": 15,
+          "y": -0.65
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "material": {
+          "name": "tank",
+          "threshold": 20,
+          "toughness": 100
+        }
+      },
+      {
+        "id": "gs2-throat-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.225,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-throat-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 16.125,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-throat-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 13.875,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-throat-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 16.775,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-wing",
+        "shape": {
+          "kind": "box",
+          "width": 3.9,
+          "height": 0.2
+        },
+        "mass": 2,
+        "position": {
+          "x": 15,
+          "y": 0.7
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-breech",
+        "shape": {
+          "kind": "box",
+          "width": 0.6000000000000001,
+          "height": 0.3
+        },
+        "mass": 15,
+        "position": {
+          "x": 15,
+          "y": 0.9500000000000001
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.0005555555555555556,
+            "capacity": 0.0005555555555555556
+          },
+          {
+            "resource": "o2",
+            "mass": 0.0044444444444444444,
+            "capacity": 0.0044444444444444444
+          }
+        ],
+        "injector": {
+          "channel": "fire",
+          "rate": 2,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "economy": 20,
+          "outlet": {
+            "x": 0,
+            "y": 0.2
+          },
+          "direction": {
+            "x": 0,
+            "y": 1
+          },
+          "width": 0.3,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 0.4,
+            "length": 2
+          }
+        },
+        "magazine": {
+          "count": 15,
+          "reload": 1,
+          "at": {
+            "x": 0,
+            "y": 0.5499999999999998
+          },
+          "angle": 0,
+          "shell": {
+            "shape": {
+              "kind": "box",
+              "width": 0.36000000000000004,
+              "height": 0.3
+            },
+            "mass": 2,
+            "restitution": 0,
+            "friction": 0.05
+          },
+          "stop": {
+            "shape": {
+              "kind": "box",
+              "width": 0.38,
+              "height": 0.06
+            },
+            "mass": 0.3,
+            "at": {
+              "x": 0,
+              "y": 0.735
+            }
+          }
+        }
+      },
+      {
+        "id": "gs2-barrel-left",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 2
+        },
+        "mass": 4,
+        "position": {
+          "x": 14.75,
+          "y": 2.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "gs2-barrel-right",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 2
+        },
+        "mass": 4,
+        "position": {
+          "x": 15.25,
+          "y": 2.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "material": {
+          "name": "hull",
+          "threshold": 50,
+          "toughness": 600
+        }
+      },
+      {
+        "id": "fly-chamber-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 38.55,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-chamber-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 40.55,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-chamber-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 39.45,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-chamber-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.8
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 41.45,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-engine-l",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": 39,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "left",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true
+        }
+      },
+      {
+        "id": "fly-engine-r",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": 41,
+          "y": 0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.01
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.08
+          }
+        ],
+        "injector": {
+          "channel": "right",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.001,
+          "radius": 0.035,
+          "igniter": true
+        }
+      },
+      {
+        "id": "fly-hull",
+        "shape": {
+          "kind": "box",
+          "width": 1.2,
+          "height": 1
+        },
+        "mass": 8,
+        "position": {
+          "x": 40,
+          "y": 1.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-nozzle-left-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 38.675,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-nozzle-left-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": 0.3
+            },
+            {
+              "x": -0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 40.675,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-nozzle-right-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 39.325,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-nozzle-right-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.175,
+              "y": 0.3
+            },
+            {
+              "x": 0.095,
+              "y": -0.3
+            },
+            {
+              "x": 0.175,
+              "y": -0.3
+            },
+            {
+              "x": -0.095,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 41.325,
+          "y": -0.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 2,
+        "position": {
+          "x": 40,
+          "y": 1.05
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.6,
+            "capacity": 0.6
+          },
+          {
+            "resource": "o2",
+            "mass": 4.8,
+            "capacity": 4.8
+          }
+        ]
+      },
+      {
+        "id": "fly-throat-left-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 38.675,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-throat-left-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 40.675,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-throat-right-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 39.325,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-throat-right-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 41.325,
+          "y": -0.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "fly-wing",
+        "shape": {
+          "kind": "box",
+          "width": 3,
+          "height": 0.2
+        },
+        "mass": 2,
+        "position": {
+          "x": 40,
+          "y": 0.7
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "shell-a",
+        "shape": {
+          "kind": "box",
+          "width": 0.36,
+          "height": 0.3
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -30,
+          "y": 3
+        },
+        "velocity": {
+          "x": 0,
+          "y": 50
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.05,
+        "explosive": {
+          "charge": 0.3,
+          "fragments": 6,
+          "radius": 2
+        }
+      },
+      {
+        "id": "shell-b",
+        "shape": {
+          "kind": "box",
+          "width": 0.36,
+          "height": 0.3
+        },
+        "mass": 0.5,
+        "position": {
+          "x": 28,
+          "y": -8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 46
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.05,
+        "explosive": {
+          "charge": 0.3,
+          "fragments": 6,
+          "radius": 2
+        }
+      }
+    ],
+    "joints": [
+      {
+        "id": "mam-w-nose",
+        "a": "mam-cockpit",
+        "b": "mam-nose",
+        "anchorA": {
+          "x": 0,
+          "y": 3
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 48000
+        }
+      },
+      {
+        "id": "mam-w-gen",
+        "a": "mam-cockpit",
+        "b": "mam-generator",
+        "anchorA": {
+          "x": -1,
+          "y": -3
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 1
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-bat",
+        "a": "mam-cockpit",
+        "b": "mam-battery",
+        "anchorA": {
+          "x": 1,
+          "y": -3
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 1
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-gen-bat",
+        "a": "mam-generator",
+        "b": "mam-battery",
+        "anchorA": {
+          "x": 1,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -1,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-tank-l",
+        "a": "mam-cockpit",
+        "b": "mam-tank-l",
+        "anchorA": {
+          "x": -2,
+          "y": 0
+        },
+        "anchorB": {
+          "x": 0.7,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-tank-r",
+        "a": "mam-cockpit",
+        "b": "mam-tank-r",
+        "anchorA": {
+          "x": 2,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.7,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-strut-front",
+        "a": "mam-cockpit",
+        "b": "mam-strut-front",
+        "anchorA": {
+          "x": 0,
+          "y": 1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 48000
+        }
+      },
+      {
+        "id": "mam-w-strut-rear",
+        "a": "mam-cockpit",
+        "b": "mam-strut-rear",
+        "anchorA": {
+          "x": 0,
+          "y": -2.5
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 48000
+        }
+      },
+      {
+        "id": "mam-w-strut-front-tank-l",
+        "a": "mam-tank-l",
+        "b": "mam-strut-front",
+        "anchorA": {
+          "x": 0,
+          "y": 1
+        },
+        "anchorB": {
+          "x": -2.7,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-strut-rear-tank-l",
+        "a": "mam-tank-l",
+        "b": "mam-strut-rear",
+        "anchorA": {
+          "x": 0,
+          "y": -1.5
+        },
+        "anchorB": {
+          "x": -2.7,
+          "y": 1
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-strut-front-tank-r",
+        "a": "mam-tank-r",
+        "b": "mam-strut-front",
+        "anchorA": {
+          "x": 0,
+          "y": 1
+        },
+        "anchorB": {
+          "x": 2.7,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-strut-rear-tank-r",
+        "a": "mam-tank-r",
+        "b": "mam-strut-rear",
+        "anchorA": {
+          "x": 0,
+          "y": -1.5
+        },
+        "anchorB": {
+          "x": 2.7,
+          "y": 1
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-head-left-l-fl",
+        "a": "mam-engine-fl",
+        "b": "mam-chamber-fleft-fl",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-head-right-l-fl",
+        "a": "mam-engine-fl",
+        "b": "mam-chamber-right-fl",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-left-throat-l-fl",
+        "a": "mam-chamber-fleft-fl",
+        "b": "mam-throat-fleft-fl",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-right-throat-l-fl",
+        "a": "mam-chamber-right-fl",
+        "b": "mam-throat-right-fl",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-throat-nozzle-left-l-fl",
+        "a": "mam-throat-fleft-fl",
+        "b": "mam-nozzle-fleft-fl",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-throat-nozzle-right-l-fl",
+        "a": "mam-throat-right-fl",
+        "b": "mam-nozzle-right-fl",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-mount-fl",
+        "a": "mam-strut-front",
+        "b": "mam-engine-fl",
+        "anchorA": {
+          "x": -7,
+          "y": -0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-head-left-l-rl",
+        "a": "mam-engine-rl",
+        "b": "mam-chamber-rleft-rl",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-head-right-l-rl",
+        "a": "mam-engine-rl",
+        "b": "mam-chamber-right-rl",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-left-throat-l-rl",
+        "a": "mam-chamber-rleft-rl",
+        "b": "mam-throat-rleft-rl",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-right-throat-l-rl",
+        "a": "mam-chamber-right-rl",
+        "b": "mam-throat-right-rl",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-throat-nozzle-left-l-rl",
+        "a": "mam-throat-rleft-rl",
+        "b": "mam-nozzle-rleft-rl",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-throat-nozzle-right-l-rl",
+        "a": "mam-throat-right-rl",
+        "b": "mam-nozzle-right-rl",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-mount-rl",
+        "a": "mam-strut-rear",
+        "b": "mam-engine-rl",
+        "anchorA": {
+          "x": -5.5,
+          "y": -0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-head-left-l-fr",
+        "a": "mam-engine-fr",
+        "b": "mam-chamber-freft-fr",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-head-right-l-fr",
+        "a": "mam-engine-fr",
+        "b": "mam-chamber-right-fr",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-left-throat-l-fr",
+        "a": "mam-chamber-freft-fr",
+        "b": "mam-throat-freft-fr",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-right-throat-l-fr",
+        "a": "mam-chamber-right-fr",
+        "b": "mam-throat-right-fr",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-throat-nozzle-left-l-fr",
+        "a": "mam-throat-freft-fr",
+        "b": "mam-nozzle-freft-fr",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-throat-nozzle-right-l-fr",
+        "a": "mam-throat-right-fr",
+        "b": "mam-nozzle-right-fr",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-mount-fr",
+        "a": "mam-strut-front",
+        "b": "mam-engine-fr",
+        "anchorA": {
+          "x": 7,
+          "y": -0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-head-left-l-rr",
+        "a": "mam-engine-rr",
+        "b": "mam-chamber-rreft-rr",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-head-right-l-rr",
+        "a": "mam-engine-rr",
+        "b": "mam-chamber-right-rr",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-left-throat-l-rr",
+        "a": "mam-chamber-rreft-rr",
+        "b": "mam-throat-rreft-rr",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-right-throat-l-rr",
+        "a": "mam-chamber-right-rr",
+        "b": "mam-throat-right-rr",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-throat-nozzle-left-l-rr",
+        "a": "mam-throat-rreft-rr",
+        "b": "mam-nozzle-rreft-rr",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-throat-nozzle-right-l-rr",
+        "a": "mam-throat-right-rr",
+        "b": "mam-nozzle-right-rr",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-mount-rr",
+        "a": "mam-strut-rear",
+        "b": "mam-engine-rr",
+        "anchorA": {
+          "x": 5.5,
+          "y": -0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-breech",
+        "a": "mam-nose",
+        "b": "mam-breech",
+        "anchorA": {
+          "x": 0,
+          "y": 2
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.15
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-barrel-left",
+        "a": "mam-breech",
+        "b": "mam-barrel-left",
+        "anchorA": {
+          "x": -0.25,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.75
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-barrel-right",
+        "a": "mam-breech",
+        "b": "mam-barrel-right",
+        "anchorA": {
+          "x": 0.25,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.75
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 32000
+        }
+      },
+      {
+        "id": "mam-w-tractor",
+        "a": "mam-generator",
+        "b": "mam-tractor",
+        "anchorA": {
+          "x": 0.4,
+          "y": -1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.5
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-tether-gen",
+        "a": "mam-battery",
+        "b": "mam-tether-gen",
+        "anchorA": {
+          "x": -0.4,
+          "y": -1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.5
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-tractor-gen",
+        "a": "mam-tractor",
+        "b": "mam-tether-gen",
+        "anchorA": {
+          "x": 0.6,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.6,
+          "y": 0
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-leg-left",
+        "a": "mam-generator",
+        "b": "mam-leg-left",
+        "anchorA": {
+          "x": -0.75,
+          "y": -1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.8
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "mam-w-leg-right",
+        "a": "mam-battery",
+        "b": "mam-leg-right",
+        "anchorA": {
+          "x": 0.75,
+          "y": -1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.8
+        },
+        "limits": {
+          "tension": 40000,
+          "compression": 80000,
+          "shear": 24000,
+          "torque": 16000
+        }
+      },
+      {
+        "id": "gs3-w-head-left-l",
+        "a": "gs3-engine-l",
+        "b": "gs3-chamber-left-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-head-right-l",
+        "a": "gs3-engine-l",
+        "b": "gs3-chamber-right-l",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-left-throat-l",
+        "a": "gs3-chamber-left-l",
+        "b": "gs3-throat-left-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-right-throat-l",
+        "a": "gs3-chamber-right-l",
+        "b": "gs3-throat-right-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-throat-nozzle-left-l",
+        "a": "gs3-throat-left-l",
+        "b": "gs3-nozzle-left-l",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-throat-nozzle-right-l",
+        "a": "gs3-throat-right-l",
+        "b": "gs3-nozzle-right-l",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-head-left-r",
+        "a": "gs3-engine-r",
+        "b": "gs3-chamber-left-r",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-head-right-r",
+        "a": "gs3-engine-r",
+        "b": "gs3-chamber-right-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-left-throat-r",
+        "a": "gs3-chamber-left-r",
+        "b": "gs3-throat-left-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-right-throat-r",
+        "a": "gs3-chamber-right-r",
+        "b": "gs3-throat-right-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-throat-nozzle-left-r",
+        "a": "gs3-throat-left-r",
+        "b": "gs3-nozzle-left-r",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-throat-nozzle-right-r",
+        "a": "gs3-throat-right-r",
+        "b": "gs3-nozzle-right-r",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-wing-left",
+        "a": "gs3-wing",
+        "b": "gs3-engine-l",
+        "anchorA": {
+          "x": -1.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-wing-right",
+        "a": "gs3-wing",
+        "b": "gs3-engine-r",
+        "anchorA": {
+          "x": 1.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-wing-leg-left",
+        "a": "gs3-wing",
+        "b": "gs3-leg-left",
+        "anchorA": {
+          "x": -1.875,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-wing-leg-right",
+        "a": "gs3-wing",
+        "b": "gs3-leg-right",
+        "anchorA": {
+          "x": 1.875,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": -0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-breech-left",
+        "a": "gs3-breech",
+        "b": "gs3-barrel-left",
+        "anchorA": {
+          "x": -0.25,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -1
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "gs3-w-breech-right",
+        "a": "gs3-breech",
+        "b": "gs3-barrel-right",
+        "anchorA": {
+          "x": 0.25,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -1
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "gs3-w-wing-hull",
+        "a": "gs3-wing",
+        "b": "gs3-hull",
+        "anchorA": {
+          "x": 0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.5
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-hull-tank",
+        "a": "gs3-hull",
+        "b": "gs3-tank",
+        "anchorA": {
+          "x": 0,
+          "y": -0.5
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.25
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs3-w-wing-breech",
+        "a": "gs3-wing",
+        "b": "gs3-breech",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.15
+        },
+        "limits": {
+          "tension": 10000,
+          "compression": 20000,
+          "shear": 6000,
+          "torque": 4000
+        }
+      },
+      {
+        "id": "gs2-w-head-left-l",
+        "a": "gs2-engine-l",
+        "b": "gs2-chamber-left-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-head-right-l",
+        "a": "gs2-engine-l",
+        "b": "gs2-chamber-right-l",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-left-throat-l",
+        "a": "gs2-chamber-left-l",
+        "b": "gs2-throat-left-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-right-throat-l",
+        "a": "gs2-chamber-right-l",
+        "b": "gs2-throat-right-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-throat-nozzle-left-l",
+        "a": "gs2-throat-left-l",
+        "b": "gs2-nozzle-left-l",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-throat-nozzle-right-l",
+        "a": "gs2-throat-right-l",
+        "b": "gs2-nozzle-right-l",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-head-left-r",
+        "a": "gs2-engine-r",
+        "b": "gs2-chamber-left-r",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-head-right-r",
+        "a": "gs2-engine-r",
+        "b": "gs2-chamber-right-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-left-throat-r",
+        "a": "gs2-chamber-left-r",
+        "b": "gs2-throat-left-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-right-throat-r",
+        "a": "gs2-chamber-right-r",
+        "b": "gs2-throat-right-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-throat-nozzle-left-r",
+        "a": "gs2-throat-left-r",
+        "b": "gs2-nozzle-left-r",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-throat-nozzle-right-r",
+        "a": "gs2-throat-right-r",
+        "b": "gs2-nozzle-right-r",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-wing-left",
+        "a": "gs2-wing",
+        "b": "gs2-engine-l",
+        "anchorA": {
+          "x": -1.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-wing-right",
+        "a": "gs2-wing",
+        "b": "gs2-engine-r",
+        "anchorA": {
+          "x": 1.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-wing-leg-left",
+        "a": "gs2-wing",
+        "b": "gs2-leg-left",
+        "anchorA": {
+          "x": -1.875,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-wing-leg-right",
+        "a": "gs2-wing",
+        "b": "gs2-leg-right",
+        "anchorA": {
+          "x": 1.875,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": -0.327381,
+          "y": 1.021429
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-breech-left",
+        "a": "gs2-breech",
+        "b": "gs2-barrel-left",
+        "anchorA": {
+          "x": -0.25,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -1
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "gs2-w-breech-right",
+        "a": "gs2-breech",
+        "b": "gs2-barrel-right",
+        "anchorA": {
+          "x": 0.25,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -1
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "gs2-w-wing-hull",
+        "a": "gs2-wing",
+        "b": "gs2-hull",
+        "anchorA": {
+          "x": 0,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.5
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-hull-tank",
+        "a": "gs2-hull",
+        "b": "gs2-tank",
+        "anchorA": {
+          "x": 0,
+          "y": -0.5
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.25
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "gs2-w-wing-breech",
+        "a": "gs2-wing",
+        "b": "gs2-breech",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.15
+        },
+        "limits": {
+          "tension": 5000,
+          "compression": 10000,
+          "shear": 3000,
+          "torque": 2000
+        }
+      },
+      {
+        "id": "fly-w-head-left-l",
+        "a": "fly-engine-l",
+        "b": "fly-chamber-left-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-head-right-l",
+        "a": "fly-engine-l",
+        "b": "fly-chamber-right-l",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-left-throat-l",
+        "a": "fly-chamber-left-l",
+        "b": "fly-throat-left-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-right-throat-l",
+        "a": "fly-chamber-right-l",
+        "b": "fly-throat-right-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-throat-nozzle-left-l",
+        "a": "fly-throat-left-l",
+        "b": "fly-nozzle-left-l",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-throat-nozzle-right-l",
+        "a": "fly-throat-right-l",
+        "b": "fly-nozzle-right-l",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-head-left-r",
+        "a": "fly-engine-r",
+        "b": "fly-chamber-left-r",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-head-right-r",
+        "a": "fly-engine-r",
+        "b": "fly-chamber-right-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.4
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-left-throat-r",
+        "a": "fly-chamber-left-r",
+        "b": "fly-throat-left-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-right-throat-r",
+        "a": "fly-chamber-right-r",
+        "b": "fly-throat-right-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.4
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-throat-nozzle-left-r",
+        "a": "fly-throat-left-r",
+        "b": "fly-nozzle-left-r",
+        "anchorA": {
+          "x": 0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-throat-nozzle-right-r",
+        "a": "fly-throat-right-r",
+        "b": "fly-nozzle-right-r",
+        "anchorA": {
+          "x": -0.135,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-wing-left",
+        "a": "fly-wing",
+        "b": "fly-engine-l",
+        "anchorA": {
+          "x": -1,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-wing-right",
+        "a": "fly-wing",
+        "b": "fly-engine-r",
+        "anchorA": {
+          "x": 1,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-wing-tank",
+        "a": "fly-wing",
+        "b": "fly-tank",
+        "anchorA": {
+          "x": 0,
+          "y": 0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.25
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      },
+      {
+        "id": "fly-w-tank-hull",
+        "a": "fly-tank",
+        "b": "fly-hull",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 1000000,
+          "compression": 1000000,
+          "shear": 1000000,
+          "torque": 1000000
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "mam-feed-h2-tank-l-engine-fl",
+        "kind": "feed",
+        "from": "mam-tank-l",
+        "to": "mam-engine-fl",
+        "resource": "h2",
+        "rate": 0.05
+      },
+      {
+        "id": "mam-feed-o2-tank-l-engine-fl",
+        "kind": "feed",
+        "from": "mam-tank-l",
+        "to": "mam-engine-fl",
+        "resource": "o2",
+        "rate": 0.4
+      },
+      {
+        "id": "mam-feed-h2-tank-l-engine-rl",
+        "kind": "feed",
+        "from": "mam-tank-l",
+        "to": "mam-engine-rl",
+        "resource": "h2",
+        "rate": 0.05
+      },
+      {
+        "id": "mam-feed-o2-tank-l-engine-rl",
+        "kind": "feed",
+        "from": "mam-tank-l",
+        "to": "mam-engine-rl",
+        "resource": "o2",
+        "rate": 0.4
+      },
+      {
+        "id": "mam-feed-h2-tank-l-engine-fr",
+        "kind": "feed",
+        "from": "mam-tank-l",
+        "to": "mam-engine-fr",
+        "resource": "h2",
+        "rate": 0.05
+      },
+      {
+        "id": "mam-feed-o2-tank-l-engine-fr",
+        "kind": "feed",
+        "from": "mam-tank-l",
+        "to": "mam-engine-fr",
+        "resource": "o2",
+        "rate": 0.4
+      },
+      {
+        "id": "mam-feed-h2-tank-l-engine-rr",
+        "kind": "feed",
+        "from": "mam-tank-l",
+        "to": "mam-engine-rr",
+        "resource": "h2",
+        "rate": 0.05
+      },
+      {
+        "id": "mam-feed-o2-tank-l-engine-rr",
+        "kind": "feed",
+        "from": "mam-tank-l",
+        "to": "mam-engine-rr",
+        "resource": "o2",
+        "rate": 0.4
+      },
+      {
+        "id": "mam-feed-h2-tank-r-engine-fl",
+        "kind": "feed",
+        "from": "mam-tank-r",
+        "to": "mam-engine-fl",
+        "resource": "h2",
+        "rate": 0.05
+      },
+      {
+        "id": "mam-feed-o2-tank-r-engine-fl",
+        "kind": "feed",
+        "from": "mam-tank-r",
+        "to": "mam-engine-fl",
+        "resource": "o2",
+        "rate": 0.4
+      },
+      {
+        "id": "mam-feed-h2-tank-r-engine-rl",
+        "kind": "feed",
+        "from": "mam-tank-r",
+        "to": "mam-engine-rl",
+        "resource": "h2",
+        "rate": 0.05
+      },
+      {
+        "id": "mam-feed-o2-tank-r-engine-rl",
+        "kind": "feed",
+        "from": "mam-tank-r",
+        "to": "mam-engine-rl",
+        "resource": "o2",
+        "rate": 0.4
+      },
+      {
+        "id": "mam-feed-h2-tank-r-engine-fr",
+        "kind": "feed",
+        "from": "mam-tank-r",
+        "to": "mam-engine-fr",
+        "resource": "h2",
+        "rate": 0.05
+      },
+      {
+        "id": "mam-feed-o2-tank-r-engine-fr",
+        "kind": "feed",
+        "from": "mam-tank-r",
+        "to": "mam-engine-fr",
+        "resource": "o2",
+        "rate": 0.4
+      },
+      {
+        "id": "mam-feed-h2-tank-r-engine-rr",
+        "kind": "feed",
+        "from": "mam-tank-r",
+        "to": "mam-engine-rr",
+        "resource": "h2",
+        "rate": 0.05
+      },
+      {
+        "id": "mam-feed-o2-tank-r-engine-rr",
+        "kind": "feed",
+        "from": "mam-tank-r",
+        "to": "mam-engine-rr",
+        "resource": "o2",
+        "rate": 0.4
+      },
+      {
+        "id": "mam-ctl-engine-fl",
+        "kind": "control",
+        "channel": "left",
+        "to": "mam-engine-fl"
+      },
+      {
+        "id": "mam-ctl-engine-rl",
+        "kind": "control",
+        "channel": "left",
+        "to": "mam-engine-rl"
+      },
+      {
+        "id": "mam-ctl-engine-fr",
+        "kind": "control",
+        "channel": "right",
+        "to": "mam-engine-fr"
+      },
+      {
+        "id": "mam-ctl-engine-rr",
+        "kind": "control",
+        "channel": "right",
+        "to": "mam-engine-rr"
+      },
+      {
+        "id": "mam-ctl-fire",
+        "kind": "control",
+        "channel": "fire",
+        "to": "mam-breech"
+      },
+      {
+        "id": "mam-ctl-tractor",
+        "kind": "control",
+        "channel": "tractor",
+        "to": "mam-tractor"
+      },
+      {
+        "id": "gs3-feed-h2-l",
+        "kind": "feed",
+        "from": "gs3-tank",
+        "to": "gs3-engine-l",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "gs3-feed-o2-l",
+        "kind": "feed",
+        "from": "gs3-tank",
+        "to": "gs3-engine-l",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "gs3-feed-h2-r",
+        "kind": "feed",
+        "from": "gs3-tank",
+        "to": "gs3-engine-r",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "gs3-feed-o2-r",
+        "kind": "feed",
+        "from": "gs3-tank",
+        "to": "gs3-engine-r",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "gs3-ctl-left",
+        "kind": "control",
+        "channel": "left",
+        "to": "gs3-engine-l"
+      },
+      {
+        "id": "gs3-ctl-right",
+        "kind": "control",
+        "channel": "right",
+        "to": "gs3-engine-r"
+      },
+      {
+        "id": "gs3-ctl-fire",
+        "kind": "control",
+        "channel": "fire",
+        "to": "gs3-breech"
+      },
+      {
+        "id": "gs2-feed-h2-l",
+        "kind": "feed",
+        "from": "gs2-tank",
+        "to": "gs2-engine-l",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "gs2-feed-o2-l",
+        "kind": "feed",
+        "from": "gs2-tank",
+        "to": "gs2-engine-l",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "gs2-feed-h2-r",
+        "kind": "feed",
+        "from": "gs2-tank",
+        "to": "gs2-engine-r",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "gs2-feed-o2-r",
+        "kind": "feed",
+        "from": "gs2-tank",
+        "to": "gs2-engine-r",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "gs2-ctl-left",
+        "kind": "control",
+        "channel": "left",
+        "to": "gs2-engine-l"
+      },
+      {
+        "id": "gs2-ctl-right",
+        "kind": "control",
+        "channel": "right",
+        "to": "gs2-engine-r"
+      },
+      {
+        "id": "gs2-feed-h2-gun",
+        "kind": "feed",
+        "from": "gs2-tank",
+        "to": "gs2-breech",
+        "resource": "h2",
+        "rate": 0.0011111111111111111
+      },
+      {
+        "id": "gs2-feed-o2-gun",
+        "kind": "feed",
+        "from": "gs2-tank",
+        "to": "gs2-breech",
+        "resource": "o2",
+        "rate": 0.008888888888888889
+      },
+      {
+        "id": "gs2-ctl-fire",
+        "kind": "control",
+        "channel": "fire",
+        "to": "gs2-breech"
+      },
+      {
+        "id": "fly-feed-h2-l",
+        "kind": "feed",
+        "from": "fly-tank",
+        "to": "fly-engine-l",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "fly-feed-o2-l",
+        "kind": "feed",
+        "from": "fly-tank",
+        "to": "fly-engine-l",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "fly-feed-h2-r",
+        "kind": "feed",
+        "from": "fly-tank",
+        "to": "fly-engine-r",
+        "resource": "h2",
+        "rate": 0.2
+      },
+      {
+        "id": "fly-feed-o2-r",
+        "kind": "feed",
+        "from": "fly-tank",
+        "to": "fly-engine-r",
+        "resource": "o2",
+        "rate": 1.6
+      },
+      {
+        "id": "fly-ctl-left",
+        "kind": "control",
+        "channel": "left",
+        "to": "fly-engine-l"
+      },
+      {
+        "id": "fly-ctl-right",
+        "kind": "control",
+        "channel": "right",
+        "to": "fly-engine-r"
+      }
+    ],
+    "gravity": {
+      "x": 0,
+      "y": 0
+    },
+    "bounds": {
+      "min": {
+        "x": -500,
+        "y": -500
+      },
+      "max": {
+        "x": 500,
+        "y": 500
+      },
+      "farField": 10,
+      "depth": 2
+    },
+    "asteroids": [
+      {
+        "id": "rock-a",
+        "seed": 3,
+        "pieces": 12,
+        "radius": 4,
+        "density": 100,
+        "material": {
+          "name": "rock",
+          "threshold": 10,
+          "toughness": 200
+        },
+        "bond": 100000,
+        "position": {
+          "x": -30,
+          "y": 30
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0.8999999999999999,
+        "angularVelocity": 0.02,
+        "gold": 1,
+        "compounds": 1
+      },
+      {
+        "id": "rock-b",
+        "seed": 8,
+        "pieces": 12,
+        "radius": 3.5,
+        "density": 100,
+        "material": {
+          "name": "rock",
+          "threshold": 10,
+          "toughness": 200
+        },
+        "bond": 100000,
+        "position": {
+          "x": 28,
+          "y": 32
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 2.4,
+        "angularVelocity": 0.02,
+        "gold": 1,
+        "compounds": 1
+      },
+      {
+        "id": "rock-c",
+        "seed": 5,
+        "pieces": 12,
+        "radius": 3,
+        "density": 100,
+        "material": {
+          "name": "rock",
+          "threshold": 10,
+          "toughness": 200
+        },
+        "bond": 100000,
+        "position": {
+          "x": -45,
+          "y": -14
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 1.5,
+        "angularVelocity": 0.02,
+        "gold": 1,
+        "compounds": 1
+      },
+      {
+        "id": "rock-d",
+        "seed": 11,
+        "pieces": 12,
+        "radius": 3,
+        "density": 100,
+        "material": {
+          "name": "rock",
+          "threshold": 10,
+          "toughness": 200
+        },
+        "bond": 100000,
+        "position": {
+          "x": 15,
+          "y": -13
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.3,
+        "angularVelocity": 0.02,
+        "gold": 1,
+        "compounds": 1
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "step": 0,
+      "commands": [
+        {
+          "type": "control.set",
+          "channel": "left",
+          "value": 1
+        },
+        {
+          "type": "control.set",
+          "channel": "right",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "end": {
+    "steps": 240
+  },
+  "probes": [
+    {
+      "id": "parcels",
+      "path": "gas.parcels.length"
+    },
+    {
+      "id": "substeps",
+      "path": "gas.substeps"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "event",
+      "type": "detonation",
+      "occurred": true,
+      "from": 0,
+      "to": 240
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "The gas benchmark: every engine on four ships fires from the start, and two shells burst on the rocks ahead within the first second. Watch the parcel count and the step time.",
+    "overlays": [],
+    "graphs": [],
+    "camera": {
+      "x": 0,
+      "y": 5,
+      "zoom": 6
+    },
+    "follow": "mam-cockpit",
+    "keys": {
+      "q": "left",
+      "e": "right"
+    },
+    "labels": false
+  }
+}

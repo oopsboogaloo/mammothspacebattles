@@ -1,0 +1,73 @@
+{
+  "scenario": "reference-battle",
+  "node": "v22.23.4",
+  "date": "2026-11-06",
+  "stepsPerSecond": 240,
+  "detonations": [
+    109,
+    193
+  ],
+  "clamped": {
+    "count": 71,
+    "from": 111,
+    "to": 249
+  },
+  "steady": {
+    "steps": 349,
+    "msPerStep": 28.85,
+    "gasMsPerStep": 22.53,
+    "gasMsP95": 32.18,
+    "otherMsPerStep": 6.33,
+    "parcels": 884,
+    "parcelsMax": 934,
+    "substeps": 30.4,
+    "parcelSubstepsPerStep": 26897,
+    "usPerParcelSubstep": 0.837,
+    "realTimeFactor": 0.144,
+    "phasesMs": {
+      "commands": 0.01,
+      "forces": 2.96,
+      "contacts": 1.45,
+      "integrate": 1.58,
+      "gas.setup": 1.16,
+      "gas.contacts": 5.28,
+      "gas.neighbours": 4.51,
+      "gas.density": 0.42,
+      "gas.impulses": 1.36,
+      "gas.move": 0.37,
+      "gas.finish": 0.35,
+      "gas.clusters": 6.08,
+      "gas": 22.53,
+      "ledger": 0.33
+    }
+  },
+  "all": {
+    "steps": 480,
+    "msPerStep": 44.9,
+    "gasMsPerStep": 37.84,
+    "gasMsP95": 168.8,
+    "otherMsPerStep": 7.06,
+    "parcels": 848,
+    "parcelsMax": 939,
+    "substeps": 220.3,
+    "parcelSubstepsPerStep": 198198,
+    "usPerParcelSubstep": 0.191,
+    "realTimeFactor": 0.093,
+    "phasesMs": {
+      "commands": 0.01,
+      "forces": 3.37,
+      "contacts": 1.57,
+      "integrate": 1.75,
+      "gas.setup": 1.21,
+      "gas.contacts": 11.1,
+      "gas.neighbours": 10.14,
+      "gas.density": 1.12,
+      "gas.impulses": 4.11,
+      "gas.move": 0.95,
+      "gas.finish": 0.39,
+      "gas.clusters": 5.98,
+      "gas": 37.84,
+      "ledger": 0.36
+    }
+  }
+}
