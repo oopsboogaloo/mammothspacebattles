@@ -103,7 +103,7 @@ export function releaseBlasts(world: World, dt: number): number {
 export const explosiveEnergy = (e: Explosive, scale = 1): number => (e.charge * (e.heat ?? 4.2e6)) / scale;
 
 /** Arms shells that have cleared their gun, and detonates armed shells that struck something hard. Returns the shells that went off. */
-export function detonate(world: World, roots: Map<string, string> | null, dt: number): string[] {
+export function detonate(world: World, roots: ReadonlyMap<string, string> | null, dt: number): string[] {
   const shells = world.bodies.filter((b) => b.explosive);
   if (!shells.length) return [];
   const byId = new Map(world.bodies.map((b) => [b.id, b]));

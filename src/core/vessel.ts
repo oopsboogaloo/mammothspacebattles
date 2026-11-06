@@ -170,7 +170,7 @@ function overlapsBox(o: Outline, bx: VesselShape["box"]): boolean {
 }
 
 /** The bodies welded to `b` (itself included), by id. */
-function assemblyOf(world: World, b: Body, roots: Map<string, string>): Body[] {
+function assemblyOf(world: World, b: Body, roots: ReadonlyMap<string, string>): Body[] {
   const r = roots.get(b.id) ?? b.id;
   return world.bodies.filter((x) => (roots.get(x.id) ?? x.id) === r);
 }
@@ -208,7 +208,7 @@ function idOf(o: object): number {
 }
 const lastShape = new WeakMap<Body, { sig: string; shape: VesselShape | null }>();
 
-function vesselShapeNow(world: World, b: Body, roots: Map<string, string>): VesselShape | null {
+function vesselShapeNow(world: World, b: Body, roots: ReadonlyMap<string, string>): VesselShape | null {
   const f = frameOf(b);
   if (!f) return null;
   const members = assemblyOf(world, b, roots);
@@ -372,7 +372,7 @@ function computeShape(b: Body, f: Frame, members: Body[], poses: Map<string, { p
 }
 
 /** The vessel's shape, if it holds its gas now: enclosed, and nothing else inside it. */
-export function holdingShape(world: World, b: Body, roots: Map<string, string>): VesselShape | null {
+export function holdingShape(world: World, b: Body, roots: ReadonlyMap<string, string>): VesselShape | null {
   const shape = vesselShape(world, b, roots);
   if (!shape || !shape.sealed) return null;
   const r = roots.get(b.id) ?? b.id;

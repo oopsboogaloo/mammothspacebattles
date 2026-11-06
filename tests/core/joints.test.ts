@@ -28,6 +28,29 @@ function pair(extra: Partial<Parameters<typeof box>[3]> = {}) {
 }
 
 describe("assemblies", () => {
+  it("ASM-001 the cached assemblies follow every change to the bodies and welds", () => {
+    const w = createWorld(1, [box("a", 1, 1, { position: { x: 0, y: 0 } }), box("b", 1, 1, { position: { x: 1, y: 0 } }), box("c", 1, 1, { position: { x: 2, y: 0 } })], { x: 0, y: 0 }, { joints: [weld("j1", "a", "b", { x: 0.5, y: 0 }, { x: -0.5, y: 0 })] });
+    expect(assemblyOf(w, "a")).toEqual(["a", "b"]);
+    expect(assemblyOf(w, "c")).toEqual(["c"]);
+    // A weld added in place (same array).
+    w.joints.push({ ...w.joints[0], id: "j2", a: "b", b: "c" });
+    expect(assemblyOf(w, "a")).toEqual(["a", "b", "c"]);
+    // A weld replaced in place, same length: now joins a and c only.
+    w.joints[1] = { ...w.joints[1], id: "j3", a: "a", b: "c" };
+    w.joints.splice(0, 1);
+    expect(assemblyOf(w, "b")).toEqual(["b"]);
+    expect(assemblyOf(w, "c")).toEqual(["a", "c"]);
+    // A body added, and the array replaced.
+    w.bodies.push({ ...w.bodies[0], id: "d" });
+    expect(assemblyOf(w, "d")).toEqual(["d"]);
+    w.joints = [];
+    expect(assemblyOf(w, "a")).toEqual(["a"]);
+    // The list it returns is the caller's own.
+    const list = assemblyOf(w, "a");
+    list.push("x");
+    expect(assemblyOf(w, "a")).toEqual(["a"]);
+  });
+
   it("ORC-004 ASM-001 assembly mass, centre of mass and inertia match hand-computed values (parallel axis)", () => {
     const w = pair();
     const parts = assemblyOf(w, "a").map((id) => {
