@@ -3,13 +3,14 @@
 // A stand-in for the gas cannon, which is kept for later: firing a gas cannon from a ship that is
 // manoeuvring hard crushed its propellant behind the shell and could take seconds a step. A
 // railgun fires the moment its channel is on and it has reloaded: the next shell appears at the
-// muzzle, moving with that point of the gun, and the gun pushes it out along the bore at `speed`,
-// taking the equal and opposite push itself. Momentum and angular momentum are exact (the shell's
+// muzzle, just past the barrel's end (not if anything is there), moving with that point of the
+// gun, and the gun pushes it out along the bore at `speed`, taking the equal and opposite push. Momentum and angular momentum are exact (the shell's
 // mass leaves the gun as a magazine's does). The energy comes from the ship's power, recorded in
 // the ledger under `power`.
 
 import { add, cross, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
+import { collide } from "./collide.ts";
 import { massProps } from "./shapes.ts";
 import type { Body, World } from "./world.ts";
 
@@ -50,6 +51,9 @@ export function fireRailguns(world: World, dt: number, addBody: (w: World, b: Bo
     const angle = b.angle + mag.angle;
     const id = `${b.id}-shell-${mag.loaded + 1}`;
     const shell = normalize({ ...structuredClone(mag.shell), id, position: at, velocity: add(b.velocity, spin), angle, angularVelocity: b.angularVelocity } as never);
+    // A blocked muzzle doesn't fire: the shell would appear inside, or past, what blocks it.
+    const placed = { shape: shell.shape, position: shell.position, rot: sinCos(angle) };
+    if (world.bodies.some((o) => collide(placed, { shape: o.shape, position: o.position, rot: sinCos(o.angle) }, 0, 0)?.points.some((p) => p.separation < 0))) continue;
     if (shell.explosive) shell.explosive = { ...shell.explosive, from: b.id, armed: false };
     // The shell's mass leaves the gun, with the momentum it carries.
     const m0 = bodyMass(b);

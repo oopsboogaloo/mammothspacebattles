@@ -800,7 +800,7 @@
           "at": {
             "x": 0,
             "y": {
-              "$expr": "barrel + 0.45"
+              "$expr": "barrel + 0.31"
             }
           },
           "angle": 0,
