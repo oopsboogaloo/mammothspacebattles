@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "mammoth",
   "title": "The Mammoth",
-  "description": "The Mammoth: a big ship built round a woolly mammoth's cockpit, a 4 m by 8 m hull with a rounded nose (room behind the seat for an airlock and stores). Behind it sit a 2 m generator and a 2 m battery; a fuel-and-oxidiser tank on each side, either of which feeds every engine; four engines, two a side on outriggers, the front pair outboard of the rear so their exhaust clears; a railgun in the nose firing 0.5 kg explosive shells; and, at the tail, a tractor projector and a separate tether generator. Without the tether generator the beam still pulls but nothing can be towed. About 280 kg; at full thrust 6.5 m/s\u00b2, like the lander, but being four times as long it turns about half as fast (0.55 rad/s after half a second on one side, against the lander's 1.3). It flies on with one engine out, or one each side, at half thrust.",
+  "description": "The Mammoth: a big ship built round a woolly mammoth's cockpit, a 4 m by 8 m hull with a rounded nose (room behind the seat for an airlock and stores). Behind it sit a 2 m generator and a 2 m battery; a fuel-and-oxidiser tank on each side, either of which feeds every engine; four engines, two a side on outriggers, the front pair outboard of the rear so their exhaust clears; a railgun in the nose firing 0.5 kg explosive shells; and, at the tail, a tractor projector and a separate tether generator. Without the tether generator the beam still pulls but nothing can be towed. About 280 kg; at full thrust 6.4 m/s\u00b2, like the lander, but being four times as long it turns about half as fast (0.6 rad/s after half a second on one side, against the lander's 1.3). It flies on with one engine out, or one each side, at half thrust.",
   "profile": "sandbox",
   "seed": 91,
   "world": {
@@ -357,7 +357,7 @@
         ],
         "injector": {
           "channel": "left",
-          "rate": 2.6,
+          "rate": 2.75,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
@@ -372,7 +372,7 @@
           },
           "width": 0.6,
           "speed": 10,
-          "parcelMass": 0.004,
+          "parcelMass": 0.012,
           "radius": 0.035,
           "igniter": true,
           "chamber": {
@@ -637,7 +637,7 @@
         ],
         "injector": {
           "channel": "left",
-          "rate": 2.6,
+          "rate": 2.75,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
@@ -652,7 +652,7 @@
           },
           "width": 0.6,
           "speed": 10,
-          "parcelMass": 0.004,
+          "parcelMass": 0.012,
           "radius": 0.035,
           "igniter": true,
           "chamber": {
@@ -917,7 +917,7 @@
         ],
         "injector": {
           "channel": "right",
-          "rate": 2.6,
+          "rate": 2.75,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
@@ -932,7 +932,7 @@
           },
           "width": 0.6,
           "speed": 10,
-          "parcelMass": 0.004,
+          "parcelMass": 0.012,
           "radius": 0.035,
           "igniter": true,
           "chamber": {
@@ -1197,7 +1197,7 @@
         ],
         "injector": {
           "channel": "right",
-          "rate": 2.6,
+          "rate": 2.75,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
@@ -1212,7 +1212,7 @@
           },
           "width": 0.6,
           "speed": 10,
-          "parcelMass": 0.004,
+          "parcelMass": 0.012,
           "radius": 0.035,
           "igniter": true,
           "chamber": {
