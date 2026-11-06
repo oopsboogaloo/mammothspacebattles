@@ -25,6 +25,7 @@ import { add, cross, dot, expD, length, rotate, scale, sinCos, sub, type Vec2 } 
 import { bodyMass } from "./bodies.ts";
 import { assemblyOf, assemblyRoots } from "./joints.ts";
 import { massProps } from "./shapes.ts";
+import { railgunReady } from "./railgun.ts";
 import type { Body, World } from "./world.ts";
 
 export type PilotGoal =
@@ -359,12 +360,14 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
 
 /** Its gun, from the design: the body with a magazine, its fire channel, and the bore direction in that body's frame. */
 function gunOf(world: World, members: Body[], channels: string[]): { body: Body; channel: string; bore: Vec2 } | null {
-  // Only a gun whose fire channel is the pilot's own (AIP-003): never another ship's.
-  const b = members.find((x) => x.magazine && x.injector && x.integrity > 0 && channels.includes(x.injector.channel));
+  // Only a gun whose fire channel is the pilot's own (AIP-003): never another ship's. A gas
+  // cannon fires through its injector's channel; a railgun (WPN-008) through its own.
+  const fireChannel = (x: Body) => x.magazine?.railgun?.channel ?? x.injector?.channel;
+  const b = members.find((x) => x.magazine && fireChannel(x) && x.integrity > 0 && channels.includes(fireChannel(x)!));
   if (!b) return null;
   const at = b.magazine!.at;
   const bore = length(at) > 1e-9 ? scale(at, 1 / length(at)) : { x: 0, y: 1 };
-  return { body: b, channel: b.injector!.channel, bore };
+  return { body: b, channel: fireChannel(b)!, bore };
 }
 
 /**
@@ -486,6 +489,8 @@ export function runPilots(world: World, dt: number): void {
     const gun = gunOf(world, ship.members, pilotChannels(world, body));
     p.combat ??= { muzzle: 40, pulse: 0, shots: 0 };
     const cb = p.combat;
+    // A railgun's launch speed is in its design; a gas cannon's is learned from its shots.
+    if (gun?.body.magazine?.railgun && !cb.shots) cb.muzzle = gun.body.magazine.railgun.speed;
     // Learn the gun's muzzle speed from its own last shot, once that shell is clear of the barrel.
     if (cb.shot) {
       const sh = world.bodies.find((b) => b.id === cb.shot);
@@ -549,7 +554,7 @@ export function runPilots(world: World, dt: number): void {
           // Fire control (AIP-012): aimed well enough, in range, a shell in the bore, the line clear.
           const boreWorld = rotate(sinCos(gun.body.angle), gun.bore);
           const tol = 0.01 + 0.06 * (1 - cs);
-          const loaded = loadedRounds(world).has(`${gun.body.id}-shell-${gun.body.magazine!.loaded}`);
+          const loaded = gun.body.magazine!.railgun ? railgunReady(gun.body) : loadedRounds(world).has(`${gun.body.id}-shell-${gun.body.magazine!.loaded}`);
           const inRange = dist < 100;
           const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids), target.root, 0.2 * ship.mass);
           fire = loaded && inRange && clear && dot(boreWorld, dir) > sinCos(tol).c;
@@ -606,8 +611,9 @@ export function runPilots(world: World, dt: number): void {
     }
     if (goal.kind === "point" || goal.kind === "station") {
       const most = chans.reduce((m, c) => m + c.gain, 0);
-      // How hard it can brake: its share of the thrust, less gravity; and how long a half turn takes.
-      const aBrake = Math.max(0.3, (authority * most) / ship.mass - length(g));
+      // How hard it plans to brake: half its share of the thrust (the velocity loop near the mark
+      // doesn't ask for all of it), less gravity; and how long a half turn takes.
+      const aBrake = Math.max(0.3, (0.5 * authority * most) / ship.mass - length(g));
       const tFlip = Math.PI / (0.8 + 1.2 * s) + 0.3;
       let target: Vec2;
       let carry = { x: 0, y: 0 };
@@ -636,7 +642,13 @@ export function runPilots(world: World, dt: number): void {
       const speed = goal.kind === "station" ? Math.min(cruise, vStop, 0.3 * dist) : stop ? Math.min(cruise, vStop) : cruise;
       // Holding at a mark, small drifts matter: every turn to hold the heading also pushes the ship.
       if (goal.kind === "point" && stop && dist < 2 * tolP) holdTight = true;
-      const vWant = dist > 1e-6 ? add(carry, scale(d, speed / dist)) : carry;
+      let vWant = dist > 1e-6 ? add(carry, scale(d, speed / dist)) : carry;
+      // Closing on a stop faster than planned: ask for that excess again, so it brakes hard along
+      // the line (the velocity loop alone eases off as it nears the mark, and overshoots).
+      if (goal.kind === "point" && stop && dist > 1e-6) {
+        const closing = dot(sub(ship.velocity, carry), scale(d, 1 / dist));
+        if (closing > speed) vWant = sub(vWant, scale(d, (closing - speed) / dist));
+      }
       p.plan.target = target;
       goal = { kind: "velocity", velocity: vWant };
     }

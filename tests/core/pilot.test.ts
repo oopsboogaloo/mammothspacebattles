@@ -24,6 +24,7 @@ function ship(goal: PilotGoal | null, opts: { gravity?: boolean; flight?: number
     b.position.y = typeof y === "number" ? y + lift : { $expr: `(${y.$expr}) + ${lift}` };
     if (b.injector) b.injector.channel = `e1.${b.injector.channel}`;
     if (b.tractor) b.tractor.channel = `e1.${b.tractor.channel}`;
+    if (b.magazine?.railgun) b.magazine.railgun.channel = `e1.${b.magazine.railgun.channel}`;
   }
   for (const l of raw.world.links) if (l.kind === "control") l.channel = `e1.${l.channel}`;
   if (goal) raw.world.bodies.find((b) => b.id === "hull")!.pilot = { skill: { flight: opts.flight ?? 0.7 }, goal };
@@ -253,6 +254,7 @@ function duel(o: { mode: string; ai?: { x: number; y: number }; player?: { x: nu
     c.position = shift(b.position, ai.x, ai.y);
     if (c.injector) c.injector.channel = `e1.${c.injector.channel}`;
     if (c.tractor) c.tractor.channel = `e1.${c.tractor.channel}`;
+    if (c.magazine?.railgun) c.magazine.railgun.channel = `e1.${c.magazine.railgun.channel}`;
     return c;
   });
   enemy.find((b) => b.id === "e1-hull")!.pilot = { skill: { flight: 0.7, combat: o.combat ?? 0.5 }, mode: o.mode, goal: { kind: "idle" }, ...(o.route !== false && o.mode !== "hunting" ? { route: { waypoints: [ai, { x: ai.x + 1, y: ai.y }], loop: true } } : {}) };
@@ -324,10 +326,9 @@ describe("AI pilot combat (phase 3)", () => {
     expect(m.controls["e1.fire"]).toBe(0.7);
   }, 120_000);
 
-  it("AIP-015 a Cautious pilot is not provoked by a ship closing on it with a shell only loaded, not fired", () => {
+  it("AIP-015 a Cautious pilot is not provoked by an armed ship closing on it without firing", () => {
     const w = duel({ mode: "cautious", ai: { x: 0, y: 30 }, player: { x: 0, y: 0, vy: 8 } });
     run(w, 240);
-    expect(w.events.some((e) => e.type === "loaded" && e.data.id === "breech")).toBe(true);
     expect(enemyPilot(w).combat?.grudgeUntil).toBeUndefined();
     expect(enemyPilot(w).intent).toMatch(/watching hull/);
   }, 120_000);

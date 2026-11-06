@@ -40,8 +40,8 @@ export interface Delta {
  * `tractor` is the work tractor beams and tethers do (TRC): their pulls come in equal and opposite
  * pairs, so it is energy only, which the ship supplies.
  */
-export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction" | "boundary" | "supply" | "tractor";
-export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction", "boundary", "supply", "tractor"];
+export type Source = "user" | "field" | "contact" | "joint" | "transfer" | "correction" | "boundary" | "supply" | "tractor" | "power";
+export const SOURCES: readonly Source[] = ["user", "field", "contact", "joint", "transfer", "correction", "boundary", "supply", "tractor", "power"];
 
 export interface StepLedger {
   tick: number;

@@ -41,13 +41,13 @@ test("AIP-015 AIP-017 the patrolling AI ship flies its route through the rocks, 
 });
 
 test("DUEL-001 DUEL-002 the duel on screen: both ships' health, the AI hunts down a player who does nothing, and Fight again starts over", async ({ page }, info) => {
-  test.setTimeout(240_000);
+  test.setTimeout(360_000);
   await openStarter(page, "ai-duel");
   const hud = page.getByTestId("duel-hud");
   await expect(hud).toContainText("You 100%");
   await expect(hud).toContainText("Enemy 100%");
-  // The AI knocks out an idle player at about 10.8 s (step 2,603).
-  for (let i = 0; i < 280; i++) await page.getByTestId("step10").click();
+  // The AI knocks out an idle player at about 17.7 s (step 4,240), once it has a clear shot past a rock.
+  for (let i = 0; i < 440; i++) await page.getByTestId("step10").click();
   const verdict = page.getByTestId("duel-verdict");
   await expect(verdict).toContainText("You lost", { timeout: 60_000 });
   await shot(page, info, "duel-lost");

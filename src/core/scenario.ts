@@ -272,6 +272,13 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       vec(v, m.at, `${mp}.at`);
       num(v, m.angle, `${mp}.angle`);
       num(v, m.reload, `${mp}.reload`, { min: 0 });
+      if (m.railgun !== undefined) {
+        if (!isObj(m.railgun)) err(v, `${mp}.railgun`, "must be {channel, speed}");
+        else {
+          str(v, m.railgun.channel, `${mp}.railgun.channel`);
+          num(v, m.railgun.speed, `${mp}.railgun.speed`, { positive: true });
+        }
+      }
       if (m.stop !== undefined) {
         if (!isObj(m.stop)) err(v, `${mp}.stop`, "must be {shape, mass, at, angle?}");
         else {

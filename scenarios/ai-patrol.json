@@ -817,56 +817,6 @@
             "$expr": "600 * material"
           }
         },
-        "contents": [
-          {
-            "resource": "h2",
-            "mass": {
-              "$expr": "charge / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge / 9 / 20"
-            }
-          },
-          {
-            "resource": "o2",
-            "mass": {
-              "$expr": "charge * 8 / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge * 8 / 9 / 20"
-            }
-          }
-        ],
-        "injector": {
-          "channel": "fire",
-          "rate": {
-            "$expr": "charge / 0.05"
-          },
-          "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
-          },
-          "economy": 20,
-          "outlet": {
-            "x": 0,
-            "y": 0.2
-          },
-          "direction": {
-            "x": 0,
-            "y": 1
-          },
-          "width": 0.3,
-          "speed": 10,
-          "parcelMass": 0.001,
-          "radius": 0.035,
-          "igniter": true,
-          "chamber": {
-            "width": 0.4,
-            "length": {
-              "$expr": "barrel"
-            }
-          }
-        },
         "magazine": {
           "count": {
             "$param": "ammo"
@@ -876,7 +826,9 @@
           },
           "at": {
             "x": 0,
-            "y": 0.5499999999999998
+            "y": {
+              "$expr": "barrel + 0.31"
+            }
           },
           "angle": 0,
           "shell": {
@@ -902,16 +854,10 @@
               }
             }
           },
-          "stop": {
-            "shape": {
-              "kind": "box",
-              "width": 0.38,
-              "height": 0.06
-            },
-            "mass": 0.3,
-            "at": {
-              "x": 0,
-              "y": 0.735
+          "railgun": {
+            "channel": "fire",
+            "speed": {
+              "$param": "muzzle"
             }
           }
         }
@@ -1834,56 +1780,6 @@
             "$expr": "600 * material"
           }
         },
-        "contents": [
-          {
-            "resource": "h2",
-            "mass": {
-              "$expr": "charge / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge / 9 / 20"
-            }
-          },
-          {
-            "resource": "o2",
-            "mass": {
-              "$expr": "charge * 8 / 9 / 20"
-            },
-            "capacity": {
-              "$expr": "charge * 8 / 9 / 20"
-            }
-          }
-        ],
-        "injector": {
-          "channel": "e1.fire",
-          "rate": {
-            "$expr": "charge / 0.05"
-          },
-          "mixture": {
-            "h2": 0.1111111111111111,
-            "o2": 0.8888888888888888
-          },
-          "economy": 20,
-          "outlet": {
-            "x": 0,
-            "y": 0.2
-          },
-          "direction": {
-            "x": 0,
-            "y": 1
-          },
-          "width": 0.3,
-          "speed": 10,
-          "parcelMass": 0.001,
-          "radius": 0.035,
-          "igniter": true,
-          "chamber": {
-            "width": 0.4,
-            "length": {
-              "$expr": "barrel"
-            }
-          }
-        },
         "magazine": {
           "count": {
             "$param": "ammo"
@@ -1893,7 +1789,9 @@
           },
           "at": {
             "x": 0,
-            "y": 0.5499999999999998
+            "y": {
+              "$expr": "barrel + 0.31"
+            }
           },
           "angle": 0,
           "shell": {
@@ -1919,16 +1817,10 @@
               }
             }
           },
-          "stop": {
-            "shape": {
-              "kind": "box",
-              "width": 0.38,
-              "height": 0.06
-            },
-            "mass": 0.3,
-            "at": {
-              "x": 0,
-              "y": 0.735
+          "railgun": {
+            "channel": "e1.fire",
+            "speed": {
+              "$param": "muzzle"
             }
           }
         }
@@ -3160,26 +3052,6 @@
         "to": "engine-r"
       },
       {
-        "id": "feed-h2-gun",
-        "kind": "feed",
-        "from": "tank",
-        "to": "breech",
-        "resource": "h2",
-        "rate": {
-          "$expr": "charge / 9 / 20 / 0.5"
-        }
-      },
-      {
-        "id": "feed-o2-gun",
-        "kind": "feed",
-        "from": "tank",
-        "to": "breech",
-        "resource": "o2",
-        "rate": {
-          "$expr": "charge * 8 / 9 / 20 / 0.5"
-        }
-      },
-      {
         "id": "ctl-fire",
         "kind": "control",
         "channel": "fire",
@@ -3234,26 +3106,6 @@
         "kind": "control",
         "channel": "e1.right",
         "to": "e1-engine-r"
-      },
-      {
-        "id": "e1-feed-h2-gun",
-        "kind": "feed",
-        "from": "e1-tank",
-        "to": "e1-breech",
-        "resource": "h2",
-        "rate": {
-          "$expr": "charge / 9 / 20 / 0.5"
-        }
-      },
-      {
-        "id": "e1-feed-o2-gun",
-        "kind": "feed",
-        "from": "e1-tank",
-        "to": "e1-breech",
-        "resource": "o2",
-        "rate": {
-          "$expr": "charge * 8 / 9 / 20 / 0.5"
-        }
       },
       {
         "id": "e1-ctl-fire",
@@ -3450,13 +3302,13 @@
   },
   "parameters": [
     {
-      "id": "charge",
-      "label": "Propellant charge",
-      "unit": "kg",
-      "min": 0.01,
-      "max": 0.5,
-      "step": 0.01,
-      "default": 0.4
+      "id": "muzzle",
+      "label": "Railgun launch speed",
+      "unit": "m/s",
+      "min": 20,
+      "max": 200,
+      "step": 2,
+      "default": 96
     },
     {
       "id": "shellMass",

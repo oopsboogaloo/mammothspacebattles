@@ -24,6 +24,7 @@ import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from
 import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive.ts";
 import { spawnWisps, stepWisps, type Wisp } from "./wisps.ts";
 import { removeDestroyed, stepDust, type Dust } from "./dust.ts";
+import { fireRailguns, type Railgun } from "./railgun.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -104,7 +105,12 @@ export interface Magazine {
    * command arrives, just before the charge fires, so the shell can't roll out but can be fired.
    */
   stop?: { shape: Shape; mass: number; at: Vec2; angle?: number };
-  /** State: seconds since the last load; shells loaded so far (names the next). */
+  /**
+   * A railgun (WPN-008): shells are not loaded into the bore but launched from `at` along the bore
+   * at `speed`, the moment the channel is on and `reload` has passed since the last shot. No stop.
+   */
+  railgun?: Railgun;
+  /** State: seconds since the last load (a railgun: since the last shot); shells loaded or fired so far (names the next). */
   timer: number;
   loaded: number;
 }
@@ -830,7 +836,7 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
 function runMagazines(world: World, dt: number): void {
   for (const b of [...world.bodies]) {
     const mag = b.magazine;
-    if (!mag || b.integrity <= 0 || b.fixed) continue;
+    if (!mag || mag.railgun || b.integrity <= 0 || b.fixed) continue;
     // The reload starts once the breech has stopped firing: loading during a shot fired two shells.
     mag.timer = b.injector?.firing ? 0 : mag.timer + dt;
     if (mag.count < 1 || mag.timer < mag.reload - 1e-9) continue;
@@ -1133,6 +1139,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     boundary: zeroDelta(),
     supply: zeroDelta(),
     tractor: zeroDelta(),
+    power: zeroDelta(),
   };
 
   // Feed links move resources between stores. Mass and momentum must not change; angular momentum may,
@@ -1157,6 +1164,15 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     const t1 = computeTotals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
     sources.transfer.energy += t1.energy.total - t0.energy.total;
+    before = t1;
+  }
+  // Railguns (WPN-008): the launch is an equal and opposite push, powered by the ship.
+  if (world.bodies.some((b) => b.magazine?.railgun)) {
+    const t0 = computeTotals(world);
+    fireRailguns(world, dt, addBody as never, normalizeBody as never);
+    const t1 = computeTotals(world);
+    sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
+    sources.power.energy += t1.energy.total - t0.energy.total;
     before = t1;
   }
   // Injectors turn stored propellant into gas; mixtures that are hot enough burn (PRP-002, PRP-003).
