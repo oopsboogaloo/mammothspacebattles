@@ -656,7 +656,7 @@ export function runPilots(world: World, dt: number): void {
     if (goal.kind === "velocity" && p.goal.kind !== "velocity") {
       const mostT = chans.reduce((m, c) => m + c.gain, 0);
       const brake = Math.max(0.3, (authority * mostT) / ship.mass - length(g));
-      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids), 2 + 4 * s, 4 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
+      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids), 3 + 4 * s, 5 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
       if (steered.avoiding.length) label += ", steering round";
       p.plan.avoiding = steered.avoiding;
       goal = { kind: "velocity", velocity: steered.v };

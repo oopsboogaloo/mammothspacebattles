@@ -84,17 +84,24 @@ export function stepDust(world: World, dt: number): void {
 export function removeDestroyed(world: World): boolean {
   const gone = world.bodies.filter((b) => b.integrity <= 0 && !b.fixed);
   if (!gone.length) return false;
-  const ids = new Set(gone.map((b) => b.id));
-  // A pilot destroyed with its body lets go of its controls.
+  removeBodies(world, new Set(gone.map((b) => b.id)), "destroyed.removed");
+  return true;
+}
+
+/**
+ * Takes bodies out of the world in bursts of dust, with the welds and links on them: event `type`
+ * for each. A pilot taken out lets go of its controls. The caller records what left in the ledger.
+ */
+export function removeBodies(world: World, ids: Set<string>, type: string): void {
+  const gone = world.bodies.filter((b) => ids.has(b.id));
   for (const b of gone) if (b.pilot) for (const ch of Object.keys(b.pilot.command)) world.controls[ch] = 0;
   for (const b of gone) {
     burst(world, b);
-    world.events.push({ tick: world.tick, type: "destroyed.removed", data: { id: b.id, x: b.position.x, y: b.position.y, mass: bodyMass(b) } });
+    world.events.push({ tick: world.tick, type, data: { id: b.id, x: b.position.x, y: b.position.y, mass: bodyMass(b) } });
   }
   world.bodies = world.bodies.filter((b) => !ids.has(b.id));
   world.joints = world.joints.filter((j) => !ids.has(j.a) && !ids.has(j.b));
   world.links = world.links.filter((l) => !ids.has(l.to) && (l.kind !== "feed" || !ids.has(l.from)));
   world.drags = world.drags.filter((d) => !ids.has(d.id));
   world.contacts = world.contacts.filter((c) => !ids.has(c.a) && !ids.has(c.b));
-  return true;
 }

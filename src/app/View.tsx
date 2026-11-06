@@ -989,6 +989,11 @@ function DuelHud() {
             <i>{d.goal.enemies.length > 1 ? e : "Enemy"}</i> {pct(s.enemies[e] ?? 0)}
           </span>
         ))}
+        {(d.goal.kills ?? 1) > 1 && (
+          <span title={`First to ${d.goal.kills} kills wins`} data-testid="duel-kills">
+            <i>Kills</i> {s.kills.player}–{s.kills.enemies} <i>of {d.goal.kills}</i>
+          </span>
+        )}
         <span>
           <i>Time</i> {sb.world.time.toFixed(0)} s
         </span>
