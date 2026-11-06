@@ -39,6 +39,16 @@
       "gas.clusters": 6.08,
       "gas": 22.53,
       "ledger": 0.33
+    },
+    "clusters": {
+      "count": 5,
+      "sizes": [
+        335,
+        292,
+        115,
+        103,
+        48
+      ]
     }
   },
   "all": {

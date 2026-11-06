@@ -12,7 +12,15 @@
 
 export interface Baseline {
   stepsPerSecond: number;
-  steady: { parcels: number; parcelsMax: number; substeps: number; gasMsPerStep: number; phasesMs: Record<string, number> };
+  steady: {
+    parcels: number;
+    parcelsMax: number;
+    substeps: number;
+    gasMsPerStep: number;
+    phasesMs: Record<string, number>;
+    /** Gas clusters (NFR-004): how many, and the mean size of the largest, second largest, … */
+    clusters?: { count: number; sizes: number[] };
+  };
 }
 export interface Measured {
   n: number;
@@ -99,4 +107,59 @@ export function estimate(b: Baseline, ms: readonly Measured[]): Estimate {
     maxParcels: { phone: maxParcels(budgetMs.phone), laptop: maxParcels(budgetMs.laptop) },
     cpuGasMs: b.steady.gasMsPerStep,
   };
+}
+
+// ---------- Spike 2: one work-group per cluster ----------
+
+export interface FusedMeasured {
+  n: number;
+  clusters: number;
+  wgs: number;
+  us: number;
+}
+export const DETAILS = [1, 2, 4] as const;
+export interface DetailEstimate {
+  detail: number;
+  /** Parcels in the largest cluster, which sets the time: the others run alongside it. */
+  biggest: number;
+  substeps: number;
+  usPerSubstep: number;
+  gasMs: number;
+  go: Record<DeviceClass, boolean>;
+}
+export interface FusedEstimate {
+  /** Clusters in the battle, and the measured layout used (clusters side by side). */
+  clusters: number;
+  measuredClusters: number;
+  restFactor: number;
+  budgetMs: Record<DeviceClass, number>;
+  details: DetailEstimate[];
+}
+
+/**
+ * The reference battle on the fused kernel at 1×, 2× and 4× detail. A step costs its substeps ×
+ * the substep time of the largest cluster (the others run side by side on other compute units),
+ * × the same allowance for walls and the rest as Spike 1. The substep time is read from the runs
+ * with as many clusters as the battle has (or the next more), the faster work-group size at each
+ * cluster size.
+ */
+export function estimateFused(b: Baseline, ms: readonly FusedMeasured[]): FusedEstimate | null {
+  const c = b.steady.clusters;
+  if (!c || !ms.length) return null;
+  const layouts = [...new Set(ms.map((m) => m.clusters))].sort((x, y) => x - y);
+  const k = layouts.find((l) => l >= c.count) ?? layouts[layouts.length - 1];
+  const best = new Map<number, number>();
+  for (const m of ms) if (m.clusters === k) best.set(m.n, Math.min(best.get(m.n) ?? Infinity, m.us));
+  const points = [...best].map(([n, us]) => ({ n, fullUs: us }));
+  const stepMs = 1000 / b.stepsPerSecond;
+  const budgetMs = { phone: BUDGET_SHARE.phone * stepMs, laptop: BUDGET_SHARE.laptop * stepMs };
+  const rf = restFactor(b);
+  const details = DETAILS.map((d) => {
+    const biggest = d * c.sizes[0];
+    const substeps = Math.sqrt(d) * b.steady.substeps;
+    const usPerSubstep = substepUs(points, biggest);
+    const gasMs = (substeps * usPerSubstep * rf) / 1000;
+    return { detail: d, biggest, substeps, usPerSubstep, gasMs, go: { phone: gasMs <= budgetMs.phone, laptop: gasMs <= budgetMs.laptop } };
+  });
+  return { clusters: c.count, measuredClusters: k, restFactor: rf, budgetMs, details };
 }

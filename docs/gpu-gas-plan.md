@@ -100,6 +100,9 @@ run WebGPU (SwiftShader) for correctness. No-go as designed.
 
 ### Phase 0b: Spike 2, one work-group per cluster, ~1 PR
 
+Built (the spike page's default; [`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md) §7); awaiting
+runs on the iPad and the desktop.
+
 - On the spike page, a fused mode: each gas cluster (NFR-004) runs in one work-group, looping over
   all its substeps (sort, density, force, move) with work-group barriers, so a step is one dispatch.
   Clusters run side by side; each can take its own substeps.

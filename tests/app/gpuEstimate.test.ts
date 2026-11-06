@@ -2,7 +2,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import baseline from "../../docs/perf/reference-battle-baseline.json";
-import { estimate, restFactor, substepUs } from "../../src/app/gpu/estimate.ts";
+import { estimate, estimateFused, restFactor, substepUs } from "../../src/app/gpu/estimate.ts";
 import { initialWorld, parseScenario } from "../../src/core/index.ts";
 import { readJson, ROOT } from "../helpers.ts";
 
@@ -36,6 +36,36 @@ describe("GPU gas budget estimate", () => {
     const slow = estimate(baseline, [{ n: 1000, fullUs: 100 }, { n: 4000, fullUs: 100 }]);
     expect(slow.go).toEqual({ phone: false, laptop: false });
     expect(slow.gasMs).toBeCloseTo((slow.substeps * 100 * slow.restFactor) / 1000);
+  });
+});
+
+describe("GPU gas budget estimate, one work-group per cluster (Spike 2)", () => {
+  it("times a step by the largest cluster, at 1×, 2× and 4× detail, from the runs with as many clusters as the battle", () => {
+    const c = baseline.steady.clusters;
+    expect(c.count).toBeGreaterThanOrEqual(4);
+    expect(c.sizes[0]).toBeGreaterThan(c.sizes[1]);
+    const ms = [
+      // Runs with one cluster are ignored when runs with enough clusters exist.
+      { n: 250, clusters: 1, wgs: 256, us: 1 },
+      { n: 250, clusters: 10, wgs: 256, us: 20 },
+      { n: 250, clusters: 10, wgs: 1024, us: 10 },
+      { n: 3000, clusters: 10, wgs: 256, us: 40 },
+      { n: 3000, clusters: 10, wgs: 1024, us: 80 },
+    ];
+    const e = estimateFused(baseline, ms)!;
+    expect(e.measuredClusters).toBe(10);
+    expect(e.details.map((d) => d.detail)).toEqual([1, 2, 4]);
+    const d4 = e.details[2];
+    expect(d4.biggest).toBe(4 * c.sizes[0]);
+    expect(d4.substeps).toBeCloseTo(2 * baseline.steady.substeps);
+    // The faster work-group size at each cluster size: 10 µs at 250, 40 µs at 3,000.
+    expect(d4.usPerSubstep).toBeCloseTo(10 + ((d4.biggest - 250) * 30) / 2750);
+    expect(d4.gasMs).toBeCloseTo((d4.substeps * d4.usPerSubstep * e.restFactor) / 1000);
+    expect(d4.go.laptop).toBe(d4.gasMs <= 1000 / 240 / 4);
+  });
+
+  it("gives no estimate before any run", () => {
+    expect(estimateFused(baseline, [])).toBeNull();
   });
 });
 
