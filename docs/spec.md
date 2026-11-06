@@ -514,6 +514,15 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
   - *a 15 m tether* (TRC-003).
 
   It weighs 90 kg with its 40 shells. The base, tractor and AI scenarios now fly Gunship 3; the older scenarios keep Gunship 2. The exhaust's tail (GAS-011) applies everywhere.
+- **The Mammoth (MAM, November 2026).** A big ship for a woolly mammoth pilot, built from separate parts welded together:
+  - *cockpit:* a 4 × 6 m hull with a semicircular nose of radius 2 m, 8 m long in all (room behind the seat for an airlock and stores, not yet modelled inside);
+  - *a 2 m square generator and a 2 m square battery* behind it. They are structure for now: there is no power model yet;
+  - *two tanks,* one each side, each holding fuel and oxidiser (1.5 kg H₂, 12 kg O₂) and feeding all four engines, so either can run the ship;
+  - *four lander engines,* two a side on outriggers: the front pair 7 m from the middle, the rear pair 5.5 m, so the front exhaust clears the rear pods (in line, it blasted them and lost a fifth of the thrust). Each burns 2.6 kg/s at 1 : 8 with 20× economy; left Q works both left engines, right E both right ones;
+  - *a railgun in the nose,* with 0.5 kg explosive shells (Gunship 3: 1 kg) carrying the same 0.3 kg charge, so the 40 shells weigh 20 kg, not 40;
+  - *a tractor projector and a separate tether generator* at the tail (TRC-007), with a 25 m tether that breaks at 40,000 N and a 1,600 N beam.
+
+  It weighs about 280 kg. Full thrust gives 6.5 m/s², like the lander's 6.3, but being four times as long it turns about half as fast: half a second on one side spins it to 0.55 rad/s, against the lander's 1.3. Matching that would need the engines about 10 m out or most of the mass at the middle. With one engine out, or one each side, a pilot tapping the stronger side holds the heading within about 1° at half thrust; with both on one side out it can only spin.
 - **Crushed gas.** When a step's substeps can't keep a parcel's thermal energy from going negative, they are halved, up to 20 times. A parcel crushed between two parts closing on each other needed ever shorter substeps: a million in one step, 150 s, as a big shell smashed the ship. Now a halving that doesn't cut the shortfall by at least a quarter stops the retries. Each step also has a budget of 8,000 substeps, retries included. Past it the step finishes in one substep and clamps, and the ledger reports the energy clamped (1.3 J in that shot). *Since November 2026* the energy the clamp makes up is recorded as a correction, and the crushed parcels leave the gas (out of the plane) at the end of the step, becoming tail wisps. Before, the ledger reported it as a violation: with destroyed pieces leaving (DMG-007), blast gas was often crushed as the rest of a rock closed in, 100–170 J a step in GS-X, and Gunship 3's first shot at a 0.35 kg charge clamped 32 J.
 
 ### 9.8 Asteroids (M7)
@@ -551,6 +560,7 @@ Salvage: a ship pulls loose objects in with a beam and tows them home on a tethe
 - **TRC-004** `[M · M7 · P]` The tether shall be a stiff, damped spring (Hooke's law) of the declared length between the ship's centre of mass and the cargo's, acting along the line between them only, so the cargo swings freely round the ship without spinning it, and stays within about a metre of that length under normal flying. *Changed November 2026: it used to run from the tractor's origin at the ship's tail, so a swinging cargo spun the ship, which made it almost impossible to fly.*
 - **TRC-005** `[M · M7 · U]` Pressing the control again shall let the cargo go. The beam shall not return until the control has been released and pressed afresh.
 - **TRC-006** `[M · M7 · U]` A tether whose force passes its declared maximum shall break, raising `tether.break`.
+- **TRC-007** `[S · M7 · U]` A tractor may name a separate body as its tether generator. While that body is gone, wrecked or no longer on the ship, the beam still pulls but no tether is made, and a tether already made lets go (`tether.release`).
 
 *Model as built (first look).*
 - **Where it acts.** Tractors run once per step, after gravity and before contacts, as velocity changes on both ends. Each pull is a pair along the line between its two points, so momentum and angular momentum are exact. The ship and the cargo are assemblies; the welds share each pull in the contact solve, so a hard yank loads them.
