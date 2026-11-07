@@ -61,7 +61,7 @@ export interface VesselShape {
 const CELLS_ACROSS = 64;
 const shapeCache = new Map<string, VesselShape | null>();
 // The same shapes within one step (geometry at rest doesn't change between the step's phases).
-const perStep = new WeakMap<World, { tick: number; shapes: Map<string, VesselShape | null> }>();
+const perStep = new WeakMap<World, { tick: number; shapes: Map<string, VesselShape | null>; topo?: object }>();
 // How far each shape reaches from its centre.
 const reachOf = new WeakMap<Shape, number>();
 function reach(shape: Shape): number {
@@ -183,7 +183,9 @@ export function vesselShape(world: World, b: Body, roots = assemblyRoots(world))
     perStep.set(world, memo);
   }
   if (memo.shapes.has(b.id)) return memo.shapes.get(b.id)!;
-  const shape = vesselShapeNow(world, b, roots);
+  // Checking the topology walks every body and weld: once a step, not once per engine.
+  memo.topo ??= topologyToken(world);
+  const shape = vesselShapeNow(world, b, roots, memo.topo);
   memo.shapes.set(b.id, shape);
   return shape;
 }
@@ -215,10 +217,9 @@ function unchanged(world: World, b: Body, last: LastShape, topo: object): boolea
   return true;
 }
 
-function vesselShapeNow(world: World, b: Body, roots: ReadonlyMap<string, string>): VesselShape | null {
+function vesselShapeNow(world: World, b: Body, roots: ReadonlyMap<string, string>, topo: object): VesselShape | null {
   const f = frameOf(b);
   if (!f) return null;
-  const topo = topologyToken(world);
   const last = lastShape.get(b);
   if (last && unchanged(world, b, last, topo)) return last.shape;
   const r = roots.get(b.id) ?? b.id;
@@ -388,20 +389,90 @@ function computeShape(b: Body, f: Frame, members: Body[], poses: Map<string, { p
   };
 }
 
+/**
+ * Where every body is, for holdingShape: a grid of cells, each listing the bodies whose bounding
+ * circle reaches it, so each engine looks only at bodies near it rather than at all of them. Build
+ * one where the bodies stand still for a run of holdingShape calls (it reads positions once).
+ */
+export interface BodyIndex {
+  grid: Map<number, number[]>;
+  big: number[]; // bodies too large to file cell by cell, checked by every query
+  r: Float64Array;
+  stamp: Int32Array;
+  query: number;
+}
+const INDEX_CELL = 2; // m
+const INDEX_MAX_CELLS = 64; // a body over more cells than this goes in `big`
+const cellKey = (cx: number, cy: number) => (cx + 32768) * 65536 + (cy + 32768);
+const cellOf = (v: number) => Math.max(-32767, Math.min(32767, Math.floor(v / INDEX_CELL)));
+
+export function bodyIndex(world: World): BodyIndex {
+  const n = world.bodies.length;
+  const grid = new Map<number, number[]>();
+  const big: number[] = [];
+  const r = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const o = world.bodies[i];
+    const ro = reach(o.shape);
+    r[i] = ro;
+    const x0 = cellOf(o.position.x - ro);
+    const x1 = cellOf(o.position.x + ro);
+    const y0 = cellOf(o.position.y - ro);
+    const y1 = cellOf(o.position.y + ro);
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) > INDEX_MAX_CELLS) {
+      big.push(i);
+      continue;
+    }
+    for (let cx = x0; cx <= x1; cx++)
+      for (let cy = y0; cy <= y1; cy++) {
+        const k = cellKey(cx, cy);
+        const list = grid.get(k);
+        if (list) list.push(i);
+        else grid.set(k, [i]);
+      }
+  }
+  return { grid, big, r, stamp: new Int32Array(n), query: 0 };
+}
+
 /** The vessel's shape, if it holds its gas now: enclosed, and nothing else inside it. */
-export function holdingShape(world: World, b: Body, roots: ReadonlyMap<string, string>): VesselShape | null {
+export function holdingShape(world: World, b: Body, roots: ReadonlyMap<string, string>, index?: BodyIndex): VesselShape | null {
   const shape = vesselShape(world, b, roots);
   if (!shape || !shape.sealed) return null;
   const r = roots.get(b.id) ?? b.id;
   const R = boxReach(shape.box);
-  for (const o of world.bodies) {
+  // Does body o sit inside the chamber? (Which order bodies are tried in can't change the answer.)
+  const blocks = (o: Body, ro: number): boolean => {
     const dx = o.position.x - b.position.x;
     const dy = o.position.y - b.position.y;
-    const ro = reach(o.shape) + R;
-    if (dx * dx + dy * dy >= ro * ro) continue;
-    if ((roots.get(o.id) ?? o.id) === r) continue;
-    if (overlapsBox(outlineIn(b, o), shape.box)) return null;
+    const rr = ro + R;
+    if (dx * dx + dy * dy >= rr * rr) return false;
+    if ((roots.get(o.id) ?? o.id) === r) return false;
+    return overlapsBox(outlineIn(b, o), shape.box);
+  };
+  if (!index) {
+    for (const o of world.bodies) if (blocks(o, reach(o.shape))) return null;
+    return shape;
   }
+  const q = ++index.query;
+  const seen = index.stamp;
+  for (const i of index.big) {
+    seen[i] = q;
+    if (blocks(world.bodies[i], index.r[i])) return null;
+  }
+  const x0 = cellOf(b.position.x - R);
+  const x1 = cellOf(b.position.x + R);
+  const y0 = cellOf(b.position.y - R);
+  const y1 = cellOf(b.position.y + R);
+  for (let cx = x0; cx <= x1; cx++)
+    for (let cy = y0; cy <= y1; cy++) {
+      const list = index.grid.get(cellKey(cx, cy));
+      if (!list) continue;
+      for (const i of list) {
+        if (seen[i] === q) continue;
+        seen[i] = q;
+        if (blocks(world.bodies[i], index.r[i])) return null;
+      }
+    }
   return shape;
 }
 
