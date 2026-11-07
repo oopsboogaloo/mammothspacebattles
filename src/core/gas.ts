@@ -31,7 +31,7 @@
 import { assemblyRoots } from "./joints.ts";
 import { cross, rotate, sinCos, type Vec2 } from "./math.ts";
 import { nextFloat, type RngState } from "./prng.ts";
-import { localVertices, massProps, type Shape } from "./shapes.ts";
+import { boundingRadiusOf, localVertices, massProps, type Shape } from "./shapes.ts";
 import { bodyMass, type Store } from "./bodies.ts";
 
 /** Universal gas constant, J/(mol·K) (CODATA 2018, exact). */
@@ -80,6 +80,19 @@ export const REACTIONS: readonly Reaction[] = [{ fuel: "h2", oxidiser: "o2", pro
 export const STORE_TEMPERATURE = 300;
 
 /** Thermal and chemical energy of a store's contents, J (0 for resources that are not gas species). */
+/** storeEnergy's two parts, without making an object. */
+export function storeThermal(st: { resource: string; mass: number }, scale = 1): number {
+  const sp = SPECIES[st.resource];
+  if (!sp) return 0;
+  const cv = R_GAS / sp.molarMass / (sp.gamma - 1);
+  return (st.mass * cv * STORE_TEMPERATURE) / scale;
+}
+export function storeChemical(st: { resource: string; mass: number }, scale = 1): number {
+  const sp = SPECIES[st.resource];
+  if (!sp) return 0;
+  return (st.mass * (sp.heat ?? 0)) / scale;
+}
+
 export function storeEnergy(st: { resource: string; mass: number }, scale = 1): { thermal: number; chemical: number } {
   const sp = SPECIES[st.resource];
   if (!sp) return { thermal: 0, chemical: 0 };
@@ -1002,21 +1015,25 @@ export function gasClusters(
   });
   for (const g of groups) {
     // A circle round the group's parts, grown by how far they move in the step.
-    let lo = { x: Infinity, y: Infinity };
-    let hi = { x: -Infinity, y: -Infinity };
+    let loX = Infinity;
+    let loY = Infinity;
+    let hiX = -Infinity;
+    let hiY = -Infinity;
     // Its parts' spread about the first part's velocity (spin, flex), added to the circle.
     const v0 = bodies[g.members[0]].fixed ? { x: 0, y: 0 } : bodies[g.members[0]].velocity;
     let spread = 0;
     for (const k of g.members) {
       const b = bodies[k];
-      const r = massProps(b.shape, 1).boundingRadius;
-      lo = { x: Math.min(lo.x, b.position.x - r), y: Math.min(lo.y, b.position.y - r) };
-      hi = { x: Math.max(hi.x, b.position.x + r), y: Math.max(hi.y, b.position.y + r) };
+      const r = boundingRadiusOf(b.shape);
+      loX = Math.min(loX, b.position.x - r);
+      loY = Math.min(loY, b.position.y - r);
+      hiX = Math.max(hiX, b.position.x + r);
+      hiY = Math.max(hiY, b.position.y + r);
       if (!b.fixed) spread = Math.max(spread, Math.sqrt((b.velocity.x - v0.x) ** 2 + (b.velocity.y - v0.y) ** 2) + Math.abs(b.angularVelocity) * r);
     }
-    g.x = 0.5 * (lo.x + hi.x);
-    g.y = 0.5 * (lo.y + hi.y);
-    g.r = 0.5 * Math.sqrt((hi.x - lo.x) ** 2 + (hi.y - lo.y) ** 2) + 2 * spread * dt;
+    g.x = 0.5 * (loX + hiX);
+    g.y = 0.5 * (loY + hiY);
+    g.r = 0.5 * Math.sqrt((hiX - loX) ** 2 + (hiY - loY) ** 2) + 2 * spread * dt;
     g.vx = v0.x;
     g.vy = v0.y;
   }
@@ -1034,8 +1051,15 @@ export function gasClusters(
     const rb = find(b);
     if (ra !== rb) up[Math.max(ra, rb)] = Math.min(ra, rb);
   };
-  // Parcels: a grid of cells 2·rmax wide, each parcel against its own and the neighbouring cells.
-  const cell = 2 * rmax;
+  // Parcels on a grid of cells about one mean reach wide. Two parcels can meet only within
+  // half + half + push + push + 2·|v_i − v_j|·dt ≤ reach_i + reach_j (|v_i − v_j| ≤ |v_i − mean| + |v_j − mean|),
+  // so the parcel with the longer reach (the lower index on a tie) finds the pair within twice its own
+  // reach. (Cells 2·rmax wide, searched 3 × 3, had every parcel test about 15 times the area it
+  // could reach, all for the one fastest parcel.) Joins don't depend on order, so the clusters are
+  // the same.
+  let reachSum = 0;
+  for (let i = 0; i < n; i++) reachSum += reach[i];
+  const cell = Math.max(reachSum / n, rmax / 8);
   const grid = new Map<number, number[]>();
   const keyOf = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
   for (let i = 0; i < n; i++) {
@@ -1046,16 +1070,21 @@ export function gasClusters(
   }
   for (let i = 0; i < n; i++) {
     const p = parcels[i].position;
-    const cx = Math.floor(p.x / cell);
-    const cy = Math.floor(p.y / cell);
-    for (let dx = -1; dx <= 1; dx++)
-      for (let dy = -1; dy <= 1; dy++) {
-        const list = grid.get(keyOf(cx + dx, cy + dy));
+    const vi = parcels[i].velocity;
+    const R = 2 * reach[i] * (1 + 1e-9) + 1e-12;
+    const x0 = Math.floor((p.x - R) / cell);
+    const x1 = Math.floor((p.x + R) / cell);
+    const y0 = Math.floor((p.y - R) / cell);
+    const y1 = Math.floor((p.y + R) / cell);
+    for (let cx = x0; cx <= x1; cx++)
+      for (let cy = y0; cy <= y1; cy++) {
+        const list = grid.get(keyOf(cx, cy));
         if (!list) continue;
         for (const j of list) {
-          if (j <= i) continue;
+          if (!(reach[j] < reach[i] || (reach[j] === reach[i] && j > i))) continue;
+          // Already in one cluster: nothing to learn (in a dense plume, most pairs).
+          if (find(i) === find(j)) continue;
           const q = parcels[j].position;
-          const vi = parcels[i].velocity;
           const vj = parcels[j].velocity;
           const d = half[i] + half[j] + push[i] + push[j] + 2 * Math.sqrt((vi.x - vj.x) ** 2 + (vi.y - vj.y) ** 2) * dt;
           if ((p.x - q.x) ** 2 + (p.y - q.y) ** 2 <= d * d) join(i, j);
@@ -1070,13 +1099,42 @@ export function gasClusters(
     const d = g.r + 2 * half[i] + push[i] + 2 * Math.sqrt((v.x - g.vx) ** 2 + (v.y - g.vy) ** 2) * dt;
     return (p.x - g.x) ** 2 + (p.y - g.y) ** 2 <= d * d;
   };
+  // The parcels a group might reach, from the parcel grid: any parcel it reaches is within
+  // g.r + 2·half + push + 2·|v − v_g|·dt, and |v − v_g| ≤ |v − mean| + |mean − v_g|, so within R below.
+  // Joins don't depend on order (a cluster's root is always its lowest index), so the clusters are
+  // the same as testing every parcel; a group too big for the grid tests every parcel.
+  let hpMax = 0;
+  let vRelMax = 0;
+  for (let i = 0; i < n; i++) {
+    hpMax = Math.max(hpMax, 2 * half[i] + push[i]);
+    const v = parcels[i].velocity;
+    vRelMax = Math.max(vRelMax, Math.sqrt((v.x - mx) ** 2 + (v.y - my) ** 2));
+  }
+  const candidates = (g: (typeof groups)[number], visit: (i: number) => void) => {
+    const R = (g.r + hpMax + 2 * (vRelMax + Math.sqrt((mx - g.vx) ** 2 + (my - g.vy) ** 2)) * dt) * (1 + 1e-9) + 1e-9;
+    const x0 = Math.floor((g.x - R) / cell);
+    const x1 = Math.floor((g.x + R) / cell);
+    const y0 = Math.floor((g.y - R) / cell);
+    const y1 = Math.floor((g.y + R) / cell);
+    if (!(cell > 0) || !Number.isFinite(R) || !((x1 - x0 + 1) * (y1 - y0 + 1) <= grid.size)) {
+      for (let i = 0; i < n; i++) visit(i);
+      return;
+    }
+    for (let cx = x0; cx <= x1; cx++)
+      for (let cy = y0; cy <= y1; cy++) {
+        const list = grid.get(keyOf(cx, cy));
+        if (list) for (const i of list) visit(i);
+      }
+  };
   const fixedGroups: number[] = [];
   groups.forEach((g, k) => {
     if (bodies[g.members[0]].fixed) {
       fixedGroups.push(k);
       return;
     }
-    for (let i = 0; i < n; i++) if (reaches(g, i)) join(n + k, i);
+    candidates(g, (i) => {
+      if (reaches(g, i)) join(n + k, i);
+    });
   });
   const byRoot = new Map<number, { parcels: number[]; bodies: number[] }>();
   for (let i = 0; i < n; i++) {
@@ -1095,7 +1153,11 @@ export function gasClusters(
   });
   for (const k of fixedGroups) {
     const g = groups[k];
-    for (const c of byRoot.values()) if (c.parcels.some((i) => reaches(g, i))) c.bodies.push(...g.members);
+    const hit = new Set<number>();
+    candidates(g, (i) => {
+      if (reaches(g, i)) hit.add(find(i));
+    });
+    if (hit.size) for (const [r, c] of byRoot) if (hit.has(r)) c.bodies.push(...g.members);
   }
   // Small clusters go together into one: stepping each apart costs more than it saves.
   const big: { parcels: number[]; bodies: number[] }[] = [];

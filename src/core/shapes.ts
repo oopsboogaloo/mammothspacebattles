@@ -73,6 +73,20 @@ export function localVertices(shape: Shape): Vec2[] {
   throw new Error("A disc has no vertices");
 }
 
+/** massProps(shape, mass).inertia, without making an object (the ledger asks for it every body, many times a step). */
+export function inertiaOf(shape: Shape, mass: number): number {
+  if (shape.kind === "disc") return 0.5 * mass * shape.radius * shape.radius;
+  const g = polygonMoments.get(shape);
+  if (!g) return massProps(shape, mass).inertia;
+  return (mass * g.j) / g.area;
+}
+
+/** massProps(shape, m).boundingRadius, without making an object. */
+export function boundingRadiusOf(shape: Shape): number {
+  if (shape.kind === "disc") return shape.radius;
+  return polygonMoments.get(shape)?.boundingRadius ?? massProps(shape, 1).boundingRadius;
+}
+
 export function massProps(shape: Shape, mass: number): MassProps {
   if (shape.kind === "disc") {
     const r = shape.radius;

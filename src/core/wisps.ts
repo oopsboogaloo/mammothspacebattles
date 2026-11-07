@@ -10,7 +10,7 @@
 import { add, cross, dot, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
 import { collide } from "./collide.ts";
-import { massProps } from "./shapes.ts";
+import { boundingRadiusOf, massProps } from "./shapes.ts";
 import type { Parcel } from "./gas.ts";
 import type { Body, World } from "./world.ts";
 
@@ -67,10 +67,8 @@ export function stepWisps(world: World, dt: number): number {
   const grid = new Map<number, Body[]>();
   const big: Body[] = [];
   const key = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
-  const reach = new Map<Body, number>();
   for (const b of world.bodies) {
-    const r = massProps(b.shape, 1).boundingRadius;
-    reach.set(b, r);
+    const r = boundingRadiusOf(b.shape);
     if (r > 4 * CELL) {
       big.push(b);
       continue;
@@ -93,14 +91,18 @@ export function stepWisps(world: World, dt: number): number {
     w.age += dt;
     if (w.age >= WISP_LIFE) continue;
     w.velocity = { x: w.velocity.x + g.x * dt, y: w.velocity.y + g.y * dt };
-    w.position = add(w.position, scale(w.velocity, dt));
+    w.position = { x: w.position.x + w.velocity.x * dt, y: w.position.y + w.velocity.y * dt };
     const m = wispMass(w);
     const r = wispRadius(w);
     const near = grid.get(key(Math.floor(w.position.x / CELL), Math.floor(w.position.y / CELL)));
-    for (const b of near ? [...near, ...big] : big) {
-      const d = sub(w.position, b.position);
-      const R = reach.get(b)! + r;
-      if (dot(d, d) > R * R) continue;
+    // The cell's bodies, then the big ones (without building a joined list for every wisp).
+    const nNear = near ? near.length : 0;
+    for (let q = 0; q < nNear + big.length; q++) {
+      const b = q < nNear ? near![q] : big[q - nNear];
+      const dx = w.position.x - b.position.x;
+      const dy = w.position.y - b.position.y;
+      const R = boundingRadiusOf(b.shape) + r;
+      if (dx * dx + dy * dy > R * R) continue;
       const hit = collide({ shape: { kind: "disc", radius: r }, position: w.position, rot: { c: 1, s: 0 } }, { shape: b.shape, position: b.position, rot: sinCos(b.angle) }, 0, 0);
       if (!hit || !hit.points.length) continue;
       const pt = hit.points.reduce((a, c) => (c.separation < a.separation ? c : a));

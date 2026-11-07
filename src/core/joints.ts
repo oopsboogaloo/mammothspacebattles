@@ -240,21 +240,39 @@ export function prepareJoints(world: World, byId: Map<string, JointBody>, dt: nu
 
 const pointVel = (r: JointBody, rr: Vec2): Vec2 => add(r.body.velocity, crossSV(r.body.angularVelocity, rr));
 
-function applyLinear(s: JointSolver, P: Vec2, acc: ConstraintAccount): void {
-  if (P.x === 0 && P.y === 0) return;
-  const before = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
+// The solver's inner loop works in plain numbers, not vector objects: it runs ten passes over every
+// weld each step, and the short-lived vectors were the step's largest source of garbage. Each
+// expression is the vector helpers' arithmetic written out in the same order, so results are
+// bit-identical.
+/** Relative velocity of b's anchor point to a's, into relX/relY. */
+let relX = 0;
+let relY = 0;
+function relVel(s: JointSolver): void {
   const A = s.a.body;
   const B = s.b.body;
-  A.velocity = sub(A.velocity, scale(P, s.a.invMass));
-  A.angularVelocity -= s.a.invInertia * cross(s.rA, P);
-  B.velocity = add(B.velocity, scale(P, s.b.invMass));
-  B.angularVelocity += s.b.invInertia * cross(s.rB, P);
-  const after = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
-  acc.predictedKE += dot(P, add(before, after)) / 2;
-  if (s.a.invMass !== 0) acc.angular -= cross(add(A.position, s.rA), P);
-  if (s.b.invMass !== 0) acc.angular += cross(add(B.position, s.rB), P);
-  if (s.a.invMass === 0) acc.externalImpulse = add(acc.externalImpulse, P);
-  else if (s.b.invMass === 0) acc.externalImpulse = sub(acc.externalImpulse, P);
+  relX = B.velocity.x + -B.angularVelocity * s.rB.y - (A.velocity.x + -A.angularVelocity * s.rA.y);
+  relY = B.velocity.y + B.angularVelocity * s.rB.x - (A.velocity.y + A.angularVelocity * s.rA.x);
+}
+
+function applyLinear(s: JointSolver, px: number, py: number, acc: ConstraintAccount): void {
+  if (px === 0 && py === 0) return;
+  relVel(s);
+  const bx = relX;
+  const by = relY;
+  const A = s.a.body;
+  const B = s.b.body;
+  const rA = s.rA;
+  const rB = s.rB;
+  A.velocity = { x: A.velocity.x - px * s.a.invMass, y: A.velocity.y - py * s.a.invMass };
+  A.angularVelocity -= s.a.invInertia * (rA.x * py - rA.y * px);
+  B.velocity = { x: B.velocity.x + px * s.b.invMass, y: B.velocity.y + py * s.b.invMass };
+  B.angularVelocity += s.b.invInertia * (rB.x * py - rB.y * px);
+  relVel(s);
+  acc.predictedKE += (px * (bx + relX) + py * (by + relY)) / 2;
+  if (s.a.invMass !== 0) acc.angular -= (A.position.x + rA.x) * py - (A.position.y + rA.y) * px;
+  if (s.b.invMass !== 0) acc.angular += (B.position.x + rB.x) * py - (B.position.y + rB.y) * px;
+  if (s.a.invMass === 0) acc.externalImpulse = { x: acc.externalImpulse.x + px, y: acc.externalImpulse.y + py };
+  else if (s.b.invMass === 0) acc.externalImpulse = { x: acc.externalImpulse.x - px, y: acc.externalImpulse.y - py };
 }
 
 function applyAngular(s: JointSolver, L: number, acc: ConstraintAccount): void {
@@ -287,21 +305,24 @@ export function solveJoints(js: JointSolver[], acc: ConstraintAccount): void {
     const L = clamp(s.L - wRel * s.angularMass, -s.torque, s.torque);
     applyAngular(s, L - s.L, acc);
     s.L = L;
-    const c = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
-    const dP = { x: -(s.m11 * c.x + s.m12 * c.y), y: -(s.m12 * c.x + s.m22 * c.y) };
+    relVel(s);
+    const dPx = -(s.m11 * relX + s.m12 * relY);
+    const dPy = -(s.m12 * relX + s.m22 * relY);
     const n = s.axis;
-    const t = { x: -n.y, y: n.x };
-    const pn = dot(s.P, n);
-    const pt = dot(s.P, t);
-    const dn = dot(dP, n);
-    const dq = dot(dP, t);
+    const tx = -n.y;
+    const ty = n.x;
+    const pn = s.P.x * n.x + s.P.y * n.y;
+    const pt = s.P.x * tx + s.P.y * ty;
+    const dn = dPx * n.x + dPy * n.y;
+    const dq = dPx * tx + dPy * ty;
     const f = Math.min(reach(pn, dn, s.lo, s.hi), reach(pt, dq, -s.shear, s.shear));
-    const step = scale(dP, f);
-    s.P = add(s.P, step);
-    applyLinear(s, step, acc);
+    const sx = dPx * f;
+    const sy = dPy * f;
+    s.P = { x: s.P.x + sx, y: s.P.y + sy };
+    applyLinear(s, sx, sy, acc);
     if (f < 1) {
-      slide(s, n, s.lo, s.hi, acc);
-      slide(s, t, -s.shear, s.shear, acc);
+      slide(s, n.x, n.y, s.lo, s.hi, acc);
+      slide(s, tx, ty, -s.shear, s.shear, acc);
     }
   }
 }
@@ -315,15 +336,17 @@ export function resetJoints(js: JointSolver[]): void {
 }
 
 /** Solves the point constraint along one direction only, keeping that component in [lo, hi]. */
-function slide(s: JointSolver, d: Vec2, lo: number, hi: number, acc: ConstraintAccount): void {
-  const k = s.k11 * d.x * d.x + 2 * s.k12 * d.x * d.y + s.k22 * d.y * d.y;
+function slide(s: JointSolver, dx: number, dy: number, lo: number, hi: number, acc: ConstraintAccount): void {
+  const k = s.k11 * dx * dx + 2 * s.k12 * dx * dy + s.k22 * dy * dy;
   if (!(k > 0)) return;
-  const c = dot(sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA)), d);
-  const now = dot(s.P, d);
+  relVel(s);
+  const c = relX * dx + relY * dy;
+  const now = s.P.x * dx + s.P.y * dy;
   const next = clamp(now - c / k, lo, hi);
-  const step = scale(d, next - now);
-  s.P = add(s.P, step);
-  applyLinear(s, step, acc);
+  const sx = dx * (next - now);
+  const sy = dy * (next - now);
+  s.P = { x: s.P.x + sx, y: s.P.y + sy };
+  applyLinear(s, sx, sy, acc);
 }
 
 /**
