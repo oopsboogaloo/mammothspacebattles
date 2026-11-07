@@ -210,7 +210,7 @@ The reference battle, gas a step (budget 1.04 ms laptop or desktop, 2.08 ms phon
    cluster fits easily; at 4× (about 1,340 parcels) the full state does not fit Apple's 32 KB, so
    only what the neighbour search reads most (positions and cells) would live there.
 
-## 8. Spike 2b: the neighbour search in work-group memory (built, awaiting device runs)
+## 8. Spike 2b: the neighbour search in work-group memory
 
 The spike page now runs Spike 2b by default (`?mode=global` for Spike 2, `?mode=global,shared` for both).
 
@@ -227,6 +227,104 @@ The spike page now runs Spike 2b by default (`?mode=global` for Spike 2, `?mode=
   not fit, and that layout shows as failed with the reason.
 - **Timed:** clusters of 250–3,000 parcels, 5 at once, 256 and 1,024 threads. Checked against the
   CPU like the others (density within 3×10⁻⁷, momentum drift 6×10⁻⁹ on SwiftShader).
+
+### Spike 2b results (6–7 November 2026)
+
+µs a substep, 5 clusters side by side. Raw runs: `gpu-spike-results.json` (`spike2b`).
+
+| Parcels a cluster | RTX 40, Spike 2 (1,024 threads) | RTX 40, **2b** (1,024) | iPad Pro, Spike 2 (256) | iPad Pro, **2b** (256) |
+|---|---|---|---|---|
+| 250 | 81 | **58** | 150 | **146** |
+| 500 | 99 | **77** | 292 | **283** |
+| 1,000 | 128 | **100** | 567 | **546** |
+| 1,500 | 235 | **177** | 921 | **875** |
+| 3,000 | 431 | failed: 40–43 KB needed, 32 KB allowed | – | failed: same |
+
+The iPad refused the 1,024-thread kernel again; the page now shows it as failed ("ran 0 of 10
+substeps") and leaves it out of the estimate.
+
+The reference battle, gas a step:
+
+| Detail | RTX 40, 2b | iPad Pro, 2b |
+|---|---|---|
+| 1× | 4.8 ms | 14.5 ms |
+| 2× | 9.0 ms | 39.6 ms |
+| 4× | 22.9 ms | 116 ms |
+| Budget | 1.04 ms | 2.08 ms |
+
+**What we learned:**
+
+1. **Work-group memory helps a little on the RTX (about 25%) and not at all on the iPad.**
+2. **The RTX still takes 58 µs a substep with most of its 1,024 threads idle** (250 parcels): the
+   cost of one substep's chain of stages (about 28 barriers, and a few dependent reads per
+   neighbour) inside one compute unit. The budget allows about 7 µs a substep at 4× detail and
+   about 14 µs at 1×.
+3. **On the iPad the cost is the work in each thread:** it doubles with every doubling of parcels a
+   thread, about 140 µs per parcel's share of a substep, wherever its data sits.
+
+## 9. Conclusion after three spikes (7 November 2026)
+
+| The battle at 4×, gas a step | iPad Pro | RTX 40 |
+|---|---|---|
+| Spike 1 (7 dispatches a substep) | 37 ms | 23 ms |
+| Spike 2 (one work-group per cluster) | 121 ms | 30 ms |
+| Spike 2b (the same, in work-group memory) | 116 ms | 23 ms |
+| Budget | 2.08 ms | 1.04 ms |
+
+- **Three different GPU layouts meet the same wall**, about 20× over budget even on a high-end
+  desktop card. The gas takes about 14,600 substeps a game second at 4× detail (61 a step, 240
+  steps a second), each a chain of stages that must finish before the next starts. GPUs are built to
+  do much work at once, not to finish small dependent steps quickly: no layout we tried gets a
+  substep under about 50–150 µs.
+- **Correctness was never the problem:** every kernel matched the CPU, on every device.
+- **The lever left is the number of substeps:** a gas method that takes far fewer, larger time
+  steps. Every GPU figure above shrinks in proportion, and the CPU gas would gain the same.
+- **Recommendation:** stop the GPU spikes here. Weigh gas methods with larger time steps and test the
+  chosen one on the CPU first, against today's gas (thrust, exhaust speed,
+  plume spread, splashes), before returning to the GPU.
+
+## 10. Extra check: approximations and substep rules (7 November 2026)
+
+**What others do** (web search, 7 November 2026):
+
+| Approach | Evidence | Fit here |
+|---|---|---|
+| One long-running GPU program (persistent kernel / megakernel) | Standard fix for launch overhead ([Mirage](https://arxiv.org/html/2512.22219v1)) | Tried: Spikes 2 and 2b. The launch was not our floor |
+| Parallel in time (Parareal, PFASST) | 4–6× over space-only parallelism in particle-in-Fourier plasma codes, sometimes none ([arXiv 2407.00485](https://arxiv.org/abs/2407.00485)); N-body ([space-time N-body](https://www.researchgate.net/publication/256791837_A_massively_space-time_parallel_N-body_solver)) | None found for SPH; needs many cores and correction sweeps |
+| Local / regional time steps | About 2× for weakly compressible SPH, CPU only ([Asynchronous Liquids](https://arxiv.org/abs/2009.14514)); block steps in astrophysics codes ([SEREN](https://arxiv.org/pdf/1102.0721), [GANDALF](https://arxiv.org/pdf/1709.04488)) | Cuts the work per substep, **not** the chain: the fastest parcels still need every substep, so no help on the GPU |
+| Implicit or semi-implicit pressure | DFSPH at 4 ms steps ([Bender & Koschier](https://animation.rwth-aachen.de/media/papers/2015-SCA-DFSPH.pdf)); a semi-implicit SPH for compressible and incompressible fluids ([He et al. 2025](https://diglib.eg.org/items/6aa00c2d-db8e-48fb-b72d-fb96af19834b)), a graphics method that corrects density by moving particles (full text not reached) | Removes the sound term only; each step then needs solver iterations, each another link in the chain |
+| Methods built for large steps (position-based fluids, MLS-MPM) | 1–2 steps a frame in WebGPU demos ([Splash](https://github.com/matsuoka-601/Splash), [WebGPU-Ocean](https://github.com/matsuoka-601/WebGPU-Ocean)) | Liquids; compressible-gas MPM is still CFL-limited ([GPU MPM](https://www.researchgate.net/publication/329272471_GPU_optimization_of_material_point_methods)) |
+
+**Measured** (`node scripts/substep-levers.ts`): the substeps the reference battle's gas would need
+under each rule, worked out per cluster from the same states (steps 60–480, the fragment-spin steps
+left out). Recomputing today's rule gives 30.1 against the gas's own 30.2. GPU time: the largest over
+clusters of substeps × Spike 2b's measured time a substep at that cluster's size, × 2.47.
+
+| Substep rule | Substeps a step | RTX 40, 1× / 4× | iPad Pro, 1× / 4× |
+|---|---|---|---|
+| Today: sound + parcel speed; bodies' speed + spin × 50 m | 30.1 | 4.7 / 21.9 ms | 14.0 / 110 ms |
+| Bodies' spin × their own size | 29.9 | 4.7 / 21.9 ms | 14.0 / 110 ms |
+| Sound + speed relative to neighbours and nearby bodies | 28.7 | 4.5 / 21.0 ms | 13.4 / 106 ms |
+| No sound term (implicit pressure), parcel speed | 22.0 | 3.5 / 16.1 ms | 10.3 / 81 ms |
+| No sound term, relative speed only | 20.8 | 3.3 / 15.2 ms | 9.7 / 77 ms |
+| **Budget** | | **1.04 ms** | **2.08 ms** |
+
+**What it shows:**
+
+1. **The exhaust's own speed sets the substep, not sound.** Leaving the engines at up to about
+   280 m/s relative to the nozzles and the gas around it, across a 0.21 m smoothing length, a parcel
+   needs about 22 substeps a step whatever the pressure solver. Seen from the gas (relative speeds)
+   saves only 5%: the jet really is fast relative to its neighbours and the nozzle walls.
+2. **The best rule (no sound term, relative speeds) saves about 31%**, and an implicit solver would
+   spend some of that on its iterations. On the RTX at 1× that is 3.3 ms of gas a step against
+   1.04 ms; at 4×, 15 ms.
+3. **Per-parcel time steps don't shorten the chain**, so they don't help the GPU at all.
+4. **Left untried:** a larger CFL number (0.25 now; many SPH codes use 0.3–0.4, worth up to 1.6×,
+   needing an accuracy check), and coarser parcels near the nozzle. Even together with the best
+   rule, these would leave the RTX at about 2 ms at 1× detail, and the iPad far off.
+
+**Conclusion:** no parallel approximation or substep rule we found closes the gap. What to do next
+with the GPU gas is open.
 
 ## How to send numbers
 
