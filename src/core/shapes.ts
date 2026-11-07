@@ -78,18 +78,27 @@ export function massProps(shape: Shape, mass: number): MassProps {
     const r = shape.radius;
     return { area: Math.PI * r * r, inertia: 0.5 * mass * r * r, boundingRadius: r };
   }
-  const vs = localVertices(shape);
-  // Second moment of area about the origin (the centroid), then scaled to mass.
-  let area = 0;
-  let j = 0;
-  let maxR2 = 0;
-  for (let i = 0; i < vs.length; i++) {
-    const p = vs[i];
-    const q = vs[(i + 1) % vs.length];
-    const w = cross(p, q);
-    area += w / 2;
-    j += (w * (p.x * p.x + p.x * q.x + q.x * q.x + p.y * p.y + p.y * q.y + q.y * q.y)) / 12;
-    maxR2 = Math.max(maxR2, p.x * p.x + p.y * p.y);
+  // Second moment of area about the origin (the centroid), then scaled to mass. The sums depend
+  // only on the shape, which is never changed in place (an edit makes a new one), so they are worked
+  // out once per shape object: the ledger and the solvers ask for them many times a step.
+  let g = polygonMoments.get(shape);
+  if (!g) {
+    const vs = localVertices(shape);
+    let area = 0;
+    let j = 0;
+    let maxR2 = 0;
+    for (let i = 0; i < vs.length; i++) {
+      const p = vs[i];
+      const q = vs[(i + 1) % vs.length];
+      const w = cross(p, q);
+      area += w / 2;
+      j += (w * (p.x * p.x + p.x * q.x + q.x * q.x + p.y * p.y + p.y * q.y + q.y * q.y)) / 12;
+      maxR2 = Math.max(maxR2, p.x * p.x + p.y * p.y);
+    }
+    g = { area, j, boundingRadius: Math.sqrt(maxR2) };
+    polygonMoments.set(shape, g);
   }
-  return { area, inertia: (mass * j) / area, boundingRadius: Math.sqrt(maxR2) };
+  return { area: g.area, inertia: (mass * g.j) / g.area, boundingRadius: g.boundingRadius };
 }
+
+const polygonMoments = new WeakMap<Shape, { area: number; j: number; boundingRadius: number }>();

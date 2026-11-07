@@ -87,11 +87,25 @@ export function storeEnergy(st: { resource: string; mass: number }, scale = 1): 
   return { thermal: (st.mass * cv * STORE_TEMPERATURE) / scale, chemical: (st.mass * (sp.heat ?? 0)) / scale };
 }
 
+/**
+ * Chemical energy per kg of each composition, J/kg. A composition is never changed once a parcel or
+ * chamber holds it (burning, mixing and drawing make a new object), so the sum is worked out once
+ * per object: the ledger asks for every parcel's chemical energy many times a step.
+ */
+const heatPerKg = new WeakMap<Record<string, number>, number>();
+function compositionHeat(c: Record<string, number>): number {
+  let e = heatPerKg.get(c);
+  if (e === undefined) {
+    e = 0;
+    for (const k in c) e += c[k] * (SPECIES[k]?.heat ?? 0);
+    heatPerKg.set(c, e);
+  }
+  return e;
+}
+
 /** Chemical energy a parcel still holds, J. */
 export function parcelChemical(p: { mass: number; composition: Record<string, number> }, scale = 1): number {
-  let e = 0;
-  for (const k in p.composition) e += p.composition[k] * (SPECIES[k]?.heat ?? 0);
-  return (p.mass * e) / scale;
+  return (p.mass * compositionHeat(p.composition)) / scale;
 }
 
 /**
