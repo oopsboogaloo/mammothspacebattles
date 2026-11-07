@@ -388,7 +388,7 @@ export function createWorld(
     gravity: { ...gravity },
     bounds: structuredClone(extra.bounds ?? DEFAULT_BOUNDS),
     bodies: [],
-    gas: emptyGas(gasScale),
+    gas: profile?.gasParcelRate ? { ...emptyGas(gasScale), parcelRate: profile.gasParcelRate } : emptyGas(gasScale),
     joints: [],
     links: [],
     controls: {},

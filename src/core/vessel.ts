@@ -169,6 +169,16 @@ function overlapsBox(o: Outline, bx: VesselShape["box"]): boolean {
   return true;
 }
 
+/**
+ * The mass of each parcel a chamber held as one volume releases: the injector's own, or heavier if
+ * it would pass the world's parcel rate. Only chambers: their thrust is the jet's recoil, whatever the
+ * parcel size. Injectors without one (FLY's engines, a gun's breech) keep their own parcels.
+ */
+export function parcelMassOf(world: World, inj: { parcelMass: number; rate: number }): number {
+  const r = world.gas.parcelRate;
+  return r ? Math.max(inj.parcelMass, inj.rate / r) : inj.parcelMass;
+}
+
 /** Can this injector hold its chamber gas as a vessel at all? */
 export function canHold(b: Body): boolean {
   return !!b.injector?.chamber && !b.magazine && !b.fixed && b.integrity > 0;
@@ -601,8 +611,9 @@ export function runVessel(world: World, b: Body, shape: VesselShape, drawn: { ma
     v.credit += dm;
   }
   const GOLDEN = 0.6180339887498949;
-  while (v.credit >= inj.parcelMass && v.mass > inj.parcelMass && world.gas.parcels.length + out.length < limit) {
-    const dm = inj.parcelMass;
+  const pm = parcelMassOf(world, inj);
+  while (v.credit >= pm && v.mass > pm && world.gas.parcels.length + out.length < limit) {
+    const dm = pm;
     const u = Math.max(0, v.thermal / v.mass);
     const uStar = u * starT;
     const cStar = Math.sqrt(g * (g - 1) * uStar);
@@ -624,7 +635,7 @@ export function runVessel(world: World, b: Body, shape: VesselShape, drawn: { ma
     v.credit -= dm;
     v.count++;
   }
-  v.credit = Math.min(v.credit, inj.parcelMass);
+  v.credit = Math.min(v.credit, pm);
   return out;
 }
 
@@ -650,7 +661,7 @@ export function spill(world: World, b: Body): Parcel[] {
       if (!contains(self, p) && !others.some((o) => contains(o, p))) spots.push(p);
     }
   if (!spots.length) spots.push(at(f, 0, 0));
-  const n = Math.max(1, Math.min(spots.length, Math.round(v.mass / inj.parcelMass)));
+  const n = Math.max(1, Math.min(spots.length, Math.round(v.mass / parcelMassOf(world, inj))));
   const step = spots.length / n;
   const q = f.q;
   for (let k = 0; k < n; k++) {
