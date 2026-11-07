@@ -261,6 +261,12 @@ const CFL = 0.25;
 const MAX_SUBSTEPS = 2000;
 /** Halvings of a substep tried before thermal energy is clamped at zero (and the ledger reports it). */
 const MAX_RETRIES = 20;
+/**
+ * Tries (substeps, retries included) one step may spend before it finishes in one substep and clamps.
+ * Normal steps take 20–60. Was 4 × MAX_SUBSTEPS = 8,000: a spinning shell fragment in a plume used them
+ * all (157 ms, a visible stutter) and clamped the same 66 J it would have after a few hundred.
+ */
+const MAX_TRIES = 500;
 const VISC_ALPHA = 1;
 const VISC_BETA = 2;
 /** A parcel closer than this × radius to a surface and still approaching bounces elastically. */
@@ -1865,7 +1871,7 @@ export function stepGas(
   const crushed = new Uint8Array(n);
   while (tDone < dt) {
     const vmax = signalSpeed();
-    const spent = tries >= 4 * MAX_SUBSTEPS;
+    const spent = tries >= MAX_TRIES;
     let ds = spent ? dt - tDone : vmax > 0 ? Math.max(minDs, (CFL * hmin) / vmax) : dt;
     if (tDone + ds >= dt * (1 - 1e-12)) ds = dt - tDone;
     // Drift, kick, drift (leapfrog): parcels and bodies move half the substep, every impulse is taken
