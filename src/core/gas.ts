@@ -201,6 +201,11 @@ export interface GasState {
   parcels: Parcel[];
   /** Parcels that flew free in the last step (profile.gasFreeFlight); 0 or absent otherwise. */
   free?: number;
+  /**
+   * The largest smoothing length of all the gas, when part of it flies free and is not in this
+   * state: the far field must not depend on which part is stepped. Only on that temporary state.
+   */
+  farReach?: number;
   nextId: number;
   /** Totals carried out of the world boundary so far (GAS-007). */
   removed: RemovedGas;
@@ -1137,33 +1142,9 @@ export function clusterGas(
   const ps = gas.parcels;
   if (!ps.length) return null;
   const clusters = gasClusters(ps, bodies, joints, dt);
-  let hmax = 0;
-  for (const p of ps) hmax = Math.max(hmax, SMOOTHING * p.radius);
-  const ff = bounds.farField;
-  const far: { x: number; y: number; r: number }[] = [];
-  if (ff)
-    for (const b of bodies) {
-      if (b.fixed) continue;
-      let minX: number, minY: number, maxX: number, maxY: number;
-      if (b.shape.kind === "disc") {
-        const r = b.shape.radius;
-        [minX, minY, maxX, maxY] = [b.position.x - r, b.position.y - r, b.position.x + r, b.position.y + r];
-      } else {
-        const q = sinCos(b.angle);
-        minX = minY = Infinity;
-        maxX = maxY = -Infinity;
-        for (const v of localVertices(b.shape)) {
-          const w = rotate(q, v);
-          minX = Math.min(minX, b.position.x + w.x);
-          minY = Math.min(minY, b.position.y + w.y);
-          maxX = Math.max(maxX, b.position.x + w.x);
-          maxY = Math.max(maxY, b.position.y + w.y);
-        }
-      }
-      // As the walls' boxes, grown by the largest smoothing length.
-      const w = { minX: minX - hmax, minY: minY - hmax, maxX: maxX + hmax, maxY: maxY + hmax };
-      far.push({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff });
-    }
+  let hmax = gas.farReach ?? 0;
+  if (gas.farReach === undefined) for (const p of ps) hmax = Math.max(hmax, SMOOTHING * p.radius);
+  const far = bounds.farField ? farFieldCirclesFor(bodies, bounds.farField, hmax) : [];
   // A job's bodies are plain copies of the bodies' state (stepped apart from the world, then written back).
   const plain = (b: WallBody) => ({ id: b.id, shape: b.shape, fixed: b.fixed, mass: b.mass, inertia: b.inertia, position: b.position, angle: b.angle, velocity: b.velocity, angularVelocity: b.angularVelocity });
   const jobs: ClusterJob[] = clusters.map((c) => {
@@ -1245,6 +1226,36 @@ export function clusterGas(
       return total;
     },
   };
+}
+
+/**
+ * The far field's circles (§9.5): each free body's world box, grown by the largest smoothing length
+ * `hmax` (as its walls are), then by the far field `ff`. Gas outside all of them leaves.
+ */
+export function farFieldCirclesFor(bodies: readonly WallBody[], ff: number, hmax: number): { x: number; y: number; r: number }[] {
+  const far: { x: number; y: number; r: number }[] = [];
+  for (const b of bodies) {
+    if (b.fixed) continue;
+    let minX: number, minY: number, maxX: number, maxY: number;
+    if (b.shape.kind === "disc") {
+      const r = b.shape.radius;
+      [minX, minY, maxX, maxY] = [b.position.x - r, b.position.y - r, b.position.x + r, b.position.y + r];
+    } else {
+      const q = sinCos(b.angle);
+      minX = minY = Infinity;
+      maxX = maxY = -Infinity;
+      for (const v of localVertices(b.shape)) {
+        const w = rotate(q, v);
+        minX = Math.min(minX, b.position.x + w.x);
+        minY = Math.min(minY, b.position.y + w.y);
+        maxX = Math.max(maxX, b.position.x + w.x);
+        maxY = Math.max(maxY, b.position.y + w.y);
+      }
+    }
+    const w = { minX: minX - hmax, minY: minY - hmax, maxX: maxX + hmax, maxY: maxY + hmax };
+    far.push({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff });
+  }
+  return far;
 }
 
 // ---------- Free flight (prototype) ----------
@@ -1335,11 +1346,11 @@ export function flyFree(
   closed: readonly ClosedRegion[],
   scale: number,
   acc: GasAccount,
+  /** The largest smoothing length of all the gas (free and stepped), for the far field. */
+  hmax: number,
 ): Parcel[] {
   const ff = bounds.farField;
-  const circles = ff
-    ? bodies.filter((b) => !b.fixed).map((b) => ({ x: b.position.x, y: b.position.y, r: shapeRadius(b) + ff }))
-    : [];
+  const circles = ff ? farFieldCirclesFor(bodies, ff, hmax) : [];
   const far = (x: number, y: number) => {
     if (!ff || !circles.length) return false;
     for (const c of circles) if ((x - c.x) ** 2 + (y - c.y) ** 2 < c.r * c.r) return false;

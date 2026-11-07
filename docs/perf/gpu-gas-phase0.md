@@ -348,29 +348,29 @@ smoothing lengths of any body (its bounding circle), however both move in the st
 the gas step and drifts on its own (`freeFlightMask`, `flyFree` in `gas.ts`). It keeps its mass,
 momentum and heat; it leaves by the gas step's own rules (bounds, far field, out of the plane), on
 the ledger's books; and it rejoins the gas step as soon as it could come near a body, so splashes on
-rocks and ground stay gas. Measured with `node scripts/free-flight.ts` and a phase breakdown
-(development container, Node, steady burn from step 60):
+rocks and ground stay gas. Measured with `node scripts/free-flight.ts` (development container, Node, steady burn from step
+60, one run):
 
 | Free flight | Gas, ms a step | Whole step, ms | Parcels flying free | Substeps |
 |---|---|---|---|---|
-| Off | 23.6 | 30.0 | 0% | 30.4 |
-| 2 smoothing lengths | **14.1** | **21.1** | 74% | 30.5 |
-| 3 smoothing lengths | 14.3 | 21.4 | 71% | 50 (see note 5) |
+| Off | 23.6 | 30.1 | 0% | 30.4 |
+| 2 smoothing lengths | **13.5** | **20.4** | 74% | 30.5 |
+| 3 smoothing lengths | 14.0 | 20.5 | 72% | 50 (see note 5) |
 
 What the gas does, free flight at 2 smoothing lengths against off:
 
 | | Off | Free flight | Change |
 |---|---|---|---|
-| Mammoth's speed after 2 s (reference battle) | 12.57 m/s | 12.49 m/s | −0.6% |
-| Gunship 3 / Gunship 2 / FLY | 24.84 / 14.23 / 6.97 m/s | 24.86 / 14.28 / 7.01 m/s | +0.1 / +0.3 / +0.6% |
+| Mammoth's speed after 2 s (reference battle) | 12.57 m/s | 12.46 m/s | −0.9% |
+| Gunship 3 / Gunship 2 / FLY | 24.84 / 14.23 / 6.97 m/s | 24.86 / 14.28 / 6.99 m/s | +0.1 / +0.3 / +0.3% |
 | Push on the rocks in the plumes | 490 N·s | 458 N·s | −6.5% |
-| LAND, both engines, climb after 1 s | 4.445 m/s | 4.488 m/s | +1.0% |
+| LAND, both engines, climb after 1 s | 4.445 m/s | 4.491 m/s | +1.0% |
 | Gunship 2, both engines, climb after 3 s | 21.20 m/s | 21.23 m/s | +0.1% |
 | Ledger violations (all runs) | 0 | 0 | |
 
 **What it shows:**
 
-1. **The gas costs about 40% less** (23.6 → 14.1 ms a step): about three quarters of the parcels
+1. **The gas costs about 43% less** (23.6 → 13.5 ms a step): about three quarters of the parcels
    fly free, but the quarter left is the costly part (near walls and nozzles, with most of the wall
    contacts), and about 2.8 ms of the gas phase is overhead either way.
 2. **Thrust is unchanged** (within 1%): the nozzles and chambers stay gas.
@@ -383,7 +383,11 @@ What the gas does, free flight at 2 smoothing lengths against off:
    some steps well above 30 (under the 200 the averages cut off at). Not yet investigated; the
    spinning-fragment bug is a likely cause.
 
-**Next, if kept:** speed up the free parcels' move (0.85 ms for about 640 parcels) and the fixed
+Free gas uses the gas step's own far-field circles (`farFieldCirclesFor`), grown by the largest
+smoothing length of all the gas, so the far field doesn't depend on which gas flies free (found in
+review, PR #55).
+
+**Next, if kept:** speed up the free parcels' move (about 0.5 ms for 650 parcels) and the fixed
 overhead; let free gas spread with its heat; test the bodies' true outlines instead of their circles
 (more gas could fly free); try a larger CFL number on the gas left.
 

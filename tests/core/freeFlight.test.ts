@@ -37,6 +37,19 @@ describe("free flight", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("free gas meets the same far field as stepped gas (a disc of 0.5 m, far field 5 m, a still parcel at 5.6 m stays either way)", () => {
+    const keeps = (p: Profile) => {
+      const w = createWorld(1, [{ ...box("d", 1, 1), shape: { kind: "disc", radius: 0.5 } }], { x: 0, y: 0 }, { bounds: { min: { x: -100, y: -100 }, max: { x: 100, y: 100 }, farField: 5 } }, test);
+      w.gas.parcels = [parcel(1, 5.6, 0)];
+      w.gas.nextId = 2;
+      w.ledger.totals = computeTotals(w);
+      stepInPlace(w, [], p);
+      return { n: w.gas.parcels.length, free: w.gas.free };
+    };
+    expect(keeps(test).n).toBe(1);
+    expect(keeps(withFree(test))).toEqual({ n: 1, free: 1 });
+  });
+
   it("LAND climbs as it does without free flight (within 2%), with the ledger exact and some gas flying free", () => {
     const scn = parseScenario(readJson(join(ROOT, "scenarios", "land-twin-engine.json")));
     const prof = getProfile(scn.profile);

@@ -17,7 +17,7 @@ import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
-import { flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
+import { SMOOTHING, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
@@ -1324,12 +1324,14 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     if (timings && mask) timings.out["gas.mask"] = timings.clock() - tm!;
     const nFree = mask ? mask.reduce((a, v) => a + v, 0) : 0;
     const all = world.gas.parcels;
-    const stepped = nFree ? { ...world.gas, parcels: all.filter((_, i) => !mask![i]) } : world.gas;
+    let hmaxAll = 0;
+    if (nFree) for (const p of all) hmaxAll = Math.max(hmaxAll, SMOOTHING * p.radius);
+    const stepped = nFree ? { ...world.gas, parcels: all.filter((_, i) => !mask![i]), farReach: hmaxAll } : world.gas;
     const gas: GasAccount = yield { gas: stepped, bodies: walls, joints, dt, bounds: world.bounds, gravity: world.gravity, closed, timings };
     if (nFree) {
       const tf = timings?.clock();
       const r0 = { ...gas.removed, momentum: { ...gas.removed.momentum } };
-      const flown = new Set(flyFree(all.filter((_, i) => mask![i]), walls, dt, world.bounds, world.gravity, closed, world.gas.scale ?? 1, gas));
+      const flown = new Set(flyFree(all.filter((_, i) => mask![i]), walls, dt, world.bounds, world.gravity, closed, world.gas.scale ?? 1, gas, hmaxAll));
       // What flew out joins the world's running totals, as the gas step's own leavers do.
       const tot = world.gas.removed;
       tot.count += gas.removed.count - r0.count;
