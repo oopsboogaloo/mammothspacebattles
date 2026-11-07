@@ -8,9 +8,10 @@ export interface Profile {
   /** Gas dynamic scale (DEC-13): 1 is real gas; N makes sound and exhaust √N times slower. Default 1. */
   gasScale?: number;
   /**
-   * Free flight (prototype, docs/perf/gpu-gas-phase0.md §11): gas that can't come within this many
+   * Free flight (docs/perf/gpu-gas-phase0.md §11, §13): gas that can't come within this many
    * smoothing lengths of any body in the step flies on its own, without pressure, instead of being
-   * stepped as gas. Off (undefined) by default.
+   * stepped as gas. Off (undefined) unless a profile sets it: on (2) in sandbox, off in test, whose
+   * gas stays the full model as the reference.
    */
   gasFreeFlight?: number;
   tol: {
@@ -85,6 +86,8 @@ const SANDBOX: Profile = {
   solverIterations: 10,
   // Heavy gas: sound and exhaust 10× slower, so engines run in real time in the browser (DEC-13).
   gasScale: 100,
+  // Far gas flies free: about half the step in the reference battle, ships within 1% (gpu-gas-phase0.md §13).
+  gasFreeFlight: 2,
   tol: { mass: 1e-6, momentum: 1e-6, angularMomentum: 1e-6, energy: 1e-3, velocity: 1e-4, pressure: 0.1, penetration: 0.005, rocket: 0.1 },
   limit: { bodies: 5_000, gasParcels: 20_000, contacts: 50_000, maxSpeed: 2_000, minThickness: 0.05, minFragment: 0.05 },
 };

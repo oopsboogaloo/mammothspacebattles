@@ -406,6 +406,61 @@ review, PR #55).
 overhead; let free gas spread with its heat; test the bodies' true outlines instead of their circles
 (more gas could fly free); try a larger CFL number on the gas left.
 
+## 12. Phase A: CPU speed-ups (7 November 2026)
+
+Bit-identical unless stated. Reference battle with free flight unless stated.
+
+| PR | Change | Result |
+|---|---|---|
+| #57 | Ledger: polygon moments and composition heat cached per object | `computeTotals` 0.176 → 0.068 ms a call; about 24.1 → 22.0 ms a step |
+| #58 | Chamber shapes and weld topology checked by reference, not key strings | about 0.35 ms a step |
+| #59 | Heat turned into motion drawn by pressure, not impulse share (physics fix, see §1) | step 155: 574 → 33 ms; no clamp; ship speeds and climbs within 0.1% |
+| #60 | Engine grid, feed id map, weld loads summed up a spanning tree | 16 Mammoths 19.9 → 14.7 ms; 640-part ship's weld stage 21.8 → 3.2 ms; both now linear |
+| #61 | **Closed, not merged.** Fewer short-lived objects (weld solver in plain numbers, ledger without objects), cluster search by reach | allocation 16.5 → 13.7 MB a step, but speed −1% (noise); cluster finding −14% |
+
+**Lesson from #61:**
+- Garbage collection is about 9% of the step, but cutting allocation by 17% didn't move the time measurably on desktop Node.
+- The changes made the code harder to keep right. The weld solver became hand-expanded arithmetic, and the ledger got copies of the store-energy and inertia formulas, which would report false energy if the originals changed alone.
+- Rule since: an optimisation must show a measured gain to be worth extra complexity.
+- Worth revisiting only if phone tests show collection pauses causing stutter.
+- Cluster finding is limited by plume density (each parcel has hundreds of parcels within reach), not by the search.
+
+**Found along the way:**
+- Each engine's first chamber-shape build costs about 10 ms: a start-up stutter with many ships.
+- Step 0 (setup) is the battle's slowest step, at about 200 ms.
+
+## 13. Phase B: the substep safety factor and free flight (7 November 2026)
+
+The substep is CFL × h ÷ (sound speed + speed), CFL = 0.25. Measured with the factor set from outside for the experiment only (no code change kept): reference battle, 300 steps, steady from step 60; LAND (both engines 1 s) and Gunship 2 (both engines 3 s) climb speeds.
+
+| CFL | substeps | tries a substep | gas ms (free flight on) | LAND m/s | GS2 m/s |
+|---|---|---|---|---|---|
+| 0.10 | | | | 4.15 | 16.4 |
+| 0.15 | | | | 4.24 | 18.4 |
+| 0.20 | 29.9 | 1.21 | 20.4 | 4.33 | 18.5 |
+| **0.25** | 23.8 | 1.00 | **16.4** | 4.44 | 21.2 |
+| 0.30 | 20.3 | 1.31 | 18.1 | 4.56 | 21.4 |
+| 0.35 | 17.6 | 1.36 | 17.4 | 4.66 | 21.6 |
+| 0.40 | 15.6 | 1.41 | 17.2 | 4.76 | 21.8 |
+
+(Substeps are per cluster per step; tries count the halving retries when a parcel's heat would go below zero.)
+
+**A larger factor doesn't pay.**
+- From 0.25 to 0.4, substeps fall 35%, but retries rise from 1.00 to 1.41 a substep and take the saving back: gas costs more, not less.
+- 0.25 happens to be the fastest setting measured. Why 0.20 retries more than 0.25 is not yet understood.
+
+**The results depend on the substep.**
+- LAND's climb rises about linearly with the factor: about +2 m/s per unit of CFL, or roughly +5% per 0.05.
+- Extrapolated to a zero substep, it would be about 3.95 m/s, so at 0.25 the thrust reads about 12% high.
+- Gunship 2 jumps more (16.4 → 21.2 m/s from 0.10 to 0.25), partly within its jet noise.
+- So the gas model is not converged in time at the current setting. That is a physics-accuracy question to look into before any compromises are weighed (Phase C).
+- Ledger violations stay 0 throughout, so energy and momentum are kept exactly; the bias is in how they're shared, not in what is conserved.
+
+**Free flight (margin 2 h):**
+- About −45% of the step: 33.6 → 18.4 ms.
+- Ship speeds within 1%, the rocks' push 5% lower, LAND +1%, Gunship 2 +0.1%.
+- **Decision (7 November 2026): on in the sandbox profile** (`gasFreeFlight: 2`), so the game and the sandbox scenarios use it. The test profile keeps the full gas model as the reference.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

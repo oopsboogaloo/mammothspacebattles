@@ -17,7 +17,11 @@ describe("benchmark command", () => {
       // The six subsystems, plus the gas step's own phases (gas.*) where there is gas.
       const keys = Object.keys(row.subsystemsMs);
       expect(keys.filter((k) => !k.startsWith("gas."))).toEqual(["commands", "forces", "contacts", "integrate", "gas", "ledger"]);
-      if (row.parcels > 0) expect(keys.filter((k) => k.startsWith("gas.")).sort()).toEqual(["gas.clusters", "gas.contacts", "gas.density", "gas.finish", "gas.impulses", "gas.move", "gas.neighbours", "gas.setup"]);
+      // With free flight on (sandbox), also the mask and the free gas's own time (gas.mask, gas.free).
+      if (row.parcels > 0) {
+        const phases = keys.filter((k) => k.startsWith("gas.") && k !== "gas.mask" && k !== "gas.free").sort();
+        expect(phases).toEqual(["gas.clusters", "gas.contacts", "gas.density", "gas.finish", "gas.impulses", "gas.move", "gas.neighbours", "gas.setup"]);
+      }
       expect(row.parcels).toBeGreaterThanOrEqual(0);
     }
     expect(r.stdout).toMatch(/rs00-workload/);

@@ -1,5 +1,5 @@
-// Free flight (prototype, profile.gasFreeFlight; docs/perf/gpu-gas-phase0.md §11): gas that can't
-// come near a body in the step flies on without pressure, outside the gas step.
+// Free flight (profile.gasFreeFlight, on in sandbox; docs/perf/gpu-gas-phase0.md §11, §13): gas that
+// can't come near a body in the step flies on without pressure, outside the gas step.
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { assemblyTotals, computeTotals, createWorld, freeFlightMask, getProfile, hashValue, initialWorld, parseScenario, stepInPlace, wallBodies, type Command, type Profile } from "../../src/core/index.ts";
@@ -62,7 +62,7 @@ describe("free flight", () => {
       }
       return { vy: assemblyTotals(w, "hull")!.velocity.y, w, free };
     };
-    const off = climb(prof);
+    const off = climb({ ...prof, gasFreeFlight: undefined });
     const on = climb(withFree(prof));
     expect(off.w.gas.free).toBeUndefined();
     expect(on.free).toBeGreaterThan(0);
