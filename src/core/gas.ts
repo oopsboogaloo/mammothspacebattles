@@ -454,6 +454,11 @@ interface Unit {
   th: number;
   qc: number;
   qs: number;
+  /**
+   * The furthest any of its walls (their boxes) reaches from its centre of mass, m: a point of the
+   * unit's surface moves at most |v| + |ω| × reach.
+   */
+  reach: number;
 }
 
 function buildWalls(bodies: WallBody[], joints: { a: string; b: string }[], margin: number): { walls: Wall[]; units: Unit[] } {
@@ -508,6 +513,7 @@ function buildWalls(bodies: WallBody[], joints: { a: string; b: string }[], marg
       th: 0,
       qc: 1,
       qs: 0,
+      reach: 0,
       sx: 0,
       sy: 0,
       sw: 0,
@@ -589,6 +595,15 @@ function buildWalls(bodies: WallBody[], joints: { a: string; b: string }[], marg
       maxX: maxX + margin,
       maxY: maxY + margin,
     });
+  }
+  // Each unit's reach from its centre of mass: the furthest corner of its walls' own boxes (without
+  // the margin the boxes are grown by: the gas sees the surface move, not the space round it).
+  for (const w of walls) {
+    if (w.unit < 0) continue;
+    const u = units[w.unit];
+    const dx = Math.max(Math.abs(w.minX + margin - u.ex), Math.abs(w.maxX - margin - u.ex));
+    const dy = Math.max(Math.abs(w.minY + margin - u.ey), Math.abs(w.maxY - margin - u.ey));
+    u.reach = Math.max(u.reach, Math.sqrt(dx * dx + dy * dy));
   }
   return { walls, units };
 }
@@ -1509,7 +1524,10 @@ export function stepGas(
       const c = Math.sqrt(gam[i] * g1[i] * Math.max(0, E[i] / m[i]));
       vmax = Math.max(vmax, c + Math.sqrt(vx[i] * vx[i] + vy[i] * vy[i]));
     }
-    for (const u of units) vmax = Math.max(vmax, Math.sqrt(u.vx * u.vx + u.vy * u.vy) + Math.abs(u.w) * 50);
+    // A body's surface moves at most its speed plus its spin times its reach. (This used a fixed
+    // 50 m reach: a 7 cm shell fragment spinning at 4,000 rad/s read as 200 km/s, and every parcel
+    // took the 2,000-substep floor.)
+    for (const u of units) vmax = Math.max(vmax, Math.sqrt(u.vx * u.vx + u.vy * u.vy) + Math.abs(u.w) * u.reach);
     return vmax;
   };
   const minDs = dt / MAX_SUBSTEPS;

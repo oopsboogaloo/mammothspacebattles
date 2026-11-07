@@ -41,6 +41,13 @@ Where the gas time goes, ms a step:
 - The substep rule counts body spin as |ω| × 50 m (`signalSpeed` in `gas.ts`). So when that fragment comes near gas, every parcel drops to the substep floor: 2,000 a step, 160–250 ms a step.
 - This lasts 71 steps (111–249). It is left out of "steady" above. Over all 480 steps, gas averages 37.8 ms a step.
 - It is a CPU bug, not a GPU question. The GPU gas would have it too if it copies the rule. It wants its own fix.
+- **Fixed (7 November 2026):** the rule now uses each body's (or welded assembly's) own reach from its
+  centre of mass, so the fragment reads as its real surface speed, about 210 m/s. The spin itself is
+  real: a 7 cm, 33 g fragment glancing off the rock at 298 m/s, its surface stopped by friction.
+  Steps over 200 substeps in 480: 71 → 1. Gas over all 480 steps: 37.8 → 27.8 ms a step on average,
+  worst 5% 169 → 49 ms; the first 240 steps run 1.6× faster. The rule had also slowed any small body
+  the gas spins (a still 7 cm fragment in gas: 409 → 61 substeps a step). One step (155) still takes
+  413 substeps, from the gas step's retries when a parcel's heat would go negative, not from spin.
 
 **The rest of the step is already over budget.**
 - Real time at 240 steps/s is 4.2 ms a step. The non-gas part alone (forces, contacts, integration, ledger) is 6.3 ms here.
