@@ -459,7 +459,7 @@ The substep is CFL × h ÷ (sound speed + speed), CFL = 0.25. Measured with the 
 **Free flight (margin 2 h):**
 - About −45% of the step: 33.6 → 18.4 ms.
 - Ship speeds within 1%, the rocks' push 5% lower, LAND +1%, Gunship 2 +0.1%.
-- It is still off by default (a profile setting); turning it on is a decision to make.
+- **Decision (7 November 2026): on in the sandbox profile** (`gasFreeFlight: 2`), so the game and the sandbox scenarios use it. The test profile keeps the full gas model as the reference.
 
 ## How to send numbers
 
