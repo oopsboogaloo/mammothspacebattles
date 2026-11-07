@@ -254,12 +254,19 @@ function vesselShapeNow(world: World, b: Body, roots: ReadonlyMap<string, string
 function shapeFor(b: Body, f: Frame, members: Body[], world: World): VesselShape | null {
   const inj = b.injector!;
   const poses = restPoses(world, b, members);
-  const key = JSON.stringify([inj.outlet, inj.direction, inj.chamber, members.map((m) => [m.id, poses.get(m.id), m.shape])]);
-  if (shapeCache.has(key)) return shapeCache.get(key)!;
-  const shape = computeShape(b, f, members, poses);
-  if (shapeCache.size > 500) shapeCache.clear();
-  shapeCache.set(key, shape);
-  return shape;
+  // Keyed by geometry alone, not ids, so every copy of a ship shares its engines' shapes (the stress
+  // test's spawned gunships: building one took about 20 ms an engine). Loads name their part by its
+  // place in `members` in the cache, and get this ship's ids back on the way out.
+  const key = JSON.stringify([inj.outlet, inj.direction, inj.chamber, members.map((m) => [m.id === b.id, poses.get(m.id), m.shape])]);
+  let cached = shapeCache.get(key);
+  if (cached === undefined) {
+    const shape = computeShape(b, f, members, poses);
+    const index = new Map(members.map((m, i) => [m.id, String(i)]));
+    cached = shape && { ...shape, loads: shape.loads.map((l) => ({ ...l, id: index.get(l.id)! })) };
+    if (shapeCache.size > 500) shapeCache.clear();
+    shapeCache.set(key, cached);
+  }
+  return cached && { ...cached, loads: cached.loads.map((l) => ({ ...l, id: members[Number(l.id)].id })) };
 }
 
 function computeShape(b: Body, f: Frame, members: Body[], poses: Map<string, { p: Vec2; angle: number }>): VesselShape | null {
@@ -273,16 +280,50 @@ function computeShape(b: Body, f: Frame, members: Body[], poses: Map<string, { p
   const nu = Math.ceil((W + 2 * margin) / h);
   const ns = Math.ceil((L + margin) / h);
   const outlines = members.map((m) => ({ id: m.id, o: outlineAt(poses.get(m.id)!.p, poses.get(m.id)!.angle, m.shape) }));
+  // Only parts whose outline reaches the grid can hold a cell (in their order, so the first that
+  // holds a cell is the same as testing them all).
+  const corners = [at(f, s0, u0), at(f, s0, u0 + nu * h), at(f, s0 + ns * h, u0), at(f, s0 + ns * h, u0 + nu * h)];
+  const gx0 = Math.min(...corners.map((c) => c.x));
+  const gx1 = Math.max(...corners.map((c) => c.x));
+  const gy0 = Math.min(...corners.map((c) => c.y));
+  const gy1 = Math.max(...corners.map((c) => c.y));
+  const near: number[] = [];
+  outlines.forEach(({ o }, k) => {
+    const [x0, x1, y0, y1] = o.kind === "disc" ? [o.c.x - o.r, o.c.x + o.r, o.c.y - o.r, o.c.y + o.r] : [Math.min(...o.vs.map((v) => v.x)), Math.max(...o.vs.map((v) => v.x)), Math.min(...o.vs.map((v) => v.y)), Math.max(...o.vs.map((v) => v.y))];
+    if (x1 >= gx0 && x0 <= gx1 && y1 >= gy0 && y0 <= gy1) near.push(k);
+  });
+  // Each part tests only the cells under its own outline (its extent in the chamber's s, u, a cell
+  // to spare), in order, taking the cells no earlier part holds: the same first holder as testing
+  // every part at every cell, at a fraction of the cost (a damaged engine's rebuild took 12–27 ms).
   const solidBy = new Int32Array(nu * ns).fill(-1);
-  for (let j = 0; j < ns; j++)
-    for (let i = 0; i < nu; i++) {
-      const p = at(f, s0 + (j + 0.5) * h, u0 + (i + 0.5) * h);
-      for (let k = 0; k < outlines.length; k++)
-        if (contains(outlines[k].o, p)) {
-          solidBy[j * nu + i] = k;
-          break;
-        }
+  for (const k of near) {
+    const o = outlines[k].o;
+    const pts = o.kind === "disc" ? [o.c] : o.vs;
+    const pad = o.kind === "disc" ? o.r : 0;
+    let sLo = Infinity;
+    let sHi = -Infinity;
+    let uLo = Infinity;
+    let uHi = -Infinity;
+    for (const v of pts) {
+      const d = sub(v, f.outlet);
+      const sv = dot(d, f.dir);
+      const uv = dot(d, f.perp);
+      sLo = Math.min(sLo, sv - pad);
+      sHi = Math.max(sHi, sv + pad);
+      uLo = Math.min(uLo, uv - pad);
+      uHi = Math.max(uHi, uv + pad);
     }
+    const j0 = Math.max(0, Math.floor((sLo - s0) / h) - 1);
+    const j1 = Math.min(ns - 1, Math.ceil((sHi - s0) / h) + 1);
+    const i0 = Math.max(0, Math.floor((uLo - u0) / h) - 1);
+    const i1 = Math.min(nu - 1, Math.ceil((uHi - u0) / h) + 1);
+    for (let j = j0; j <= j1; j++)
+      for (let i = i0; i <= i1; i++) {
+        const c = j * nu + i;
+        if (solidBy[c] >= 0) continue;
+        if (contains(o, at(f, s0 + (j + 0.5) * h, u0 + (i + 0.5) * h))) solidBy[c] = k;
+      }
+  }
   // The throat: the deepest of the narrowest cross-sections downstream of the outlet.
   const jStart = Math.floor(margin / h);
   let minCount = Infinity;
