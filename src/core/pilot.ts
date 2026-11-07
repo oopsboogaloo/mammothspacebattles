@@ -74,7 +74,7 @@ export interface Pilot {
   detect?: number;
   /** State: combat (phase 3): its target, grudge, what it has learned of its gun, and a shot in progress. */
   combat?: { target?: string; grudgeUntil?: number; offender?: string; muzzle: number; pulse: number; shot?: string; attacking?: boolean; shots: number };
-  /** Steps between decisions. */
+  /** Time between decisions, in steps of 1/240 s (the scenario step) whatever the step rate. */
   interval: number;
   /** State: tick of the next decision. */
   next: number;
@@ -419,6 +419,9 @@ function clearShot(from: Vec2, dir: Vec2, range: number, obs: Obstacle[], target
  * world, learns from what its last commands did, decides, and sets its channels. Between decisions
  * its channels hold.
  */
+/** The unit of a pilot's decision interval, s: 1/240 s, the scenario step. */
+const INTERVAL_TICK = 1 / 240;
+
 export function runPilots(world: World, dt: number): void {
   for (const body of world.bodies) {
     const p = body.pilot;
@@ -428,7 +431,8 @@ export function runPilots(world: World, dt: number): void {
       continue;
     }
     if (world.tick < p.next) continue;
-    p.next = world.tick + Math.max(1, Math.floor(p.interval));
+    // The interval counts 1/240 s (as scenario steps do), whatever the step rate.
+    p.next = world.tick + Math.max(1, Math.floor((p.interval * INTERVAL_TICK) / dt + 1e-9));
     const ship = shipState(world, body);
     const ids = new Set(ship.members.map((b) => b.id));
     // Relearn when the ship's parts change (a part lost, a new one welded on).
@@ -546,7 +550,7 @@ export function runPilots(world: World, dt: number): void {
           const muzzleAt = add(gun.body.position, rotate(sinCos(gun.body.angle), gun.body.magazine!.at));
           let dir = aimAt(muzzleAt, ship.velocity, target.centre, target.velocity, cb.muzzle, 0.3 + 0.7 * cs);
           // Aim error that grows as combat skill falls: up to about 4°, steady for a second at a time.
-          const e = 0.07 * (1 - cs) * wobble(Math.floor(world.tick / 240), body.id);
+          const e = 0.07 * (1 - cs) * wobble(Math.floor(world.time + 1e-9), body.id);
           const qe = sinCos(e);
           dir = rotate(qe, dir);
           aim = dir;
@@ -560,7 +564,7 @@ export function runPilots(world: World, dt: number): void {
           fire = loaded && inRange && clear && dot(boreWorld, dir) > sinCos(tol).c;
           label = `${angry ? "fighting back" : "attacking"} ${target.id}${fire ? ", firing" : !loaded ? ", reloading" : !clear ? ", no clear shot" : ""}`;
           if (fire && cb.pulse <= 0) {
-            cb.pulse = Math.max(1, Math.round(0.1 / (p.interval * dt)));
+            cb.pulse = Math.max(1, Math.round(0.1 / (p.interval * INTERVAL_TICK)));
             cb.shot = `${gun.body.id}-shell-${gun.body.magazine!.loaded}`;
             cb.shots += 1;
           }
@@ -683,7 +687,7 @@ export function runPilots(world: World, dt: number): void {
       // misjudged engine) is worked off by throttle. Under gravity only: in open space it just overshoots. Signed, so an overshoot winds it back down;
       // never negative, since it can only add throttle; and only near the wanted velocity, or it
       // would wind up while accelerating toward it.
-      if (length(raw) < 1 && length(g) > 0.05) p.trim = Math.min(2, Math.max(0, (p.trim ?? 0) + (eAlong < 0 ? 4 : 1) * eAlong * p.interval * dt)); // unwinds fast on overshoot
+      if (length(raw) < 1 && length(g) > 0.05) p.trim = Math.min(2, Math.max(0, (p.trim ?? 0) + (eAlong < 0 ? 4 : 1) * eAlong * p.interval * INTERVAL_TICK)); // unwinds fast on overshoot
       const a = add(scale(e, k), scale(axis, 0.3 * k * (p.trim ?? 0)));
       force = scale(sub(a, g), ship.mass); // what the engines must supply, gravity included
       // Point the thrust axis along the force only when there is a force worth pointing for: a
@@ -725,7 +729,7 @@ export function runPilots(world: World, dt: number): void {
     const scaleT = Math.max(1, ...chans.map((c) => Math.abs(c.gain * cross(c.point, c.direction))));
     const scaleF = Math.max(1, ...chans.map((c) => c.gain));
     const u = allocate(A, [fBody.x, fBody.y, torque * authority], [1 / (scaleF * scaleF), 1 / (scaleF * scaleF), 25 / (scaleT * scaleT)], chans.length);
-    const decay = 1 - expD(-(p.interval * dt) / ENGINE_LAG);
+    const decay = 1 - expD(-(p.interval * INTERVAL_TICK) / ENGINE_LAG);
     chans.forEach((c, i) => {
       // The engines' lagged response to what was last commanded, over the coming interval.
       const prev = p.lagged[c.channel] ?? 0;

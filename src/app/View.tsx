@@ -1062,7 +1062,12 @@ function FlightPad() {
   const sb = sandbox.value!;
   // Channels an AI pilot flies are its own (AIP-003): no buttons for them.
   const piloted = new Set(sb.world.bodies.filter((b) => b.pilot).flatMap((b) => pilotChannels(sb.world, b)));
-  const channels = [...new Set(sb.world.links.filter((l) => l.kind === "control").map((l) => (l as { channel: string }).channel))].filter((c) => !piloted.has(c)).sort();
+  // Nor for spawned ships' channels (ui.spawn), whose pilot may be wrecked while parts fly on.
+  const spawned = (sb.scenario.ui?.spawn?.links ?? []).map((l) => String(l.channel ?? "")).filter((c) => c.includes("{n}"));
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = spawned.map((t) => new RegExp(`^${t.split("{n}").map(esc).join("\\d+")}$`));
+  const fromTemplate = (c: string) => patterns.some((r) => r.test(c));
+  const channels = [...new Set(sb.world.links.filter((l) => l.kind === "control").map((l) => (l as { channel: string }).channel))].filter((c) => !piloted.has(c) && !fromTemplate(c)).sort();
   const held = useRef(new Map<string, { pointer: number; group: number }>());
   const releaseChannel = (ch: string) => {
     const h = held.current.get(ch);

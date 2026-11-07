@@ -12,6 +12,7 @@ import {
   stepInPlace,
   stepInPlaceAsync,
   timelineByStep,
+  scenarioStep,
   type GasAccount,
   type GasJob,
   type Command,
@@ -78,6 +79,24 @@ export interface StepRun {
   snapshots: [number, World][];
   /** A landing verdict was reached (FLT-009): the run stops there. */
   verdict: boolean;
+  /** Time the steps took, ms: in all, in their gas phases, and the slowest step. */
+  timing: RunTiming;
+}
+
+export interface RunTiming {
+  ms: number;
+  gasMs: number;
+  worstMs: number;
+}
+
+const now = () => performance.now();
+/** Times one step into `run.timing`; `out` collects the step's own phase timings (LED-004). */
+function timed(run: StepRun, out: Record<string, number>, t0: number): void {
+  const ms = now() - t0;
+  run.timing.ms += ms;
+  run.timing.gasMs += out.gas ?? 0;
+  run.timing.worstMs = Math.max(run.timing.worstMs, ms);
+  for (const k in out) delete out[k];
 }
 
 /**
@@ -87,9 +106,12 @@ export interface StepRun {
  */
 export function runSteps(world: World, plan: StepPlan, n: number, opts: { deadline?: () => boolean; stopOnVerdict?: boolean } = {}): StepRun {
   const run = startRun(world, plan);
+  const out: Record<string, number> = {};
   while (run.steps < n) {
     const flying = undecided(world);
-    stepInPlace(world, plan.timeline.get(world.tick) ?? [], plan.profile);
+    const t0 = now();
+    stepInPlace(world, plan.timeline.get(world.tick) ?? [], plan.profile, { clock: now, out });
+    timed(run, out, t0);
     if (afterStep(run, plan, flying, opts)) break;
   }
   return run;
@@ -104,9 +126,12 @@ export async function runStepsAsync(
   opts: { deadline?: () => boolean; stopOnVerdict?: boolean } = {},
 ): Promise<StepRun> {
   const run = startRun(world, plan);
+  const out: Record<string, number> = {};
   while (run.steps < n) {
     const flying = undecided(world);
-    await stepInPlaceAsync(world, plan.timeline.get(world.tick) ?? [], plan.profile, runGas);
+    const t0 = now();
+    await stepInPlaceAsync(world, plan.timeline.get(world.tick) ?? [], plan.profile, runGas, { clock: now, out });
+    timed(run, out, t0);
     if (afterStep(run, plan, flying, opts)) break;
   }
   return run;
@@ -120,7 +145,7 @@ function undecided(world: World): boolean {
 function startRun(world: World, plan: StepPlan): StepRun {
   const samples: Record<string, number[]> = {};
   for (const s of plan.series) samples[s.id] = [];
-  return { world, from: world.tick, steps: 0, samples, snapshots: [], verdict: false };
+  return { world, from: world.tick, steps: 0, samples, snapshots: [], verdict: false, timing: { ms: 0, gasMs: 0, worstMs: 0 } };
 }
 
 /** After a step: snapshot, recorded edits, samples. Returns true if the run should stop here. */
@@ -233,8 +258,39 @@ export class Sandbox {
     return true;
   }
 
+  /** Ships the scenario's spawn button has added (ui.spawn): the next copy's number is one more. */
+  spawned = 0;
+
+  /** The last runs' timings, newest last (a second or two of steps), for the performance panel. */
+  recentRuns: (RunTiming & { steps: number })[] = [];
+
+  /** Mean ms a step, and of it gas, over the recent runs; the slowest step among them. */
+  perf(): { msPerStep: number; gasMsPerStep: number; worstMs: number; steps: number } | null {
+    const rs = this.recentRuns;
+    const steps = rs.reduce((n, r) => n + r.steps, 0);
+    if (!steps) return null;
+    return {
+      msPerStep: rs.reduce((t, r) => t + r.ms, 0) / steps,
+      gasMsPerStep: rs.reduce((t, r) => t + r.gasMs, 0) / steps,
+      worstMs: Math.max(...rs.map((r) => r.worstMs)),
+      steps,
+    };
+  }
+
   private takeRun(run: StepRun): void {
     if (!run.steps) return;
+    if (run.timing) {
+      this.recentRuns.push({ ...run.timing, steps: run.steps });
+      // About two seconds of game time.
+      let n = 0;
+      for (let i = this.recentRuns.length - 1; i >= 0; i--) {
+        n += this.recentRuns[i].steps;
+        if (n * this.profile.timestep > 2) {
+          this.recentRuns.splice(0, i);
+          break;
+        }
+      }
+    }
     for (const e of this.undoStack) if (e.tick <= run.from) e.before = undefined;
     for (const [t, w] of run.snapshots) this.saveSnapshot(t, w);
     for (const s of this.series) {
@@ -370,11 +426,14 @@ export class Sandbox {
     if (Array.isArray(out.parameters)) {
       out.parameters = (out.parameters as Record<string, unknown>[]).map((p) => ({ ...p, default: this.scenario.values[p.id as string] ?? p.default }));
     }
+    // Edits are at simulation ticks; the file counts scenario steps (1/240 s, SCENARIO_TICK).
+    const at = (tick: number) => scenarioStep(this.profile, tick);
     const timeline: { step: number; commands: Command[] }[] = [];
-    const steps = new Set<number>([...this.edits.map((e) => e.tick), ...((out.timeline as { step: number }[]) ?? []).map((e) => e.step)]);
+    const steps = new Set<number>([...this.edits.map((e) => at(e.tick)), ...((out.timeline as { step: number }[]) ?? []).map((e) => e.step)]);
     const rawTimeline = (out.timeline as { step: number; commands: Command[] }[]) ?? [];
     for (const s of [...steps].sort((a, b) => a - b)) {
-      const commands = [...this.editsAt(s), ...rawTimeline.filter((e) => e.step === s).flatMap((e) => e.commands)];
+      const edits = this.edits.filter((e) => at(e.tick) === s).flatMap((e) => e.commands);
+      const commands = [...edits, ...rawTimeline.filter((e) => e.step === s).flatMap((e) => e.commands)];
       if (commands.length) timeline.push({ step: s, commands });
     }
     out.timeline = timeline;
@@ -383,7 +442,7 @@ export class Sandbox {
     out.probes = [...((out.probes as unknown[]) ?? []), ...extra];
     const end = (out.end as { steps: number } | undefined)?.steps ?? 0;
     const lastEdit = Math.max(0, ...this.edits.map((e) => e.tick));
-    out.end = { steps: Math.max(end, this.maxTick, lastEdit + 1) };
+    out.end = { steps: Math.max(end, at(this.maxTick), at(lastEdit + 1)) };
     return out;
   }
 
