@@ -871,6 +871,16 @@ export function leaveThreshold(id: number): number {
   return (h >>> 0) / 4294967296;
 }
 
+/**
+ * Parcel i's share of a pair's pressure work, by its own pressure term (A = P/ρ²). When a pair's
+ * impulse turns heat into motion (work > 0), all of that heat comes from pressure (viscosity only
+ * heats), so it is drawn by this share. Drawing it by the impulse's share instead, viscosity part
+ * included, charged a cold parcel (A ≈ 0) for its hot neighbour's push: it went below zero at any
+ * substep, and halving the substep 20 times over took one step of the reference battle to 413
+ * substeps and 8,000 tries, then clamped 11 J.
+ */
+const pressureShare = (ai: number, aj: number): number => (ai + aj > 0 ? ai / (ai + aj) : 0.5);
+
 const W_C2 = 7 / Math.PI;
 /** |dW/dr| = G_C2/h³ · q(1 − q)³ */
 const G_C2 = 140 / Math.PI;
@@ -2188,7 +2198,7 @@ export function stepGas(
         if (!(Jm > 0)) continue;
         pJ[k] = Jm;
         // Thermal share of i: its own pressure term plus half the viscosity (Monaghan 1992).
-        pS[k] = (Jp * (A[i] + A[j] > 0 ? A[i] / (A[i] + A[j]) : 0.5) + 0.5 * Jv) / Jm;
+        pS[k] = (Jp * pressureShare(A[i], A[j]) + 0.5 * Jv) / Jm;
         dvx[i] += (Jm * exx) / m[i];
         dvy[i] += (Jm * eyy) / m[i];
         dvx[j] -= (Jm * exx) / m[j];
@@ -2225,7 +2235,7 @@ export function stepGas(
         if (!(Jm > 0)) continue;
         gJ[k] = Jm;
         // Thermal share of the parcel; the rest is drawn from the ghost's source parcel, as in a real pair.
-        gS[k] = (Jp * (A[i] + A[j] > 0 ? A[i] / (A[i] + A[j]) : 0.5) + 0.5 * Jv) / Jm;
+        gS[k] = (Jp * pressureShare(A[i], A[j]) + 0.5 * Jv) / Jm;
         const jx = Jm * exx;
         const jy = Jm * eyy;
         dvx[i] += jx / m[i];
@@ -2262,8 +2272,9 @@ export function stepGas(
         const j = pb[k];
         const r = pr[k];
         const work = (Jm * ((x[i] - x[j]) * (mvx[i] - mvx[j]) + (y[i] - y[j]) * (mvy[i] - mvy[j]))) / r;
-        E[i] -= pS[k] * work;
-        E[j] -= (1 - pS[k]) * work;
+        const sh = work > 0 ? pressureShare(A[i], A[j]) : pS[k];
+        E[i] -= sh * work;
+        E[j] -= (1 - sh) * work;
       }
       for (let k = 0; k < ng; k++) {
         const Jm = gJ[k];
@@ -2284,8 +2295,10 @@ export function stepGas(
           wvy = u.vy + 0.5 * u.dvy + w * (x[i] - u.cx);
         }
         const work = Jm * (exx * (mvx[i] - wvx) + eyy * (mvy[i] - wvy));
-        E[i] -= gS[k] * work;
-        E[cP[c]] -= (1 - gS[k]) * work;
+        const src = cP[c];
+        const sh = work > 0 ? pressureShare(A[i], A[src]) : gS[k];
+        E[i] -= sh * work;
+        E[src] -= (1 - sh) * work;
       }
       for (let i = 0; i < n; i++) {
         vx[i] += dvx[i];

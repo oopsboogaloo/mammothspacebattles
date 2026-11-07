@@ -48,6 +48,14 @@ Where the gas time goes, ms a step:
   worst 5% 169 → 49 ms; the first 240 steps run 1.6× faster. The rule had also slowed any small body
   the gas spins (a still 7 cm fragment in gas: 409 → 61 substeps a step). One step (155) still takes
   413 substeps, from the gas step's retries when a parcel's heat would go negative, not from spin.
+- **Also fixed (7 November 2026):** step 155's retries came from how a pair's work was split. When
+  a push turns heat into motion, each parcel paid by its share of the impulse, viscosity included,
+  so a cold parcel (parcel 172, no heat left) paid for a hot neighbour's push. It went below zero
+  at any substep length, so every substep halved 20 times to 10⁻¹⁰ s, until the step's 8,000-try
+  budget ran out and the clamp made up 11 J. That heat now comes by each parcel's pressure term.
+  Step 155: 413 → 38 substeps, 574 → 33 ms; no step of 300 now takes over 60. The battle's worst step is now step 0 (setup), and it
+  needs no clamp in 300 steps. Ship speeds, LAND's and Gunship 2's climbs are within 0.1%, the
+  rocks' push within 1%.
 
 **The rest of the step is already over budget.**
 - Real time at 240 steps/s is 4.2 ms a step. The non-gas part alone (forces, contacts, integration, ledger) is 6.3 ms here.
