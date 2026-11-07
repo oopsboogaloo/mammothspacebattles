@@ -17,7 +17,7 @@
 
 import { bodyMass } from "./bodies.ts";
 import { burn, mixture, type Parcel, type WallBody } from "./gas.ts";
-import { assemblyRoots } from "./joints.ts";
+import { assemblyRoots, topologyToken } from "./joints.ts";
 import { add, cross, dot, invRotate, length, powPos, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { localVertices, massProps, type Shape } from "./shapes.ts";
 import type { Body, World } from "./world.ts";
@@ -169,12 +169,6 @@ function overlapsBox(o: Outline, bx: VesselShape["box"]): boolean {
   return true;
 }
 
-/** The bodies welded to `b` (itself included), by id. */
-function assemblyOf(world: World, b: Body, roots: ReadonlyMap<string, string>): Body[] {
-  const r = roots.get(b.id) ?? b.id;
-  return world.bodies.filter((x) => (roots.get(x.id) ?? x.id) === r);
-}
-
 /** Can this injector hold its chamber gas as a vessel at all? */
 export function canHold(b: Body): boolean {
   return !!b.injector?.chamber && !b.magazine && !b.fixed && b.integrity > 0;
@@ -195,31 +189,54 @@ export function vesselShape(world: World, b: Body, roots = assemblyRoots(world))
 }
 
 // A quick check that nothing the shape depends on has been replaced since last time: the objects
-// themselves (edits replace them), not their contents.
-const objIds = new WeakMap<object, number>();
-let nextObj = 1;
-function idOf(o: object): number {
-  let i = objIds.get(o);
-  if (i === undefined) {
-    i = nextObj++;
-    objIds.set(o, i);
-  }
-  return i;
+// themselves (edits replace them), not their contents. While the weld topology is unchanged, body i
+// and weld i are the same as last time, so it compares by index with no search and no string.
+interface LastShape {
+  topo: object;
+  refs: object[]; // outlet, direction, chamber, then each member's shape, then each weld and its anchors
+  memberIdx: number[];
+  weldIdx: number[];
+  angles: number[];
+  shape: VesselShape | null;
 }
-const lastShape = new WeakMap<Body, { sig: string; shape: VesselShape | null }>();
+const lastShape = new WeakMap<Body, LastShape>();
+
+function unchanged(world: World, b: Body, last: LastShape, topo: object): boolean {
+  if (last.topo !== topo) return false;
+  const inj = b.injector!;
+  const r = last.refs;
+  if (r[0] !== inj.outlet || r[1] !== inj.direction || r[2] !== inj.chamber) return false;
+  let k = 3;
+  for (const i of last.memberIdx) if (world.bodies[i].shape !== r[k++]) return false;
+  for (let n = 0; n < last.weldIdx.length; n++) {
+    const j = world.joints[last.weldIdx[n]];
+    if (j.anchorA !== r[k++] || j.anchorB !== r[k++] || j.referenceAngle !== last.angles[n]) return false;
+  }
+  return true;
+}
 
 function vesselShapeNow(world: World, b: Body, roots: ReadonlyMap<string, string>): VesselShape | null {
   const f = frameOf(b);
   if (!f) return null;
-  const members = assemblyOf(world, b, roots);
+  const topo = topologyToken(world);
+  const last = lastShape.get(b);
+  if (last && unchanged(world, b, last, topo)) return last.shape;
+  const r = roots.get(b.id) ?? b.id;
+  const memberIdx: number[] = [];
+  world.bodies.forEach((x, i) => {
+    if ((roots.get(x.id) ?? x.id) === r) memberIdx.push(i);
+  });
+  const members = memberIdx.map((i) => world.bodies[i]);
   const inj = b.injector!;
   const ids = new Set(members.map((m) => m.id));
-  const welds = world.joints.filter((j) => ids.has(j.a) && ids.has(j.b));
-  const sig = [idOf(inj.outlet), idOf(inj.direction), idOf(inj.chamber!), ...members.map((m) => `${m.id}:${idOf(m.shape)}`), ...welds.map((j) => `${idOf(j)}:${idOf(j.anchorA)}:${idOf(j.anchorB)}:${j.referenceAngle}`)].join("|");
-  const last = lastShape.get(b);
-  if (last && last.sig === sig) return last.shape;
+  const weldIdx: number[] = [];
+  world.joints.forEach((j, i) => {
+    if (ids.has(j.a) && ids.has(j.b)) weldIdx.push(i);
+  });
+  const welds = weldIdx.map((i) => world.joints[i]);
+  const refs: object[] = [inj.outlet, inj.direction, inj.chamber!, ...members.map((m) => m.shape), ...welds.flatMap((j) => [j.anchorA, j.anchorB])];
   const shape = shapeFor(b, f, members, world);
-  lastShape.set(b, { sig, shape });
+  lastShape.set(b, { topo, refs, memberIdx, weldIdx, angles: welds.map((j) => j.referenceAngle), shape });
   return shape;
 }
 
