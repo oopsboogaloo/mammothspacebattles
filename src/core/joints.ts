@@ -77,6 +77,7 @@ interface Topology {
   members?: Map<string, string[]>;
   adj?: Adjacency;
   sides: Map<string, Set<string>>;
+  tree?: WeldTree;
 }
 const topologies = new WeakMap<object, Topology>();
 
@@ -363,6 +364,70 @@ function adjacency(joints: readonly { id: string; a: string; b: string }[]): Adj
   return adj;
 }
 
+/**
+ * A spanning tree of the welds (depth first), kept with the topology: each body's parent and the
+ * weld to it, the visiting order, and which welds are bridges (not in a loop; Tarjan's low links).
+ * A bridge's far side is then a subtree, or its assembly less one, so sums over far sides take one
+ * pass up the tree rather than a pass over each side (quadratic in a long ship).
+ */
+interface WeldTree {
+  order: string[]; // parents before children
+  parent: Map<string, string>;
+  parentJoint: Map<string, string>; // body → id of the weld to its parent
+  root: Map<string, string>; // body → its tree's root
+  bridge: Set<string>; // weld ids
+}
+
+function weldTree(t: Topology): WeldTree {
+  if (t.tree) return t.tree;
+  t.adj ??= adjacency(t.joints);
+  const adj = t.adj;
+  const order: string[] = [];
+  const parent = new Map<string, string>();
+  const parentJoint = new Map<string, string>();
+  const root = new Map<string, string>();
+  const bridge = new Set<string>();
+  const tin = new Map<string, number>();
+  const low = new Map<string, number>();
+  for (const start of t.bodyIds) {
+    if (tin.has(start) || !adj.has(start)) continue;
+    // Iterative DFS: each frame is a body and how far through its welds it has got.
+    const stack: { id: string; k: number }[] = [{ id: start, k: 0 }];
+    tin.set(start, order.length);
+    low.set(start, order.length);
+    order.push(start);
+    root.set(start, start);
+    while (stack.length) {
+      const top = stack[stack.length - 1];
+      const list = adj.get(top.id)!;
+      if (top.k < list.length) {
+        const j = list[top.k++];
+        if (j.id === parentJoint.get(top.id)) continue;
+        const other = j.a === top.id ? j.b : j.a;
+        const seen = tin.get(other);
+        if (seen === undefined) {
+          tin.set(other, order.length);
+          low.set(other, order.length);
+          order.push(other);
+          parent.set(other, top.id);
+          parentJoint.set(other, j.id);
+          root.set(other, start);
+          stack.push({ id: other, k: 0 });
+        } else low.set(top.id, Math.min(low.get(top.id)!, seen));
+      } else {
+        stack.pop();
+        const up = parent.get(top.id);
+        if (up !== undefined) {
+          low.set(up, Math.min(low.get(up)!, low.get(top.id)!));
+          if (low.get(top.id)! > tin.get(up)!) bridge.add(parentJoint.get(top.id)!);
+        }
+      }
+    }
+  }
+  t.tree = { order, parent, parentJoint, root, bridge };
+  return t.tree;
+}
+
 /** The bodies on b's side of a joint (or, in a loop, a set holding a), kept with the topology. */
 function farSide(t: Topology, j: Joint): Set<string> {
   let side = t.sides.get(j.id);
@@ -406,6 +471,28 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
   const broken = new Set<string>();
   const t = topology(world);
   const byId = new Map(world.bodies.map((b) => [b.id, b]));
+  // Each body's subtree sums of the rigid impulses: ΣJ and Σ(position × J), up the weld tree.
+  let tree: WeldTree | undefined;
+  let sumJ: Map<string, { x: number; y: number; q: number }> | undefined;
+  if (rigidImpulse.size) {
+    tree = weldTree(t);
+    sumJ = new Map();
+    for (const id of tree.order) {
+      const J = rigidImpulse.get(id);
+      const body = byId.get(id);
+      sumJ.set(id, J && body ? { x: J.x, y: J.y, q: cross(body.position, J) } : { x: 0, y: 0, q: 0 });
+    }
+    for (let i = tree.order.length - 1; i >= 0; i--) {
+      const id = tree.order[i];
+      const up = tree.parent.get(id);
+      if (up === undefined) continue;
+      const s = sumJ.get(id)!;
+      const u = sumJ.get(up)!;
+      u.x += s.x;
+      u.y += s.y;
+      u.q += s.q;
+    }
+  }
   for (const j of world.joints) {
     const A = byId.get(j.a);
     const B = byId.get(j.b);
@@ -414,18 +501,27 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     const own = capped.get(j.id) ?? j.impulse;
     let P = { x: own.x, y: own.y };
     let T = own.angular;
-    if (rigidImpulse.size && rigidImpulse.has(j.b)) {
-      const side = farSide(t, j);
-      if (!side.has(j.a)) {
-        const pB = add(B.position, rotate(sinCos(B.angle), j.anchorB));
-        for (const id of side) {
-          const J = rigidImpulse.get(id);
-          const body = byId.get(id);
-          if (!J || !body) continue;
-          P = add(P, J);
-          T += cross(sub(body.position, pB), J);
-        }
+    // b's side of a weld not in a loop: b's subtree if b hangs below a, else the assembly less a's
+    // subtree. Its rigid impulses' torque about the anchor is Σ(r × J) − p_B × ΣJ.
+    if (tree && sumJ && rigidImpulse.has(j.b) && tree.bridge.has(j.id)) {
+      const pB = add(B.position, rotate(sinCos(B.angle), j.anchorB));
+      let sx: number;
+      let sy: number;
+      let sq: number;
+      if (tree.parentJoint.get(j.b) === j.id) {
+        const s = sumJ.get(j.b)!;
+        sx = s.x;
+        sy = s.y;
+        sq = s.q;
+      } else {
+        const all = sumJ.get(tree.root.get(j.a)!)!;
+        const s = sumJ.get(j.a)!;
+        sx = all.x - s.x;
+        sy = all.y - s.y;
+        sq = all.q - s.q;
       }
+      P = { x: P.x + sx, y: P.y + sy };
+      T += sq - (pB.x * sy - pB.y * sx);
     }
     // Gas pushing the assembly last step (one step behind, so a break is evaluated, and its excess
     // impulse taken back, against this step's solver state).

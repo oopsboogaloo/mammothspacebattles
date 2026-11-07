@@ -20,7 +20,7 @@ import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { SMOOTHING, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
-import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
+import { bodyIndex, holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
 import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive.ts";
 import { spawnWisps, stepWisps, type Wisp } from "./wisps.ts";
 import { removeDestroyed, stepDust, type Dust } from "./dust.ts";
@@ -471,10 +471,16 @@ export function controlInputs(world: World, bodyId: string): Record<string, numb
 function runFeeds(world: World, dt: number): { touchedFixed: boolean; spinShift: number } {
   let touchedFixed = false;
   let spinShift = 0;
+  // Bodies by id, the first of each id as find() would give, built once rather than searched per link.
+  let byId: Map<string, Body> | undefined;
   for (const l of world.links) {
     if (l.kind !== "feed") continue;
-    const from = world.bodies.find((b) => b.id === l.from);
-    const to = world.bodies.find((b) => b.id === l.to);
+    if (!byId) {
+      byId = new Map();
+      for (const b of world.bodies) if (!byId.has(b.id)) byId.set(b.id, b);
+    }
+    const from = l.from === undefined ? undefined : byId.get(l.from);
+    const to = byId.get(l.to);
     const src = from?.contents?.find((s) => s.resource === l.resource);
     const dst = to?.contents?.find((s) => s.resource === l.resource);
     if (!from || !to || !src || !dst) continue;
@@ -705,6 +711,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
   const gs = world.gas.scale ?? 1;
   const limit = profile?.limit.gasParcels ?? Infinity;
   const roots = world.bodies.some((b) => b.injector?.chamber) ? assemblyRoots(world) : null;
+  const index = roots ? bodyIndex(world) : undefined;
   for (const b of world.bodies) {
     const inj = b.injector;
     if (!inj || b.fixed) continue;
@@ -715,7 +722,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
       if (status.firing) pushEvent(world, { tick: world.tick, type: "ignition", data: { id: b.id } });
     }
     // An engine whose walls enclose its chamber holds the gas there as one volume (§10.1).
-    const shape = roots && inj.chamber ? holdingShape(world, b, roots) : null;
+    const shape = roots && inj.chamber ? holdingShape(world, b, roots, index) : null;
     if (shape) {
       const drawn = status.firing ? drawPropellant(b, command * inj.rate * dt, gs) : null;
       inj.credit = 0;
@@ -1304,9 +1311,10 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   const holding: { b: Body; plug: WallBody | null; shape: NonNullable<ReturnType<typeof holdingShape>> }[] = [];
   if (world.bodies.some((b) => b.injector?.vessel)) {
     const roots = assemblyRoots(world);
+    const index = bodyIndex(world);
     for (const b of world.bodies) {
       if (!b.injector?.vessel) continue;
-      const shape = holdingShape(world, b, roots);
+      const shape = holdingShape(world, b, roots, index);
       if (shape) holding.push({ b, plug: plugWall(b, shape), shape });
     }
   }
