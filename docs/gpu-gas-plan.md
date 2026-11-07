@@ -7,8 +7,8 @@ as designed, on an iPad Pro and on a desktop with an RTX 40-series card. The gas
 takes about 61 substeps a step, and a substep costs at least about 140 µs on the GPU however few the
 parcels; the budget leaves about 7 µs. Phase 0b (Spikes 2 and 2b, one work-group per gas
 cluster) met the same wall: the battle at 4× takes 23 ms of gas a step on the RTX and 116 ms on the
-iPad. **The GPU spikes stop here**; next is a gas method with far fewer substeps, tried on the CPU
-first ([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md) §9). A further check of published approaches
+iPad. The recommendation was to stop the GPU spikes and try a gas method with far fewer substeps on
+the CPU first ([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md) §9). A further check of published approaches
 and substep rules (§10) found none that closes the gap: the exhaust's own speed sets about two thirds
 of today's substeps whatever the solver. What to do next is open.
 

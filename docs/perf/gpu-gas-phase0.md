@@ -279,8 +279,8 @@ The reference battle, gas a step:
 - **Correctness was never the problem:** every kernel matched the CPU, on every device.
 - **The lever left is the number of substeps:** a gas method that takes far fewer, larger time
   steps. Every GPU figure above shrinks in proportion, and the CPU gas would gain the same.
-- **Decision:** the GPU spikes stop here. The next step is to weigh gas methods with larger time
-  steps and test the chosen one on the CPU first, against today's gas (thrust, exhaust speed,
+- **Recommendation:** stop the GPU spikes here. Weigh gas methods with larger time steps and test the
+  chosen one on the CPU first, against today's gas (thrust, exhaust speed,
   plume spread, splashes), before returning to the GPU.
 
 ## 10. Extra check: approximations and substep rules (7 November 2026)
