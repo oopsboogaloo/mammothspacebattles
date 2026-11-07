@@ -69,7 +69,10 @@ interface JointSolver {
 interface Topology {
   bodyIds: string[];
   joints: { id: string; a: string; b: string }[];
-  jointKeys: string[];
+  /** Each weld's id and ends when cached: welds are replaced on edit, but check the fields too. */
+  jointIds: string[];
+  jointAs: string[];
+  jointBs: string[];
   roots: ReadonlyMap<string, string>;
   members?: Map<string, string[]>;
   adj?: Adjacency;
@@ -85,14 +88,16 @@ function topology(world: Pick<World, "bodies" | "joints">): Topology {
     for (let i = 0; i < bodies.length && same; i++) same = bodies[i].id === t.bodyIds[i];
     for (let i = 0; i < joints.length && same; i++) {
       const j = joints[i];
-      same = j === t.joints[i] && j.id + "\u0000" + j.a + "\u0000" + j.b === t.jointKeys[i];
+      same = j === t.joints[i] && j.id === t.jointIds[i] && j.a === t.jointAs[i] && j.b === t.jointBs[i];
     }
     if (same) return t;
   }
   const fresh: Topology = {
     bodyIds: bodies.map((b) => b.id),
     joints: [...joints],
-    jointKeys: joints.map((j) => j.id + "\u0000" + j.a + "\u0000" + j.b),
+    jointIds: joints.map((j) => j.id),
+    jointAs: joints.map((j) => j.a),
+    jointBs: joints.map((j) => j.b),
     roots: buildRoots(bodies, joints),
     sides: new Map(),
   };
@@ -132,6 +137,14 @@ function buildRoots(bodies: readonly { id: string }[], joints: readonly { a: str
 /** Body id → id of its assembly's root (the smallest id in it). Shared: callers must not change it. */
 export function assemblyRoots(world: Pick<World, "bodies" | "joints">): ReadonlyMap<string, string> {
   return topology(world).roots;
+}
+
+/**
+ * An object that stays the same while no body or weld has been added, removed or replaced (same
+ * test as the cache above). Body i and weld i are then the same ids and weld objects as before.
+ */
+export function topologyToken(world: Pick<World, "bodies" | "joints">): object {
+  return topology(world);
 }
 
 /** The ids of every body in `id`'s assembly, sorted. */
