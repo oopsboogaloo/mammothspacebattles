@@ -829,7 +829,7 @@ The plume is kept as parcels: retiring supersonic exhaust once it is clear of th
 
 Together these plausibly give 10× or more with exact replays kept. Cosmetic GPU smoke can come after.
 
-**Superseded direction (November 2026):** exact replay of the gas is to be given up for gas on the GPU (WebGPU), with 4× detail and the rest kept as headroom for battles. See [`docs/gpu-gas-plan.md`](gpu-gas-plan.md); not yet built. Phase 0 (the reference battle and a WebGPU spike) found it no-go as first designed: each substep has a fixed GPU cost far above the budget ([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md)). Two further spikes (each gas cluster as one GPU work-group, then with its neighbour search in on-chip memory) met the same wall: the gas's many small substeps, each a chain of stages, not its parcel count. The GPU work is paused; next is a gas method with far fewer substeps, tried on the CPU first.
+**Superseded direction (November 2026):** exact replay of the gas is to be given up for gas on the GPU (WebGPU), with 4× detail and the rest kept as headroom for battles. See [`docs/gpu-gas-plan.md`](gpu-gas-plan.md); not yet built. Phase 0 (the reference battle and a WebGPU spike) found it no-go as first designed: each substep has a fixed GPU cost far above the budget ([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md)). Two further spikes (each gas cluster as one GPU work-group, then with its neighbour search in on-chip memory) met the same wall: the gas's many small substeps, each a chain of stages, not its parcel count. Recommended next: a gas method with far fewer substeps, tried on the CPU first; whether to pause the GPU work is open.
 
 ## 11. Reference Scenarios
 
