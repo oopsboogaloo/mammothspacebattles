@@ -7,6 +7,12 @@ export interface Profile {
   solverIterations: number;
   /** Gas dynamic scale (DEC-13): 1 is real gas; N makes sound and exhaust √N times slower. Default 1. */
   gasScale?: number;
+  /**
+   * Free flight (prototype, docs/perf/gpu-gas-phase0.md §11): gas that can't come within this many
+   * smoothing lengths of any body in the step flies on its own, without pressure, instead of being
+   * stepped as gas. Off (undefined) by default.
+   */
+  gasFreeFlight?: number;
   tol: {
     mass: number; // kg
     momentum: number; // kg·m/s

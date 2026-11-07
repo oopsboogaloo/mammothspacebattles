@@ -326,6 +326,67 @@ clusters of substeps × Spike 2b's measured time a substep at that cluster's siz
 **Conclusion:** no parallel approximation or substep rule we found closes the gap. What to do next
 with the GPU gas is open.
 
+## 11. Larger time steps, and the free-flight prototype (7 November 2026)
+
+### What limits the step, and the methods that lift it
+
+The battle's exhaust is supersonic: up to about 278 m/s against a sound speed of about 161 m/s. Its
+own speed sets about 22 of today's 30 substeps a step (§10), so methods that only remove the sound
+term gain little here.
+
+| Method | What it changes | Fit here |
+|---|---|---|
+| Implicit sound only ([Kwatra et al. 2009](https://portal.mardi4nfdi.de/wiki/Publication:1025167)) | The step limited by flow speed, not flow speed + sound | About 1.4× (30 → 22 substeps), less the solver's iterations |
+| Gas on a grid with conservative semi-Lagrangian advection ([Lentine et al.](https://physbam.stanford.edu/papers/stanford2010-01.pdf), [Kwatra thesis](https://purl.stanford.edu/hn238xx1131)) | Gas may cross several cells a step (about 3 in their compressible tests) | The one true large-step route: about 4 substeps a step instead of 30 at 0.1 m cells. Suits GPUs. A rewrite: cut-cell walls for thrust, moving grid patches, more smearing |
+| Hybrid: gas near bodies, free flight elsewhere (as rocket plumes in vacuum are modelled: continuum near the nozzle, free-molecular beyond; [UT Austin](https://cfpl.ae.utexas.edu/lunar-lander-plume-impingement), [hybrid continuum/DSMC](http://cfpl.ae.utexas.edu/wp-content/uploads/2009/05/AIAA_Orlando_Benedicte_152360.pdf), [UGKWP](https://arxiv.org/pdf/2303.13108)) | Same step; far less gas to step | Cuts the work, not the substeps: a CPU win. Prototyped below |
+| A larger CFL number (0.25 → 0.3–0.4) | Longer substeps of the same method | Up to 1.6×; needs an accuracy check. Not yet tried |
+
+### The free-flight prototype
+
+`profile.gasFreeFlight` (off by default): each step, a parcel that can't come within that many
+smoothing lengths of any body (its bounding circle), however both move in the step, is left out of
+the gas step and drifts on its own (`freeFlightMask`, `flyFree` in `gas.ts`). It keeps its mass,
+momentum and heat; it leaves by the gas step's own rules (bounds, far field, out of the plane), on
+the ledger's books; and it rejoins the gas step as soon as it could come near a body, so splashes on
+rocks and ground stay gas. Measured with `node scripts/free-flight.ts` and a phase breakdown
+(development container, Node, steady burn from step 60):
+
+| Free flight | Gas, ms a step | Whole step, ms | Parcels flying free | Substeps |
+|---|---|---|---|---|
+| Off | 23.6 | 30.0 | 0% | 30.4 |
+| 2 smoothing lengths | **14.1** | **21.1** | 74% | 30.5 |
+| 3 smoothing lengths | 14.3 | 21.4 | 71% | 50 (see note 5) |
+
+What the gas does, free flight at 2 smoothing lengths against off:
+
+| | Off | Free flight | Change |
+|---|---|---|---|
+| Mammoth's speed after 2 s (reference battle) | 12.57 m/s | 12.49 m/s | −0.6% |
+| Gunship 3 / Gunship 2 / FLY | 24.84 / 14.23 / 6.97 m/s | 24.86 / 14.28 / 7.01 m/s | +0.1 / +0.3 / +0.6% |
+| Push on the rocks in the plumes | 490 N·s | 458 N·s | −6.5% |
+| LAND, both engines, climb after 1 s | 4.445 m/s | 4.488 m/s | +1.0% |
+| Gunship 2, both engines, climb after 3 s | 21.20 m/s | 21.23 m/s | +0.1% |
+| Ledger violations (all runs) | 0 | 0 | |
+
+**What it shows:**
+
+1. **The gas costs about 40% less** (23.6 → 14.1 ms a step): about three quarters of the parcels
+   fly free, but the quarter left is the costly part (near walls and nozzles, with most of the wall
+   contacts), and about 2.8 ms of the gas phase is overhead either way.
+2. **Thrust is unchanged** (within 1%): the nozzles and chambers stay gas.
+3. **Splashes are a little weaker** (−6.5% on the rocks): free gas doesn't spread from its own
+   pressure, so the plume reaching a rock is narrower. Turning some of a free parcel's heat into
+   spreading would fix most of it.
+4. **The substeps are unchanged**: the fastest gas is at the nozzles, which stay gas. So this helps
+   the CPU, not the GPU.
+5. Note: at 3 smoothing lengths the substep average reads 50 in `scripts/free-flight.ts`, from
+   some steps well above 30 (under the 200 the averages cut off at). Not yet investigated; the
+   spinning-fragment bug is a likely cause.
+
+**Next, if kept:** speed up the free parcels' move (0.85 ms for about 640 parcels) and the fixed
+overhead; let free gas spread with its heat; test the bodies' true outlines instead of their circles
+(more gas could fly free); try a larger CFL number on the gas left.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

@@ -17,7 +17,7 @@ import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
-import { burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
+import { flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
@@ -1316,7 +1316,35 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     const plugs = holding.filter((h) => h.plug);
     const walls = plugs.length ? [...wallBodies(world.bodies), ...plugs.map((h) => h.plug!)] : wallBodies(world.bodies);
     const joints = plugs.length ? [...world.joints, ...plugs.map((h) => ({ a: h.b.id, b: h.plug!.id }))] : world.joints;
-    const gas: GasAccount = yield { gas: world.gas, bodies: walls, joints, dt, bounds: world.bounds, gravity: world.gravity, closed: world.bounds.depth ? engineInteriors(world) : [], timings };
+    const closed = world.bounds.depth ? engineInteriors(world) : [];
+    // Free flight (prototype, profile.gasFreeFlight): gas that can't come near a body this step flies
+    // on its own; the rest is stepped as gas. Both are put back in their original order.
+    const tm = timings?.clock();
+    const mask = profile.gasFreeFlight ? freeFlightMask(world.gas.parcels, walls, dt, profile.gasFreeFlight) : null;
+    if (timings && mask) timings.out["gas.mask"] = timings.clock() - tm!;
+    const nFree = mask ? mask.reduce((a, v) => a + v, 0) : 0;
+    const all = world.gas.parcels;
+    const stepped = nFree ? { ...world.gas, parcels: all.filter((_, i) => !mask![i]) } : world.gas;
+    const gas: GasAccount = yield { gas: stepped, bodies: walls, joints, dt, bounds: world.bounds, gravity: world.gravity, closed, timings };
+    if (nFree) {
+      const tf = timings?.clock();
+      const r0 = { ...gas.removed, momentum: { ...gas.removed.momentum } };
+      const flown = new Set(flyFree(all.filter((_, i) => mask![i]), walls, dt, world.bounds, world.gravity, closed, world.gas.scale ?? 1, gas));
+      // What flew out joins the world's running totals, as the gas step's own leavers do.
+      const tot = world.gas.removed;
+      tot.count += gas.removed.count - r0.count;
+      tot.mass += gas.removed.mass - r0.mass;
+      tot.momentum.x += gas.removed.momentum.x - r0.momentum.x;
+      tot.momentum.y += gas.removed.momentum.y - r0.momentum.y;
+      tot.angularMomentum += gas.removed.angularMomentum - r0.angularMomentum;
+      tot.energy += gas.removed.energy - r0.energy;
+      const kept = new Set(stepped.parcels);
+      world.gas.parcels = all.filter((p) => kept.has(p) || flown.has(p));
+      world.gas.substeps = stepped.substeps;
+      world.gas.wallImpulse = stepped.wallImpulse;
+      if (timings) timings.out["gas.free"] = timings.clock() - tf!;
+    }
+    if (profile.gasFreeFlight) world.gas.free = nFree;
     gasJointImpulse = gas.jointImpulse;
     // A plug is part of its engine.
     for (const h of plugs) {
