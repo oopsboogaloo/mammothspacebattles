@@ -490,6 +490,29 @@ The substep is CFL × h ÷ (sound speed + speed), CFL = 0.25. Measured with the 
 - Ship speeds within 1%, the rocks' push 5% lower, LAND +1%, Gunship 2 +0.1%.
 - **Decision (7 November 2026): on in the sandbox profile** (`gasFreeFlight: 2`), so the game and the sandbox scenarios use it. The test profile keeps the full gas model as the reference.
 
+## 14. Phase C first looks: helper threads, slower gas, less detail (7 November 2026)
+
+**Helper threads (measured, not built).**
+- Per reference-battle step (24 ms), the 5 cluster jobs take 11.1 ms in total, and the biggest alone takes 4.4 ms. The other 13 ms can't be split as things stand: preparing the gas and finding clusters, free flight, and the rigid-body step.
+- Even with perfect threads the step would only fall to about 17 ms (−28%).
+- Copying the jobs to helper threads and back with `structuredClone` costs 5.5 ms a step, which takes back almost all of that.
+- Getting the 28% would need jobs packed as typed arrays (shapes sent once), a gas step that can wait for helpers (a split step, or shared memory, which GitHub Pages needs a service-worker workaround to allow), and a worker pool.
+- **Parked:** too much machinery for the gain at this size. The gain grows with more ships, and so does the part that can't be split.
+
+**Slower gas.**
+- Test: gasScale 400 instead of 100 (exhaust and sound half as fast). Each engine's flow and parcel mass were doubled and its economy set ×2, so thrust, parcel count and fuel time stay as now.
+- Ship speeds held (within 2%) and substeps halved (30.6 → 14.8).
+- But gas fell only about 11% (18.2 → 16.2 ms; the noise between runs is a few ms).
+- **Why:** at the same mass flow, slower exhaust packs the plume twice as densely, and 25% more parcels linger. Each substep then has about twice the neighbour pairs: contacts −36% and neighbours −16%, but pushes unchanged.
+- **Not worth it on its own.** It also weakens explosions, since chemical energy is divided by the scale.
+
+**Less detail** (parcels 4× heavier and 2× wider, about the same neighbours each, a quarter of the parcels):
+- Gas 18 → 9.7 ms, step about 26 → 16 ms.
+- **But** FLY can't fly (0.3 m/s): its small engine's chamber and nozzle can't hold parcels that size. The rocks' push is −33%.
+- Adding slower gas on top gains nothing more (9.5 ms).
+- Wider parcels alone, without fewer of them, were slower: same count, more neighbours each.
+- So detail has to follow each engine's size: parcels sized to the nozzle, not one global setting.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
