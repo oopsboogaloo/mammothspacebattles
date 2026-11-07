@@ -513,6 +513,47 @@ The substep is CFL × h ÷ (sound speed + speed), CFL = 0.25. Measured with the 
 - Wider parcels alone, without fewer of them, were slower: same count, more neighbours each.
 - So detail has to follow each engine's size: parcels sized to the nozzle, not one global setting.
 
+## 15. Why fewer parcels make less thrust (7 November 2026)
+
+**Setup:**
+- LAND's two engines in open space (no gravity, no ground, as in PRP-005), firing to a steady state, then 0.5 s measured.
+- The push on the hull is split into three parts:
+  - the recoil as the chamber releases each parcel (`release` in `vessel.ts`);
+  - the gas on the throat plug;
+  - the gas on the nozzle walls.
+- The ideal is the choked-throat thrust ṁ·c*·(1 + 1/γ) = ṁc* (jet) + ṁc*/γ (throat pressure, P*·A*).
+
+| parcel mass | radius | parcels | thrust / ideal | recoil (ideal ṁc* ≈ 108 N) | plug (ideal P*A* ≈ 81 N) | nozzle walls |
+|---|---|---|---|---|---|---|
+| ×4 | ×1 | 18 | 0.78 | 111 N | 35 N | 6 N |
+| ×2 | ×1 | 36 | 0.77 | 110 N | 34 N | 6 N |
+| **×1 (today)** | ×1 | 69 | **0.79** | 111 N | 34 N | 10 N |
+| ×0.5 | ×1 | 123 | 0.90 | 110 N | 34 N | 35 N |
+| ×0.25 | ×1 | 238 | 0.94 | 110 N | 34 N | 45 N |
+| ×0.125 | ×1 | 429 | 1.04 | 110 N | 45 N | 56 N |
+| ×0.0625 | ×1 | 825 | 1.09 | 110 N | 49 N | 64 N |
+| ×1 | ×1.5 | 63 | 0.87 | 111 N | 32 N | 29 N |
+| ×1 | ×2 | 60 | 0.92 | 111 N | 29 N | 42 N |
+| ×4 | ×2 | 17 | 0.86 | 111 N | 29 N | 27 N |
+| ×0.25 | ×0.5 | 261 | 0.84 | 108 N | 35 N | 26 N |
+| ×0.0625 | ×0.25 | 1,019 | 0.91 | 110 N | 49 N | 22 N |
+
+**Findings:**
+- **The recoil is right at every detail** (110 N against an ideal 108 N), because the chamber model sets the jet's mass flow and speed.
+- **The throat plug gets about 42% of P*·A*** (34 of 81 N), and only starts to rise at much finer detail (49 N at ×0.0625). Fresh parcels leave the throat at the speed of sound, so they are within reach of the plug only briefly.
+- **The nozzle walls are badly under-resolved:** 10 N today, 64 N at 16× the parcels and still rising.
+  - At today's detail the exhaust of both engines is about 69 parcels, about two a step per engine: a string of beads, not a gas filling the nozzle.
+  - A parcel's reach is fixed by its radius, whatever the spacing, so sparse parcels coast through the nozzle without pushing its walls.
+  - Wider parcels recover some of the push even at the same count, so it is reach against the nozzle's size, not only parcel count.
+- **Thrust has not settled even at 16× the parcels** (still +5% per halving of parcel mass). The settled value is probably about 1.1–1.2 of the throat-only ideal (a nozzle adds expansion thrust), so today's thrust reads roughly 25–35% low.
+- This is the reverse of the old time-step error (§13), which read high and, for Gunship 2, more than made up for it.
+
+**What it means:** thrust from SPH inside a nozzle needs many parcels per nozzle width; the game can't afford that for every engine. A better split would compute what is known exactly in the chamber model and leave SPH the plume:
+- Push the throat pressure term P*·A* on the engine directly from the chamber's state, as the recoil already is, and stop the plug's SPH push (no double count).
+- Possibly extend the chamber model through the nozzle (one-dimensional nozzle flow from the nozzle's area ratio), releasing parcels at the exit at the exit speed and pressure.
+
+Thrust would then be right at any detail, the nozzle would need no SPH, and parcels could be sized to the plume instead of the nozzle: the per-engine detail of §14 without its thrust loss. To discuss.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
