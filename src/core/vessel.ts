@@ -292,16 +292,38 @@ function computeShape(b: Body, f: Frame, members: Body[], poses: Map<string, { p
     const [x0, x1, y0, y1] = o.kind === "disc" ? [o.c.x - o.r, o.c.x + o.r, o.c.y - o.r, o.c.y + o.r] : [Math.min(...o.vs.map((v) => v.x)), Math.max(...o.vs.map((v) => v.x)), Math.min(...o.vs.map((v) => v.y)), Math.max(...o.vs.map((v) => v.y))];
     if (x1 >= gx0 && x0 <= gx1 && y1 >= gy0 && y0 <= gy1) near.push(k);
   });
+  // Each part tests only the cells under its own outline (its extent in the chamber's s, u, a cell
+  // to spare), in order, taking the cells no earlier part holds: the same first holder as testing
+  // every part at every cell, at a fraction of the cost (a damaged engine's rebuild took 12–27 ms).
   const solidBy = new Int32Array(nu * ns).fill(-1);
-  for (let j = 0; j < ns; j++)
-    for (let i = 0; i < nu; i++) {
-      const p = at(f, s0 + (j + 0.5) * h, u0 + (i + 0.5) * h);
-      for (const k of near)
-        if (contains(outlines[k].o, p)) {
-          solidBy[j * nu + i] = k;
-          break;
-        }
+  for (const k of near) {
+    const o = outlines[k].o;
+    const pts = o.kind === "disc" ? [o.c] : o.vs;
+    const pad = o.kind === "disc" ? o.r : 0;
+    let sLo = Infinity;
+    let sHi = -Infinity;
+    let uLo = Infinity;
+    let uHi = -Infinity;
+    for (const v of pts) {
+      const d = sub(v, f.outlet);
+      const sv = dot(d, f.dir);
+      const uv = dot(d, f.perp);
+      sLo = Math.min(sLo, sv - pad);
+      sHi = Math.max(sHi, sv + pad);
+      uLo = Math.min(uLo, uv - pad);
+      uHi = Math.max(uHi, uv + pad);
     }
+    const j0 = Math.max(0, Math.floor((sLo - s0) / h) - 1);
+    const j1 = Math.min(ns - 1, Math.ceil((sHi - s0) / h) + 1);
+    const i0 = Math.max(0, Math.floor((uLo - u0) / h) - 1);
+    const i1 = Math.min(nu - 1, Math.ceil((uHi - u0) / h) + 1);
+    for (let j = j0; j <= j1; j++)
+      for (let i = i0; i <= i1; i++) {
+        const c = j * nu + i;
+        if (solidBy[c] >= 0) continue;
+        if (contains(o, at(f, s0 + (j + 0.5) * h, u0 + (i + 0.5) * h))) solidBy[c] = k;
+      }
+  }
   // The throat: the deepest of the narrowest cross-sections downstream of the outlet.
   const jStart = Math.floor(margin / h);
   let minCount = Infinity;
