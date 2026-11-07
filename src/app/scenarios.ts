@@ -45,6 +45,7 @@ const ORDER: [string, string][] = [
   ["rs16-twin-engine", "RS-16"],
   ["rs00-workload", "RS-00"],
   ["reference-battle", "REF"],
+  ["stress-test", "STRESS"],
 ];
 
 export const BUILT_INS: BuiltIn[] = ORDER.flatMap(([name, id]) => {

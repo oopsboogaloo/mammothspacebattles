@@ -10,6 +10,7 @@ import { generateAsteroid, type AsteroidSpec } from "./asteroid.ts";
 import type { LandingGoal } from "./landing.ts";
 import type { DuelGoal } from "./duel.ts";
 import { PROFILES, getProfile, type Profile } from "./profile.ts";
+import type { ShipTemplate } from "./spawn.ts";
 import { polygonProblem } from "./shapes.ts";
 import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type GasFill, type JointInput, type LinkInput, type Vec2, type World } from "./world.ts";
 
@@ -42,6 +43,8 @@ export interface ScenarioUi {
   keys?: Record<string, string>;
   /** Draw body ids on the view (default true). */
   labels?: boolean;
+  /** A button that adds a copy of this ship each press (the stress test; see spawn.ts). */
+  spawn?: ShipTemplate;
 }
 
 export type LedgerQuantity = "mass" | "momentum" | "angularMomentum" | "energy";
@@ -762,6 +765,20 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
       for (const k of ["overlays", "graphs"]) {
         const arr = data.ui[k];
         if (arr !== undefined && (!Array.isArray(arr) || arr.some((x) => typeof x !== "string"))) err(v, `$.ui.${k}`, "must be an array of strings");
+      }
+      if (data.ui.spawn !== undefined) {
+        const sp = data.ui.spawn;
+        if (!isObj(sp)) err(v, "$.ui.spawn", "must be an object {label, bodies, joints, links}");
+        else {
+          if (typeof sp.label !== "string" || !sp.label) err(v, "$.ui.spawn.label", "must be a string");
+          if (!Array.isArray(sp.bodies) || !sp.bodies.length) err(v, "$.ui.spawn.bodies", "must be a non-empty array of bodies");
+          else
+            sp.bodies.forEach((b, i) => {
+              if (!isObj(b) || typeof b.id !== "string" || !b.id.includes("{n}")) err(v, `$.ui.spawn.bodies[${i}].id`, 'must contain "{n}", so each copy has its own ids');
+            });
+          for (const k of ["joints", "links"]) if (sp[k] !== undefined && !Array.isArray(sp[k])) err(v, `$.ui.spawn.${k}`, "must be an array");
+          if (sp.radius !== undefined) num(v, sp.radius, "$.ui.spawn.radius", { positive: true });
+        }
       }
       if (data.ui.camera !== undefined) {
         const c = data.ui.camera;

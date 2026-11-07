@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { assemblyProps, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, leakRate, length, massProps, MATERIALS, mixture, temperatureOf, vesselPressure, vesselShape, type Body, type Parcel, type Joint, type Shape, type Store } from "../core/index.ts";
+import { assemblyProps, assemblyTotals, bodyMass, controlInputs, cross, dot, gasTotals, injectorStatus, leakRate, length, massProps, MATERIALS, mixture, spawnCommands, temperatureOf, vesselPressure, vesselShape, type Body, type Parcel, type Joint, type Shape, type Store } from "../core/index.ts";
 import { assemblyIds, makePrefab } from "./ports.ts";
 import { deg, fmt, rad } from "./format.ts";
 import { NumberField } from "./NumberField.tsx";
@@ -91,6 +91,7 @@ export function TopBar() {
           {playing.value ? `speed ${a.scale.toFixed(2)}×` : "paused"}
           {playing.value && a.behind && <span class="sr-only"> (slow: can't keep up)</span>}
         </span>
+        {sb.scenario.ui?.spawn && <SpawnBar />}
       </div>
       <div class="spacer" />
       <div class="group wide">
@@ -749,6 +750,8 @@ function ScenarioPanel() {
           </div>
         ))}
       </Section>
+      {scn.ui?.spawn && <SpawnSection />}
+      <PerformanceSection />
       <Section id="world" title="World">
         <NumberField id="gx" label="Gravity x" unit="m/s²" value={sb.world.gravity.x} onCommit={(v) => edit([{ type: "world.set", patch: { gravity: { x: v, y: sb.world.gravity.y } } }], "Set gravity")} />
         <NumberField id="gy" label="Gravity y" unit="m/s²" value={sb.world.gravity.y} onCommit={(v) => edit([{ type: "world.set", patch: { gravity: { x: sb.world.gravity.x, y: v } } }], "Set gravity")} />
@@ -766,6 +769,76 @@ function ScenarioPanel() {
         {res && <Row k="Last residual (p, E)" v={`${Math.hypot(res.momentumX, res.momentumY).toExponential(1)}, ${res.energy.toExponential(1)}`} title="What the ledger could not attribute to any source in the last step." />}
       </Section>
     </>
+  );
+}
+
+/** Adds the next copy of the scenario's spawn ship (ui.spawn) round the followed body. */
+function spawnShip() {
+  const sb = sandbox.value!;
+  const t = sb.scenario.ui!.spawn!;
+  const centreId = sb.scenario.ui?.follow;
+  const centre = (centreId && assemblyTotals(sb.world, centreId)?.centre) || { x: 0, y: 0 };
+  sb.spawned++;
+  edit(spawnCommands(t, sb.spawned, centre), t.label);
+}
+/** Spawned copies with a part still in the world. */
+const shipsFlying = () => new Set(sandbox.value!.world.bodies.map((b) => /^s(\d+)-/.exec(b.id)?.[1]).filter(Boolean)).size;
+
+/** In the top bar, for a scenario with a spawn button (the stress test): the button and the step time. */
+function SpawnBar() {
+  void version.value;
+  const sb = sandbox.value!;
+  const p = sb.perf();
+  const budget = 1000 * sb.profile.timestep;
+  return (
+    <>
+      <button class="btn primary small" data-testid="spawn" onClick={spawnShip} title={`Adds an AI ship that hunts whatever it sees. ${sb.spawned} added, ${shipsFlying()} still flying.`}>
+        {sb.scenario.ui!.spawn!.label}
+      </button>
+      <span data-testid="perf" class={p && p.msPerStep > budget ? "behind" : ""} title="Mean time a step takes to compute, against the time a step stands for (real time).">
+        {shipsFlying()} ships · step {p ? p.msPerStep.toFixed(1) : "–"} / {budget.toFixed(1)} ms
+      </span>
+    </>
+  );
+}
+
+/** The scenario's spawn button in the inspector too (ui.spawn). */
+function SpawnSection() {
+  void version.value;
+  const sb = sandbox.value!;
+  return (
+    <Section id="spawn" title="Ships">
+      <button class="btn primary" onClick={spawnShip}>
+        {sb.scenario.ui!.spawn!.label}
+      </button>
+      <Row k="Added" v={`${sb.spawned} (${shipsFlying()} still flying)`} />
+    </Section>
+  );
+}
+
+/** What the steps cost (LED-004), over the last couple of seconds of game time, against real time. */
+function PerformanceSection() {
+  void version.value;
+  const sb = sandbox.value!;
+  const p = sb.perf();
+  const budget = 1000 * sb.profile.timestep;
+  return (
+    <Section id="performance" title="Performance">
+      {p ? (
+        <>
+          <Row k="Step" v={`${p.msPerStep.toFixed(1)} ms`} title="Mean time a step took to compute, over the last couple of seconds of game time." />
+          <Row k="of which gas" v={`${p.gasMsPerStep.toFixed(1)} ms`} />
+          <Row k="Slowest step" v={`${p.worstMs.toFixed(0)} ms`} />
+          <Row k="Real-time budget" v={`${budget.toFixed(1)} ms a step`} title={`At ${Math.round(1 / sb.profile.timestep)} steps a second, a step must take this long or less to keep up with real time.`} />
+          <Row k="Can run at" v={`${Math.round((100 * budget) / p.msPerStep)}% of real time`} />
+        </>
+      ) : (
+        <span class="muted" style={{ fontSize: "12px" }}>
+          Press play to measure.
+        </span>
+      )}
+      <Row k="Bodies · welds · gas parcels" v={`${sb.world.bodies.length} · ${sb.world.joints.length} · ${sb.world.gas.parcels.length}`} />
+    </Section>
   );
 }
 

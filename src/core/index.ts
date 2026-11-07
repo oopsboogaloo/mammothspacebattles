@@ -21,6 +21,7 @@ export * from "./prng.ts";
 export * from "./probes.ts";
 export * from "./profile.ts";
 export * from "./scenario.ts";
+export * from "./spawn.ts";
 export * from "./shapes.ts";
 export * from "./stepper.ts";
 export * from "./world.ts";
