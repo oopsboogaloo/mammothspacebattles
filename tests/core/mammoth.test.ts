@@ -40,15 +40,15 @@ describe("the Mammoth", () => {
     expect(r.world.links.filter((l) => l.kind === "control" && l.channel === "right").map((l) => l.to)).toEqual(["engine-fr", "engine-rr"]);
   });
 
-  it("pushes like the lander (about 6.3 m/s²) and turns about half as fast, holding together with a clean ledger", () => {
+  it("pushes like the lander (about 8 m/s²) and turns about half as fast, holding together with a clean ledger", () => {
     const w = ship();
     stepInPlace(w, [set("left", 1), set("right", 1)], sandbox);
     for (let i = 0; i < 120; i++) stepInPlace(w, [], sandbox); // the chambers come up
     const v0 = totals(w).velocity.y;
     for (let i = 0; i < 240; i++) stepInPlace(w, [], sandbox);
     const a = (totals(w).velocity.y - v0) / (240 * sandbox.timestep);
-    expect(a).toBeGreaterThan(5.8);
-    expect(a).toBeLessThan(7);
+    expect(a).toBeGreaterThan(7.4);
+    expect(a).toBeLessThan(9);
     expect(breaks(w)).toBe(0);
     expect(w.ledger.violations).toBe(0);
 
@@ -56,8 +56,8 @@ describe("the Mammoth", () => {
     stepInPlace(s, [set("left", 1)], sandbox);
     for (let i = 1; i < 120; i++) stepInPlace(s, [], sandbox);
     const spin = Math.abs(totals(s).angularVelocity);
-    expect(spin).toBeGreaterThan(0.4); // the lander: 1.3 rad/s
-    expect(spin).toBeLessThan(0.75);
+    expect(spin).toBeGreaterThan(0.55); // the lander: 1.6 rad/s
+    expect(spin).toBeLessThan(0.95);
   }, 60_000);
 
   it("flies on with one engine out, or one each side: tapping the stronger side holds its heading", () => {

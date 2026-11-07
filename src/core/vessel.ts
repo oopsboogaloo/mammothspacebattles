@@ -612,9 +612,14 @@ export function runVessel(world: World, b: Body, shape: VesselShape, drawn: { ma
     const point = add(b.position, rotate(q, local));
     const r = sub(point, b.position);
     const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
-    const vParcel = add(vPoint, scale(rotate(q, f.dir), cStar));
-    // The parcel carries the throat's static energy plus the flow work that pushes it out (γ u*).
-    const p = release(world, b, dm, dm * g * uStar, point, vParcel, inj.radius);
+    // The jet leaves at c*·(1 + 1/γ): its momentum flux ṁ·c* plus the throat's pressure P*·A* =
+    // ṁ·c*/γ, so the recoil gives the choked throat's whole thrust. The throat pressure pushed back
+    // on the plug only through the parcels just released, and at the game's detail they were too
+    // sparse to carry it (about 40% of it, docs/perf/gpu-gas-phase0.md §15). Each kilogram still
+    // carries the throat's stagnation enthalpy, γ·u* + c*²/2, as heat plus motion.
+    const vOut = cStar * (1 + 1 / g);
+    const vParcel = add(vPoint, scale(rotate(q, f.dir), vOut));
+    const p = release(world, b, dm, dm * (g * uStar + 0.5 * cStar * cStar - 0.5 * vOut * vOut), point, vParcel, inj.radius);
     out.push(p);
     v.credit -= dm;
     v.count++;

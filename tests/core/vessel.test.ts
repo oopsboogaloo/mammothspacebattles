@@ -64,10 +64,10 @@ describe("chambers held as one volume", () => {
     const u = v.thermal / v.mass;
     const cStar = Math.sqrt(gamma * (gamma - 1) * u * (2 / (gamma + 1)));
     const mdot = 2 * engine(w).injector!.rate; // both engines at full command
-    // The nozzle gas pushing back on the throat is resolved by the parcels just released: at LAND's
-    // 0.5 kg/s they are sparse and it makes about 79% of the ideal. (84% before the gas substeps
-    // became drift-kick-drift: the first-order substeps added thrust that grew with the substep.)
-    expect(thrust / (mdot * cStar * (1 + 1 / gamma))).toBeGreaterThan(0.75);
+    // The jet leaves at c*·(1 + 1/γ), so its recoil is the ideal; the plug and the nozzle walls add a
+    // little (LAND: about 1.05). Before, the throat pressure came only through the sparse parcels just
+    // released, and LAND made 79% (gpu-gas-phase0.md §15).
+    expect(thrust / (mdot * cStar * (1 + 1 / gamma))).toBeGreaterThan(0.95);
     expect(thrust / (mdot * cStar * (1 + 1 / gamma))).toBeLessThan(1.15);
     expect(computeTotals(w).mass).toBeLessThan(m0); // gas leaves the world as it goes far
     expect(w.ledger.violations).toBe(0);
