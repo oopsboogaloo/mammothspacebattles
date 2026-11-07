@@ -554,6 +554,13 @@ The substep is CFL × h ÷ (sound speed + speed), CFL = 0.25. Measured with the 
 
 Thrust would then be right at any detail, the nozzle would need no SPH, and parcels could be sized to the plume instead of the nozzle: the per-engine detail of §14 without its thrust loss. To discuss.
 
+**Done: the throat term from the chamber model (7 November 2026).**
+- The jet now leaves the throat at c*·(1 + 1/γ), so the recoil is the ideal choked-throat thrust. Each kilogram still carries the throat's stagnation enthalpy (γu* + c*²/2), as heat plus motion.
+- LAND in open space: 1.09, 1.05 and 1.11 of the ideal at ×4, ×1 and ×0.25 parcel mass (was 0.78, 0.79 and 0.94). The plug adds about 15 N and the nozzle walls 2–14 N.
+- Reference battle with a cap of 500 parcels a second per engine: the step falls 24.2 → 18.1 ms. Gunship 3 and Gunship 2 lose 5% of their speed, against 18% without the fix; the Mammoth is unchanged.
+- FLY's engines have no chamber, so the fix doesn't reach them; they still need their parcels.
+- Every chamber engine is about 35% stronger than on main: open-space acceleration is LAND 5.86 → 7.97 m/s² and the Mammoth 5.87 → 8.23. The Mammoth test's bands and the spec's figures follow.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
