@@ -456,6 +456,35 @@ The substep is CFL × h ÷ (sound speed + speed), CFL = 0.25. Measured with the 
 - So the gas model is not converged in time at the current setting. That is a physics-accuracy question to look into before any compromises are weighed (Phase C).
 - Ledger violations stay 0 throughout, so energy and momentum are kept exactly; the bias is in how they're shared, not in what is conserved.
 
+**Cause and fix: drift-kick-drift (7 November 2026).**
+- **Where the extra thrust came from:** splitting the gas's push on LAND's hull by mechanism showed it was all in the pressure on the walls. Hard-wall bounces contributed nothing. That push grew linearly with the substep: 45.6, 53.6 and 62.0 N·s at CFL 0.10, 0.25 and 0.40.
+- **Why:** each substep took its impulses at the positions at its start, then drifted. That is first order in the substep.
+- **Fix:** each substep now drifts half, takes every impulse there, then drifts the rest with the new velocities (leapfrog). That is second order, at the same cost.
+- **Retries:** when a retry shortens a substep, the rest of the drift still starts where the impulses acted, so momentum and angular momentum stay exact. An earlier version restarted the drift from the substep's start and broke the ledger in five tests.
+
+| CFL | LAND old → new, m/s | Gunship 2 old → new, m/s |
+|---|---|---|
+| 0.05 | 4.071 → 4.014 | 16.06 → 15.74 |
+| 0.10 | 4.152 → 4.027 | 16.42 → 15.81 |
+| 0.25 | 4.444 → 4.071 | 21.20 → 15.91 |
+| 0.30 | 4.559 → 4.072 | 21.42 → 16.07 |
+| 0.40 | 4.755 → 4.111 | 21.77 → 16.83 |
+
+(Free flight off, hull's climb speed; LAND after 1 s, Gunship 2 after 3 s.)
+
+**What the numbers show:**
+- Both integrators head for the same answer as the substep shrinks: LAND about 4.0 m/s, Gunship 2 about 15.7 m/s. So the fix removes time-step error and doesn't change the physics.
+- At CFL 0.25 the new one is within 2% of that answer for both ships. The old one read 11% (LAND) and 35% (Gunship 2) high.
+- At 0.3 the new one is within 3%, and at 0.4 Gunship 2 reads 7% high. In a quick check, the ledger also reported one violation in Gunship 2 at 0.35 and at 0.5. So CFL stays 0.25; 0.3 is an option to weigh later.
+
+**Effect in the reference battle (480 steps, free flight on):**
+- Step 25.9 → 22.8 ms; gas 18.6 → 16.1 ms; gas worst 5% 38.1 → 28.6 ms, from fewer retries.
+- Ship speeds are lower because the thrust is now right: Mammoth −8%, Gunship 3 −4%, Gunship 2 −4%; the rocks' push −11%.
+
+**Tests and tuning:**
+- PRP-005's thrust band was lowered from > 0.80 to > 0.75 of the ideal choked-throat value. LAND now makes 79% of the ideal, down from 84%; the gap is the sparse parcels resolving the throat.
+- Ships' engine rates or masses may want retuning for feel. That is a game decision.
+
 **Free flight (margin 2 h):**
 - About −45% of the step: 33.6 → 18.4 ms.
 - Ship speeds within 1%, the rocks' push 5% lower, LAND +1%, Gunship 2 +0.1%.

@@ -1866,6 +1866,24 @@ export function stepGas(
     const spent = tries >= 4 * MAX_SUBSTEPS;
     let ds = spent ? dt - tDone : vmax > 0 ? Math.max(minDs, (CFL * hmin) / vmax) : dt;
     if (tDone + ds >= dt * (1 - 1e-12)) ds = dt - tDone;
+    // Drift, kick, drift (leapfrog): parcels and bodies move half the substep, every impulse is taken
+    // there, then they move the rest with the new velocities. Second order in the substep. Kicking at
+    // the substep's start and then drifting (first order) made thrust grow with the substep: LAND's
+    // climb read about 10% high at CFL 0.25, and a longer substep needed more retries
+    // (docs/perf/gpu-gas-phase0.md §13).
+    const dsHalf = 0.5 * ds;
+    for (let i = 0; i < n; i++) {
+      x[i] += vx[i] * dsHalf;
+      y[i] += vy[i] * dsHalf;
+    }
+    for (const u of units) {
+      u.cx += u.vx * dsHalf;
+      u.cy += u.vy * dsHalf;
+      u.th += u.w * dsHalf;
+      const q = sinCos(u.th);
+      u.qc = q.c;
+      u.qs = q.s;
+    }
 
     // --- Wall contacts within one smoothing length. ---
     buildWallCells();
@@ -2346,7 +2364,7 @@ export function stepGas(
     tDone = ds === dt - tDone ? dt : tDone + ds;
     nsub++;
 
-    // --- Elastic bounce for a parcel that would otherwise reach a surface this substep. ---
+    // --- Elastic bounce for a parcel that would otherwise reach a surface in the rest of the substep. ---
     for (let c = 0; c < nc; c++) {
       const i = cP[c];
       const d = cD[c];
@@ -2358,7 +2376,7 @@ export function stepGas(
       const py = y[i] - d * ny;
       wallPointVelocity(wall, px, py);
       const vn = (vx[i] - wpv.x) * nx + (vy[i] - wpv.y) * ny;
-      if (!(vn < 0) || d + vn * ds >= HARD_WALL * rad[i]) continue;
+      if (!(vn < 0) || d + vn * (ds - dsHalf) >= HARD_WALL * rad[i]) continue;
       const rn = u ? (px - u.cx) * ny - (py - u.cy) * nx : 0;
       const invK = 1 / m[i] + (u ? 1 / u.M + (rn * rn) / u.I : 0);
       const Jm = (-2 * vn) / invK;
@@ -2367,14 +2385,17 @@ export function stepGas(
     }
 
     // --- Drift: parcels, and the bodies with them. ---
+    // The rest of the substep from where the impulses acted: ds/2, unless a retry shortened ds (then
+    // still from there, so momentum and angular momentum stay exact).
+    const rest = ds - dsHalf;
     for (let i = 0; i < n; i++) {
-      x[i] += vx[i] * ds;
-      y[i] += vy[i] * ds;
+      x[i] += vx[i] * rest;
+      y[i] += vy[i] * rest;
     }
     for (const u of units) {
-      u.cx += u.vx * ds;
-      u.cy += u.vy * ds;
-      u.th += u.w * ds;
+      u.cx += u.vx * rest;
+      u.cy += u.vy * rest;
+      u.th += u.w * rest;
       const q = sinCos(u.th);
       u.qc = q.c;
       u.qs = q.s;

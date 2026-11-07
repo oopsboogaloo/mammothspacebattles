@@ -30,7 +30,7 @@ interface Run {
 function run(name: string, n: number, margin: number | undefined, extra: Record<number, Command[]> = {}): Run {
   const scn = load(name);
   const base = getProfile(scn.profile);
-  const profile: Profile = margin === undefined ? base : { ...base, gasFreeFlight: margin };
+  const profile: Profile = { ...base, gasFreeFlight: margin };
   const tl = timelineByStep(scn);
   const world = initialWorld(scn);
   const out: Record<string, number> = {};
