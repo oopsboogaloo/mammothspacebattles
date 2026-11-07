@@ -484,5 +484,122 @@
     }
    }
   ]
+ },
+ "spike2b": {
+  "what": "Spike 2b (Spike 2 with each cluster's sorted positions and neighbour table in work-group memory). µs per substep, 5 clusters side by side, median of 5. null: the layout failed (reason given).",
+  "runs": [
+   {
+    "device": "Desktop, NVIDIA RTX 40-series (Lovelace), Windows 11, Chrome 157",
+    "date": "2026-11-06T23:48:56Z",
+    "check": {
+     "pass": true,
+     "densityError": 3.29e-07,
+     "momentumDrift": 1.62e-09
+    },
+    "fused": [
+     {
+      "n": 250,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 275
+     },
+     {
+      "n": 500,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 160.4
+     },
+     {
+      "n": 1000,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 239.6
+     },
+     {
+      "n": 1500,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 394.6
+     },
+     {
+      "n": 250,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 58.3
+     },
+     {
+      "n": 500,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 76.7
+     },
+     {
+      "n": 1000,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 100
+     },
+     {
+      "n": 1500,
+      "clusters": 5,
+      "wgs": 1024,
+      "us": 177.1
+     }
+    ],
+    "failed": {
+     "3000": "needs 40.4 KB (256 threads) / 43.4 KB (1,024) of work-group memory; this GPU allows 32 KB"
+    },
+    "note": "The 256-thread, 250-parcel row (275 us) was measured first, likely before the card left its idle clocks.",
+    "estimate": {
+     "1x": 4.85,
+     "2x": 8.98,
+     "4x": 22.89
+    }
+   },
+   {
+    "device": "iPad Pro (M-series), iPadOS 26.6.2, Chrome 156 (WebKit)",
+    "date": "2026-11-07T00:01:37Z",
+    "check": {
+     "pass": true,
+     "densityError": 3.92e-07,
+     "momentumDrift": 4.76e-09
+    },
+    "fused": [
+     {
+      "n": 250,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 145.8
+     },
+     {
+      "n": 500,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 283.3
+     },
+     {
+      "n": 1000,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 545.8
+     },
+     {
+      "n": 1500,
+      "clusters": 5,
+      "wgs": 256,
+      "us": 875
+     }
+    ],
+    "failed": {
+     "1024 threads": "cluster 0 ran 0 of 10 substeps: the GPU did not run the kernel (now caught)",
+     "3000": "needs 40.4 KB of work-group memory; this GPU allows 32 KB"
+    },
+    "estimate": {
+     "1x": 14.46,
+     "2x": 39.56,
+     "4x": 115.58
+    }
+   }
+  ]
  }
 }

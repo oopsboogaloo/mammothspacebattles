@@ -210,7 +210,7 @@ The reference battle, gas a step (budget 1.04 ms laptop or desktop, 2.08 ms phon
    cluster fits easily; at 4× (about 1,340 parcels) the full state does not fit Apple's 32 KB, so
    only what the neighbour search reads most (positions and cells) would live there.
 
-## 8. Spike 2b: the neighbour search in work-group memory (built, awaiting device runs)
+## 8. Spike 2b: the neighbour search in work-group memory
 
 The spike page now runs Spike 2b by default (`?mode=global` for Spike 2, `?mode=global,shared` for both).
 
@@ -227,6 +227,61 @@ The spike page now runs Spike 2b by default (`?mode=global` for Spike 2, `?mode=
   not fit, and that layout shows as failed with the reason.
 - **Timed:** clusters of 250–3,000 parcels, 5 at once, 256 and 1,024 threads. Checked against the
   CPU like the others (density within 3×10⁻⁷, momentum drift 6×10⁻⁹ on SwiftShader).
+
+### Spike 2b results (6–7 November 2026)
+
+µs a substep, 5 clusters side by side. Raw runs: `gpu-spike-results.json` (`spike2b`).
+
+| Parcels a cluster | RTX 40, Spike 2 (1,024 threads) | RTX 40, **2b** (1,024) | iPad Pro, Spike 2 (256) | iPad Pro, **2b** (256) |
+|---|---|---|---|---|
+| 250 | 81 | **58** | 150 | **146** |
+| 500 | 99 | **77** | 292 | **283** |
+| 1,000 | 128 | **100** | 567 | **546** |
+| 1,500 | 235 | **177** | 921 | **875** |
+| 3,000 | 431 | failed: 40–43 KB needed, 32 KB allowed | – | failed: same |
+
+The iPad refused the 1,024-thread kernel again; the page now shows it as failed ("ran 0 of 10
+substeps") and leaves it out of the estimate.
+
+The reference battle, gas a step:
+
+| Detail | RTX 40, 2b | iPad Pro, 2b |
+|---|---|---|
+| 1× | 4.8 ms | 14.5 ms |
+| 2× | 9.0 ms | 39.6 ms |
+| 4× | 22.9 ms | 116 ms |
+| Budget | 1.04 ms | 2.08 ms |
+
+**What we learned:**
+
+1. **Work-group memory helps a little on the RTX (about 25%) and not at all on the iPad.**
+2. **The RTX still takes 58 µs a substep with most of its 1,024 threads idle** (250 parcels): the
+   cost of one substep's chain of stages (about 28 barriers, and a few dependent reads per
+   neighbour) inside one compute unit. The budget allows about 7 µs a substep at 4× detail and
+   about 14 µs at 1×.
+3. **On the iPad the cost is the work in each thread:** it doubles with every doubling of parcels a
+   thread, about 140 µs per parcel's share of a substep, wherever its data sits.
+
+## 9. Conclusion after three spikes (7 November 2026)
+
+| The battle at 4×, gas a step | iPad Pro | RTX 40 |
+|---|---|---|
+| Spike 1 (7 dispatches a substep) | 37 ms | 23 ms |
+| Spike 2 (one work-group per cluster) | 121 ms | 30 ms |
+| Spike 2b (the same, in work-group memory) | 116 ms | 23 ms |
+| Budget | 2.08 ms | 1.04 ms |
+
+- **Three different GPU layouts meet the same wall**, about 20× over budget even on a high-end
+  desktop card. The gas takes about 14,600 substeps a game second at 4× detail (61 a step, 240
+  steps a second), each a chain of stages that must finish before the next starts. GPUs are built to
+  do much work at once, not to finish small dependent steps quickly: no layout we tried gets a
+  substep under about 50–150 µs.
+- **Correctness was never the problem:** every kernel matched the CPU, on every device.
+- **The lever left is the number of substeps:** a gas method that takes far fewer, larger time
+  steps. Every GPU figure above shrinks in proportion, and the CPU gas would gain the same.
+- **Decision:** the GPU spikes stop here. The next step is to weigh gas methods with larger time
+  steps and test the chosen one on the CPU first, against today's gas (thrust, exhaust speed,
+  plume spread, splashes), before returning to the GPU.
 
 ## How to send numbers
 

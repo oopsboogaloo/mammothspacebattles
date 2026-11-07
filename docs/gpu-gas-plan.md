@@ -5,7 +5,10 @@ Agreed 6 November 2026. The decisions below stand as recommended unless changed.
 **Status:** Phase 0 is done ([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md)): no-go for Phase 1
 as designed, on an iPad Pro and on a desktop with an RTX 40-series card. The gas at 4× detail
 takes about 61 substeps a step, and a substep costs at least about 140 µs on the GPU however few the
-parcels; the budget leaves about 7 µs. The direction stays; next is Phase 0b (Spike 2) below.
+parcels; the budget leaves about 7 µs. Phase 0b (Spikes 2 and 2b, one work-group per gas
+cluster) met the same wall: the battle at 4× takes 23 ms of gas a step on the RTX and 116 ms on the
+iPad. **The GPU spikes stop here**; next is a gas method with far fewer substeps, tried on the CPU
+first ([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md) §9).
 
 ## Goal
 
@@ -104,8 +107,11 @@ run WebGPU (SwiftShader) for correctness. No-go as designed.
 Clusters run side by side, but each is slow: about 80 µs a substep on the RTX and 146 µs on the
 iPad even at one parcel a thread, from dependent loads from GPU main memory. The battle at 4×:
 30 ms of gas a step on the RTX, 121 ms on the iPad (Spike 1: 23 and 37). Next: the same kernel
-with each cluster's parcels in work-group memory (Spike 2b). Built: the spike page's default
-([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md) §8); awaiting runs on the iPad and the desktop.
+with each cluster's parcels in work-group memory (Spike 2b).
+
+**Spike 2b outcome (7 November 2026):** no-go ([`perf/gpu-gas-phase0.md`](perf/gpu-gas-phase0.md)
+§8–9). About 25% faster than Spike 2 on the RTX (58 µs a substep with most threads idle), no faster on
+the iPad. The battle at 4×: 23 ms of gas a step on the RTX, 116 ms on the iPad.
 
 - On the spike page, a fused mode: each gas cluster (NFR-004) runs in one work-group, looping over
   all its substeps (sort, density, force, move) with work-group barriers, so a step is one dispatch.
