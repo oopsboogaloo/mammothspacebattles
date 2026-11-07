@@ -27,6 +27,7 @@ import { fmt } from "./format.ts";
 import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
 import { ENGINE, engineFor, HULL, TANK, withFreshChannels } from "./parts.ts";
 import { COLORS, FLAME, GLOW_FROM, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, temperatureFraction, type PortMarker, type Preview, type RulerView } from "./render.ts";
+import { extrapolate, nextShownTime, shown } from "./smooth.ts";
 import {
   achieved,
   bump,
@@ -255,20 +256,24 @@ export function View() {
           bump();
           lastBump = now;
         }
+        shown.time = nextShownTime(shown.time, sb.world.time, realDt, smoothed);
       } else {
+        shown.time = sb.world.time;
         stepper.accumulator = 0;
         smoothed = timeScale.value;
         owed = 0;
         taken = 0;
         sim.cancel();
       }
+      // Drawn moved on to the shown time, so motion is even however the worker's results arrive.
+      const world = extrapolate(sb.world, shown.time - sb.world.time);
       if (follow.value && followId.value) {
-        const b = sb.world.bodies.find((x) => x.id === followId.value);
+        const b = world.bodies.find((x) => x.id === followId.value);
         if (b) camera.value = { ...camera.value, x: b.position.x, y: b.position.y };
       }
       const dpr = window.devicePixelRatio || 1;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const bodies = sb.world.bodies;
+      const bodies = world.bodies;
       let rulerView: RulerView | null = null;
       const r = rulerRef.current;
       const g = gesture.current;
@@ -287,7 +292,7 @@ export function View() {
         rulerLabelRef.current = label;
         setRulerLabel(label);
       }
-      renderFrame(ctx, sb.world, camera.value, viewport.value, {
+      renderFrame(ctx, world, camera.value, viewport.value, {
         overlays: overlays.value,
         selection: new Set(selection.value),
         hover: hover.value,
