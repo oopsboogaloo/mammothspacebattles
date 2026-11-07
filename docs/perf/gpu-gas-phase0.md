@@ -561,6 +561,12 @@ Thrust would then be right at any detail, the nozzle would need no SPH, and parc
 - FLY's engines have no chamber, so the fix doesn't reach them; they still need their parcels.
 - Every chamber engine is about 35% stronger than on main: open-space acceleration is LAND 5.86 → 7.97 m/s² and the Mammoth 5.87 → 8.23. The Mammoth test's bands and the spec's figures follow.
 
+**Parcel cap in the sandbox (`profile.gasParcelRate`, 7 November 2026).**
+- A chamber engine that would release more than the cap uses heavier parcels (rate ÷ cap): the same mass, momentum and energy in fewer parcels. Injectors without a chamber (FLY's engines, a gun's breech) keep their own parcels: their thrust or launch still depends on parcel size. Capping the breech failed a gun test (spin with and without drift 1.5×10⁻⁴ rad/s apart, limit 10⁻⁴).
+- **Reference battle:** the step falls about 24.5 → 18.6 ms (−24%); the Mammoth is unchanged, the gunships are 3% slower, the ledger exact.
+- **The cap is 1,000, not 500:** 500 saves no more in the battle. Its lumpier thrust (about two parcels a step at full command, fewer below it) spoiled the autopilot's hover (0.31 against the test's 0.15) and its stopping. A blast test also failed, through Gunship 2's gun breech.
+- The test profile is uncapped.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

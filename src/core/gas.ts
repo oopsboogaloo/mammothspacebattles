@@ -233,6 +233,8 @@ export interface GasState {
    * 1 is real gas (the test profile); the sandbox uses 100.
    */
   scale: number;
+  /** Most parcels a second one engine's chamber releases (profile.gasParcelRate); absent: no limit. */
+  parcelRate?: number;
 }
 
 export interface GasFill {
