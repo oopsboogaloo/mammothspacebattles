@@ -9,7 +9,7 @@ import { resolveProbe } from "./probes.ts";
 import { generateAsteroid, type AsteroidSpec } from "./asteroid.ts";
 import type { LandingGoal } from "./landing.ts";
 import type { DuelGoal } from "./duel.ts";
-import { PROFILES, getProfile } from "./profile.ts";
+import { PROFILES, getProfile, type Profile } from "./profile.ts";
 import { polygonProblem } from "./shapes.ts";
 import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type GasFill, type JointInput, type LinkInput, type Vec2, type World } from "./world.ts";
 
@@ -821,17 +821,35 @@ export function initialWorld(scn: Scenario): World {
   );
 }
 
+/**
+ * A scenario counts time in steps of 1/240 s (its timeline, assertions and `end.steps`), whatever
+ * its profile's timestep, so a file means the same at any step rate. These convert to and from the
+ * simulation's own steps (the same numbers at 1/240 s).
+ */
+export const SCENARIO_TICK = 1 / 240;
+export const simStep = (profile: Pick<Profile, "timestep">, s: number): number => Math.round((s * SCENARIO_TICK) / profile.timestep);
+export const scenarioStep = (profile: Pick<Profile, "timestep">, tick: number): number => Math.round((tick * profile.timestep) / SCENARIO_TICK);
+
+/** The timeline's commands by simulation step. */
 export function timelineByStep(scn: Scenario): Map<number, Command[]> {
+  const profile = getProfile(scn.profile);
   const byStep = new Map<number, Command[]>();
-  for (const e of scn.timeline) byStep.set(e.step, [...(byStep.get(e.step) ?? []), ...e.commands]);
+  for (const e of scn.timeline) {
+    const k = simStep(profile, e.step);
+    byStep.set(k, [...(byStep.get(k) ?? []), ...e.commands]);
+  }
   return byStep;
 }
+
+/** The scenario's length in simulation steps. */
+export const scenarioSteps = (scn: Scenario): number => simStep(getProfile(scn.profile), scn.end.steps);
 
 export function runScenario(scn: Scenario, opts: { recordHashes?: boolean; steps?: number } = {}): RunResult {
   const profile = getProfile(scn.profile);
   const world = initialWorld(scn);
   const byStep = timelineByStep(scn);
-  const steps = opts.steps ?? scn.end.steps;
+  // opts.steps counts simulation steps.
+  const steps = opts.steps ?? scenarioSteps(scn);
 
   const probes: Record<string, number[]> = {};
   for (const p of scn.probes) probes[p.id] = [];
@@ -849,7 +867,7 @@ export function runScenario(scn: Scenario, opts: { recordHashes?: boolean; steps
     hashes?.push(hashValue(world));
   }
 
-  const assertions = scn.assertions.map((a, index) => checkAssertion(a, index, probes, scn.values, world, steps));
+  const assertions = scn.assertions.map((a, index) => checkAssertion(a, index, probes, scn.values, world, steps, (t) => simStep(profile, t)));
   return {
     scenario: scn.name,
     steps,
@@ -869,8 +887,10 @@ function checkAssertion(
   params: Record<string, number>,
   world: World,
   last: number,
+  sim: (scenarioStep: number) => number,
 ): AssertionResult {
-  const tick = (s: number | "end") => (s === "end" ? last : s);
+  // Assertions name scenario steps (1/240 s); probes are sampled every simulation step.
+  const tick = (s: number | "end") => (s === "end" ? last : sim(s));
   const fmt = (x: number) => (Number.isFinite(x) ? x.toPrecision(6) : String(x));
   const res = (pass: boolean, message: string): AssertionResult => ({ index, kind: a.kind, pass, message });
   const outOfRange = (t: number) => t < 0 || t > last;
@@ -905,7 +925,7 @@ function checkAssertion(
       const at = tick(a.at);
       if (outOfRange(at)) return res(false, `step ${at} is outside 0..${last}`);
       const lookup = (id: string, ref: number | "here" | "end") =>
-        id in probes ? (probes[id][ref === "here" ? at : ref === "end" ? last : ref] ?? NaN) : (params[id] ?? NaN);
+        id in probes ? (probes[id][ref === "here" ? at : ref === "end" ? last : sim(ref)] ?? NaN) : (params[id] ?? NaN);
       const l = evaluateFormula(a.left, lookup);
       const r = evaluateFormula(a.right, lookup);
       const diff = Math.abs(l - r);

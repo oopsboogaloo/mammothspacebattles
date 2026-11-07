@@ -3,7 +3,7 @@
 //   node scripts/bench.ts [--steps N] [--json out.json] [scenario.json ...]
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getProfile, initialWorld, parseScenario, stepInPlace, timelineByStep } from "../src/core/index.ts";
+import { getProfile, initialWorld, parseScenario, scenarioSteps, stepInPlace, timelineByStep } from "../src/core/index.ts";
 
 const args = process.argv.slice(2);
 const opt = (name: string) => {
@@ -31,7 +31,7 @@ const rows: Row[] = [];
 for (const file of files) {
   const scn = parseScenario(JSON.parse(readFileSync(file, "utf8")));
   const profile = getProfile(scn.profile);
-  const steps = stepsOverride ? Number(stepsOverride) : scn.end.steps;
+  const steps = stepsOverride ? Number(stepsOverride) : scenarioSteps(scn);
   const byStep = timelineByStep(scn);
   const world = initialWorld(scn);
   const sub: Record<string, number> = {};

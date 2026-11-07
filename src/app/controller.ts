@@ -12,6 +12,7 @@ import {
   stepInPlace,
   stepInPlaceAsync,
   timelineByStep,
+  scenarioStep,
   type GasAccount,
   type GasJob,
   type Command,
@@ -370,11 +371,14 @@ export class Sandbox {
     if (Array.isArray(out.parameters)) {
       out.parameters = (out.parameters as Record<string, unknown>[]).map((p) => ({ ...p, default: this.scenario.values[p.id as string] ?? p.default }));
     }
+    // Edits are at simulation ticks; the file counts scenario steps (1/240 s, SCENARIO_TICK).
+    const at = (tick: number) => scenarioStep(this.profile, tick);
     const timeline: { step: number; commands: Command[] }[] = [];
-    const steps = new Set<number>([...this.edits.map((e) => e.tick), ...((out.timeline as { step: number }[]) ?? []).map((e) => e.step)]);
+    const steps = new Set<number>([...this.edits.map((e) => at(e.tick)), ...((out.timeline as { step: number }[]) ?? []).map((e) => e.step)]);
     const rawTimeline = (out.timeline as { step: number; commands: Command[] }[]) ?? [];
     for (const s of [...steps].sort((a, b) => a - b)) {
-      const commands = [...this.editsAt(s), ...rawTimeline.filter((e) => e.step === s).flatMap((e) => e.commands)];
+      const edits = this.edits.filter((e) => at(e.tick) === s).flatMap((e) => e.commands);
+      const commands = [...edits, ...rawTimeline.filter((e) => e.step === s).flatMap((e) => e.commands)];
       if (commands.length) timeline.push({ step: s, commands });
     }
     out.timeline = timeline;
@@ -383,7 +387,7 @@ export class Sandbox {
     out.probes = [...((out.probes as unknown[]) ?? []), ...extra];
     const end = (out.end as { steps: number } | undefined)?.steps ?? 0;
     const lastEdit = Math.max(0, ...this.edits.map((e) => e.tick));
-    out.end = { steps: Math.max(end, this.maxTick, lastEdit + 1) };
+    out.end = { steps: Math.max(end, at(this.maxTick), at(lastEdit + 1)) };
     return out;
   }
 

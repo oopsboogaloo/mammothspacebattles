@@ -546,7 +546,7 @@ export function runPilots(world: World, dt: number): void {
           const muzzleAt = add(gun.body.position, rotate(sinCos(gun.body.angle), gun.body.magazine!.at));
           let dir = aimAt(muzzleAt, ship.velocity, target.centre, target.velocity, cb.muzzle, 0.3 + 0.7 * cs);
           // Aim error that grows as combat skill falls: up to about 4°, steady for a second at a time.
-          const e = 0.07 * (1 - cs) * wobble(Math.floor(world.tick / 240), body.id);
+          const e = 0.07 * (1 - cs) * wobble(Math.floor(world.time + 1e-9), body.id);
           const qe = sinCos(e);
           dir = rotate(qe, dir);
           aim = dir;
