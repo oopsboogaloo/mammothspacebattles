@@ -54,6 +54,8 @@ export interface LandingStatus {
   score?: number;
   /** The pad landed on (with `pads`). */
   landedOn?: string;
+  /** The ship's parts at the start: once welds break, its own pieces knocking together are no crash. */
+  parts?: string[];
   /** Time the ship has been at rest on the pad since, s (cleared when it moves). */
   restSince?: number;
   /** Last time the ship touched the pad, s. */
@@ -140,7 +142,7 @@ export function landingTelemetry(world: World, goal: LandingGoal): Omit<LandingS
 
 export function startLanding(world: World, goal: LandingGoal): Challenge {
   const t = landingTelemetry(world, goal);
-  return { goal, status: { phase: "flying", altitude: t.altitude, vx: t.vx, vy: t.vy, tilt: t.tilt, fuel: t.fuel, fuelStart: t.fuel } };
+  return { goal, status: { phase: "flying", altitude: t.altitude, vx: t.vx, vy: t.vy, tilt: t.tilt, fuel: t.fuel, fuelStart: t.fuel, ...(goal.pads ? { parts: [...t.members] } : {}) } };
 }
 
 const fmt = (x: number, digits = 1) => x.toFixed(digits);
@@ -178,6 +180,7 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
     const bIn = t.members.has(b);
     if (aIn === bIn) continue;
     const other = aIn ? b : a;
+    if (s.parts?.includes(other)) continue; // a piece of this ship that has broken off
     const speed = Number(e.data.speed);
     if (!open.has(other)) {
       if (goal.used?.includes(other)) return crash(`Touched a pad already used, at ${fmt(speed)} m/s.`);

@@ -139,6 +139,8 @@ export async function runStepsAsync(
 
 /** A challenge or duel still to be decided (a run with `stopOnVerdict` stops when it is). */
 function undecided(world: World): boolean {
+  // Mammoth Lander plays on through each ship's verdict: the game itself decides when it's over.
+  if (world.lander) return world.lander.state.phase !== "over";
   return world.challenge?.status.phase === "flying" || world.duel?.status.phase === "fighting";
 }
 

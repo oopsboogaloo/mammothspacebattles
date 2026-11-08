@@ -1,3 +1,4 @@
+import { openLander } from "./Lander.tsx";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { parseScenario, initialWorld } from "../core/index.ts";
 import { fitBounds, worldBounds } from "./camera.ts";
@@ -83,6 +84,9 @@ export function Picker() {
         </button>
       </div>
       <div class="wrap" style={{ flexDirection: "row", gap: "8px", flexWrap: "wrap" }}>
+        <button class="btn primary" onClick={openLander} data-testid="open-lander">
+          Play Mammoth Lander
+        </button>
         <button class="btn" onClick={openFile} data-testid="open-file">
           Open scenario file…
         </button>

@@ -379,6 +379,8 @@ export interface RenderOptions {
   gasStyle?: GasStyle;
   /** A landing pad to mark (FLT-009). */
   pad?: string;
+  /** Draw fixed bodies as plain ground with a single surface line (Mammoth Lander). */
+  groundLine?: boolean;
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -569,7 +571,7 @@ function drawAssemblyCom(ctx: Ctx, s: Vec2): void {
 }
 
 /** Marks a landing pad: a bright top edge with end posts, so it stands out from the ground. */
-function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string): void {
+function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string, label = "PAD", used = false): void {
   const b = world.bodies.find((x) => x.id === id);
   if (!b || b.shape.kind === "disc") return;
   const q = sinCos(b.angle);
@@ -579,6 +581,8 @@ function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string): v
   if (edge.length < 2) return;
   const a = toScreen(c, vp, edge[0]);
   const z = toScreen(c, vp, edge[edge.length - 1]);
+  // A used pad (Mammoth Lander, LND-012) is dim, its label struck out.
+  ctx.globalAlpha = used ? 0.35 : 1;
   ctx.strokeStyle = COLORS.preview;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -593,7 +597,39 @@ function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string): v
   ctx.font = "12px 'IBM Plex Mono', monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("PAD", (a.x + z.x) / 2, a.y - 4);
+  const mid = (a.x + z.x) / 2;
+  ctx.fillText(label, mid, a.y - 4);
+  if (used) {
+    const w = 7.5 * label.length; // the 12px mono font's advance, near enough
+    ctx.fillRect(mid - w / 2 - 2, a.y - 10, w + 4, 1.5);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  const fixed = world.bodies.filter((b) => b.fixed && b.shape.kind !== "disc");
+  ctx.fillStyle = "#05070d";
+  for (const b of fixed) {
+    bodyPath(ctx, c, vp, b);
+    ctx.fill();
+  }
+  ctx.strokeStyle = "#cfd8ea";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (const b of fixed) {
+    const q = sinCos(b.angle);
+    const vs = localVertices(b.shape).map((v) => add(b.position, rotate(q, v)));
+    const bottom = Math.min(...vs.map((v) => v.y));
+    vs.forEach((v, i) => {
+      const w = vs[(i + 1) % vs.length];
+      if (v.y <= bottom + 1e-6 || w.y <= bottom + 1e-6) return; // a side or the bottom
+      const a = toScreen(c, vp, v);
+      const z = toScreen(c, vp, w);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(z.x, z.y);
+    });
+  }
+  ctx.stroke();
 }
 
 /** Tractor beams as a faint wedge, and tethers as a line that warms from teal to red as it nears breaking (TRC). */
@@ -791,7 +827,11 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     seams.set(j.a, [...(seams.get(j.a) ?? []), j.anchorA]);
     seams.set(j.b, [...(seams.get(j.b) ?? []), j.anchorB]);
   }
+  // Ground as a single line (Mammoth Lander): fixed bodies filled plainly, with only the edges along
+  // the surface drawn, not the sides and bottoms where the pieces meet.
+  if (opts.groundLine) drawGroundLine(ctx, world, c, vp);
   for (const b of world.bodies) {
+    if (opts.groundLine && b.fixed) continue;
     const selected = opts.selection.has(b.id);
     const hover = opts.hover === b.id;
     // Gold shows once it can be seen: not while hidden inside a larger fragment (AST-006).
@@ -829,7 +869,10 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     }
   }
   drawTractors(ctx, world, c, vp);
-  if (opts.pad) drawPad(ctx, world, c, vp, opts.pad);
+  // Several pads, each with its multiplier (Mammoth Lander, LND-010); or the one pad.
+  const goal = world.challenge?.goal;
+  if (goal?.pads) for (const p of goal.pads) drawPad(ctx, world, c, vp, p.id, `×${p.multiplier}`, goal.used?.includes(p.id));
+  else if (opts.pad) drawPad(ctx, world, c, vp, opts.pad);
   drawDamage(ctx, world, c, vp, opts.overlays.has("damage"));
 
   if (opts.overlays.has("com")) {
