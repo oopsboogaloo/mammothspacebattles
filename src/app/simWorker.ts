@@ -2,7 +2,7 @@
 // smooth while the physics runs. It keeps its own copy of the world between runs; the page sends a new
 // one only when its own has changed (an edit, undo, scrub). Same code as the page, so same results.
 /// <reference lib="webworker" />
-import { getProfile, runClusterJob, runGasJob, stepGasClustered, type ClusterJob, type ClusterResult, type Command, type GasJob, type World } from "../core/index.ts";
+import { applyCommands, getProfile, runClusterJob, runGasJob, stepGasClustered, type ClusterJob, type ClusterResult, type Command, type GasJob, type World } from "../core/index.ts";
 import { runStepsAsync, type Edit, type Series, type StepRun } from "./controller.ts";
 
 export interface RunRequest {
@@ -21,6 +21,8 @@ export interface RunRequest {
   stopOnVerdict: boolean;
   /** Gas helper threads to use (the page's `?helpers=N`); default none. */
   helpers?: number;
+  /** Live input to apply to this copy first (the page has: its version is one past this copy's). */
+  inputs?: Command[];
 }
 
 export interface RunResult {
@@ -108,7 +110,8 @@ self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
   const req = e.data;
   HELPERS = Math.min(MAX_HELPERS, req.helpers ?? 0);
   if (req.world) world = req.world;
-  else if (version !== req.version || !world) return; // a stale request: the page will resend
+  else if (version !== (req.inputs ? req.version - 1 : req.version) || !world) return; // a stale request: the page will resend
+  if (req.inputs && !req.world) applyCommands(world, req.inputs, getProfile(req.profile));
   const start = performance.now();
   helperJobs = 0;
   const run = await runStepsAsync(world, { profile: getProfile(req.profile), timeline: new Map(req.timeline), edits: req.edits, series: req.series }, req.steps, runGas, {

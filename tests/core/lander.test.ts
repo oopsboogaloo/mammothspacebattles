@@ -64,16 +64,24 @@ describe("Mammoth Lander", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("LND-020 the game ends after the last life", () => {
-    const { w, step } = game(8, { lives: 2, pause: 0.5 });
+  it("LND-020 the game ends when every ship has flown", () => {
+    const { w, step } = game(8, { ships: 2, pause: 0.5 });
     step(5);
     expect(w.lander!.state.crashes).toBe(2);
     expect(w.lander!.state.phase).toBe("over");
-    expect(w.lander!.state.ended).toBe("crashes");
+    expect(w.lander!.state.ended).toBe("ships");
   });
 
-  it("LND-021 the last life's hard crash still explodes before the game ends", () => {
-    const { w, step } = game(8, { lives: 1, pause: 0.5 });
+  it("LND-020 a landing uses a ship too: three ships, landed or crashed, make the game", () => {
+    const { w, step } = game(1, { ships: 1, pause: 0.5 });
+    step(2.5);
+    expect(w.lander!.state.landings).toHaveLength(1);
+    expect(w.lander!.state.phase).toBe("over");
+    expect(w.lander!.state.ended).toBe("ships");
+  });
+
+  it("LND-021 the last ship's hard crash still explodes before the game ends", () => {
+    const { w, step } = game(8, { ships: 1, pause: 0.5 });
     step(2);
     expect(w.lander!.state.phase).toBe("over");
     expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);

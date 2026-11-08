@@ -12,7 +12,7 @@ milestone is scheduled.
 | Question | Decision |
 |---|---|
 | Ship | The LAND twin-engine ship: two engines, Q and E. Both together lift; one alone turns. |
-| Session | 3 lives per game. A crash costs a life; a landing banks its score and a fresh ship starts. |
+| Session | 3 ships per game. Each flies once, landed or crashed; when all three have flown, that is the score. |
 | Terrain | One fixed, hand-made layout per scenario, so it can be learned and scores compare fairly. |
 | Controls | Two big touch buttons (left and right thumb, one per engine). Q and E on a keyboard. |
 | Speed | Fixed at 1× (half real time). A pause button, no speed buttons. |
@@ -32,7 +32,7 @@ milestone is scheduled.
    - The first ship starts at the scenario's start point.
    - After each landing or crash there is a short pause (about 2 s, or a tap) showing the result.
    - Then the next ship starts at the start point.
-4. **Game over** after the third crash, or when every pad has been used (see LND-012).
+4. **Game over** when all three ships have flown, or when every pad has been used (see LND-012).
    - Shows the total score, the landings, and fuel used.
 5. **New high score.** If the total makes the top 10, enter 3 initials with big touch letter pickers.
    Then the table, with the new entry highlighted.
@@ -40,11 +40,12 @@ milestone is scheduled.
 
 ## 3. Rules
 
-### Ships and lives
+### Ships
 
-- **Lives:** 3 per game.
-- **A crash** costs a life.
-- **A landing** banks the score and keeps every life.
+- **Ships:** 3 per game. Each flies once.
+- **A landing** banks its score; **a crash** scores nothing.
+- **The game ends** when all three have flown (changed 8 November 2026 after play: rounds were
+  too long when only crashes counted).
 - **Each new ship** starts at the scenario's start point, with that scenario's start velocity and a
   full tank.
 - **The world carries on between ships.** Wreckage, parked ships and loose debris stay where they
@@ -99,7 +100,7 @@ Large and readable on an iPad:
 
 - **Flight readout:** height above the nearest pad, vertical and sideways speed, tilt.
 - **Fuel:** a bar plus kilograms. It flashes when below 15%.
-- **Game status:** lives left, score, and the scenario name.
+- **Game status:** ships left, score, and the scenario name.
 - **Speed and tilt warnings:** each readout turns red when it is over the scenario's limit, so you
   know before touchdown.
 

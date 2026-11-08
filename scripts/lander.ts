@@ -170,7 +170,7 @@ function scenario(o: { name: string; title: string; description: string; bodies:
       description: "Gently rolling ground, five pads and plenty of fuel. Smaller pads score more. The ground wraps round.",
       bodies: terrain(pts, pads, { bottom: -60, width: W, seam: 30 }),
       bounds: { min: { x: -W / 2, y: -2000 }, max: { x: W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
-      economy: 20,
+      economy: 5,
       start: { position: { x: -270, y: 120 }, velocity: { x: 15, y: 0 } },
       pads,
       maxSpeed: 2,

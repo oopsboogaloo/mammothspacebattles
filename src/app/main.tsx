@@ -67,7 +67,9 @@ function App() {
         e.preventDefault();
         if (!e.repeat) {
           pressGroups[key] = ++pressCounter;
-          edit([{ type: "control.set", channel, value: 1 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
+          const cmd = [{ type: "control.set" as const, channel, value: 1 }];
+          // In the game, while running, keys go straight to the simulation (no stall at each press).
+          if (!(screen.value === "lander" && playing.value && sim.input(cmd))) edit(cmd, `Key ${key.toUpperCase()}`, pressGroups[key]);
         }
         return;
       }
@@ -95,7 +97,8 @@ function App() {
       const key = e.key.toLowerCase();
       const channel = bindings.value[key];
       if (channel && sandbox.value && pressGroups[key] !== undefined) {
-        edit([{ type: "control.set", channel, value: 0 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
+        const cmd = [{ type: "control.set" as const, channel, value: 0 }];
+        if (!(screen.value === "lander" && playing.value && sim.input(cmd))) edit(cmd, `Key ${key.toUpperCase()}`, pressGroups[key]);
         delete pressGroups[key];
       }
     };

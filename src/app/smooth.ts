@@ -18,7 +18,9 @@ export function nextShownTime(shown: number, latest: number, realDt: number, rat
   t += (latest - t) * (1 - Math.exp(-realDt / PULL_S));
   // Far off means a different run (a reset, another scenario): start from it.
   if (Math.abs(latest - t) > 1) return latest;
-  return Math.min(latest + MAX_LEAD_S, Math.max(latest - MAX_LEAD_S, t));
+  // Never back: ahead of the world, the clock waits for it rather than rewinding (that showed as time
+  // running backwards after a stall).
+  return Math.max(Math.min(shown, latest + MAX_LEAD_S), Math.min(latest + MAX_LEAD_S, Math.max(latest - MAX_LEAD_S, t)));
 }
 
 const sources = new WeakMap<World, World>();
