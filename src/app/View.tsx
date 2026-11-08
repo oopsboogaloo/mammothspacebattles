@@ -19,6 +19,7 @@ import {
   type Parcel,
   type BodyInput,
   type Vec2,
+  type World,
   pilotChannels,
 } from "../core/index.ts";
 import { panBy, toScreen, toWorld, zoomAt } from "./camera.ts";
@@ -27,6 +28,7 @@ import { fmt } from "./format.ts";
 import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
 import { ENGINE, engineFor, HULL, TANK, withFreshChannels } from "./parts.ts";
 import { COLORS, FLAME, GLOW_FROM, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, temperatureFraction, type PortMarker, type Preview, type RulerView } from "./render.ts";
+import { extrapolate, nextShownTime, shown, sourceOf } from "./smooth.ts";
 import {
   achieved,
   bump,
@@ -161,6 +163,9 @@ export function View() {
   const attach = useRef<Placement | null>(null);
   const [attachText, setAttachText] = useState<string | null>(null);
   const [hoverParcel, setHoverParcel] = useState<Parcel | null>(null);
+  // The world as last drawn (moved on for smooth motion), so the pointer picks what is on screen.
+  const drawn = useRef<World | null>(null);
+  const shownOf = (w: World): World => (drawn.current && sourceOf(drawn.current) === w ? drawn.current : w);
   void version.value;
 
   // Resize the canvas to its box at device pixel ratio.
@@ -255,20 +260,25 @@ export function View() {
           bump();
           lastBump = now;
         }
+        shown.time = nextShownTime(shown.time, sb.world.time, realDt, smoothed);
       } else {
+        shown.time = sb.world.time;
         stepper.accumulator = 0;
         smoothed = timeScale.value;
         owed = 0;
         taken = 0;
         sim.cancel();
       }
+      // Drawn moved on to the shown time, so motion is even however the worker's results arrive.
+      const world = extrapolate(sb.world, shown.time - sb.world.time);
+      drawn.current = world;
       if (follow.value && followId.value) {
-        const b = sb.world.bodies.find((x) => x.id === followId.value);
+        const b = world.bodies.find((x) => x.id === followId.value);
         if (b) camera.value = { ...camera.value, x: b.position.x, y: b.position.y };
       }
       const dpr = window.devicePixelRatio || 1;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const bodies = sb.world.bodies;
+      const bodies = world.bodies;
       let rulerView: RulerView | null = null;
       const r = rulerRef.current;
       const g = gesture.current;
@@ -287,7 +297,7 @@ export function View() {
         rulerLabelRef.current = label;
         setRulerLabel(label);
       }
-      renderFrame(ctx, sb.world, camera.value, viewport.value, {
+      renderFrame(ctx, world, camera.value, viewport.value, {
         overlays: overlays.value,
         selection: new Set(selection.value),
         hover: hover.value,
@@ -351,10 +361,11 @@ export function View() {
     const minR = 4 / camera.value.zoom;
     let best: Parcel | null = null;
     let bestD = Infinity;
-    for (const q of sb.world.gas.parcels) {
+    // Tested where it is drawn; the world's own parcel is returned.
+    shownOf(sb.world).gas.parcels.forEach((q, i) => {
       const d = Math.hypot(q.position.x - p.x, q.position.y - p.y);
-      if (d < Math.max(q.radius, minR) && d < bestD) [best, bestD] = [q, d];
-    }
+      if (d < Math.max(q.radius, minR) && d < bestD) [best, bestD] = [sb.world.gas.parcels[i], d];
+    });
     return best;
   };
 
@@ -362,10 +373,12 @@ export function View() {
     const sb = sandbox.value;
     if (!sb) return null;
     const minR = 6 / camera.value.zoom;
-    for (let i = sb.world.bodies.length - 1; i >= 0; i--) {
-      const b = sb.world.bodies[i];
-      if (containsPoint({ shape: b.shape, position: b.position, rot: sinCos(b.angle) }, p)) return b;
-      if (length(sub(p, b.position)) < minR) return b;
+    // Tested where it is drawn; the world's own body is returned.
+    const shownBodies = shownOf(sb.world).bodies;
+    for (let i = shownBodies.length - 1; i >= 0; i--) {
+      const b = shownBodies[i];
+      if (containsPoint({ shape: b.shape, position: b.position, rot: sinCos(b.angle) }, p)) return sb.world.bodies[i];
+      if (length(sub(p, b.position)) < minR) return sb.world.bodies[i];
     }
     return null;
   };

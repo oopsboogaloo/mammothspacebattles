@@ -27,6 +27,7 @@ import {
 import { sim, View } from "./View.tsx";
 import { toScreen } from "./camera.ts";
 import { hashValue } from "../core/index.ts";
+import { shown } from "./smooth.ts";
 
 const pressGroups: Record<string, number> = {};
 let pressCounter = 5_000_000;
@@ -148,6 +149,8 @@ function App() {
   },
   hash: () => (sandbox.value ? hashValue(sandbox.value.world) : null),
   /** The simulation worker: whether there is one, runs of steps it has delivered, and gas jobs its helpers ran. */
+  /** The game time drawn on screen: the latest world's, moved on for smooth motion (smooth.ts). */
+  shown: () => shown.time,
   sim: () => ({ worker: sim.available, runs: sim.runs, helperJobs: sim.helperJobs }),
 };
 

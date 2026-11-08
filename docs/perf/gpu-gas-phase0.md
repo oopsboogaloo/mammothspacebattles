@@ -567,6 +567,27 @@ Thrust would then be right at any detail, the nozzle would need no SPH, and parc
 - **The cap is 1,000, not 500:** 500 saves no more in the battle. Its lumpier thrust (about two parcels a step at full command, fewer below it) spoiled the autopilot's hover (0.31 against the test's 0.15) and its stopping. A blast test also failed, through Gunship 2's gun breech.
 - The test profile is uncapped.
 
+## 16. Stutters: smooth drawing, and what is left (7 November 2026)
+
+Measured in the stress test (Mammoth, two rocks, gunships added by the button).
+
+- **Smooth drawing (PR #70): kept.** The worker hands over results in bunches about every 30 ms, so
+  56% of frames (3 ships) and 66% (6 ships) showed no motion. The page now draws the latest world
+  moved on by velocity to a steady clock (`src/app/smooth.ts`). No frames without motion; per-frame
+  jerk p95 26 → 8 ms (3 ships) and 19 → 4 ms (6 ships) of game time. Drawing only: hashes unchanged.
+- **Debris contacts: not the cause.** Over 40 s the world never had more than 50 contacts. The
+  contact phase's 14–44 ms spikes came at 0–3 contacts and on different steps in two identical runs,
+  so they are collection pauses or machine noise, not work. No change.
+- **Only two spikes repeat run to run:** the first step, and a ship blowing up (t = 7.87 s, about
+  20–40 ms). The blast step rebuilds the damaged ship's two engine chambers, about 8 ms each, on
+  geometry that really is new.
+- **Rebuilding only the hit ship's engines: no gain, dropped.** Checking whether the unhit ships'
+  engines needed rebuilding after a weld broke elsewhere changed nothing (hashes identical). They
+  already skipped it: the shape cache hit.
+- **Left as is:** a faster chamber rebuild (fewer allocations in `computeShape`) could cut the blast
+  step by about 10 ms. With smooth drawing the screen carries on through a step of that size, so it
+  isn't worth the extra code unless play still shows it.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

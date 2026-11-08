@@ -2,6 +2,7 @@
 // world, camera and options, usable without the UI shell.
 import { add, assemblyRoots, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
+import { sourceOf } from "./smooth.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "pilots" | "grid";
 
@@ -286,11 +287,13 @@ function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: V
 
 /** Gas held in engine chambers (§10.1): each chamber filled in its gas's colour. */
 function drawChambers(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition", style: GasStyle = "dots"): void {
-  for (const b of world.bodies) {
+  // Shapes from the world as stepped, which its caches know, drawn where the shown copy has moved them.
+  const src = sourceOf(world);
+  world.bodies.forEach((b, i) => {
     const v = b.injector?.vessel;
-    if (!v || !(v.mass > 0)) continue;
-    const shape = vesselShape(world, b);
-    if (!shape) continue;
+    if (!v || !(v.mass > 0)) return;
+    const shape = vesselShape(src, src.bodies[i]);
+    if (!shape) return;
     const gas = { ...v, id: 0, position: b.position, velocity: b.velocity, radius: 0 } as Parcel;
     const T = temperatureOf(gas, world.gas.scale ?? 1);
     ctx.fillStyle = mode === "composition" ? compositionColour(gas) : style === "plume" ? flameColour(T).colour : temperatureColour(T);
@@ -305,7 +308,7 @@ function drawChambers(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "te
     ctx.closePath();
     ctx.fill();
     ctx.globalAlpha = 1;
-  }
+  });
 }
 
 function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "temperature" | "composition", style: GasStyle = "dots"): void {
