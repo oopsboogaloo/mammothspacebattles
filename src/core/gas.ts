@@ -2555,53 +2555,51 @@ export function stepGas(
   return acc;
 }
 
+type WallSource = { id: string; shape: Shape; fixed: boolean; mass: number; position: Vec2; angle: number; velocity: Vec2; angularVelocity: number; contents?: Store[] };
+
+/** A body seen by the gas phase: mass and inertia include stores; pose and velocity writes land on the body. */
+class BodyWall implements WallBody {
+  readonly id: string;
+  readonly shape: Shape;
+  readonly fixed: boolean;
+  readonly mass: number;
+  readonly inertia: number;
+  private readonly b: WallSource;
+  constructor(b: WallSource) {
+    this.b = b;
+    this.id = b.id;
+    this.shape = b.shape;
+    this.fixed = b.fixed;
+    this.mass = bodyMass(b);
+    this.inertia = massProps(b.shape, this.mass).inertia;
+  }
+  get position(): Vec2 {
+    return this.b.position;
+  }
+  set position(v: Vec2) {
+    this.b.position = v;
+  }
+  get angle(): number {
+    return this.b.angle;
+  }
+  set angle(a: number) {
+    this.b.angle = a;
+  }
+  get velocity(): Vec2 {
+    return this.b.velocity;
+  }
+  set velocity(v: Vec2) {
+    this.b.velocity = v;
+  }
+  get angularVelocity(): number {
+    return this.b.angularVelocity;
+  }
+  set angularVelocity(w: number) {
+    this.b.angularVelocity = w;
+  }
+}
+
 /** Views of bodies for the gas phase: mass and inertia include stores; pose and velocity writes land on the body. */
-export function wallBodies(
-  bodies: readonly {
-    id: string;
-    shape: Shape;
-    fixed: boolean;
-    mass: number;
-    position: Vec2;
-    angle: number;
-    velocity: Vec2;
-    angularVelocity: number;
-    contents?: Store[];
-  }[],
-): WallBody[] {
-  return bodies.map((b) => {
-    const mass = bodyMass(b);
-    const inertia = massProps(b.shape, mass).inertia;
-    return {
-      id: b.id,
-      shape: b.shape,
-      fixed: b.fixed,
-      mass,
-      inertia,
-      get position() {
-        return b.position;
-      },
-      set position(v: Vec2) {
-        b.position = v;
-      },
-      get angle() {
-        return b.angle;
-      },
-      set angle(a: number) {
-        b.angle = a;
-      },
-      get velocity() {
-        return b.velocity;
-      },
-      set velocity(v: Vec2) {
-        b.velocity = v;
-      },
-      get angularVelocity() {
-        return b.angularVelocity;
-      },
-      set angularVelocity(w: number) {
-        b.angularVelocity = w;
-      },
-    };
-  });
+export function wallBodies(bodies: readonly WallSource[]): WallBody[] {
+  return bodies.map((b) => new BodyWall(b));
 }
