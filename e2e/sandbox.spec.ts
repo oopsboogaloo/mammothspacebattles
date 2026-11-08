@@ -27,18 +27,23 @@ test.describe("time control", () => {
 
   test("SBX-002 SBX-005 time scale changes steps per second, and achieved speed is shown", async ({ page }) => {
     await openStarter(page, "sc01-elastic-collision");
-    await page.getByTestId("scale-0.0625").click();
+    // Normal speed (1×) is half real time, so 1/8× is 1/16 of real time.
+    await expect(page.getByTestId("scale-1")).toHaveAttribute("aria-pressed", "true");
+    await page.getByTestId("scale-0.125").click();
     await page.keyboard.press("Space");
     await page.waitForTimeout(1000);
     await page.keyboard.press("Space");
     const slow = (await world(page)).tick;
-    expect(slow).toBeLessThan(40); // ~15 ticks/s at 1/16×
+    expect(slow).toBeLessThan(40); // ~15 ticks/s at 1/16 of real time
     await page.keyboard.press("]");
-    await expect(page.getByTestId("scale-0.25")).toHaveAttribute("aria-pressed", "false");
-    await page.getByTestId("scale-0.5").click(); // half speed has its own button
+    await expect(page.getByTestId("scale-0.125")).toHaveAttribute("aria-pressed", "false");
+    await page.getByTestId("scale-0.5").click(); // half the normal speed has its own button
     await expect(page.getByTestId("scale-0.5")).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByTestId("scale-0.5")).toHaveText("1/2×");
-    await page.getByTestId("scale-4").click();
+    await expect(page.getByTestId("scale-0.5")).toHaveText("½×");
+    // Fine steps either side of normal speed.
+    await expect(page.getByTestId("scale-0.75")).toHaveText("¾×");
+    await expect(page.getByTestId("scale-1.25")).toHaveText("1¼×");
+    await page.getByTestId("scale-8").click();
     await page.keyboard.press("Space");
     await expect(page.getByTestId("achieved")).toContainText("speed");
     await page.waitForTimeout(1000);
@@ -48,10 +53,10 @@ test.describe("time control", () => {
   });
 
   test("SBX-005 when it can't keep up it says slow, without moving the layout", async ({ page }) => {
-    // A gas engine at 8× is more than any machine here steps in real time.
+    // A gas engine at 16× (8 times real time) is more than any machine here steps.
     await openStarter(page, "rs08-chemical-rocket");
     const achieved = page.getByTestId("achieved");
-    await page.getByTestId("scale-8").click();
+    await page.getByTestId("scale-16").click();
     await page.getByTestId("play").click();
     await expect(achieved).toHaveClass(/behind/, { timeout: 15_000 });
     await expect(achieved).toContainText("slow"); // for screen readers; on screen it is the colour

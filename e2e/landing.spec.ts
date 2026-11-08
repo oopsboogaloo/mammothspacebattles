@@ -28,7 +28,7 @@ test("FLT-009 LAND shows height, speeds, tilt and fuel; a crash says why and pau
   await page.keyboard.up("e");
   await expect(hud).not.toContainText("Fuel 100%");
   // Then fall: the ship drifts onto the slope short of the pad.
-  await page.getByTestId("scale-8").click();
+  await page.getByTestId("scale-16").click();
   const verdict = page.getByTestId("challenge-verdict");
   await expect(verdict).toBeVisible({ timeout: 100_000 });
   await expect(verdict).toContainText("Crashed");
@@ -53,7 +53,7 @@ test.describe("on a phone (390 px)", () => {
     const pad = (await page.locator(".flightpad").boundingBox())!;
     expect(hud.y + hud.height).toBeLessThanOrEqual(note.y + 1);
     expect(hud.y + hud.height).toBeLessThanOrEqual(pad.y + 1);
-    await page.getByTestId("scale-8").tap();
+    await page.getByTestId("scale-16").tap();
     await page.getByTestId("play").tap();
     const verdict = page.getByTestId("challenge-verdict");
     await expect(verdict).toBeVisible({ timeout: 100_000 });

@@ -52,6 +52,7 @@ import {
   showToast,
   spawnKind,
   timeScale,
+  GAME_PACE,
   toggleOverlay,
   tool,
   version,
@@ -217,7 +218,7 @@ export function View() {
       const realDt = Math.min(0.25, (now - last) / 1000);
       last = now;
       if (playing.value) {
-        const r = advanceStepper(stepper, realDt, { timestep: sb.profile.timestep, timeScale: timeScale.value, maxStepsPerFrame: 64 });
+        const r = advanceStepper(stepper, realDt, { timestep: sb.profile.timestep, timeScale: timeScale.value * GAME_PACE, maxStepsPerFrame: 64 });
         let done = 0;
         let cut = false;
         if (sim.available && !sim.stale(sb)) {
@@ -252,7 +253,8 @@ export function View() {
           cut = done < r.steps;
         }
         if (cut) stepper.accumulator = 0;
-        const scaleNow = realDt > 0 ? (done * sb.profile.timestep) / realDt : 0;
+        // Achieved speed as the buttons show it: game seconds a real second, over the normal pace.
+        const scaleNow = realDt > 0 ? (done * sb.profile.timestep) / realDt / GAME_PACE : 0;
         smoothed = smoothed * 0.9 + scaleNow * 0.1;
         if (now - lastBump > 100) {
           if (r.fellBehind || cut || smoothed < timeScale.value * 0.95) behindAt = now;
@@ -260,7 +262,7 @@ export function View() {
           bump();
           lastBump = now;
         }
-        shown.time = nextShownTime(shown.time, sb.world.time, realDt, smoothed);
+        shown.time = nextShownTime(shown.time, sb.world.time, realDt, smoothed * GAME_PACE);
       } else {
         shown.time = sb.world.time;
         stepper.accumulator = 0;
