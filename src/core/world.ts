@@ -798,6 +798,47 @@ function drawPropellant(b: Body, want: number, gs: number): { mass: number; comp
  * Damaged bodies holding gas leak it through their breach (DMG-004, rule in damage.ts), with the
  * same mass, momentum and energy bookkeeping as an injector: the leak pushes the body like a jet.
  */
+/**
+ * The bodies the gas phase needs this step: whole assemblies with a part within reach of some gas
+ * (the far field, two smoothing lengths and twice the step's travel, with 5 m to spare), and those of
+ * `keep`. Bodies beyond it can't touch the gas or keep it from leaving by the far field, so a
+ * wreck-strewn world doesn't make a little gas slow. If none of them moves, one moving body is kept,
+ * so gas far from everything still leaves as it would (the far field needs something to be far from).
+ */
+function bodiesNearGas(world: World, dt: number, keep: string[]): Body[] {
+  const ps = world.gas.parcels;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let vmax = 0;
+  let hmax = 0;
+  for (const p of ps) {
+    minX = Math.min(minX, p.position.x);
+    minY = Math.min(minY, p.position.y);
+    maxX = Math.max(maxX, p.position.x);
+    maxY = Math.max(maxY, p.position.y);
+    vmax = Math.max(vmax, Math.sqrt(p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y));
+    hmax = Math.max(hmax, SMOOTHING * p.radius);
+  }
+  const R = (world.bounds.farField ?? 0) + 2 * hmax + 2 * vmax * dt + 5;
+  const roots = assemblyRoots(world);
+  const rootOf = (id: string) => roots.get(id) ?? id;
+  const wanted = new Set(keep.map(rootOf));
+  for (const b of world.bodies) {
+    const r = massProps(b.shape, 1).boundingRadius;
+    const reach = R + r + (Math.sqrt(b.velocity.x * b.velocity.x + b.velocity.y * b.velocity.y) + Math.abs(b.angularVelocity) * r) * dt;
+    const dx = Math.max(minX - b.position.x, 0, b.position.x - maxX);
+    const dy = Math.max(minY - b.position.y, 0, b.position.y - maxY);
+    if (dx * dx + dy * dy <= reach * reach) wanted.add(rootOf(b.id));
+  }
+  if (!world.bodies.some((b) => !b.fixed && wanted.has(rootOf(b.id)))) {
+    const moving = world.bodies.find((b) => !b.fixed);
+    if (moving) wanted.add(rootOf(moving.id));
+  }
+  return wanted.size === 0 ? [] : world.bodies.filter((b) => wanted.has(rootOf(b.id)));
+}
+
 function runLeaks(world: World, dt: number, profile?: Profile): void {
   const limit = profile?.limit.gasParcels ?? Infinity;
   for (const b of world.bodies) {
@@ -1327,8 +1368,12 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   if (world.gas.parcels.length) {
     before = after;
     const plugs = holding.filter((h) => h.plug);
-    const walls = plugs.length ? [...wallBodies(world.bodies), ...plugs.map((h) => h.plug!)] : wallBodies(world.bodies);
-    const joints = plugs.length ? [...world.joints, ...plugs.map((h) => ({ a: h.b.id, b: h.plug!.id }))] : world.joints;
+    // Only bodies that could meet the gas this step take part (wreckage far from any gas costs nothing).
+    const near = bodiesNearGas(world, dt, plugs.map((h) => h.b.id));
+    const nearIds = new Set(near.map((b) => b.id));
+    const nearJoints = near.length === world.bodies.length ? world.joints : world.joints.filter((j) => nearIds.has(j.a) && nearIds.has(j.b));
+    const walls = plugs.length ? [...wallBodies(near), ...plugs.map((h) => h.plug!)] : wallBodies(near);
+    const joints = plugs.length ? [...nearJoints, ...plugs.map((h) => ({ a: h.b.id, b: h.plug!.id }))] : nearJoints;
     const closed = world.bounds.depth ? engineInteriors(world) : [];
     // Free flight (prototype, profile.gasFreeFlight): gas that can't come near a body this step flies
     // on its own; the rest is stepped as gas. Both are put back in their original order.
