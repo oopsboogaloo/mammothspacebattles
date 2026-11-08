@@ -60,6 +60,17 @@ export class SimClient {
     return true;
   }
 
+  /**
+   * Applies queued live input now, on the page (pausing): edits made while paused then come after
+   * it, so a release while paused isn't undone by its press on resume. The worker's copy is sent
+   * again with the next run.
+   */
+  flush(sb: Sandbox): void {
+    if (!this.pending.length) return;
+    sb.input(this.pending);
+    this.pending = [];
+  }
+
   /** Starts a run of up to `steps` steps from the sandbox's world now. */
   request(sb: Sandbox, steps: number, budgetMs: number): void {
     if (!this.worker || this.inFlight) return;

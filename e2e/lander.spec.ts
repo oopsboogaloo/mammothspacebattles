@@ -39,3 +39,19 @@ test("LND-050 Emergency flashes its banner", async ({ page }) => {
   await expect(page.getByTestId("lander-emergency")).toBeVisible();
   await expect(page.getByTestId("lander-emergency")).toHaveText("EMERGENCY");
 });
+
+test("LND-030 a thrust released while paused stays released on resume", async ({ page }) => {
+  await page.goto("./?game=lander");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-hud")).toContainText("FUEL");
+  const left = page.getByTestId("thrust-left");
+  // Press, pause at once (the press may still be queued for the worker), release while paused, resume.
+  await left.dispatchEvent("pointerdown", { pointerId: 1 });
+  await page.getByTestId("lander-pause").click();
+  await left.dispatchEvent("pointerup", { pointerId: 1 });
+  await page.getByRole("button", { name: "Resume" }).last().click();
+  await page.waitForTimeout(500);
+  const left1 = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls.left ?? 0);
+  expect(left1).toBe(0);
+});

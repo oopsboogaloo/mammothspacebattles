@@ -98,6 +98,18 @@ function Select() {
   );
 }
 
+/**
+ * Sets a control channel from the game: while running, straight to the simulation as live input (no
+ * stall); paused, an ordinary edit, after any input still queued (so a release while paused isn't
+ * undone by its press when play resumes).
+ */
+export function sendControl(channel: string, value: number, label: string, group: number): void {
+  const cmd = [{ type: "control.set" as const, channel, value }];
+  if (playing.value && sim.input(cmd)) return;
+  if (sandbox.value) sim.flush(sandbox.value);
+  edit(cmd, label, group);
+}
+
 /** Holds a channel at full while pressed: mouse, touch or pen, several at once (LND-030). */
 function Thrust({ channel, label, side }: { channel: string; label: string; side: "left" | "right" }) {
   const group = useRef(0);
@@ -106,9 +118,7 @@ function Thrust({ channel, label, side }: { channel: string; label: string; side
     if (on === down.current) return;
     down.current = on;
     if (on) group.current = Math.floor(Math.random() * 1e9);
-    const cmd = [{ type: "control.set" as const, channel, value: on ? 1 : 0 }];
-    // While running, straight to the simulation (no stall); paused, an ordinary edit.
-    if (!(playing.value && sim.input(cmd))) edit(cmd, `Thrust ${label}`, group.current);
+    sendControl(channel, on ? 1 : 0, `Thrust ${label}`, group.current);
   };
   return (
     <button
