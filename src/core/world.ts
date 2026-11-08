@@ -800,7 +800,6 @@ function drawPropellant(b: Body, want: number, gs: number): { mass: number; comp
  */
 function runLeaks(world: World, dt: number, profile?: Profile): void {
   const limit = profile?.limit.gasParcels ?? Infinity;
-  let clear: ReturnType<typeof clearOf> | null = null;
   for (const b of world.bodies) {
     const rate = leakRate(b);
     if (!(rate > 0)) continue;
@@ -821,8 +820,9 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
       const ahead = LEAK_RADIUS + 0.01 + ((br.credit - LEAK_PARCEL) / rate) * LEAK_SPEED;
       const point = add(b.position, add(rotate(q, br.point), add(scale(n, ahead), scale({ x: -n.y, y: n.x }, spread))));
       // Nothing leaks into another body: a breach pressed against something stays shut until it moves off.
-      clear ??= clearOf(wallBodies(world.bodies));
-      if (!clear(point.x, point.y, LEAK_RADIUS)) break;
+      // Only bodies that reach within the clearance can block it (a wreck-strewn world has hundreds).
+      const near = world.bodies.filter((o) => Math.hypot(point.x - o.position.x, point.y - o.position.y) <= massProps(o.shape, 1).boundingRadius + LEAK_RADIUS + 1e-6);
+      if (!clearOf(wallBodies(near))(point.x, point.y, LEAK_RADIUS)) break;
       const r = sub(point, b.position);
       const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
       const p = emitParcel(world, b, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, LEAK_SPEED)), LEAK_RADIUS);

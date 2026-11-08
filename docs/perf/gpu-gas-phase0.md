@@ -588,6 +588,39 @@ Measured in the stress test (Mammoth, two rocks, gunships added by the button).
   step by about 10 ms. With smooth drawing the screen carries on through a step of that size, so it
   isn't worth the extra code unless play still shows it.
 
+## 17. What wreckage costs (8 November 2026)
+
+A stress test where 12 gunships fight for 60 s ends with 454 bodies: 424 of them wreckage, 12 rock, 18
+still-flying ship parts. Timing the same 4 s from that moment (Node, best of 3):
+
+| World | ms a step |
+|---|---|
+| As it is | 10.7 |
+| Without wreckage that still does something (53 pieces) | 3.5 |
+| Without any wreckage or dust | 0.6 |
+
+- **Dust: about 0.4 ms.** It touches nothing and fades in 20–30 s. Keep it.
+- **Inert wreckage (371 plates and parts): about 3 ms**, roughly 8 µs a piece.
+- **Wreckage that still does something: about 7 ms.** That is 35 unexploded shells, 12 tanks still
+  holding gas, 10 engines and 8 breaches. With only 9 gas parcels in the world, the gas machinery's
+  work over every body each step was the cost.
+
+Two fixes, both with identical results (world hashes unchanged in the reference scenarios and the
+battle snapshot):
+
+- **Leaks:** the check that nothing blocks a leak built walls for every body in the world each
+  step. It now builds them only for bodies within reach of the leak point.
+- **Gas walls:** the gas step's view of each body was an object literal with eight getters and
+  setters, made fresh for every body every step: slow to create, and most of the collector's work.
+  It is now a small class.
+
+Battle snapshot: 8.4–9.3 → 6.4–7.2 ms a step (about 22% faster); collection pauses 2.4 → 0.55 ms a
+step. Reference battle: unchanged within noise.
+
+Left: the ledger's totals over every body (about 1.2 ms, called several times a step), and the gas
+step's other passes over every body when there is little gas (far field, free-flight mask,
+clusters: about 1.3 ms).
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
