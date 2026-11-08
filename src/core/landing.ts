@@ -14,8 +14,15 @@ export interface LandingGoal {
   kind: "landing";
   /** A body of the ship. Its whole assembly counts; this body's angle is the ship's tilt (0 = upright). */
   ship: string;
-  /** The fixed body to land on. */
+  /** The fixed body to land on (with `pads`, the first of them). */
   pad: string;
+  /**
+   * Several pads to choose from, each with its score multiplier (Mammoth Lander, LND-010). Any one
+   * not in `used` is a pad; a used one is ground (LND-012). Absent: `pad` alone.
+   */
+  pads?: { id: string; multiplier: number }[];
+  /** Pads already landed on this game: touching one is touching the ground (LND-012). */
+  used?: string[];
   /** Fastest closing speed at a touch on the pad that still counts as a landing, m/s. */
   maxSpeed: number;
   /** Largest tilt from upright the ship may come to rest at, degrees. */
@@ -43,8 +50,10 @@ export interface LandingStatus {
   fuel: number;
   /** Propellant at the start, kg. */
   fuelStart: number;
-  /** Score once landed: up to 500 for fuel left, up to 500 for a soft touchdown. */
+  /** Score once landed: up to 500 for fuel left, up to 500 for a soft touchdown. With `pads`, LND-013's. */
   score?: number;
+  /** The pad landed on (with `pads`). */
+  landedOn?: string;
   /** Time the ship has been at rest on the pad since, s (cleared when it moves). */
   restSince?: number;
   /** Last time the ship touched the pad, s. */
@@ -86,12 +95,30 @@ function highest(shape: Shape, position: Vec2, angle: number): number {
   return y;
 }
 
+/** The pads the ship may land on now. */
+export function openPads(goal: LandingGoal): Set<string> {
+  if (!goal.pads) return new Set([goal.pad]);
+  const used = new Set(goal.used ?? []);
+  return new Set(goal.pads.map((p) => p.id).filter((id) => !used.has(id)));
+}
+
 /** Ship telemetry for the HUD and the judge. */
 export function landingTelemetry(world: World, goal: LandingGoal): Omit<LandingStatus, "phase" | "fuelStart"> & { spin: number; members: Set<string> } {
   const members = new Set(assemblyOf(world, goal.ship));
   const ship = world.bodies.find((b) => b.id === goal.ship);
-  const pad = world.bodies.find((b) => b.id === goal.pad);
   const totals = assemblyTotals(world, goal.ship);
+  // Height above the pad nearest across (of those still open), or the only pad.
+  const open = openPads(goal);
+  let pad = world.bodies.find((b) => b.id === goal.pad);
+  if (goal.pads && totals) {
+    let best = Infinity;
+    pad = undefined;
+    for (const b of world.bodies) {
+      if (!open.has(b.id)) continue;
+      const d = Math.abs(b.position.x - totals.centre.x);
+      if (d < best) [best, pad] = [d, b];
+    }
+  }
   let low = Infinity;
   let fuel = 0;
   for (const b of world.bodies) {
@@ -141,6 +168,7 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
     return "crashed";
   };
 
+  const open = openPads(goal);
   // New touches between the ship and anything else.
   for (const e of world.events) {
     if (e.tick < fromTick || e.type !== "collision") continue;
@@ -151,16 +179,22 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
     if (aIn === bIn) continue;
     const other = aIn ? b : a;
     const speed = Number(e.data.speed);
-    if (other !== goal.pad) {
+    if (!open.has(other)) {
+      if (goal.used?.includes(other)) return crash(`Touched a pad already used, at ${fmt(speed)} m/s.`);
       const body = world.bodies.find((x) => x.id === other);
       return crash(body?.fixed ? `Touched the ground off the pad, at ${fmt(speed)} m/s.` : `Hit ${other}.`);
     }
     if (speed > goal.maxSpeed) return crash(`Hit the pad at ${fmt(speed, 2)} m/s: land slower than ${fmt(goal.maxSpeed)} m/s.`);
     if (s.touchdown === undefined) s.touchdown = speed;
+    s.landedOn ??= other;
   }
 
   // At rest on the pad: landed, or tipped over.
-  if (world.contacts.some((k) => (k.a === goal.pad && t.members.has(k.b)) || (k.b === goal.pad && t.members.has(k.a)))) s.padAt = world.time;
+  const onOpen = world.contacts.find((k) => (open.has(k.a) && t.members.has(k.b)) || (open.has(k.b) && t.members.has(k.a)));
+  if (onOpen) {
+    s.padAt = world.time;
+    s.landedOn = open.has(onOpen.a) ? onOpen.a : onOpen.b;
+  }
   const onPad = s.padAt !== undefined && world.time - s.padAt <= BOUNCE_TIME + 1e-9;
   const speed = Math.sqrt(t.vx * t.vx + t.vy * t.vy);
   if (!(onPad && speed < REST_SPEED && Math.abs(t.spin) < REST_SPIN)) {
@@ -172,7 +206,10 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
     if (Math.abs(t.tilt) > goal.maxTilt) return crash(`Came to rest tilted ${fmt(Math.abs(t.tilt), 0)}°: land within ${fmt(goal.maxTilt, 0)}° of upright.`);
     const touch = s.touchdown ?? 0;
     const fuelPart = s.fuelStart > 0 ? s.fuel / s.fuelStart : 0;
-    s.score = Math.round(500 * fuelPart + 500 * Math.max(0, 1 - touch / goal.maxSpeed));
+    const soft = Math.max(0, 1 - touch / goal.maxSpeed);
+    // With several pads (LND-013): 100 for landing, up to 100 each for softness and fuel, times the pad's multiplier.
+    const pad = goal.pads?.find((p) => p.id === s.landedOn);
+    s.score = goal.pads ? Math.round((100 + 100 * soft + 100 * fuelPart) * (pad?.multiplier ?? 1)) : Math.round(500 * fuelPart + 500 * soft);
     s.phase = "landed";
     s.at = world.tick;
     s.reason = `Landed at ${fmt(touch)} m/s, ${fmt(Math.abs(t.tilt), 0)}° from upright, with ${fmt(s.fuel, 2)} kg of propellant left.`;

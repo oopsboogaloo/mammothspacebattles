@@ -1,6 +1,7 @@
 // Scenario files: schema, validation with JSON paths, parameters, migration,
 // and running with probes and assertions (SCN-001…SCN-003, SCN-007, SCN-008).
 
+import type { LanderSpec } from "./lander.ts";
 import { hashValue } from "./canonical.ts";
 import { evaluateFormula } from "./formula.ts";
 import { SPECIES } from "./gas.ts";
@@ -66,7 +67,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; asteroids?: AsteroidSpec[] };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; asteroids?: AsteroidSpec[] };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -466,6 +467,25 @@ function validateChallenge(v: V, c: unknown, bodies: unknown, path: string): voi
   num(v, c.maxTilt, `${path}.maxTilt`, { min: 0, max: 180 });
 }
 
+function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
+  if (!isObj(g)) return err(v, path, "must be an object {ship, hull, start, pads, maxSpeed, maxTilt}");
+  if (!isObj(g.ship) || !Array.isArray(g.ship.bodies) || !g.ship.bodies.length) err(v, `${path}.ship`, "must be {bodies, joints?, links?} with at least one body");
+  else if (!g.ship.bodies.some((b) => isObj(b) && b.id === g.hull)) err(v, `${path}.hull`, "must be the id of one of the ship's bodies");
+  if (typeof g.hull !== "string" || !g.hull.includes("{n}")) err(v, `${path}.hull`, 'must be an id with "{n}"');
+  if (g.tank !== undefined && (typeof g.tank !== "string" || !g.tank.includes("{n}"))) err(v, `${path}.tank`, 'must be an id with "{n}"');
+  if (!isObj(g.start) || !isObj(g.start.position) || !isObj(g.start.velocity)) err(v, `${path}.start`, "must be {position, velocity}");
+  const ids = new Set((Array.isArray(bodies) ? bodies.filter(isObj) : []).filter((b) => b.fixed === true).map((b) => b.id));
+  if (!Array.isArray(g.pads) || !g.pads.length) err(v, `${path}.pads`, "must be a list of {id, multiplier}");
+  else
+    g.pads.forEach((p, i) => {
+      if (!isObj(p) || !ids.has(p.id)) err(v, `${path}.pads[${i}].id`, "must be the id of a fixed body in the world");
+      else num(v, p.multiplier, `${path}.pads[${i}].multiplier`, { positive: true });
+    });
+  num(v, g.maxSpeed, `${path}.maxSpeed`, { positive: true });
+  num(v, g.maxTilt, `${path}.maxTilt`, { min: 0, max: 180 });
+  for (const k of ["lives", "pause", "explodeAbove", "clearBonus"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
+}
+
 function validateDuel(v: V, c: unknown, bodies: unknown, path: string): void {
   if (!isObj(c)) return err(v, path, "must be an object {kind, player, enemies}");
   if (c.kind !== "duel") return err(v, `${path}.kind`, 'must be "duel"');
@@ -710,6 +730,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     if (data.world.bounds !== undefined) validateBounds(v, data.world.bounds, "$.world.bounds");
     if (data.world.challenge !== undefined) validateChallenge(v, data.world.challenge, data.world.bodies, "$.world.challenge");
     if (data.world.duel !== undefined) validateDuel(v, data.world.duel, data.world.bodies, "$.world.duel");
+    if (data.world.lander !== undefined) validateLander(v, data.world.lander, data.world.bodies, "$.world.lander");
   }
 
   let endSteps = Infinity;
@@ -833,7 +854,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander },
     getProfile(scn.profile),
   );
 }

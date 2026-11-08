@@ -1,0 +1,6445 @@
+{
+  "schema": 1,
+  "name": "lander-easy",
+  "title": "Mammoth Lander: Easy",
+  "description": "Gently rolling ground, five pads and plenty of fuel. Smaller pads score more. The ground wraps round.",
+  "profile": "sandbox",
+  "seed": 1,
+  "world": {
+    "gravity": {
+      "x": 0,
+      "y": -1.6
+    },
+    "bounds": {
+      "min": {
+        "x": -300,
+        "y": -2000
+      },
+      "max": {
+        "x": 300,
+        "y": 2000
+      },
+      "wrap": true,
+      "farField": 10,
+      "depth": 2
+    },
+    "bodies": [
+      {
+        "id": "ground-0",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -300,
+              "y": -60
+            },
+            {
+              "x": -295,
+              "y": -60
+            },
+            {
+              "x": -295,
+              "y": 0.48562715290817415
+            },
+            {
+              "x": -300,
+              "y": 0.7058181007723259
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-1",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -295,
+              "y": -60
+            },
+            {
+              "x": -290,
+              "y": -60
+            },
+            {
+              "x": -290,
+              "y": -0.11917391286434986
+            },
+            {
+              "x": -295,
+              "y": 0.48562715290817415
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-2",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -290,
+              "y": -60
+            },
+            {
+              "x": -285,
+              "y": -60
+            },
+            {
+              "x": -285,
+              "y": -1.099702661468724
+            },
+            {
+              "x": -290,
+              "y": -0.11917391286434986
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-3",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -285,
+              "y": -60
+            },
+            {
+              "x": -280,
+              "y": -60
+            },
+            {
+              "x": -280,
+              "y": -2.367067063139189
+            },
+            {
+              "x": -285,
+              "y": -1.099702661468724
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-4",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -280,
+              "y": -60
+            },
+            {
+              "x": -275,
+              "y": -60
+            },
+            {
+              "x": -275,
+              "y": -3.7678536260674083
+            },
+            {
+              "x": -280,
+              "y": -2.367067063139189
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-5",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -275,
+              "y": -60
+            },
+            {
+              "x": -270,
+              "y": -60
+            },
+            {
+              "x": -270,
+              "y": -5.111356092597708
+            },
+            {
+              "x": -275,
+              "y": -3.7678536260674083
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-6",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -270,
+              "y": -60
+            },
+            {
+              "x": -265,
+              "y": -60
+            },
+            {
+              "x": -265,
+              "y": -6.203661184514573
+            },
+            {
+              "x": -270,
+              "y": -5.111356092597708
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-7",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -265,
+              "y": -60
+            },
+            {
+              "x": -260,
+              "y": -60
+            },
+            {
+              "x": -260,
+              "y": -6.882508179164736
+            },
+            {
+              "x": -265,
+              "y": -6.203661184514573
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-8",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -260,
+              "y": -60
+            },
+            {
+              "x": -255,
+              "y": -60
+            },
+            {
+              "x": -255,
+              "y": -7.046706952595125
+            },
+            {
+              "x": -260,
+              "y": -6.882508179164736
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-9",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -255,
+              "y": -60
+            },
+            {
+              "x": -250,
+              "y": -60
+            },
+            {
+              "x": -250,
+              "y": -6.674856866026332
+            },
+            {
+              "x": -255,
+              "y": -7.046706952595125
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-10",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -250,
+              "y": -60
+            },
+            {
+              "x": -245,
+              "y": -60
+            },
+            {
+              "x": -245,
+              "y": -5.829989279847807
+            },
+            {
+              "x": -250,
+              "y": -6.674856866026332
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-11",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -245,
+              "y": -60
+            },
+            {
+              "x": -240,
+              "y": -60
+            },
+            {
+              "x": -240,
+              "y": -4.649231826677941
+            },
+            {
+              "x": -245,
+              "y": -5.829989279847807
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-12",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -240,
+              "y": -60
+            },
+            {
+              "x": -235,
+              "y": -60
+            },
+            {
+              "x": -235,
+              "y": -3.320231479651657
+            },
+            {
+              "x": -240,
+              "y": -4.649231826677941
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-13",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -235,
+              "y": -60
+            },
+            {
+              "x": -230,
+              "y": -60
+            },
+            {
+              "x": -230,
+              "y": -0.3727533251052023
+            },
+            {
+              "x": -235,
+              "y": -3.320231479651657
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-14",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -230,
+              "y": -60
+            },
+            {
+              "x": -225,
+              "y": -60
+            },
+            {
+              "x": -225,
+              "y": -0.3727533251052023
+            },
+            {
+              "x": -230,
+              "y": -0.3727533251052023
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-15",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -225,
+              "y": -60
+            },
+            {
+              "x": -220,
+              "y": -60
+            },
+            {
+              "x": -220,
+              "y": -0.3727533251052023
+            },
+            {
+              "x": -225,
+              "y": -0.3727533251052023
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-16",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -220,
+              "y": -60
+            },
+            {
+              "x": -215,
+              "y": -60
+            },
+            {
+              "x": -215,
+              "y": -0.3727533251052023
+            },
+            {
+              "x": -220,
+              "y": -0.3727533251052023
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-17",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -215,
+              "y": -60
+            },
+            {
+              "x": -210,
+              "y": -60
+            },
+            {
+              "x": -210,
+              "y": -0.3727533251052023
+            },
+            {
+              "x": -215,
+              "y": -0.3727533251052023
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-18",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -210,
+              "y": -60
+            },
+            {
+              "x": -205,
+              "y": -60
+            },
+            {
+              "x": -205,
+              "y": -0.8650733144579297
+            },
+            {
+              "x": -210,
+              "y": -0.3727533251052023
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-19",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -205,
+              "y": -60
+            },
+            {
+              "x": -200,
+              "y": -60
+            },
+            {
+              "x": -200,
+              "y": -1.4885448005308743
+            },
+            {
+              "x": -205,
+              "y": -0.8650733144579297
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-20",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -200,
+              "y": -60
+            },
+            {
+              "x": -195,
+              "y": -60
+            },
+            {
+              "x": -195,
+              "y": -2.025402262632386
+            },
+            {
+              "x": -200,
+              "y": -1.4885448005308743
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-21",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -195,
+              "y": -60
+            },
+            {
+              "x": -190,
+              "y": -60
+            },
+            {
+              "x": -190,
+              "y": -2.269237189484712
+            },
+            {
+              "x": -195,
+              "y": -2.025402262632386
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-22",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -190,
+              "y": -60
+            },
+            {
+              "x": -185,
+              "y": -60
+            },
+            {
+              "x": -185,
+              "y": -2.0543521645042997
+            },
+            {
+              "x": -190,
+              "y": -2.269237189484712
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-23",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -185,
+              "y": -60
+            },
+            {
+              "x": -180,
+              "y": -60
+            },
+            {
+              "x": -180,
+              "y": -1.2869215023522855
+            },
+            {
+              "x": -185,
+              "y": -2.0543521645042997
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-24",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -180,
+              "y": -60
+            },
+            {
+              "x": -175,
+              "y": -60
+            },
+            {
+              "x": -175,
+              "y": 0.03547335910898419
+            },
+            {
+              "x": -180,
+              "y": -1.2869215023522855
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-25",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -175,
+              "y": -60
+            },
+            {
+              "x": -170,
+              "y": -60
+            },
+            {
+              "x": -170,
+              "y": 1.8193990336527457
+            },
+            {
+              "x": -175,
+              "y": 0.03547335910898419
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-26",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -170,
+              "y": -60
+            },
+            {
+              "x": -165,
+              "y": -60
+            },
+            {
+              "x": -165,
+              "y": 3.8871313095076268
+            },
+            {
+              "x": -170,
+              "y": 1.8193990336527457
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-27",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -165,
+              "y": -60
+            },
+            {
+              "x": -160,
+              "y": -60
+            },
+            {
+              "x": -160,
+              "y": 6.0024225177494
+            },
+            {
+              "x": -165,
+              "y": 3.8871313095076268
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-28",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -160,
+              "y": -60
+            },
+            {
+              "x": -155,
+              "y": -60
+            },
+            {
+              "x": -155,
+              "y": 7.906260763342319
+            },
+            {
+              "x": -160,
+              "y": 6.0024225177494
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-29",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -155,
+              "y": -60
+            },
+            {
+              "x": -150,
+              "y": -60
+            },
+            {
+              "x": -150,
+              "y": 9.356706627517976
+            },
+            {
+              "x": -155,
+              "y": 7.906260763342319
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-30",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -150,
+              "y": -60
+            },
+            {
+              "x": -145,
+              "y": -60
+            },
+            {
+              "x": -145,
+              "y": 10.166199207052657
+            },
+            {
+              "x": -150,
+              "y": 9.356706627517976
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-31",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -145,
+              "y": -60
+            },
+            {
+              "x": -140,
+              "y": -60
+            },
+            {
+              "x": -140,
+              "y": 10.23015454819723
+            },
+            {
+              "x": -145,
+              "y": 10.166199207052657
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-32",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -140,
+              "y": -60
+            },
+            {
+              "x": -135,
+              "y": -60
+            },
+            {
+              "x": -135,
+              "y": 9.542160988594434
+            },
+            {
+              "x": -140,
+              "y": 10.23015454819723
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-33",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -135,
+              "y": -60
+            },
+            {
+              "x": -130,
+              "y": -60
+            },
+            {
+              "x": -130,
+              "y": 8.193352558383175
+            },
+            {
+              "x": -135,
+              "y": 9.542160988594434
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-34",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -130,
+              "y": -60
+            },
+            {
+              "x": -125,
+              "y": -60
+            },
+            {
+              "x": -125,
+              "y": 6.356221968136163
+            },
+            {
+              "x": -130,
+              "y": 8.193352558383175
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-35",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -125,
+              "y": -60
+            },
+            {
+              "x": -120,
+              "y": -60
+            },
+            {
+              "x": -120,
+              "y": 4.255758567963891
+            },
+            {
+              "x": -125,
+              "y": 6.356221968136163
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-36",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -120,
+              "y": -60
+            },
+            {
+              "x": -117,
+              "y": -60
+            },
+            {
+              "x": -117,
+              "y": 0.20665049962805937
+            },
+            {
+              "x": -120,
+              "y": 4.255758567963891
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-37",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -117,
+              "y": -60
+            },
+            {
+              "x": -115,
+              "y": -60
+            },
+            {
+              "x": -115,
+              "y": 0.20665049962805937
+            },
+            {
+              "x": -117,
+              "y": 0.20665049962805937
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-38",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -115,
+              "y": -60
+            },
+            {
+              "x": -110,
+              "y": -60
+            },
+            {
+              "x": -110,
+              "y": 0.20665049962805937
+            },
+            {
+              "x": -115,
+              "y": 0.20665049962805937
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-39",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -110,
+              "y": -60
+            },
+            {
+              "x": -105,
+              "y": -60
+            },
+            {
+              "x": -105,
+              "y": 0.20665049962805937
+            },
+            {
+              "x": -110,
+              "y": 0.20665049962805937
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-40",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -105,
+              "y": -60
+            },
+            {
+              "x": -103,
+              "y": -60
+            },
+            {
+              "x": -103,
+              "y": 0.20665049962805937
+            },
+            {
+              "x": -105,
+              "y": 0.20665049962805937
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-41",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -103,
+              "y": -60
+            },
+            {
+              "x": -100,
+              "y": -60
+            },
+            {
+              "x": -100,
+              "y": -2.4774430825102334
+            },
+            {
+              "x": -103,
+              "y": 0.20665049962805937
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-42",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -100,
+              "y": -60
+            },
+            {
+              "x": -95,
+              "y": -60
+            },
+            {
+              "x": -95,
+              "y": -3.1477541873801
+            },
+            {
+              "x": -100,
+              "y": -2.4774430825102334
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-43",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -95,
+              "y": -60
+            },
+            {
+              "x": -90,
+              "y": -60
+            },
+            {
+              "x": -90,
+              "y": -3.4478832219023543
+            },
+            {
+              "x": -95,
+              "y": -3.1477541873801
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-44",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -90,
+              "y": -60
+            },
+            {
+              "x": -85,
+              "y": -60
+            },
+            {
+              "x": -85,
+              "y": -3.5139705532910037
+            },
+            {
+              "x": -90,
+              "y": -3.4478832219023543
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-45",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -85,
+              "y": -60
+            },
+            {
+              "x": -80,
+              "y": -60
+            },
+            {
+              "x": -80,
+              "y": -3.509912655566096
+            },
+            {
+              "x": -85,
+              "y": -3.5139705532910037
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-46",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -80,
+              "y": -60
+            },
+            {
+              "x": -75,
+              "y": -60
+            },
+            {
+              "x": -75,
+              "y": -3.5926889861270603
+            },
+            {
+              "x": -80,
+              "y": -3.509912655566096
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-47",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -75,
+              "y": -60
+            },
+            {
+              "x": -70,
+              "y": -60
+            },
+            {
+              "x": -70,
+              "y": -3.879749919117887
+            },
+            {
+              "x": -75,
+              "y": -3.5926889861270603
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-48",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -70,
+              "y": -60
+            },
+            {
+              "x": -65,
+              "y": -60
+            },
+            {
+              "x": -65,
+              "y": -4.424349776251663
+            },
+            {
+              "x": -70,
+              "y": -3.879749919117887
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-49",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -65,
+              "y": -60
+            },
+            {
+              "x": -60,
+              "y": -60
+            },
+            {
+              "x": -60,
+              "y": -5.203273361389521
+            },
+            {
+              "x": -65,
+              "y": -4.424349776251663
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-50",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -60,
+              "y": -60
+            },
+            {
+              "x": -55,
+              "y": -60
+            },
+            {
+              "x": -55,
+              "y": -6.119189913421307
+            },
+            {
+              "x": -60,
+              "y": -5.203273361389521
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-51",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -55,
+              "y": -60
+            },
+            {
+              "x": -50,
+              "y": -60
+            },
+            {
+              "x": -50,
+              "y": -7.017262415303069
+            },
+            {
+              "x": -55,
+              "y": -6.119189913421307
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-52",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -50,
+              "y": -60
+            },
+            {
+              "x": -45,
+              "y": -60
+            },
+            {
+              "x": -45,
+              "y": -7.71309809607734
+            },
+            {
+              "x": -50,
+              "y": -7.017262415303069
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-53",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -45,
+              "y": -60
+            },
+            {
+              "x": -40,
+              "y": -60
+            },
+            {
+              "x": -40,
+              "y": -8.027092037021424
+            },
+            {
+              "x": -45,
+              "y": -7.71309809607734
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-54",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -40,
+              "y": -60
+            },
+            {
+              "x": -35,
+              "y": -60
+            },
+            {
+              "x": -35,
+              "y": -7.819046147210057
+            },
+            {
+              "x": -40,
+              "y": -8.027092037021424
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-55",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -35,
+              "y": -60
+            },
+            {
+              "x": -30,
+              "y": -60
+            },
+            {
+              "x": -30,
+              "y": -7.016846455611161
+            },
+            {
+              "x": -35,
+              "y": -7.819046147210057
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-56",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -30,
+              "y": -60
+            },
+            {
+              "x": -25,
+              "y": -60
+            },
+            {
+              "x": -25,
+              "y": -5.633972794797322
+            },
+            {
+              "x": -30,
+              "y": -7.016846455611161
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-57",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -25,
+              "y": -60
+            },
+            {
+              "x": -20,
+              "y": -60
+            },
+            {
+              "x": -20,
+              "y": -3.772527049310803
+            },
+            {
+              "x": -25,
+              "y": -5.633972794797322
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-58",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -20,
+              "y": -60
+            },
+            {
+              "x": -15,
+              "y": -60
+            },
+            {
+              "x": -15,
+              "y": -1.6109693275642005
+            },
+            {
+              "x": -20,
+              "y": -3.772527049310803
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-59",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -15,
+              "y": -60
+            },
+            {
+              "x": -10,
+              "y": -60
+            },
+            {
+              "x": -10,
+              "y": 0.6215875952466254
+            },
+            {
+              "x": -15,
+              "y": -1.6109693275642005
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-60",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -10,
+              "y": -60
+            },
+            {
+              "x": -5.5,
+              "y": -60
+            },
+            {
+              "x": -5.5,
+              "y": 4.343007808075052
+            },
+            {
+              "x": -10,
+              "y": 0.6215875952466254
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-61",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -5.5,
+              "y": -60
+            },
+            {
+              "x": -5,
+              "y": -60
+            },
+            {
+              "x": -5,
+              "y": 4.343007808075052
+            },
+            {
+              "x": -5.5,
+              "y": 4.343007808075052
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-62",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -5,
+              "y": -60
+            },
+            {
+              "x": 0,
+              "y": -60
+            },
+            {
+              "x": 0,
+              "y": 4.343007808075052
+            },
+            {
+              "x": -5,
+              "y": 4.343007808075052
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-63",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0,
+              "y": -60
+            },
+            {
+              "x": 5,
+              "y": -60
+            },
+            {
+              "x": 5,
+              "y": 4.343007808075052
+            },
+            {
+              "x": 0,
+              "y": 4.343007808075052
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-64",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 5,
+              "y": -60
+            },
+            {
+              "x": 5.5,
+              "y": -60
+            },
+            {
+              "x": 5.5,
+              "y": 4.343007808075052
+            },
+            {
+              "x": 5,
+              "y": 4.343007808075052
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-65",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 5.5,
+              "y": -60
+            },
+            {
+              "x": 10,
+              "y": -60
+            },
+            {
+              "x": 10,
+              "y": 5.906635031448184
+            },
+            {
+              "x": 5.5,
+              "y": 4.343007808075052
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-66",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 10,
+              "y": -60
+            },
+            {
+              "x": 15,
+              "y": -60
+            },
+            {
+              "x": 15,
+              "y": 5.743023841534252
+            },
+            {
+              "x": 10,
+              "y": 5.906635031448184
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-67",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 15,
+              "y": -60
+            },
+            {
+              "x": 20,
+              "y": -60
+            },
+            {
+              "x": 20,
+              "y": 5.063375889404438
+            },
+            {
+              "x": 15,
+              "y": 5.743023841534252
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-68",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 20,
+              "y": -60
+            },
+            {
+              "x": 25,
+              "y": -60
+            },
+            {
+              "x": 25,
+              "y": 4.050933807274439
+            },
+            {
+              "x": 20,
+              "y": 5.063375889404438
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-69",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 25,
+              "y": -60
+            },
+            {
+              "x": 30,
+              "y": -60
+            },
+            {
+              "x": 30,
+              "y": 2.9322604937130934
+            },
+            {
+              "x": 25,
+              "y": 4.050933807274439
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-70",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 30,
+              "y": -60
+            },
+            {
+              "x": 35,
+              "y": -60
+            },
+            {
+              "x": 35,
+              "y": 1.9391752310475106
+            },
+            {
+              "x": 30,
+              "y": 2.9322604937130934
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-71",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 35,
+              "y": -60
+            },
+            {
+              "x": 40,
+              "y": -60
+            },
+            {
+              "x": 40,
+              "y": 1.270000234108322
+            },
+            {
+              "x": 35,
+              "y": 1.9391752310475106
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-72",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 40,
+              "y": -60
+            },
+            {
+              "x": 45,
+              "y": -60
+            },
+            {
+              "x": 45,
+              "y": 1.056630627683599
+            },
+            {
+              "x": 40,
+              "y": 1.270000234108322
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-73",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 45,
+              "y": -60
+            },
+            {
+              "x": 50,
+              "y": -60
+            },
+            {
+              "x": 50,
+              "y": 1.3429507759719324
+            },
+            {
+              "x": 45,
+              "y": 1.056630627683599
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-74",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 50,
+              "y": -60
+            },
+            {
+              "x": 55,
+              "y": -60
+            },
+            {
+              "x": 55,
+              "y": 2.0781884264670962
+            },
+            {
+              "x": 50,
+              "y": 1.3429507759719324
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-75",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 55,
+              "y": -60
+            },
+            {
+              "x": 60,
+              "y": -60
+            },
+            {
+              "x": 60,
+              "y": 3.126256661561173
+            },
+            {
+              "x": 55,
+              "y": 2.0781884264670962
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-76",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 60,
+              "y": -60
+            },
+            {
+              "x": 65,
+              "y": -60
+            },
+            {
+              "x": 65,
+              "y": 4.28941824464254
+            },
+            {
+              "x": 60,
+              "y": 3.126256661561173
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-77",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 65,
+              "y": -60
+            },
+            {
+              "x": 70,
+              "y": -60
+            },
+            {
+              "x": 70,
+              "y": 5.342183209666235
+            },
+            {
+              "x": 65,
+              "y": 4.28941824464254
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-78",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 70,
+              "y": -60
+            },
+            {
+              "x": 75,
+              "y": -60
+            },
+            {
+              "x": 75,
+              "y": 6.069633388478767
+            },
+            {
+              "x": 70,
+              "y": 5.342183209666235
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-79",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 75,
+              "y": -60
+            },
+            {
+              "x": 80,
+              "y": -60
+            },
+            {
+              "x": 80,
+              "y": 6.3036497773705324
+            },
+            {
+              "x": 75,
+              "y": 6.069633388478767
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-80",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 80,
+              "y": -60
+            },
+            {
+              "x": 85,
+              "y": -60
+            },
+            {
+              "x": 85,
+              "y": 5.950920528177554
+            },
+            {
+              "x": 80,
+              "y": 6.3036497773705324
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-81",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 85,
+              "y": -60
+            },
+            {
+              "x": 90,
+              "y": -60
+            },
+            {
+              "x": 90,
+              "y": 5.008056229376734
+            },
+            {
+              "x": 85,
+              "y": 5.950920528177554
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-82",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 90,
+              "y": -60
+            },
+            {
+              "x": 95,
+              "y": -60
+            },
+            {
+              "x": 95,
+              "y": 3.561382140723178
+            },
+            {
+              "x": 90,
+              "y": 5.008056229376734
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-83",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 95,
+              "y": -60
+            },
+            {
+              "x": 100,
+              "y": -60
+            },
+            {
+              "x": 100,
+              "y": 1.7716249817379037
+            },
+            {
+              "x": 95,
+              "y": 3.561382140723178
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-84",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 100,
+              "y": -60
+            },
+            {
+              "x": 105,
+              "y": -60
+            },
+            {
+              "x": 105,
+              "y": -0.15369333625222503
+            },
+            {
+              "x": 100,
+              "y": 1.7716249817379037
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-85",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 105,
+              "y": -60
+            },
+            {
+              "x": 105.5,
+              "y": -60
+            },
+            {
+              "x": 105.5,
+              "y": -1.9952487639823502
+            },
+            {
+              "x": 105,
+              "y": -0.15369333625222503
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-86",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 105.5,
+              "y": -60
+            },
+            {
+              "x": 110,
+              "y": -60
+            },
+            {
+              "x": 110,
+              "y": -1.9952487639823502
+            },
+            {
+              "x": 105.5,
+              "y": -1.9952487639823502
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-87",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 110,
+              "y": -60
+            },
+            {
+              "x": 114.5,
+              "y": -60
+            },
+            {
+              "x": 114.5,
+              "y": -1.9952487639823502
+            },
+            {
+              "x": 110,
+              "y": -1.9952487639823502
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-88",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 114.5,
+              "y": -60
+            },
+            {
+              "x": 115,
+              "y": -60
+            },
+            {
+              "x": 115,
+              "y": -3.5581557805521173
+            },
+            {
+              "x": 114.5,
+              "y": -1.9952487639823502
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-89",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 115,
+              "y": -60
+            },
+            {
+              "x": 120,
+              "y": -60
+            },
+            {
+              "x": 120,
+              "y": -4.7031548225592354
+            },
+            {
+              "x": 115,
+              "y": -3.5581557805521173
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-90",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 120,
+              "y": -60
+            },
+            {
+              "x": 125,
+              "y": -60
+            },
+            {
+              "x": 125,
+              "y": -5.367379449163378
+            },
+            {
+              "x": 120,
+              "y": -4.7031548225592354
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-91",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 125,
+              "y": -60
+            },
+            {
+              "x": 130,
+              "y": -60
+            },
+            {
+              "x": 130,
+              "y": -5.571199887033461
+            },
+            {
+              "x": 125,
+              "y": -5.367379449163378
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-92",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 130,
+              "y": -60
+            },
+            {
+              "x": 135,
+              "y": -60
+            },
+            {
+              "x": 135,
+              "y": -5.410106474624387
+            },
+            {
+              "x": 130,
+              "y": -5.571199887033461
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-93",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 135,
+              "y": -60
+            },
+            {
+              "x": 140,
+              "y": -60
+            },
+            {
+              "x": 140,
+              "y": -5.033235752758509
+            },
+            {
+              "x": 135,
+              "y": -5.410106474624387
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-94",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 140,
+              "y": -60
+            },
+            {
+              "x": 145,
+              "y": -60
+            },
+            {
+              "x": 145,
+              "y": -4.612493264696049
+            },
+            {
+              "x": 140,
+              "y": -5.033235752758509
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-95",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 145,
+              "y": -60
+            },
+            {
+              "x": 150,
+              "y": -60
+            },
+            {
+              "x": 150,
+              "y": -4.307880718670596
+            },
+            {
+              "x": 145,
+              "y": -4.612493264696049
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-96",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 150,
+              "y": -60
+            },
+            {
+              "x": 155,
+              "y": -60
+            },
+            {
+              "x": 155,
+              "y": -4.235302754787327
+            },
+            {
+              "x": 150,
+              "y": -4.307880718670596
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-97",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 155,
+              "y": -60
+            },
+            {
+              "x": 160,
+              "y": -60
+            },
+            {
+              "x": 160,
+              "y": -4.442693429613396
+            },
+            {
+              "x": 155,
+              "y": -4.235302754787327
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-98",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 160,
+              "y": -60
+            },
+            {
+              "x": 165,
+              "y": -60
+            },
+            {
+              "x": 165,
+              "y": -4.898839808528905
+            },
+            {
+              "x": 160,
+              "y": -4.442693429613396
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-99",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 165,
+              "y": -60
+            },
+            {
+              "x": 170,
+              "y": -60
+            },
+            {
+              "x": 170,
+              "y": -5.497043732117925
+            },
+            {
+              "x": 165,
+              "y": -4.898839808528905
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-100",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 170,
+              "y": -60
+            },
+            {
+              "x": 175,
+              "y": -60
+            },
+            {
+              "x": 175,
+              "y": -6.073141786929147
+            },
+            {
+              "x": 170,
+              "y": -5.497043732117925
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-101",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 175,
+              "y": -60
+            },
+            {
+              "x": 180,
+              "y": -60
+            },
+            {
+              "x": 180,
+              "y": -6.434854166848508
+            },
+            {
+              "x": 175,
+              "y": -6.073141786929147
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-102",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 180,
+              "y": -60
+            },
+            {
+              "x": 185,
+              "y": -60
+            },
+            {
+              "x": 185,
+              "y": -6.397400258153919
+            },
+            {
+              "x": 180,
+              "y": -6.434854166848508
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-103",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 185,
+              "y": -60
+            },
+            {
+              "x": 190,
+              "y": -60
+            },
+            {
+              "x": 190,
+              "y": -5.819158444684474
+            },
+            {
+              "x": 185,
+              "y": -6.397400258153919
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-104",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 190,
+              "y": -60
+            },
+            {
+              "x": 195,
+              "y": -60
+            },
+            {
+              "x": 195,
+              "y": -4.6310652057613595
+            },
+            {
+              "x": 190,
+              "y": -5.819158444684474
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-105",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 195,
+              "y": -60
+            },
+            {
+              "x": 200,
+              "y": -60
+            },
+            {
+              "x": 200,
+              "y": -2.8544630075441706
+            },
+            {
+              "x": 195,
+              "y": -4.6310652057613595
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-106",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 200,
+              "y": -60
+            },
+            {
+              "x": 205,
+              "y": -60
+            },
+            {
+              "x": 205,
+              "y": -0.6040466660006252
+            },
+            {
+              "x": 200,
+              "y": -2.8544630075441706
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-107",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 205,
+              "y": -60
+            },
+            {
+              "x": 207,
+              "y": -60
+            },
+            {
+              "x": 207,
+              "y": 4.483157318281881
+            },
+            {
+              "x": 205,
+              "y": -0.6040466660006252
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-108",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 207,
+              "y": -60
+            },
+            {
+              "x": 210,
+              "y": -60
+            },
+            {
+              "x": 210,
+              "y": 4.483157318281881
+            },
+            {
+              "x": 207,
+              "y": 4.483157318281881
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-109",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 210,
+              "y": -60
+            },
+            {
+              "x": 215,
+              "y": -60
+            },
+            {
+              "x": 215,
+              "y": 4.483157318281881
+            },
+            {
+              "x": 210,
+              "y": 4.483157318281881
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-110",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 215,
+              "y": -60
+            },
+            {
+              "x": 220,
+              "y": -60
+            },
+            {
+              "x": 220,
+              "y": 4.483157318281881
+            },
+            {
+              "x": 215,
+              "y": 4.483157318281881
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-111",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 220,
+              "y": -60
+            },
+            {
+              "x": 223,
+              "y": -60
+            },
+            {
+              "x": 223,
+              "y": 4.483157318281881
+            },
+            {
+              "x": 220,
+              "y": 4.483157318281881
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-112",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 223,
+              "y": -60
+            },
+            {
+              "x": 225,
+              "y": -60
+            },
+            {
+              "x": 225,
+              "y": 8.641514894974435
+            },
+            {
+              "x": 223,
+              "y": 4.483157318281881
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-113",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 225,
+              "y": -60
+            },
+            {
+              "x": 230,
+              "y": -60
+            },
+            {
+              "x": 230,
+              "y": 9.810646371383218
+            },
+            {
+              "x": 225,
+              "y": 8.641514894974435
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-114",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 230,
+              "y": -60
+            },
+            {
+              "x": 235,
+              "y": -60
+            },
+            {
+              "x": 235,
+              "y": 10.211810894835496
+            },
+            {
+              "x": 230,
+              "y": 9.810646371383218
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-115",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 235,
+              "y": -60
+            },
+            {
+              "x": 240,
+              "y": -60
+            },
+            {
+              "x": 240,
+              "y": 9.846594541455051
+            },
+            {
+              "x": 235,
+              "y": 10.211810894835496
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-116",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 240,
+              "y": -60
+            },
+            {
+              "x": 245,
+              "y": -60
+            },
+            {
+              "x": 245,
+              "y": 8.815498739686568
+            },
+            {
+              "x": 240,
+              "y": 9.846594541455051
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-117",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 245,
+              "y": -60
+            },
+            {
+              "x": 250,
+              "y": -60
+            },
+            {
+              "x": 250,
+              "y": 7.300342596510106
+            },
+            {
+              "x": 245,
+              "y": 8.815498739686568
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-118",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 250,
+              "y": -60
+            },
+            {
+              "x": 255,
+              "y": -60
+            },
+            {
+              "x": 255,
+              "y": 5.534002497192729
+            },
+            {
+              "x": 250,
+              "y": 7.300342596510106
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-119",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 255,
+              "y": -60
+            },
+            {
+              "x": 260,
+              "y": -60
+            },
+            {
+              "x": 260,
+              "y": 3.762606083554367
+            },
+            {
+              "x": 255,
+              "y": 5.534002497192729
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-120",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 260,
+              "y": -60
+            },
+            {
+              "x": 265,
+              "y": -60
+            },
+            {
+              "x": 265,
+              "y": 2.206538202153643
+            },
+            {
+              "x": 260,
+              "y": 3.762606083554367
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-121",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 265,
+              "y": -60
+            },
+            {
+              "x": 270,
+              "y": -60
+            },
+            {
+              "x": 270,
+              "y": 1.0267701306996355
+            },
+            {
+              "x": 265,
+              "y": 2.206538202153643
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-122",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 270,
+              "y": -60
+            },
+            {
+              "x": 275,
+              "y": -60
+            },
+            {
+              "x": 275,
+              "y": 0.3020667047429195
+            },
+            {
+              "x": 270,
+              "y": 1.0267701306996355
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-123",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 275,
+              "y": -60
+            },
+            {
+              "x": 280,
+              "y": -60
+            },
+            {
+              "x": 280,
+              "y": 0.020726195930084623
+            },
+            {
+              "x": 275,
+              "y": 0.3020667047429195
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-124",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 280,
+              "y": -60
+            },
+            {
+              "x": 285,
+              "y": -60
+            },
+            {
+              "x": 285,
+              "y": 0.08799416244742697
+            },
+            {
+              "x": 280,
+              "y": 0.020726195930084623
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-125",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 285,
+              "y": -60
+            },
+            {
+              "x": 290,
+              "y": -60
+            },
+            {
+              "x": 290,
+              "y": 0.34759916974425686
+            },
+            {
+              "x": 285,
+              "y": 0.08799416244742697
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-126",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 290,
+              "y": -60
+            },
+            {
+              "x": 295,
+              "y": -60
+            },
+            {
+              "x": 295,
+              "y": 0.6134493491511457
+            },
+            {
+              "x": 290,
+              "y": 0.34759916974425686
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-127",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 295,
+              "y": -60
+            },
+            {
+              "x": 300,
+              "y": -60
+            },
+            {
+              "x": 300,
+              "y": 0.7058181007723263
+            },
+            {
+              "x": 295,
+              "y": 0.6134493491511457
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-r0",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 300,
+              "y": -60
+            },
+            {
+              "x": 305,
+              "y": -60
+            },
+            {
+              "x": 305,
+              "y": 0.48562715290817415
+            },
+            {
+              "x": 300,
+              "y": 0.7058181007723259
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-r1",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 305,
+              "y": -60
+            },
+            {
+              "x": 310,
+              "y": -60
+            },
+            {
+              "x": 310,
+              "y": -0.11917391286434986
+            },
+            {
+              "x": 305,
+              "y": 0.48562715290817415
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-r2",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 310,
+              "y": -60
+            },
+            {
+              "x": 315,
+              "y": -60
+            },
+            {
+              "x": 315,
+              "y": -1.099702661468724
+            },
+            {
+              "x": 310,
+              "y": -0.11917391286434986
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-r3",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 315,
+              "y": -60
+            },
+            {
+              "x": 320,
+              "y": -60
+            },
+            {
+              "x": 320,
+              "y": -2.367067063139189
+            },
+            {
+              "x": 315,
+              "y": -1.099702661468724
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-r4",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 320,
+              "y": -60
+            },
+            {
+              "x": 325,
+              "y": -60
+            },
+            {
+              "x": 325,
+              "y": -3.7678536260674083
+            },
+            {
+              "x": 320,
+              "y": -2.367067063139189
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-r5",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 325,
+              "y": -60
+            },
+            {
+              "x": 330,
+              "y": -60
+            },
+            {
+              "x": 330,
+              "y": -5.111356092597708
+            },
+            {
+              "x": 325,
+              "y": -3.7678536260674083
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-l122",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -330,
+              "y": -60
+            },
+            {
+              "x": -325,
+              "y": -60
+            },
+            {
+              "x": -325,
+              "y": 0.3020667047429195
+            },
+            {
+              "x": -330,
+              "y": 1.0267701306996355
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-l123",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -325,
+              "y": -60
+            },
+            {
+              "x": -320,
+              "y": -60
+            },
+            {
+              "x": -320,
+              "y": 0.020726195930084623
+            },
+            {
+              "x": -325,
+              "y": 0.3020667047429195
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-l124",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -320,
+              "y": -60
+            },
+            {
+              "x": -315,
+              "y": -60
+            },
+            {
+              "x": -315,
+              "y": 0.08799416244742697
+            },
+            {
+              "x": -320,
+              "y": 0.020726195930084623
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-l125",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -315,
+              "y": -60
+            },
+            {
+              "x": -310,
+              "y": -60
+            },
+            {
+              "x": -310,
+              "y": 0.34759916974425686
+            },
+            {
+              "x": -315,
+              "y": 0.08799416244742697
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-l126",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -310,
+              "y": -60
+            },
+            {
+              "x": -305,
+              "y": -60
+            },
+            {
+              "x": -305,
+              "y": 0.6134493491511457
+            },
+            {
+              "x": -310,
+              "y": 0.34759916974425686
+            }
+          ]
+        }
+      },
+      {
+        "id": "ground-seam-l127",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -305,
+              "y": -60
+            },
+            {
+              "x": -300,
+              "y": -60
+            },
+            {
+              "x": -300,
+              "y": 0.7058181007723263
+            },
+            {
+              "x": -305,
+              "y": 0.6134493491511457
+            }
+          ]
+        }
+      },
+      {
+        "id": "pad-1",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": -220,
+          "y": -0.1727533251052023
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 16,
+          "height": 0.4
+        }
+      },
+      {
+        "id": "pad-2",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": -110,
+          "y": 0.4066504996280594
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 10,
+          "height": 0.4
+        }
+      },
+      {
+        "id": "pad-3",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 4.5430078080750524
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 7,
+          "height": 0.4
+        }
+      },
+      {
+        "id": "pad-4",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 110,
+          "y": -1.7952487639823502
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 5,
+          "height": 0.4
+        }
+      },
+      {
+        "id": "pad-5",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 215,
+          "y": 4.683157318281881
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 12,
+          "height": 0.4
+        }
+      }
+    ],
+    "lander": {
+      "ship": {
+        "bodies": [
+          {
+            "id": "l{n}-chamber-left-l",
+            "shape": {
+              "kind": "box",
+              "width": 0.1,
+              "height": 0.8
+            },
+            "mass": 0.5,
+            "position": {
+              "x": -1.4499999999999993,
+              "y": -1.8000000000000007
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-chamber-left-r",
+            "shape": {
+              "kind": "box",
+              "width": 0.1,
+              "height": 0.8
+            },
+            "mass": 0.5,
+            "position": {
+              "x": 0.5500000000000007,
+              "y": -1.8000000000000007
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-chamber-right-l",
+            "shape": {
+              "kind": "box",
+              "width": 0.1,
+              "height": 0.8
+            },
+            "mass": 0.5,
+            "position": {
+              "x": -0.5500000000000007,
+              "y": -1.8000000000000007
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-chamber-right-r",
+            "shape": {
+              "kind": "box",
+              "width": 0.1,
+              "height": 0.8
+            },
+            "mass": 0.5,
+            "position": {
+              "x": 1.4499999999999993,
+              "y": -1.8000000000000007
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-engine-l",
+            "shape": {
+              "kind": "box",
+              "width": 1,
+              "height": 0.2
+            },
+            "mass": 1,
+            "position": {
+              "x": -1,
+              "y": -1.3000000000000007
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "contents": [
+              {
+                "resource": "h2",
+                "mass": 0,
+                "capacity": 0.01
+              },
+              {
+                "resource": "o2",
+                "mass": 0,
+                "capacity": 0.08
+              }
+            ],
+            "injector": {
+              "channel": "left",
+              "rate": 0.5,
+              "mixture": {
+                "h2": 0.1111111111111111,
+                "o2": 0.8888888888888888
+              },
+              "outlet": {
+                "x": 0,
+                "y": -0.15
+              },
+              "direction": {
+                "x": 0,
+                "y": -1
+              },
+              "width": 0.6,
+              "speed": 10,
+              "parcelMass": 0.001,
+              "radius": 0.035,
+              "igniter": true,
+              "chamber": {
+                "width": 1,
+                "length": 1.45
+              },
+              "economy": 20
+            },
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-engine-r",
+            "shape": {
+              "kind": "box",
+              "width": 1,
+              "height": 0.2
+            },
+            "mass": 1,
+            "position": {
+              "x": 1,
+              "y": -1.3000000000000007
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "contents": [
+              {
+                "resource": "h2",
+                "mass": 0,
+                "capacity": 0.01
+              },
+              {
+                "resource": "o2",
+                "mass": 0,
+                "capacity": 0.08
+              }
+            ],
+            "injector": {
+              "channel": "right",
+              "rate": 0.5,
+              "mixture": {
+                "h2": 0.1111111111111111,
+                "o2": 0.8888888888888888
+              },
+              "outlet": {
+                "x": 0,
+                "y": -0.15
+              },
+              "direction": {
+                "x": 0,
+                "y": -1
+              },
+              "width": 0.6,
+              "speed": 10,
+              "parcelMass": 0.001,
+              "radius": 0.035,
+              "igniter": true,
+              "chamber": {
+                "width": 1,
+                "length": 1.45
+              },
+              "economy": 20
+            },
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-hull",
+            "shape": {
+              "kind": "box",
+              "width": 1.2,
+              "height": 1
+            },
+            "mass": 8,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-leg-left",
+            "shape": {
+              "kind": "polygon",
+              "vertices": [
+                {
+                  "x": -0.197619,
+                  "y": -0.928571
+                },
+                {
+                  "x": -0.397619,
+                  "y": -0.928571
+                },
+                {
+                  "x": 0.252381,
+                  "y": 1.021429
+                },
+                {
+                  "x": 0.402381,
+                  "y": 1.021429
+                }
+              ]
+            },
+            "mass": 0.4,
+            "position": {
+              "x": -1.7523809999999997,
+              "y": -2.2214290000000005
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.9,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-leg-right",
+            "shape": {
+              "kind": "polygon",
+              "vertices": [
+                {
+                  "x": 0.197619,
+                  "y": -0.928571
+                },
+                {
+                  "x": 0.397619,
+                  "y": -0.928571
+                },
+                {
+                  "x": -0.252381,
+                  "y": 1.021429
+                },
+                {
+                  "x": -0.402381,
+                  "y": 1.021429
+                }
+              ]
+            },
+            "mass": 0.4,
+            "position": {
+              "x": 1.7523809999999997,
+              "y": -2.2214290000000005
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.9,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-nozzle-left-l",
+            "shape": {
+              "kind": "polygon",
+              "vertices": [
+                {
+                  "x": 0.175,
+                  "y": 0.3
+                },
+                {
+                  "x": 0.095,
+                  "y": 0.3
+                },
+                {
+                  "x": -0.175,
+                  "y": -0.3
+                },
+                {
+                  "x": -0.095,
+                  "y": -0.3
+                }
+              ]
+            },
+            "mass": 0.3,
+            "position": {
+              "x": -1.3249999999999993,
+              "y": -2.6000000000000014
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-nozzle-left-r",
+            "shape": {
+              "kind": "polygon",
+              "vertices": [
+                {
+                  "x": 0.175,
+                  "y": 0.3
+                },
+                {
+                  "x": 0.095,
+                  "y": 0.3
+                },
+                {
+                  "x": -0.175,
+                  "y": -0.3
+                },
+                {
+                  "x": -0.095,
+                  "y": -0.3
+                }
+              ]
+            },
+            "mass": 0.3,
+            "position": {
+              "x": 0.6750000000000007,
+              "y": -2.6000000000000014
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-nozzle-right-l",
+            "shape": {
+              "kind": "polygon",
+              "vertices": [
+                {
+                  "x": -0.175,
+                  "y": 0.3
+                },
+                {
+                  "x": 0.095,
+                  "y": -0.3
+                },
+                {
+                  "x": 0.175,
+                  "y": -0.3
+                },
+                {
+                  "x": -0.095,
+                  "y": 0.3
+                }
+              ]
+            },
+            "mass": 0.3,
+            "position": {
+              "x": -0.6750000000000007,
+              "y": -2.6000000000000014
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-nozzle-right-r",
+            "shape": {
+              "kind": "polygon",
+              "vertices": [
+                {
+                  "x": -0.175,
+                  "y": 0.3
+                },
+                {
+                  "x": 0.095,
+                  "y": -0.3
+                },
+                {
+                  "x": 0.175,
+                  "y": -0.3
+                },
+                {
+                  "x": -0.095,
+                  "y": 0.3
+                }
+              ]
+            },
+            "mass": 0.3,
+            "position": {
+              "x": 1.3249999999999993,
+              "y": -2.6000000000000014
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-tank",
+            "shape": {
+              "kind": "box",
+              "width": 1,
+              "height": 0.5
+            },
+            "mass": 2,
+            "position": {
+              "x": 0,
+              "y": -0.75
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "contents": [
+              {
+                "resource": "h2",
+                "mass": 0.9,
+                "capacity": 0.9
+              },
+              {
+                "resource": "o2",
+                "mass": 7.2,
+                "capacity": 7.2
+              }
+            ],
+            "material": {
+              "name": "tank",
+              "threshold": 100,
+              "toughness": 1500
+            },
+            "explosive": {
+              "charge": 0.05,
+              "arm": 1000000,
+              "fragments": 6,
+              "radius": 0.5
+            }
+          },
+          {
+            "id": "l{n}-throat-left-l",
+            "shape": {
+              "kind": "box",
+              "width": 0.35,
+              "height": 0.1
+            },
+            "mass": 0.3,
+            "position": {
+              "x": -1.3249999999999993,
+              "y": -2.25
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-throat-left-r",
+            "shape": {
+              "kind": "box",
+              "width": 0.35,
+              "height": 0.1
+            },
+            "mass": 0.3,
+            "position": {
+              "x": 0.6750000000000007,
+              "y": -2.25
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-throat-right-l",
+            "shape": {
+              "kind": "box",
+              "width": 0.35,
+              "height": 0.1
+            },
+            "mass": 0.3,
+            "position": {
+              "x": -0.6750000000000007,
+              "y": -2.25
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-throat-right-r",
+            "shape": {
+              "kind": "box",
+              "width": 0.35,
+              "height": 0.1
+            },
+            "mass": 0.3,
+            "position": {
+              "x": 1.3249999999999993,
+              "y": -2.25
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          },
+          {
+            "id": "l{n}-wing",
+            "shape": {
+              "kind": "box",
+              "width": 3,
+              "height": 0.2
+            },
+            "mass": 2,
+            "position": {
+              "x": 0,
+              "y": -1.1000000000000014
+            },
+            "velocity": {
+              "x": 1.2,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            }
+          }
+        ],
+        "joints": [
+          {
+            "id": "l{n}-w-head-left-l",
+            "a": "l{n}-engine-l",
+            "b": "l{n}-chamber-left-l",
+            "anchorA": {
+              "x": -0.45,
+              "y": -0.1
+            },
+            "anchorB": {
+              "x": 0,
+              "y": 0.4
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-head-right-l",
+            "a": "l{n}-engine-l",
+            "b": "l{n}-chamber-right-l",
+            "anchorA": {
+              "x": 0.45,
+              "y": -0.1
+            },
+            "anchorB": {
+              "x": 0,
+              "y": 0.4
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-left-throat-l",
+            "a": "l{n}-chamber-left-l",
+            "b": "l{n}-throat-left-l",
+            "anchorA": {
+              "x": 0,
+              "y": -0.4
+            },
+            "anchorB": {
+              "x": -0.125,
+              "y": 0.05
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-right-throat-l",
+            "a": "l{n}-chamber-right-l",
+            "b": "l{n}-throat-right-l",
+            "anchorA": {
+              "x": 0,
+              "y": -0.4
+            },
+            "anchorB": {
+              "x": 0.125,
+              "y": 0.05
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-throat-nozzle-left-l",
+            "a": "l{n}-throat-left-l",
+            "b": "l{n}-nozzle-left-l",
+            "anchorA": {
+              "x": 0.135,
+              "y": -0.05
+            },
+            "anchorB": {
+              "x": 0.135,
+              "y": 0.3
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-throat-nozzle-right-l",
+            "a": "l{n}-throat-right-l",
+            "b": "l{n}-nozzle-right-l",
+            "anchorA": {
+              "x": -0.135,
+              "y": -0.05
+            },
+            "anchorB": {
+              "x": -0.135,
+              "y": 0.3
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-head-left-r",
+            "a": "l{n}-engine-r",
+            "b": "l{n}-chamber-left-r",
+            "anchorA": {
+              "x": -0.45,
+              "y": -0.1
+            },
+            "anchorB": {
+              "x": 0,
+              "y": 0.4
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-head-right-r",
+            "a": "l{n}-engine-r",
+            "b": "l{n}-chamber-right-r",
+            "anchorA": {
+              "x": 0.45,
+              "y": -0.1
+            },
+            "anchorB": {
+              "x": 0,
+              "y": 0.4
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-left-throat-r",
+            "a": "l{n}-chamber-left-r",
+            "b": "l{n}-throat-left-r",
+            "anchorA": {
+              "x": 0,
+              "y": -0.4
+            },
+            "anchorB": {
+              "x": -0.125,
+              "y": 0.05
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-right-throat-r",
+            "a": "l{n}-chamber-right-r",
+            "b": "l{n}-throat-right-r",
+            "anchorA": {
+              "x": 0,
+              "y": -0.4
+            },
+            "anchorB": {
+              "x": 0.125,
+              "y": 0.05
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-throat-nozzle-left-r",
+            "a": "l{n}-throat-left-r",
+            "b": "l{n}-nozzle-left-r",
+            "anchorA": {
+              "x": 0.135,
+              "y": -0.05
+            },
+            "anchorB": {
+              "x": 0.135,
+              "y": 0.3
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-throat-nozzle-right-r",
+            "a": "l{n}-throat-right-r",
+            "b": "l{n}-nozzle-right-r",
+            "anchorA": {
+              "x": -0.135,
+              "y": -0.05
+            },
+            "anchorB": {
+              "x": -0.135,
+              "y": 0.3
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-wing-left",
+            "a": "l{n}-wing",
+            "b": "l{n}-engine-l",
+            "anchorA": {
+              "x": -1,
+              "y": -0.1
+            },
+            "anchorB": {
+              "x": 0,
+              "y": 0.1
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-wing-right",
+            "a": "l{n}-wing",
+            "b": "l{n}-engine-r",
+            "anchorA": {
+              "x": 1,
+              "y": -0.1
+            },
+            "anchorB": {
+              "x": 0,
+              "y": 0.1
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-wing-tank",
+            "a": "l{n}-wing",
+            "b": "l{n}-tank",
+            "anchorA": {
+              "x": 0,
+              "y": 0.1
+            },
+            "anchorB": {
+              "x": 0,
+              "y": -0.25
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-tank-hull",
+            "a": "l{n}-tank",
+            "b": "l{n}-hull",
+            "anchorA": {
+              "x": 0,
+              "y": 0.25
+            },
+            "anchorB": {
+              "x": 0,
+              "y": -0.5
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-wing-leg-left",
+            "a": "l{n}-wing",
+            "b": "l{n}-leg-left",
+            "anchorA": {
+              "x": -1.425,
+              "y": -0.1
+            },
+            "anchorB": {
+              "x": 0.327381,
+              "y": 1.021429
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          },
+          {
+            "id": "l{n}-w-wing-leg-right",
+            "a": "l{n}-wing",
+            "b": "l{n}-leg-right",
+            "anchorA": {
+              "x": 1.425,
+              "y": -0.1
+            },
+            "anchorB": {
+              "x": -0.327381,
+              "y": 1.021429
+            },
+            "limits": {
+              "tension": 5000,
+              "compression": 10000,
+              "shear": 3500,
+              "torque": 1200
+            }
+          }
+        ],
+        "links": [
+          {
+            "id": "l{n}-feed-h2-l",
+            "kind": "feed",
+            "from": "l{n}-tank",
+            "to": "l{n}-engine-l",
+            "resource": "h2",
+            "rate": 0.2
+          },
+          {
+            "id": "l{n}-feed-o2-l",
+            "kind": "feed",
+            "from": "l{n}-tank",
+            "to": "l{n}-engine-l",
+            "resource": "o2",
+            "rate": 1.6
+          },
+          {
+            "id": "l{n}-feed-h2-r",
+            "kind": "feed",
+            "from": "l{n}-tank",
+            "to": "l{n}-engine-r",
+            "resource": "h2",
+            "rate": 0.2
+          },
+          {
+            "id": "l{n}-feed-o2-r",
+            "kind": "feed",
+            "from": "l{n}-tank",
+            "to": "l{n}-engine-r",
+            "resource": "o2",
+            "rate": 1.6
+          },
+          {
+            "id": "l{n}-ctl-left",
+            "kind": "control",
+            "channel": "left",
+            "to": "l{n}-engine-l"
+          },
+          {
+            "id": "l{n}-ctl-right",
+            "kind": "control",
+            "channel": "right",
+            "to": "l{n}-engine-r"
+          }
+        ]
+      },
+      "hull": "l{n}-hull",
+      "tank": "l{n}-tank",
+      "start": {
+        "position": {
+          "x": -270,
+          "y": 120
+        },
+        "velocity": {
+          "x": 15,
+          "y": 0
+        }
+      },
+      "pads": [
+        {
+          "id": "pad-1",
+          "multiplier": 2
+        },
+        {
+          "id": "pad-2",
+          "multiplier": 3
+        },
+        {
+          "id": "pad-3",
+          "multiplier": 4
+        },
+        {
+          "id": "pad-4",
+          "multiplier": 5
+        },
+        {
+          "id": "pad-5",
+          "multiplier": 2
+        }
+      ],
+      "maxSpeed": 2,
+      "maxTilt": 15,
+      "explodeAbove": 3.5
+    }
+  },
+  "timeline": [],
+  "end": {
+    "steps": 864000
+  },
+  "probes": [],
+  "assertions": [],
+  "ui": {
+    "keys": {
+      "q": "left",
+      "e": "right"
+    },
+    "overlays": [],
+    "labels": false
+  }
+}
