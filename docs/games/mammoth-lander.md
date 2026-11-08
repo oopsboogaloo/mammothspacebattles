@@ -4,7 +4,7 @@ A lunar-lander mini game built on the Mammoth Space Battles physics. You fly the
 ship down onto landing pads across six scenarios. Gravity, real exhaust gas, contacts and breaking
 welds decide every landing and every crash.
 
-Status: draft for review, 8 November 2026. Requirement IDs (LND-…) move into `docs/spec.md` when a
+Status: agreed, 8 November 2026. Requirement IDs (LND-…) move into `docs/spec.md` when a
 milestone is scheduled.
 
 ## 1. Decisions so far
@@ -32,7 +32,7 @@ milestone is scheduled.
    - The first ship starts at the scenario's start point.
    - After each landing or crash there is a short pause (about 2 s, or a tap) showing the result.
    - Then the next ship starts at the start point.
-4. **Game over** after the third crash, or when every pad has been landed on (see LND-012).
+4. **Game over** after the third crash, or when every pad has been used (see LND-012).
    - Shows the total score, the landings, and fuel used.
 5. **New high score.** If the total makes the top 10, enter 3 initials with big touch letter pickers.
    Then the table, with the new entry highlighted.
@@ -48,7 +48,7 @@ milestone is scheduled.
 - **Each new ship** starts at the scenario's start point, with that scenario's start velocity and a
   full tank.
 - **The world carries on between ships.** Wreckage, parked ships and loose debris stay where they
-  are (LND-020).
+  are until the game ends (LND-020).
 
 ### Landing
 
@@ -61,7 +61,7 @@ The existing judge (FLT-005…FLT-008) decides, extended to several pads (LND-01
   - touching a pad too fast;
   - coming to rest too tilted;
   - the ship breaking apart.
-- **A landed ship stays parked on its pad.** That pad is then *claimed* (LND-012).
+- **A landed ship stays parked on its pad.** That pad is then *used*: it is closed for the rest of the game (LND-012).
 
 ### Scoring
 
@@ -72,7 +72,8 @@ Each landing scores:
 - **Pads:** each shows its multiplier as ×2, ×3, ×4 or ×5. Smaller and harder pads have bigger
   multipliers.
 - **Cave:** the multiplier rises with depth.
-- **Claimed pads:** proposal: landing on one again pays ×1. Clearing every pad gives a
+- **Used pads:** a pad landed on is closed for the rest of the game. It is drawn dim, with its
+  multiplier struck out. Touching it counts as touching the ground. Using every pad gives a
   1,000-point bonus and ends the game (LND-012).
 - **Game total:** the sum of the landings, plus the clear bonus.
 
@@ -80,9 +81,8 @@ Each landing scores:
 
 - **A crash is physical.** A hard enough hit breaks the ship's welds. The tank ruptures and its
   propellant burns in a blast (LND-021). The flash, dust and flying parts show it.
-- **Wreckage stays** for the next 3 ships, crashed or landed, then fades away in a puff of dust
-  (LND-022). Until then it is ordinary physics: you can hit it, push it, or land on it if it lies
-  flat. Landing on wreckage is a crash, because it isn't a pad.
+- **Wreckage stays for the whole game** (LND-022). It is ordinary physics: you can hit it or push
+  it. Touching it is a crash, because it isn't a pad. A new game starts with clean terrain.
 
 ## 4. Controls, HUD and camera
 
@@ -167,7 +167,7 @@ the same weight and thrust.
 
 - **Terrain:** Hard's.
 - **The leak:** the ship starts with a breach in its tank. The leak drains fuel and its jet pushes
-  the ship, using the existing leak physics (LND-040).
+  the ship with about a tenth of one engine's thrust, using the existing leak physics (LND-040).
 - **Warnings:** a flashing red EMERGENCY banner. With sound, a siren (LND-051).
 - **Plan:** land fast before the tank empties, while fighting the push.
 
@@ -205,8 +205,8 @@ Priority: **M** must, **S** should.
   verdict names the pad.
 - **LND-011** `[M]` A pad may sit on a moving body, such as the orbital asteroid. Touchdown speed
   and rest are then measured relative to the pad, and tilt from the local "up".
-- **LND-012** `[S]` A pad landed on is claimed. Landing on it again pays ×1. Claiming every pad
-  ends the game with a bonus.
+- **LND-012** `[M]` A pad landed on is used: it closes for the rest of the game, and touching it
+  counts as touching the ground. Using every pad ends the game with a 1,000-point bonus.
 - **LND-013** `[M]` Each landing is scored as in §3.
 
 **Lives and the persistent world**
@@ -214,7 +214,7 @@ Priority: **M** must, **S** should.
   old one stays, parked or wrecked.
 - **LND-021** `[M]` The LAND ship can break. Its parts have materials and its welds have break
   limits, so a hard impact breaks it apart. The tank ruptures and burns as a blast.
-- **LND-022** `[S]` Wreckage is removed, as dust, when the third ship after its crash starts.
+- **LND-022** `[M]` Wreckage and parked ships stay for the whole game. A new game starts clean.
 
 **Controls and camera**
 - **LND-030** `[M]` Two touch thrust buttons (multi-touch). Q/E and the arrow keys on a keyboard.
@@ -222,6 +222,7 @@ Priority: **M** must, **S** should.
 
 **Scenarios**
 - **LND-040** `[M]` A ship may start with a breach (Emergency), using the existing leak physics.
+  Its jet pushes with about a tenth of one engine's thrust.
 - **LND-041** `[M]` Terrain is authored as a line of points per scenario. The game builds the
   ground's polygons from it.
 - **LND-042** `[M]` Terrain collides across the wrap seam. Today nothing collides across a seam
@@ -264,15 +265,12 @@ dust, wreckage physics and the smooth drawing.
 4. **Orbital.** Pads on a spinning body, relative-speed landing, orbit start.
 5. **Sound.**
 
-## 10. Open questions
+## 10. Answered (8 November 2026)
 
-1. **Claimed pads (LND-012):** is ×1 for a repeat landing and a bonus for clearing all pads right?
-   Or should a landed pad be closed?
-2. **Score numbers:** the base, softness and fuel points (100/100/100) and the clear bonus (1,000)
-   are starting values.
-3. **Wreckage:** removed when the third ship after the crash starts. Landed, parked ships stay all
-   game. Is that right?
-4. **Orbital's spin and size:** about 150 m across, one turn every 5–10 minutes. Too slow to notice,
-   or about right?
-5. **Emergency's leak:** how strong? Proposal: it empties the tank in about 60 s of game time on its
-   own, and its push is about a third of one engine's.
+1. **Used pads close.** A pad landed on can't be used again in that game. Using every pad ends
+   the game with a 1,000-point bonus.
+2. **Points:** 100 base, up to 100 for softness, up to 100 for fuel, and the 1,000 clear bonus
+   are the starting values.
+3. **Wreckage stays for the whole game.** So do parked ships. A new game starts clean.
+4. **Orbital:** about 150 m across, one turn every 5–10 minutes.
+5. **Emergency's leak:** its push is about a tenth of one engine's thrust.
