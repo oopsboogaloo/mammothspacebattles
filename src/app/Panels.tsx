@@ -89,7 +89,7 @@ export function TopBar() {
           data-testid="achieved"
           title={playing.value && a.behind ? "Slow: this machine can't keep up with the chosen speed, so the run is in slow motion (SBX-005)" : "Achieved simulation speed (SBX-005)"}
         >
-          {playing.value ? `speed ${a.scale.toFixed(2)}×` : "paused"}
+          {playing.value ? `speed ${speedText(a.scale)}×` : "paused"}
           {playing.value && a.behind && <span class="sr-only"> (slow: can't keep up)</span>}
         </span>
         {sb.scenario.ui?.spawn && <SpawnBar />}
@@ -784,6 +784,9 @@ function spawnShip() {
 }
 /** Spawned copies with a part still in the world. */
 const shipsFlying = () => new Set(sandbox.value!.world.bodies.map((b) => /^s(\d+)-/.exec(b.id)?.[1]).filter(Boolean)).size;
+
+/** The achieved speed in four characters (0.73, 12.5), so the top bar doesn't shift as it changes. */
+const speedText = (v: number): string => (v.toFixed(2).length > 4 ? v.toFixed(1) : v.toFixed(2));
 
 /** In the top bar, for a scenario with a spawn button (the stress test): the button and the step time. */
 function SpawnBar() {
