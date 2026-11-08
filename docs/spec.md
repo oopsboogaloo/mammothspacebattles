@@ -256,7 +256,7 @@ Right-click on any entity opens a context menu with the common actions for that 
 ### 8.6 Requirements — time control
 
 - **SBX-001** `[M · M1 · E]` The sandbox shall provide play, pause, single-step, step-10 and reset-to-start, via both buttons and keys.
-- **SBX-002** `[M · M1 · E]` The sandbox shall provide a time scale from at least 1/16× to 8×, implemented as more or fewer fixed steps, never a larger timestep.
+- **SBX-002** `[M · M1 · E]` The sandbox shall provide a time scale from at least 1/16× to 8×, implemented as more or fewer fixed steps, never a larger timestep. Normal speed, shown as 1×, is half real time: the pace the game plays well at. The speeds shown run from 1/8× to 16× (1/16 to 8 times real time), with fine steps either side of 1×.
 - **SBX-003** `[M · M2 · E]` The sandbox shall keep a snapshot history so you can scrub back over at least the last 10 s of simulated time.
 - **SBX-004** `[M · M2 · E]` When you edit while scrubbed back, the sandbox shall discard the future after that point and continue from the edited state. A single undo restores the discarded future.
 - **SBX-005** `[M · M1 · E]` If the simulation cannot keep up in real time, then the sandbox shall show the achieved time scale instead of silently dropping steps.

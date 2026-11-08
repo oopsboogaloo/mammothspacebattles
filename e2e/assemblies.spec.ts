@@ -37,7 +37,7 @@ test("UXV-001 W4 SBX-015 SBX-016 detach a part mid-flight and see the assembly's
 
 test("UXV-001 W8 SBX-004 pause, scrub back 5 s, change a value and resume, branching the run, in ≤ 5 actions", async ({ page }) => {
   await openStarter(page, "sc01-elastic-collision");
-  await page.getByTestId("scale-4").click();
+  await page.getByTestId("scale-8").click();
   await page.keyboard.press("Space");
   await waitForTick(page, 240 * 7);
   const b = new Budget(page, 5);
@@ -68,7 +68,7 @@ test("UXV-001 W8 SBX-004 pause, scrub back 5 s, change a value and resume, branc
 
 test("SBX-003 the scrub bar reaches back at least 10 s", async ({ page }) => {
   await openStarter(page, "rs05b-spinning-assembly");
-  await page.getByTestId("scale-8").click();
+  await page.getByTestId("scale-16").click();
   await page.keyboard.press("Space");
   await waitForTick(page, 240 * 12);
   await page.keyboard.press("Space");

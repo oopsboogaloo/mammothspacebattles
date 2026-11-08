@@ -31,6 +31,7 @@ import {
   sheet,
   spawnKind,
   timeScale,
+  GAME_PACE,
   tool,
   TOOLS,
   version,
@@ -789,13 +790,14 @@ function SpawnBar() {
   void version.value;
   const sb = sandbox.value!;
   const p = sb.perf();
-  const budget = 1000 * sb.profile.timestep;
+  // What a step may take to keep up with the chosen speed.
+  const budget = (1000 * sb.profile.timestep) / (timeScale.value * GAME_PACE);
   return (
     <>
       <button class="btn primary small" data-testid="spawn" onClick={spawnShip} title={`Adds an AI ship that hunts whatever it sees. ${sb.spawned} added, ${shipsFlying()} still flying.`}>
         {sb.scenario.ui!.spawn!.label}
       </button>
-      <span data-testid="perf" class={p && p.msPerStep > budget ? "behind" : ""} title="Mean time a step takes to compute, against the time a step stands for (real time).">
+      <span data-testid="perf" class={p && p.msPerStep > budget ? "behind" : ""} title="Mean time a step takes to compute, against what it may take to keep up with the chosen speed.">
         {shipsFlying()} ships · step {p ? p.msPerStep.toFixed(1) : "–"} / {budget.toFixed(1)} ms
       </span>
     </>
@@ -821,7 +823,8 @@ function PerformanceSection() {
   void version.value;
   const sb = sandbox.value!;
   const p = sb.perf();
-  const budget = 1000 * sb.profile.timestep;
+  // What a step may take to keep up at normal speed (1×, GAME_PACE of real time).
+  const budget = (1000 * sb.profile.timestep) / GAME_PACE;
   return (
     <Section id="performance" title="Performance">
       {p ? (
@@ -829,8 +832,8 @@ function PerformanceSection() {
           <Row k="Step" v={`${p.msPerStep.toFixed(1)} ms`} title="Mean time a step took to compute, over the last couple of seconds of game time." />
           <Row k="of which gas" v={`${p.gasMsPerStep.toFixed(1)} ms`} />
           <Row k="Slowest step" v={`${p.worstMs.toFixed(0)} ms`} />
-          <Row k="Real-time budget" v={`${budget.toFixed(1)} ms a step`} title={`At ${Math.round(1 / sb.profile.timestep)} steps a second, a step must take this long or less to keep up with real time.`} />
-          <Row k="Can run at" v={`${Math.round((100 * budget) / p.msPerStep)}% of real time`} />
+          <Row k="Budget at 1×" v={`${budget.toFixed(1)} ms a step`} title={`Normal speed (1×) is ${GAME_PACE} of real time: ${Math.round(GAME_PACE / sb.profile.timestep)} steps a second, so a step must take this long or less to keep up.`} />
+          <Row k="Can run at" v={`${(budget / p.msPerStep).toFixed(2)}×`} />
         </>
       ) : (
         <span class="muted" style={{ fontSize: "12px" }}>

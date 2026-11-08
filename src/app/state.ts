@@ -45,6 +45,10 @@ export const version = signal(0);
 export const screen = signal<"picker" | "sandbox">("picker");
 export const scenarioKey = signal<string>("");
 export const playing = signal(false);
+/** The game's normal pace, in game seconds a real second: 1× on the speed buttons is half real time,
+ * the speed the game plays well at (and twice the step budget). */
+export const GAME_PACE = 0.5;
+/** The chosen speed, as the buttons show it: 1 is normal pace (GAME_PACE of real time). */
 export const timeScale = signal(1);
 export const achieved = signal({ scale: 1, behind: false });
 export const tool = signal<ToolId>("select");
@@ -254,10 +258,11 @@ export function fitView(): void {
   camera.value = fitBounds(worldBounds(sb.world), viewport.value);
 }
 
-const SCALES = [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8];
-export const SCALE_BUTTONS = [1 / 16, 1 / 4, 1 / 2, 1, 4, 8];
+// Speeds as shown, 1 being normal pace: 1/8× to 16× is 1/16 to 8 times real time (SBX-002).
+const SCALES = [1 / 8, 1 / 4, 1 / 2, 3 / 4, 1, 1.25, 1.5, 2, 4, 8, 16];
+export const SCALE_BUTTONS = [1 / 8, 1 / 2, 3 / 4, 1, 1.25, 2, 8, 16];
 export function scaleLabel(s: number): string {
-  return s >= 1 ? `${s}×` : `1/${Math.round(1 / s)}×`;
+  return s >= 1 || !Number.isInteger(1 / s) ? `${s}×` : `1/${Math.round(1 / s)}×`;
 }
 
 export interface Action {
