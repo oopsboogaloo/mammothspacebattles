@@ -685,6 +685,26 @@ So the gas cost is the number of substeps hot exhaust needs (about 22 a step), t
 each. What is left: making each substep cheaper (the neighbour search and impulses), or the physics
 knobs that set the substep: parcel size h and the gas's sound speed (gasScale).
 
+## 20. Cheaper gas substeps: no big win (8 November 2026)
+
+Profiled the reference battle (2 s from step 480). Gas was 12 ms of an 18 ms step.
+
+| Where | ms a step |
+|---|---|
+| The gas step's own loop (pairs, impulses, drift) | 4.5 |
+| Wisps (the drawn tail bouncing off bodies) | 1.2 |
+| Filing walls into grid cells, each substep | 1.1 |
+| Collector pauses | 1.2 |
+| Wall surface tests | 0.55 |
+
+- **The gas loop has no hot line.** Its time is spread across many lines, none above 3%.
+- **Wall cells are already tuned.**
+- **Wisps: kept.** Each wisp built a combined list of nearby and big bodies every step. It now walks
+  the two lists in the same order through one shared function: 1.22 → 1.05 ms, identical results.
+
+What would cut gas time further is fewer substeps (§19) or less work per parcel pair. Neither has a
+cheap, identical-result change left.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
