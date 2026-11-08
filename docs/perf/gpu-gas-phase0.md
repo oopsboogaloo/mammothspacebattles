@@ -621,6 +621,20 @@ Left: the ledger's totals over every body (about 1.2 ms, called several times a 
 step's other passes over every body when there is little gas (far field, free-flight mask,
 clusters: about 1.3 ms).
 
+**Follow-up (8 November 2026), battle snapshot, interleaved runs: 6.8 → 6.0 ms a step.**
+
+- **Ledger totals: kept.** `computeTotals` runs 17 times a step over every body. It now asks for
+  inertia and store energy as plain numbers instead of making an object for each, with the same
+  sums: 82 → 60 µs a call.
+- **Gas phase takes only bodies near gas: kept.** It takes whole assemblies within reach of some
+  gas: the far field, two smoothing lengths and twice the step's travel, with 5 m to spare. Engines
+  holding chamber gas are always taken, and one moving body if none is near, so far gas still
+  leaves. Gas phase 3.0 → 1.6 ms a step. Hashes unchanged in every test scenario and the battle; the
+  margin is the only approximation.
+- **Inert pieces, small clean-ups: dropped.** Per-body setup without a throwaway object, and
+  grouping assemblies by appending instead of copying. Identical results but no measurable gain, so
+  not worth the code.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
