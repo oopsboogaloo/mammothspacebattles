@@ -88,6 +88,35 @@ export function stepWisps(world: World, dt: number): number {
       }
   }
   let bounces = 0;
+  /** Bounces wisp w (mass m, radius r) off body b if it has run into it. */
+  const touch = (w: Wisp, m: number, r: number, b: Body): void => {
+    const d = sub(w.position, b.position);
+    const R = reach.get(b)! + r;
+    if (dot(d, d) > R * R) return;
+    const hit = collide({ shape: { kind: "disc", radius: r }, position: w.position, rot: { c: 1, s: 0 } }, { shape: b.shape, position: b.position, rot: sinCos(b.angle) }, 0, 0);
+    if (!hit || !hit.points.length) return;
+    const pt = hit.points.reduce((a, c) => (c.separation < a.separation ? c : a));
+    if (pt.separation >= 0) return;
+    const n = hit.normal; // from the wisp into the body
+    // Out of the body first, then the bounce.
+    w.position = add(w.position, scale(n, pt.separation));
+    const rb = sub(pt.point, b.position);
+    const vb = b.fixed ? { x: 0, y: 0 } : add(b.velocity, { x: -b.angularVelocity * rb.y, y: b.angularVelocity * rb.x });
+    const vn = dot(sub(w.velocity, vb), n); // > 0: moving into it
+    if (vn <= 0) return;
+    const mb = bodyMass(b);
+    const invB = b.fixed ? 0 : 1 / mb;
+    const ib = b.fixed ? 0 : massProps(b.shape, mb).inertia;
+    const rn = cross(rb, n);
+    const invI = ib > 0 ? (rn * rn) / ib : 0;
+    const j = ((1 + RESTITUTION) * vn) / (1 / m + invB + invI);
+    w.velocity = sub(w.velocity, scale(n, j / m));
+    if (!b.fixed) {
+      b.velocity = add(b.velocity, scale(n, j * invB));
+      if (ib > 0) b.angularVelocity += (rn * j) / ib;
+    }
+    bounces += 1;
+  };
   const kept: Wisp[] = [];
   for (const w of list) {
     w.age += dt;
@@ -97,34 +126,9 @@ export function stepWisps(world: World, dt: number): number {
     const m = wispMass(w);
     const r = wispRadius(w);
     const near = grid.get(key(Math.floor(w.position.x / CELL), Math.floor(w.position.y / CELL)));
-    for (const b of near ? [...near, ...big] : big) {
-      const d = sub(w.position, b.position);
-      const R = reach.get(b)! + r;
-      if (dot(d, d) > R * R) continue;
-      const hit = collide({ shape: { kind: "disc", radius: r }, position: w.position, rot: { c: 1, s: 0 } }, { shape: b.shape, position: b.position, rot: sinCos(b.angle) }, 0, 0);
-      if (!hit || !hit.points.length) continue;
-      const pt = hit.points.reduce((a, c) => (c.separation < a.separation ? c : a));
-      if (pt.separation >= 0) continue;
-      const n = hit.normal; // from the wisp into the body
-      // Out of the body first, then the bounce.
-      w.position = add(w.position, scale(n, pt.separation));
-      const rb = sub(pt.point, b.position);
-      const vb = b.fixed ? { x: 0, y: 0 } : add(b.velocity, { x: -b.angularVelocity * rb.y, y: b.angularVelocity * rb.x });
-      const vn = dot(sub(w.velocity, vb), n); // > 0: moving into it
-      if (vn <= 0) continue;
-      const mb = bodyMass(b);
-      const invB = b.fixed ? 0 : 1 / mb;
-      const ib = b.fixed ? 0 : massProps(b.shape, mb).inertia;
-      const rn = cross(rb, n);
-      const invI = ib > 0 ? (rn * rn) / ib : 0;
-      const j = ((1 + RESTITUTION) * vn) / (1 / m + invB + invI);
-      w.velocity = sub(w.velocity, scale(n, j / m));
-      if (!b.fixed) {
-        b.velocity = add(b.velocity, scale(n, j * invB));
-        if (ib > 0) b.angularVelocity += (rn * j) / ib;
-      }
-      bounces += 1;
-    }
+    // Each nearby body, then each big one: the same order as before, without a combined list per wisp.
+    if (near) for (const b of near) touch(w, m, r, b);
+    for (const b of big) touch(w, m, r, b);
     kept.push(w);
   }
   world.wisps = kept;
