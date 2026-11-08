@@ -261,8 +261,10 @@ export function fitView(): void {
 // Speeds as shown, 1 being normal pace: 1/8× to 16× is 1/16 to 8 times real time (SBX-002).
 const SCALES = [1 / 8, 1 / 4, 1 / 2, 3 / 4, 1, 1.25, 1.5, 2, 4, 8, 16];
 export const SCALE_BUTTONS = [1 / 8, 1 / 2, 3 / 4, 1, 1.25, 2, 8, 16];
+/** Fractions as single characters, so the speed buttons fit the top bar. */
+const FRACTIONS: Record<string, string> = { "0.125": "⅛", "0.25": "¼", "0.5": "½", "0.75": "¾", "1.25": "1¼", "1.5": "1½" };
 export function scaleLabel(s: number): string {
-  return s >= 1 || !Number.isInteger(1 / s) ? `${s}×` : `1/${Math.round(1 / s)}×`;
+  return `${FRACTIONS[String(s)] ?? s}×`;
 }
 
 export interface Action {

@@ -39,10 +39,10 @@ test.describe("time control", () => {
     await expect(page.getByTestId("scale-0.125")).toHaveAttribute("aria-pressed", "false");
     await page.getByTestId("scale-0.5").click(); // half the normal speed has its own button
     await expect(page.getByTestId("scale-0.5")).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByTestId("scale-0.5")).toHaveText("1/2×");
+    await expect(page.getByTestId("scale-0.5")).toHaveText("½×");
     // Fine steps either side of normal speed.
-    await expect(page.getByTestId("scale-0.75")).toHaveText("0.75×");
-    await expect(page.getByTestId("scale-1.25")).toHaveText("1.25×");
+    await expect(page.getByTestId("scale-0.75")).toHaveText("¾×");
+    await expect(page.getByTestId("scale-1.25")).toHaveText("1¼×");
     await page.getByTestId("scale-8").click();
     await page.keyboard.press("Space");
     await expect(page.getByTestId("achieved")).toContainText("speed");
