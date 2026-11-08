@@ -28,6 +28,16 @@ describe("smooth motion on screen", () => {
     expect(nextShownTime(30, 0, 1 / 60, 1)).toBe(0); // a reset
   });
 
+  it("ARC-006 the shown clock never runs backwards: ahead of the world, it waits for it", () => {
+    // Ahead after a stall; the world comes in behind it.
+    let shown = 5.08;
+    for (let f = 0; f < 30; f++) {
+      const next = nextShownTime(shown, 5, 1 / 60, 1);
+      expect(next).toBeGreaterThanOrEqual(shown);
+      shown = next;
+    }
+  });
+
   it("ARC-006 draws what moves carried on by its velocity, leaving the world itself alone", () => {
     const w = createWorld(1, [disc("a", { velocity: { x: 2, y: 0 }, angularVelocity: 1 }), box("floor", 4, 0.5, { fixed: true, position: { x: 0, y: -1 } })]);
     const s = extrapolate(w, 0.5);

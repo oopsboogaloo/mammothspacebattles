@@ -483,7 +483,7 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
     });
   num(v, g.maxSpeed, `${path}.maxSpeed`, { positive: true });
   num(v, g.maxTilt, `${path}.maxTilt`, { min: 0, max: 180 });
-  for (const k of ["lives", "pause", "explodeAbove", "clearBonus"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
+  for (const k of ["ships", "pause", "explodeAbove", "clearBonus"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
 }
 
 function validateDuel(v: V, c: unknown, bodies: unknown, path: string): void {

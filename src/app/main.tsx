@@ -26,7 +26,7 @@ import {
   violationsOpen,
 } from "./state.ts";
 import { sim, View } from "./View.tsx";
-import { LanderApp } from "./Lander.tsx";
+import { LanderApp, sendControl } from "./Lander.tsx";
 import { toScreen } from "./camera.ts";
 import { hashValue } from "../core/index.ts";
 import { shown } from "./smooth.ts";
@@ -67,7 +67,9 @@ function App() {
         e.preventDefault();
         if (!e.repeat) {
           pressGroups[key] = ++pressCounter;
-          edit([{ type: "control.set", channel, value: 1 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
+          // In the game, keys go in as live input (no stall at each press).
+          if (screen.value === "lander") sendControl(channel, 1, `Key ${key.toUpperCase()}`, pressGroups[key]);
+          else edit([{ type: "control.set", channel, value: 1 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
         }
         return;
       }
@@ -95,7 +97,8 @@ function App() {
       const key = e.key.toLowerCase();
       const channel = bindings.value[key];
       if (channel && sandbox.value && pressGroups[key] !== undefined) {
-        edit([{ type: "control.set", channel, value: 0 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
+        if (screen.value === "lander") sendControl(channel, 0, `Key ${key.toUpperCase()}`, pressGroups[key]);
+        else edit([{ type: "control.set", channel, value: 0 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
         delete pressGroups[key];
       }
     };

@@ -342,6 +342,24 @@ export class Sandbox {
    * Commands with the same `group` merge into one undo step (e.g. a drag).
    * Throws if a command is invalid for the current world; nothing changes then.
    */
+  /**
+   * Live input while running (a game's thrust buttons): the commands apply at the current tick and are
+   * recorded with the edits, so replays and scrubbing see them, but without the undo snapshots an edit
+   * takes. The simulation worker applies the same commands to its own copy (SimClient.input), so the
+   * world isn't sent to it again and the run in flight isn't thrown away.
+   */
+  input(commands: Command[]): void {
+    const t = this.world.tick;
+    applyCommands(this.world, commands, this.profile);
+    this.edits = this.edits.filter((e) => e.tick <= t);
+    this.invalidateAfter(t);
+    const at = this.edits.find((e) => e.tick === t);
+    if (at) at.commands.push(...structuredClone(commands));
+    else this.edits.push({ tick: t, commands: structuredClone(commands) });
+    this.version++;
+    this.dirty = true;
+  }
+
   edit(commands: Command[], label: string, group?: number): void {
     const t = this.world.tick;
     const before = structuredClone(this.world);

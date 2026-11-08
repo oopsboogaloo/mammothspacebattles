@@ -7,7 +7,7 @@ import { scenarioFile } from "./scenarios.ts";
 import { addScore, best, loadScores, qualifies, type ScoreTable } from "./landerScores.ts";
 import { bindings, camera, edit, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
 import { shown } from "./smooth.ts";
-import { View } from "./View.tsx";
+import { sim, View } from "./View.tsx";
 
 /** The six scenarios, in order; those without a file yet are shown as coming soon. */
 export const LANDER_SCENARIOS: { key: string; title: string; blurb: string }[] = [
@@ -98,6 +98,18 @@ function Select() {
   );
 }
 
+/**
+ * Sets a control channel from the game: while running, straight to the simulation as live input (no
+ * stall); paused, an ordinary edit, after any input still queued (so a release while paused isn't
+ * undone by its press when play resumes).
+ */
+export function sendControl(channel: string, value: number, label: string, group: number): void {
+  const cmd = [{ type: "control.set" as const, channel, value }];
+  if (playing.value && sim.input(cmd)) return;
+  if (sandbox.value) sim.flush(sandbox.value);
+  edit(cmd, label, group);
+}
+
 /** Holds a channel at full while pressed: mouse, touch or pen, several at once (LND-030). */
 function Thrust({ channel, label, side }: { channel: string; label: string; side: "left" | "right" }) {
   const group = useRef(0);
@@ -106,7 +118,7 @@ function Thrust({ channel, label, side }: { channel: string; label: string; side
     if (on === down.current) return;
     down.current = on;
     if (on) group.current = Math.floor(Math.random() * 1e9);
-    edit([{ type: "control.set", channel, value: on ? 1 : 0 }], `Thrust ${label}`, group.current);
+    sendControl(channel, on ? 1 : 0, `Thrust ${label}`, group.current);
   };
   return (
     <button
@@ -137,7 +149,8 @@ function Play() {
   const game = sb.world.lander;
   const status = sb.world.challenge?.status;
   const goal = sb.world.challenge?.goal;
-  const lives = game ? (game.spec.lives ?? 3) - game.state.crashes : 0;
+  // Ships still to fly, the one flying included.
+  const lives = game ? (game.spec.ships ?? 3) - game.state.n + (game.state.phase === "flying" ? 1 : 0) : 0;
 
   // The camera frames the ship (the one flying, or the last) and the ground under it, closing in as
   // it comes down (LND-031). It follows the ship as drawn (moved on for smooth motion, smooth.ts).
@@ -156,7 +169,7 @@ function Play() {
       const y = hull.position.y + hull.velocity.y * ahead;
       const alt = Math.min(150, Math.max(0, w.challenge?.status.altitude ?? 50));
       const vp = viewport.value;
-      const zoom = Math.min(30, Math.max(3, vp.height / (1.5 * alt + 24)));
+      const zoom = Math.min(18, Math.max(3, vp.height / (1.5 * alt + 45)));
       const c = camera.value;
       const z = c.zoom + (zoom - c.zoom) * 0.04;
       // The ship sits above the middle, so the ground below it is in view.
@@ -205,6 +218,11 @@ function Play() {
           {playing.value ? "Pause" : "Resume"}
         </button>
       </div>
+      {landerKey.value === "lander-emergency" && !over && (
+        <div class="lander-emergency" data-testid="lander-emergency">
+          EMERGENCY
+        </div>
+      )}
       {between && status && (
         <div class={`lander-banner ${status.phase === "landed" ? "good" : "bad"}`} data-testid="lander-verdict">
           {status.phase === "landed" ? `LANDED ×${goal?.pads?.find((p) => p.id === status.landedOn)?.multiplier ?? 1}  +${last?.score ?? 0}` : "CRASHED"}

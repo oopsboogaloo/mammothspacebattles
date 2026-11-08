@@ -3,6 +3,7 @@
 // worker (tests, old browsers) or the run in flight has gone stale.
 import type { Sandbox } from "./controller.ts";
 import type { RunRequest, RunResult } from "./simWorker.ts";
+import type { Command } from "../core/index.ts";
 
 export class SimClient {
   private worker: Worker | null = null;
@@ -15,6 +16,8 @@ export class SimClient {
   /** Runs taken in so far, and gas cluster jobs helper threads ran in them (for tests and diagnostics). */
   runs = 0;
   helperJobs = 0;
+  /** Live input waiting for the next run (see `input`). */
+  private pending: Command[] = [];
   /** Called with each result taken in: steps applied, and whether a landing verdict stopped the run. */
   onRun: (steps: number, verdict: boolean) => void = () => {};
 
@@ -45,9 +48,42 @@ export class SimClient {
     return !!this.inFlight && (this.inFlight.sb !== sb || this.inFlight.version !== sb.version || this.inFlight.cancelled);
   }
 
+  /**
+   * Live input while running (a game's thrust buttons): applied at the start of the next run, on the
+   * page and in the worker alike, so the run in flight carries on and the world isn't sent again
+   * (an edit would do both: a stall of a run or two at every press). Returns false if there is no
+   * worker, for the caller to edit instead.
+   */
+  input(commands: Command[]): boolean {
+    if (!this.worker) return false;
+    this.pending.push(...commands);
+    return true;
+  }
+
+  /**
+   * Applies queued live input now, on the page (pausing): edits made while paused then come after
+   * it, so a release while paused isn't undone by its press on resume. The worker's copy is sent
+   * again with the next run.
+   */
+  flush(sb: Sandbox): void {
+    if (!this.pending.length) return;
+    sb.input(this.pending);
+    this.pending = [];
+  }
+
   /** Starts a run of up to `steps` steps from the sandbox's world now. */
   request(sb: Sandbox, steps: number, budgetMs: number): void {
     if (!this.worker || this.inFlight) return;
+    // Live input goes in at this tick: recorded on the page, and applied by the worker to its copy.
+    let inputs: Command[] | undefined;
+    if (this.pending.length) {
+      inputs = this.pending;
+      this.pending = [];
+      const inSync = this.holds?.sb === sb && this.holds.version === sb.version;
+      sb.input(inputs);
+      if (inSync) this.holds = { sb, version: sb.version };
+      else inputs = undefined; // the world goes whole, with them in it
+    }
     const fresh = this.holds?.sb === sb && this.holds.version === sb.version;
     const req: RunRequest = {
       type: "run",
@@ -61,6 +97,7 @@ export class SimClient {
       budgetMs,
       stopOnVerdict: true,
       helpers: this.helpers,
+      inputs,
     };
     this.inFlight = { sb, version: sb.version, cancelled: false };
     this.holds = { sb, version: sb.version };

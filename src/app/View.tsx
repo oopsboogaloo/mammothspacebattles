@@ -270,6 +270,7 @@ export function View() {
         owed = 0;
         taken = 0;
         sim.cancel();
+        sim.flush(sb);
       }
       // Drawn moved on to the shown time, so motion is even however the worker's results arrive.
       const world = extrapolate(sb.world, shown.time - sb.world.time);

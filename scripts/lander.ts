@@ -26,7 +26,13 @@ const material = (bid: string) => (bid === "tank" ? { name: "tank", threshold: 1
 /** Weld limits: a landing's loads are far below them, a crash's are not. */
 const WELD = { tension: 5000, compression: 10000, shear: 3500, torque: 1200 };
 
-function ship(economy: number) {
+/** A leak in the tank (Emergency, LND-040): how damaged it is (1 whole), and where the hole faces in its frame. */
+interface Leak {
+  integrity: number;
+  normal: Vec;
+}
+
+function ship(economy: number, leak?: Leak) {
   const bodies = land.world.bodies
     .filter((b) => shipIds.has(String(b.id)))
     .map((b) => {
@@ -34,6 +40,12 @@ function ship(economy: number) {
       if (out.injector) out.injector = { ...(out.injector as Json), economy };
       // The tank's charge: the propellant's stored energy, set off by the game in a hard crash.
       if (b.id === "tank") out.explosive = { charge: 0.05, arm: 1e6, fragments: 6, radius: 0.5 };
+      // A leaking tank: damaged from the start, its hole on the side the leak faces (DMG-004).
+      if (b.id === "tank" && leak) {
+        const box = b.shape as { width: number; height: number };
+        out.integrity = leak.integrity;
+        out.breach = { point: { x: (leak.normal.x * box.width) / 2, y: (leak.normal.y * box.height) / 2 }, normal: leak.normal, credit: 0, count: 0 };
+      }
       return out;
     });
   const joints = land.world.joints.map((j) => ({ ...j, id: id(j.id), a: id(j.a), b: id(j.b), limits: WELD }));
@@ -118,7 +130,7 @@ function write(file: string, scn: Json) {
   console.log(`wrote scenarios/${file}.json`);
 }
 
-function scenario(o: { name: string; title: string; description: string; bodies: Json[]; bounds: Json; economy: number; start: { position: Vec; velocity: Vec }; pads: Pad[]; maxSpeed: number; maxTilt: number }): Json {
+function scenario(o: { name: string; title: string; description: string; bodies: Json[]; bounds: Json; economy: number; leak?: Leak; start: { position: Vec; velocity: Vec }; pads: Pad[]; maxSpeed: number; maxTilt: number }): Json {
   return {
     schema: 1,
     name: o.name,
@@ -131,7 +143,7 @@ function scenario(o: { name: string; title: string; description: string; bodies:
       bounds: o.bounds,
       bodies: o.bodies,
       lander: {
-        ship: ship(o.economy),
+        ship: ship(o.economy, o.leak),
         hull: "l{n}-hull",
         tank: "l{n}-tank",
         start: o.start,
@@ -170,7 +182,7 @@ function scenario(o: { name: string; title: string; description: string; bodies:
       description: "Gently rolling ground, five pads and plenty of fuel. Smaller pads score more. The ground wraps round.",
       bodies: terrain(pts, pads, { bottom: -60, width: W, seam: 30 }),
       bounds: { min: { x: -W / 2, y: -2000 }, max: { x: W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
-      economy: 20,
+      economy: 5,
       start: { position: { x: -270, y: 120 }, velocity: { x: 15, y: 0 } },
       pads,
       maxSpeed: 2,
@@ -178,3 +190,96 @@ function scenario(o: { name: string; title: string; description: string; bodies:
     }),
   );
 }
+
+// Bumps for mountains: a sharp peak (or, with negative height, a pit) of `height` m and half-width `half` m at `x`.
+const spike = (x: number, height: number, half: number) => (at: number) => Math.max(0, 1 - Math.abs(at - x) / half) * height;
+const sum =
+  (...fs: ((x: number) => number)[]) =>
+  (x: number) =>
+    fs.reduce((y, f) => y + f(x), 0);
+const wave = (amp: number, period: number, phase = 0) => (x: number) => amp * Math.sin((2 * Math.PI * x) / period + phase);
+
+// Medium: lunar peaks and spikes, 800 m round. Pads in the valleys (wider, ×2/×3) and cut as shelves
+// into the mountain sides (narrow, ×4/×5). Fuel matters: a quarter less than Easy.
+const MEDIUM = (() => {
+  const W = 800;
+  const f = sum(wave(28, 400), wave(12, 160, 1), wave(5, 80, 2), spike(-260, 45, 18), spike(-40, 60, 22), spike(150, 38, 15), spike(300, 50, 20));
+  const pads: Pad[] = [
+    { x: -330, width: 12, multiplier: 2 },
+    { x: -215, width: 7, multiplier: 4 },
+    { x: -110, width: 10, multiplier: 3 },
+    { x: 40, width: 6, multiplier: 5 },
+    { x: 210, width: 11, multiplier: 2 },
+    { x: 345, width: 6, multiplier: 4 },
+  ];
+  return { W, f, pads, pts: line(-W / 2, W / 2, 4, f, pads) };
+})();
+write(
+  "lander-medium",
+  scenario({
+    name: "lander-medium",
+    title: "Mammoth Lander: Medium",
+    description: "Lunar peaks and spikes. Pads in the valleys and on shelves in the mountain sides. Fuel matters. The ground wraps round.",
+    bodies: terrain(MEDIUM.pts, MEDIUM.pads, { bottom: -100, width: MEDIUM.W, seam: 30 }),
+    bounds: { min: { x: -MEDIUM.W / 2, y: -2000 }, max: { x: MEDIUM.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
+    economy: 4,
+    start: { position: { x: -380, y: 170 }, velocity: { x: 10, y: 0 } },
+    pads: MEDIUM.pads,
+    maxSpeed: 1.5,
+    maxTilt: 12,
+  }),
+);
+
+// Hard: sheer, jagged mountains, 800 m round, and narrow pads on ledges and down pits. Tighter limits.
+const HARD = (() => {
+  const W = 800;
+  const f = sum(
+    wave(35, 400, 0.5),
+    wave(15, 100, 1.3),
+    wave(6, 40, 2.1),
+    spike(-300, 70, 14),
+    spike(-180, 85, 16),
+    spike(-30, 75, 12),
+    spike(120, 95, 18),
+    spike(260, 80, 14),
+    // Pits, each with a pad at the bottom.
+    spike(-240, -30, 9),
+    spike(60, -35, 9),
+  );
+  const pads: Pad[] = [
+    { x: -340, width: 8, multiplier: 2 },
+    { x: -240, width: 6, multiplier: 5 },
+    { x: -105, width: 6, multiplier: 4 },
+    { x: 60, width: 6, multiplier: 5 },
+    { x: 190, width: 7, multiplier: 3 },
+    { x: 330, width: 6, multiplier: 4 },
+  ];
+  return { W, f, pads, pts: line(-W / 2, W / 2, 3, f, pads, 1) };
+})();
+const hard = (o: { name: string; title: string; description: string; leak?: Leak; economy: number }) =>
+  scenario({
+    ...o,
+    bodies: terrain(HARD.pts, HARD.pads, { bottom: -120, width: HARD.W, seam: 30 }),
+    bounds: { min: { x: -HARD.W / 2, y: -2000 }, max: { x: HARD.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
+    start: { position: { x: -390, y: 200 }, velocity: { x: 10, y: 0 } },
+    pads: HARD.pads,
+    maxSpeed: 1.2,
+    maxTilt: 10,
+  });
+write(
+  "lander-hard",
+  hard({ name: "lander-hard", title: "Mammoth Lander: Hard", description: "Sheer mountains, narrow ledges and pits. Tight limits and tight fuel. The ground wraps round.", economy: 3.5 }),
+);
+
+// Emergency: Hard's mountains with the tank leaking from the start: fuel drains, and the leak's jet
+// pushes the ship sideways with about a tenth of one engine's thrust (LND-040).
+write(
+  "lander-emergency",
+  hard({
+    name: "lander-emergency",
+    title: "Mammoth Lander: Emergency",
+    description: "Hard's mountains, with a leaking tank: fuel drains and the leak pushes you about. Get down fast.",
+    economy: 3.5,
+    leak: { integrity: 0.6, normal: { x: 1, y: 0 } },
+  }),
+);

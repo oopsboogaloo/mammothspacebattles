@@ -12,7 +12,7 @@ milestone is scheduled.
 | Question | Decision |
 |---|---|
 | Ship | The LAND twin-engine ship: two engines, Q and E. Both together lift; one alone turns. |
-| Session | 3 lives per game. A crash costs a life; a landing banks its score and a fresh ship starts. |
+| Session | 3 ships per game. Each flies once, landed or crashed; when all three have flown, that is the score. |
 | Terrain | One fixed, hand-made layout per scenario, so it can be learned and scores compare fairly. |
 | Controls | Two big touch buttons (left and right thumb, one per engine). Q and E on a keyboard. |
 | Speed | Fixed at 1× (half real time). A pause button, no speed buttons. |
@@ -32,7 +32,7 @@ milestone is scheduled.
    - The first ship starts at the scenario's start point.
    - After each landing or crash there is a short pause (about 2 s, or a tap) showing the result.
    - Then the next ship starts at the start point.
-4. **Game over** after the third crash, or when every pad has been used (see LND-012).
+4. **Game over** when all three ships have flown, or when every pad has been used (see LND-012).
    - Shows the total score, the landings, and fuel used.
 5. **New high score.** If the total makes the top 10, enter 3 initials with big touch letter pickers.
    Then the table, with the new entry highlighted.
@@ -40,11 +40,12 @@ milestone is scheduled.
 
 ## 3. Rules
 
-### Ships and lives
+### Ships
 
-- **Lives:** 3 per game.
-- **A crash** costs a life.
-- **A landing** banks the score and keeps every life.
+- **Ships:** 3 per game. Each flies once.
+- **A landing** banks its score; **a crash** scores nothing.
+- **The game ends** when all three have flown (changed 8 November 2026 after play: rounds were
+  too long when only crashes counted).
 - **Each new ship** starts at the scenario's start point, with that scenario's start velocity and a
   full tank.
 - **The world carries on between ships.** Wreckage, parked ships and loose debris stay where they
@@ -99,7 +100,7 @@ Large and readable on an iPad:
 
 - **Flight readout:** height above the nearest pad, vertical and sideways speed, tilt.
 - **Fuel:** a bar plus kilograms. It flashes when below 15%.
-- **Game status:** lives left, score, and the scenario name.
+- **Game status:** ships left, score, and the scenario name.
 - **Speed and tilt warnings:** each readout turns red when it is over the scenario's limit, so you
   know before touchdown.
 
@@ -118,8 +119,8 @@ Limits are starting values to tune in play.
 |---|---|---|---|---|---|---|
 | Gravity | 1.6 m/s² down | 1.6 | 1.6 | 1.6 | asteroid's, about 1 m/s² at the surface | 1.6 |
 | World | wraps, about 600 m wide | wraps, about 800 m | wraps, about 800 m | bounded | open space round the asteroid | wraps, as Hard |
-| Fuel | plentiful (economy 20) | tight (economy 4) | tight (economy 4) | tight (economy 4) | moderate (economy 8) | Hard's, draining through a leak |
-| Start | 120 m up, 15 m/s sideways | 150 m up, 10 m/s sideways | 150 m up, 10 m/s sideways | cave mouth, still | in orbit at about 60 m | as Hard, leak open |
+| Fuel | economy 5 (cut from 20 after play) | tight (economy 4) | tight (economy 3.5) | tight (economy 4) | moderate (economy 8) | Hard's, draining through a leak |
+| Start | 120 m up, 15 m/s sideways | 170 m up, 10 m/s sideways | 200 m up, 10 m/s sideways | cave mouth, still | in orbit at about 60 m | as Hard, leak open |
 | Touchdown limit | 2.0 m/s, 15° | 1.5 m/s, 12° | 1.2 m/s, 10° | 1.5 m/s, 12° | 1.5 m/s relative to the pad, 12° | 1.2 m/s, 10° |
 | Pads | 5: wide ×2 to narrow ×5 | 6: valleys and mountain shelves | 6: narrow ledges and pits | 5: ×2 to ×6, deeper is more | 6: plateaus and crater floors | Hard's |
 
@@ -142,7 +143,7 @@ the same weight and thrust.
 ### Hard
 
 - **Terrain:** sheer, jagged mountains.
-- **Pads:** narrow, on ledges, in pits, and under overhangs that force a sideways approach.
+- **Pads:** narrow, on ledges and at the bottom of pits. (Overhangs need terrain that isn't a single line of heights: a later step.)
 - **Tolerances:** tighter.
 
 ### Cave
@@ -167,7 +168,9 @@ the same weight and thrust.
 
 - **Terrain:** Hard's.
 - **The leak:** the ship starts with a breach in its tank. The leak drains fuel and its jet pushes
-  the ship with about a tenth of one engine's thrust, using the existing leak physics (LND-040).
+  the ship with about a tenth of one engine's thrust, using the existing leak physics (LND-040). As built:
+  the tank starts at 60% integrity with its hole facing sideways: about 5.5 N of push, and a full
+  tank leaks away in about 40 s on its own.
 - **Warnings:** a flashing red EMERGENCY banner. With sound, a siren (LND-051).
 - **Plan:** land fast before the tank empties, while fighting the push.
 

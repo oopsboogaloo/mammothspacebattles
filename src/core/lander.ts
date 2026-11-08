@@ -22,8 +22,8 @@ export interface LanderSpec {
   /** Fastest touchdown and largest tilt that still land (FLT-006, FLT-008). */
   maxSpeed: number;
   maxTilt: number;
-  /** Ships a game (default 3). */
-  lives?: number;
+  /** Ships a game (default 3): landed or crashed, each flies once. */
+  ships?: number;
   /** Game time between a verdict and the next ship, s (default 2). */
   pause?: number;
   /** A crash touching down faster than this sets off the tank, m/s (default 3). */
@@ -44,7 +44,7 @@ export interface LanderState {
   /** When the next ship starts (between ships), s. */
   next?: number;
   /** Why the game ended. */
-  ended?: "crashes" | "cleared";
+  ended?: "ships" | "cleared";
 }
 
 export interface LanderGame {
@@ -52,7 +52,7 @@ export interface LanderGame {
   state: LanderState;
 }
 
-const DEFAULTS = { lives: 3, pause: 2, explodeAbove: 3, clearBonus: 1000 };
+const DEFAULTS = { ships: 3, pause: 2, explodeAbove: 3, clearBonus: 1000 };
 
 const withN = <T>(x: T, n: number): T => JSON.parse(JSON.stringify(x).replaceAll("{n}", String(n))) as T;
 
@@ -82,10 +82,10 @@ export function startLander(spec: LanderSpec): LanderGame {
 export function landerCommands(world: World): Command[] {
   const game = world.lander;
   if (!game || game.state.phase !== "between" || world.time < (game.state.next ?? 0) - 1e-9) return [];
-  // The last life's crash has played out (its explosion included): the game is over.
-  if (game.state.crashes >= (game.spec.lives ?? DEFAULTS.lives)) {
+  // Every ship has flown, and the last one's verdict has played out (an explosion included): the game is over.
+  if (game.state.n >= (game.spec.ships ?? DEFAULTS.ships)) {
     game.state.phase = "over";
-    game.state.ended = "crashes";
+    game.state.ended = "ships";
     game.state.next = undefined;
     return [];
   }

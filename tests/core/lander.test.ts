@@ -64,16 +64,24 @@ describe("Mammoth Lander", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("LND-020 the game ends after the last life", () => {
-    const { w, step } = game(8, { lives: 2, pause: 0.5 });
+  it("LND-020 the game ends when every ship has flown", () => {
+    const { w, step } = game(8, { ships: 2, pause: 0.5 });
     step(5);
     expect(w.lander!.state.crashes).toBe(2);
     expect(w.lander!.state.phase).toBe("over");
-    expect(w.lander!.state.ended).toBe("crashes");
+    expect(w.lander!.state.ended).toBe("ships");
   });
 
-  it("LND-021 the last life's hard crash still explodes before the game ends", () => {
-    const { w, step } = game(8, { lives: 1, pause: 0.5 });
+  it("LND-020 a landing uses a ship too: three ships, landed or crashed, make the game", () => {
+    const { w, step } = game(1, { ships: 1, pause: 0.5 });
+    step(2.5);
+    expect(w.lander!.state.landings).toHaveLength(1);
+    expect(w.lander!.state.phase).toBe("over");
+    expect(w.lander!.state.ended).toBe("ships");
+  });
+
+  it("LND-021 the last ship's hard crash still explodes before the game ends", () => {
+    const { w, step } = game(8, { ships: 1, pause: 0.5 });
     step(2);
     expect(w.lander!.state.phase).toBe("over");
     expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);
@@ -95,6 +103,22 @@ describe("Mammoth Lander", () => {
     for (let k = 0; k < 2 * 240; k++) stepInPlace(w, [], prof);
     expect(w.lander!.state.crashes).toBe(1);
     expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);
+  });
+
+  it("LND-040 Emergency: the tank leaks from the start, draining fuel and pushing the ship sideways", () => {
+    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-emergency.json", import.meta.url), "utf8"));
+    scn.world.gravity = { x: 0, y: 0 };
+    scn.world.lander.start = { position: { x: 0, y: 900 }, velocity: { x: 0, y: 0 } };
+    const s = parseScenario(scn);
+    const prof = getProfile(s.profile);
+    const w = initialWorld(s);
+    for (let k = 0; k < 2 * 240; k++) stepInPlace(w, [], prof);
+    const st = w.challenge!.status;
+    expect(st.fuel).toBeLessThan(st.fuelStart - 0.2); // no engine firing
+    // A tenth or so of one engine's thrust, sideways: about 0.2 m/s² on the 27 kg ship.
+    expect(Math.abs(st.vx)).toBeGreaterThan(0.25);
+    expect(Math.abs(st.vx)).toBeLessThan(0.6);
+    expect(w.ledger.violations).toBe(0);
   });
 
   it("LND-041 the scenario is checked: the hull must be one of the ship's bodies", () => {
