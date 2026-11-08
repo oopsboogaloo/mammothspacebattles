@@ -821,7 +821,12 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
       const point = add(b.position, add(rotate(q, br.point), add(scale(n, ahead), scale({ x: -n.y, y: n.x }, spread))));
       // Nothing leaks into another body: a breach pressed against something stays shut until it moves off.
       // Only bodies that reach within the clearance can block it (a wreck-strewn world has hundreds).
-      const near = world.bodies.filter((o) => Math.hypot(point.x - o.position.x, point.y - o.position.y) <= massProps(o.shape, 1).boundingRadius + LEAK_RADIUS + 1e-6);
+      const near = world.bodies.filter((o) => {
+        const dx = point.x - o.position.x;
+        const dy = point.y - o.position.y;
+        const reach = massProps(o.shape, 1).boundingRadius + LEAK_RADIUS + 1e-6;
+        return dx * dx + dy * dy <= reach * reach;
+      });
       if (!clearOf(wallBodies(near))(point.x, point.y, LEAK_RADIUS)) break;
       const r = sub(point, b.position);
       const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
