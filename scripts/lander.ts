@@ -142,7 +142,7 @@ function scenario(o: { name: string; title: string; description: string; bodies:
       },
     },
     timeline: [],
-    end: { steps: 240 * 3600 },
+    end: { steps: 240 }, // the game runs on until it is over; this is how far a headless run goes
     probes: [],
     assertions: [],
     ui: { keys: { q: "left", e: "right" }, overlays: [], labels: false },
