@@ -4,9 +4,10 @@ test("LND-001 LND-002 LND-030 Mammoth Lander: title, mission select, and a fligh
   await page.goto("./?game=lander");
   await page.getByTestId("lander-title").click();
   await expect(page.getByTestId("lander-select")).toBeVisible();
-  // Easy is ready; the others are coming.
-  await expect(page.getByTestId("lander-pick-lander-easy")).toBeEnabled();
+  // Easy, Medium, Hard and Emergency are ready; Cave and Orbital are coming.
+  for (const k of ["easy", "medium", "hard", "emergency"]) await expect(page.getByTestId(`lander-pick-lander-${k}`)).toBeEnabled();
   await expect(page.getByTestId("lander-pick-lander-cave")).toBeDisabled();
+  await expect(page.getByTestId("lander-pick-lander-orbital")).toBeDisabled();
   await page.getByTestId("lander-pick-lander-easy").click();
   const hud = page.getByTestId("lander-hud");
   await expect(hud).toContainText("FUEL 8.10 kg");
@@ -29,4 +30,12 @@ test("LND-001 the sandbox picker opens the game", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("open-lander").click();
   await expect(page.getByTestId("lander-title")).toBeVisible();
+});
+
+test("LND-050 Emergency flashes its banner", async ({ page }) => {
+  await page.goto("./?game=lander");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-emergency").click();
+  await expect(page.getByTestId("lander-emergency")).toBeVisible();
+  await expect(page.getByTestId("lander-emergency")).toHaveText("EMERGENCY");
 });

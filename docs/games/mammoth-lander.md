@@ -119,8 +119,8 @@ Limits are starting values to tune in play.
 |---|---|---|---|---|---|---|
 | Gravity | 1.6 m/s² down | 1.6 | 1.6 | 1.6 | asteroid's, about 1 m/s² at the surface | 1.6 |
 | World | wraps, about 600 m wide | wraps, about 800 m | wraps, about 800 m | bounded | open space round the asteroid | wraps, as Hard |
-| Fuel | plentiful (economy 20) | tight (economy 4) | tight (economy 4) | tight (economy 4) | moderate (economy 8) | Hard's, draining through a leak |
-| Start | 120 m up, 15 m/s sideways | 150 m up, 10 m/s sideways | 150 m up, 10 m/s sideways | cave mouth, still | in orbit at about 60 m | as Hard, leak open |
+| Fuel | economy 5 (cut from 20 after play) | tight (economy 4) | tight (economy 3.5) | tight (economy 4) | moderate (economy 8) | Hard's, draining through a leak |
+| Start | 120 m up, 15 m/s sideways | 170 m up, 10 m/s sideways | 200 m up, 10 m/s sideways | cave mouth, still | in orbit at about 60 m | as Hard, leak open |
 | Touchdown limit | 2.0 m/s, 15° | 1.5 m/s, 12° | 1.2 m/s, 10° | 1.5 m/s, 12° | 1.5 m/s relative to the pad, 12° | 1.2 m/s, 10° |
 | Pads | 5: wide ×2 to narrow ×5 | 6: valleys and mountain shelves | 6: narrow ledges and pits | 5: ×2 to ×6, deeper is more | 6: plateaus and crater floors | Hard's |
 
@@ -143,7 +143,7 @@ the same weight and thrust.
 ### Hard
 
 - **Terrain:** sheer, jagged mountains.
-- **Pads:** narrow, on ledges, in pits, and under overhangs that force a sideways approach.
+- **Pads:** narrow, on ledges and at the bottom of pits. (Overhangs need terrain that isn't a single line of heights: a later step.)
 - **Tolerances:** tighter.
 
 ### Cave
@@ -168,7 +168,9 @@ the same weight and thrust.
 
 - **Terrain:** Hard's.
 - **The leak:** the ship starts with a breach in its tank. The leak drains fuel and its jet pushes
-  the ship with about a tenth of one engine's thrust, using the existing leak physics (LND-040).
+  the ship with about a tenth of one engine's thrust, using the existing leak physics (LND-040). As built:
+  the tank starts at 60% integrity with its hole facing sideways: about 5.5 N of push, and a full
+  tank leaks away in about 40 s on its own.
 - **Warnings:** a flashing red EMERGENCY banner. With sound, a siren (LND-051).
 - **Plan:** land fast before the tank empties, while fighting the push.
 

@@ -208,6 +208,11 @@ function Play() {
           {playing.value ? "Pause" : "Resume"}
         </button>
       </div>
+      {landerKey.value === "lander-emergency" && !over && (
+        <div class="lander-emergency" data-testid="lander-emergency">
+          EMERGENCY
+        </div>
+      )}
       {between && status && (
         <div class={`lander-banner ${status.phase === "landed" ? "good" : "bad"}`} data-testid="lander-verdict">
           {status.phase === "landed" ? `LANDED ×${goal?.pads?.find((p) => p.id === status.landedOn)?.multiplier ?? 1}  +${last?.score ?? 0}` : "CRASHED"}

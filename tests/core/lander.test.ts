@@ -105,6 +105,22 @@ describe("Mammoth Lander", () => {
     expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);
   });
 
+  it("LND-040 Emergency: the tank leaks from the start, draining fuel and pushing the ship sideways", () => {
+    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-emergency.json", import.meta.url), "utf8"));
+    scn.world.gravity = { x: 0, y: 0 };
+    scn.world.lander.start = { position: { x: 0, y: 900 }, velocity: { x: 0, y: 0 } };
+    const s = parseScenario(scn);
+    const prof = getProfile(s.profile);
+    const w = initialWorld(s);
+    for (let k = 0; k < 2 * 240; k++) stepInPlace(w, [], prof);
+    const st = w.challenge!.status;
+    expect(st.fuel).toBeLessThan(st.fuelStart - 0.2); // no engine firing
+    // A tenth or so of one engine's thrust, sideways: about 0.2 m/s² on the 27 kg ship.
+    expect(Math.abs(st.vx)).toBeGreaterThan(0.25);
+    expect(Math.abs(st.vx)).toBeLessThan(0.6);
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("LND-041 the scenario is checked: the hull must be one of the ship's bodies", () => {
     const scn = structuredClone(raw);
     scn.world.lander.hull = "l{n}-nothing";
