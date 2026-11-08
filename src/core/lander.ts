@@ -82,6 +82,13 @@ export function startLander(spec: LanderSpec): LanderGame {
 export function landerCommands(world: World): Command[] {
   const game = world.lander;
   if (!game || game.state.phase !== "between" || world.time < (game.state.next ?? 0) - 1e-9) return [];
+  // The last life's crash has played out (its explosion included): the game is over.
+  if (game.state.crashes >= (game.spec.lives ?? DEFAULTS.lives)) {
+    game.state.phase = "over";
+    game.state.ended = "crashes";
+    game.state.next = undefined;
+    return [];
+  }
   game.state.n += 1;
   game.state.phase = "flying";
   game.state.next = undefined;
@@ -113,27 +120,25 @@ export function updateLander(world: World): void {
     state.crashes += 1;
     // A hard crash sets off the tank: the blast, shrapnel and dust are the explosion (LND-021).
     const tank = spec.tank ? world.bodies.find((b) => b.id === withN(spec.tank!, state.n)) : undefined;
-    if (tank?.explosive && crashSpeed(world, c.goal.ship, st.at ?? world.tick) >= o.explodeAbove) tank.explosive.trigger = true;
+    if (tank?.explosive && crashSpeed(world, c.goal.ship, st.at ?? world.tick, st.parts) >= o.explodeAbove) tank.explosive.trigger = true;
   }
   // The keys fly only the next ship: this one's engines lose their control links.
   const members = new Set(assemblyOf(world, c.goal.ship));
   world.links = world.links.filter((l) => !(l.kind === "control" && members.has(l.to)));
-  if (state.crashes >= o.lives) {
-    state.phase = "over";
-    state.ended = "crashes";
-  } else if (state.used.length >= spec.pads.length) {
+  if (state.used.length >= spec.pads.length) {
     state.phase = "over";
     state.ended = "cleared";
     state.score += o.clearBonus;
   } else {
+    // The pause after the last life's crash too, so its explosion plays before the game ends.
     state.phase = "between";
     state.next = world.time + o.pause;
   }
 }
 
-/** The hardest touch on the ship in the step of its crash, m/s. */
-function crashSpeed(world: World, ship: string, tick: number): number {
-  const members = new Set(assemblyOf(world, ship));
+/** The hardest touch between the ship (its parts at the start) and anything else, in the steps of its crash, m/s. */
+function crashSpeed(world: World, ship: string, tick: number, parts?: string[]): number {
+  const members = new Set(parts ?? assemblyOf(world, ship));
   let v = 0;
   for (const e of world.events) {
     if (e.type !== "collision" || e.tick < tick - 1) continue;

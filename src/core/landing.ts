@@ -171,16 +171,19 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
   };
 
   const open = openPads(goal);
+  // The ship is its parts at the start (with `parts`): a part knocked loose is still the ship, so
+  // what it hits counts, and the ship coming apart is a crash.
+  const ship = s.parts ? new Set(s.parts) : t.members;
+  if (s.parts && s.parts.some((id) => world.bodies.some((b) => b.id === id) && !t.members.has(id))) return crash("The ship broke apart.");
   // New touches between the ship and anything else.
   for (const e of world.events) {
     if (e.tick < fromTick || e.type !== "collision") continue;
     const a = String(e.data.a);
     const b = String(e.data.b);
-    const aIn = t.members.has(a);
-    const bIn = t.members.has(b);
+    const aIn = ship.has(a);
+    const bIn = ship.has(b);
     if (aIn === bIn) continue;
     const other = aIn ? b : a;
-    if (s.parts?.includes(other)) continue; // a piece of this ship that has broken off
     const speed = Number(e.data.speed);
     if (!open.has(other)) {
       if (goal.used?.includes(other)) return crash(`Touched a pad already used, at ${fmt(speed)} m/s.`);

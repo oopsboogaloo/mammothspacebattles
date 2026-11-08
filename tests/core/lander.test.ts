@@ -72,6 +72,31 @@ describe("Mammoth Lander", () => {
     expect(w.lander!.state.ended).toBe("crashes");
   });
 
+  it("LND-021 the last life's hard crash still explodes before the game ends", () => {
+    const { w, step } = game(8, { lives: 1, pause: 0.5 });
+    step(2);
+    expect(w.lander!.state.phase).toBe("over");
+    expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);
+  });
+
+  it("LND-021 a ship that breaks apart has crashed, whichever part hit first", () => {
+    // Tilted and hard onto the pad: welds break as it hits.
+    const scn = structuredClone(raw);
+    scn.world.lander.start = { position: { x: pad1.position.x, y: padTop + REACH + 2 }, velocity: { x: 0, y: -12 } };
+    scn.world.lander.ship.bodies = scn.world.lander.ship.bodies.map((b: { position: { x: number; y: number }; angle?: number }) => {
+      const c = Math.cos(0.4);
+      const sn = Math.sin(0.4);
+      return { ...b, position: { x: c * b.position.x - sn * b.position.y, y: sn * b.position.x + c * b.position.y }, angle: (b.angle ?? 0) + 0.4 };
+    });
+    scn.world.lander.ship.joints = scn.world.lander.ship.joints.map((j: Record<string, unknown>) => j);
+    const s = parseScenario(scn);
+    const prof = getProfile(s.profile);
+    const w = initialWorld(s);
+    for (let k = 0; k < 2 * 240; k++) stepInPlace(w, [], prof);
+    expect(w.lander!.state.crashes).toBe(1);
+    expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);
+  });
+
   it("LND-041 the scenario is checked: the hull must be one of the ship's bodies", () => {
     const scn = structuredClone(raw);
     scn.world.lander.hull = "l{n}-nothing";
