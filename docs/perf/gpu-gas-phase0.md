@@ -635,6 +635,56 @@ clusters: about 1.3 ms).
   grouping assemblies by appending instead of copying. Identical results but no measurable gain, so
   not worth the code.
 
+## 18. The dynamic gas budget: tried, dropped (8 November 2026)
+
+The idea (docs/gpu-gas-plan.md): cap the parcels the gas model simulates. Over the cap, the gas
+farthest from any body leaves the model as drawn-only wisps. Built as profile `gasSimCap`:
+- **Trim:** when over the cap, trim to 90% of it.
+- **Rank:** by distance to the nearest body in 2 m grid cells, the oldest parcel first at equal
+  distance.
+- **Never trimmed:** gas in a cell a body touches.
+- **Ledger:** what leaves is booked at the boundary. No ledger violations in any run.
+
+| Scene (sandbox profile) | Most parcels | Gas, ms a step |
+|---|---|---|
+| Reference battle, no cap | 680 | 9.1 |
+| Reference battle, cap 600 / 400 / 250 / 150 | 593 / 399 / 250 / 201 | 7.8 / 8.5 / 7.7 / 8.2 |
+| Mammoth on full burn, 10 s | 71 | cap never triggers |
+| Stress test, 6 gunships, 30 s | 287 | about 1.5 (no cap) |
+
+- **Small gain.** Gas far from bodies was already cheap: free flight steps it with little work.
+  The cost is the dense gas at the engines and the substeps (about 22 a step on full burn) that
+  fast, hot exhaust forces. Trimming that would spoil thrust.
+- **Different results.** The reference battle played out differently: one ship ended 15–40 m from
+  where it ends with no cap.
+- **Normal play never reaches a useful cap.** The parcel-rate limit, free flight and the far field
+  already keep counts low.
+
+Dropped under the simplicity rule. The patch is kept outside the repository in case very gas-heavy
+scenes turn up. The lever for gas cost is the substep count, not the parcel count.
+
+## 19. Substeps: already as long as they can be (8 November 2026)
+
+Measured every substep of the reference battle (4 s, 61,000 substeps) and of the Mammoth on full burn
+in the stress test (6 s). Instrumented only; no code change kept.
+
+- **Per-parcel CFL: no gain (×1.00).** The substep is CFL × smallest h ÷ fastest signal speed, which
+  can pair one parcel's size with another's speed. The standard per-parcel form, min of h ÷ speed
+  over the parcels, gives the same substep: all parcels have the same size.
+- **Bodies never set the pace.** Moving bodies' surface speed set it in 0% of substeps.
+- **Multi-rate (block) substeps: at most 8%.**
+  - **Reference battle:** 85% of parcels need the shortest substep and 15% could take twice it. With
+    power-of-two steps per parcel, gas work would fall to 92% at best.
+  - **Mammoth on full burn:** all of them need it (100%).
+  - **Why:** the hot exhaust's sound speed sets every parcel's limit about equally. The few slow ones
+    are already cheap through free flight.
+  - **Cost:** multi-rate stepping would need a scheme that keeps the ledger exact, a large and risky
+    change for less than 8%.
+
+So the gas cost is the number of substeps hot exhaust needs (about 22 a step), times the work in
+each. What is left: making each substep cheaper (the neighbour search and impulses), or the physics
+knobs that set the substep: parcel size h and the gas's sound speed (gasScale).
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
