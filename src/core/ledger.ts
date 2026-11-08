@@ -5,9 +5,9 @@
 
 import { cross, dot, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
-import { parcelChemical, storeEnergy } from "./gas.ts";
+import { parcelChemical, storeChemical, storeThermal } from "./gas.ts";
 import { explosiveEnergy, type Explosive } from "./explosive.ts";
-import { massProps } from "./shapes.ts";
+import { inertiaOf } from "./shapes.ts";
 import type { World } from "./world.ts";
 
 export interface Totals {
@@ -92,7 +92,7 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
   for (const b of world.bodies) {
     if (b.fixed) continue;
     const m = bodyMass(b);
-    const { inertia } = massProps(b.shape, m);
+    const inertia = inertiaOf(b.shape, m);
     const v = b.velocity;
     mass += m;
     px += m * v.x;
@@ -103,9 +103,8 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
     // Propellant in stores carries its thermal and chemical energy (PRP-001).
     if (b.contents) {
       for (const st of b.contents) {
-        const e = storeEnergy(st, world.gas.scale ?? 1);
-        thermal += e.thermal;
-        chemical += e.chemical;
+        thermal += storeThermal(st, world.gas.scale ?? 1);
+        chemical += storeChemical(st, world.gas.scale ?? 1);
       }
     }
     // An explosive charge holds chemical energy until it detonates (WPN), shells in a magazine included.

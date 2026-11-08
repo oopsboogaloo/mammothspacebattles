@@ -102,3 +102,14 @@ export function massProps(shape: Shape, mass: number): MassProps {
 }
 
 const polygonMoments = new WeakMap<Shape, { area: number; j: number; boundingRadius: number }>();
+
+/** massProps(shape, mass).inertia without making an object: the ledger asks for it many times a step. */
+export function inertiaOf(shape: Shape, mass: number): number {
+  if (shape.kind === "disc") return 0.5 * mass * shape.radius * shape.radius;
+  let g = polygonMoments.get(shape);
+  if (!g) {
+    massProps(shape, mass);
+    g = polygonMoments.get(shape)!;
+  }
+  return (mass * g.j) / g.area;
+}

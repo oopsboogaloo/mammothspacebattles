@@ -81,10 +81,21 @@ export const STORE_TEMPERATURE = 300;
 
 /** Thermal and chemical energy of a store's contents, J (0 for resources that are not gas species). */
 export function storeEnergy(st: { resource: string; mass: number }, scale = 1): { thermal: number; chemical: number } {
+  return { thermal: storeThermal(st, scale), chemical: storeChemical(st, scale) };
+}
+
+/** storeEnergy's thermal part alone, without making an object (the ledger asks many times a step). */
+export function storeThermal(st: { resource: string; mass: number }, scale = 1): number {
   const sp = SPECIES[st.resource];
-  if (!sp) return { thermal: 0, chemical: 0 };
+  if (!sp) return 0;
   const cv = R_GAS / sp.molarMass / (sp.gamma - 1);
-  return { thermal: (st.mass * cv * STORE_TEMPERATURE) / scale, chemical: (st.mass * (sp.heat ?? 0)) / scale };
+  return (st.mass * cv * STORE_TEMPERATURE) / scale;
+}
+
+/** storeEnergy's chemical part alone. */
+export function storeChemical(st: { resource: string; mass: number }, scale = 1): number {
+  const sp = SPECIES[st.resource];
+  return sp ? (st.mass * (sp.heat ?? 0)) / scale : 0;
 }
 
 /**
