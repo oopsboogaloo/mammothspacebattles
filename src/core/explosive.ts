@@ -20,7 +20,7 @@
 import { breakWreckage, damageBody } from "./damage.ts";
 import { bodyMass } from "./bodies.ts";
 import { collide } from "./collide.ts";
-import type { Parcel } from "./gas.ts";
+import { storeChemical, storeThermal, type Parcel } from "./gas.ts";
 import { add, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { localVertices, massProps, polygonArea } from "./shapes.ts";
 import { compareIds, type Body, type World } from "./world.ts";
@@ -42,6 +42,8 @@ export interface Explosive {
   /** State: the body that loaded it (its gun), and whether it has left that gun's assembly. */
   from?: string;
   armed?: boolean;
+  /** Set to make it go off at the next step whatever it touches (a lander's tank in a crash, LND-021). */
+  trigger?: boolean;
 }
 
 /** Share of a charge's energy that drives the casing outward (the Gurney energy); the rest goes with the gas. */
@@ -124,7 +126,7 @@ export function detonate(world: World, roots: ReadonlyMap<string, string> | null
     if (!e.armed) continue;
     let J = 0;
     for (const c of world.contacts) if (c.a === s.id || c.b === s.id) J = Math.max(J, c.normalImpulse);
-    if (J > (e.arm ?? 5) * bodyMass(s)) struck.push(s);
+    if (e.trigger || J > (e.arm ?? 5) * bodyMass(s)) struck.push(s);
   }
   for (const s of struck) burst(world, s, dt);
   if (struck.length) breakWreckage(world);
@@ -234,7 +236,12 @@ function burst(world: World, s: Body, dt: number): void {
     world.bodies.push(f);
   }
   world.bodies.sort((a, b) => compareIds(a.id, b.id));
-  const gasMass = made.length ? s.mass - M : s.mass;
+  // What it held (a lander's propellant, say) goes up with the charge: its mass joins the blast gas,
+  // and the heat and chemical energy it stored become the blast's heat.
+  const held = s.contents ?? [];
+  const heldMass = held.reduce((m, st) => m + st.mass, 0);
+  const heldEnergy = held.reduce((x, st) => x + storeThermal(st, gs) + storeChemical(st, gs), 0);
+  const gasMass = (made.length ? s.mass - M : s.mass) + heldMass;
   // Fragments take GURNEY of E as outward motion. The gas step takes bodies as already moved this step
   // and rewinds them by their velocity (§9.4): put each fragment where it ends the step.
   const u = made.length ? Math.sqrt((2 * GURNEY * E) / M) : 0;
@@ -251,7 +258,7 @@ function burst(world: World, s: Body, dt: number): void {
     position: s.position,
     velocity: s.velocity,
     mass: gasMass,
-    energy: before + E - fragmentKE - 0.5 * gasMass * dot(s.velocity, s.velocity),
+    energy: before + E + heldEnergy - fragmentKE - 0.5 * gasMass * dot(s.velocity, s.velocity),
     angle: s.angle,
     spots: corePoints(s, 2 * BLAST_PARCEL_RADIUS, 0.85),
   };

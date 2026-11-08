@@ -16,6 +16,7 @@ import {
   dialog,
   keyToAction,
   persist,
+  playing,
   probeMenu,
   sandbox,
   screen,
@@ -25,6 +26,7 @@ import {
   violationsOpen,
 } from "./state.ts";
 import { sim, View } from "./View.tsx";
+import { LanderApp } from "./Lander.tsx";
 import { toScreen } from "./camera.ts";
 import { hashValue } from "../core/index.ts";
 import { shown } from "./smooth.ts";
@@ -69,6 +71,14 @@ function App() {
         }
         return;
       }
+      // In the game only its keys work: the engines (above), and P or Esc to pause.
+      if (screen.value === "lander") {
+        if ((key === "p" || key === "escape") && sandbox.value) {
+          e.preventDefault();
+          playing.value = !playing.value;
+        }
+        return;
+      }
       const id = keyToAction(e);
       if (!id) return;
       // Space always means play/pause (Enter still activates a focused button).
@@ -79,7 +89,7 @@ function App() {
     };
     const onUnload = (e: BeforeUnloadEvent) => {
       persist();
-      if (sandbox.value?.dirty) e.preventDefault();
+      if (sandbox.value?.dirty && screen.value !== "lander") e.preventDefault();
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
@@ -101,7 +111,9 @@ function App() {
 
   return (
     <>
-      {screen.value === "picker" || !sandbox.value ? (
+      {screen.value === "lander" ? (
+        <LanderApp />
+      ) : screen.value === "picker" || !sandbox.value ? (
         <Picker />
       ) : (
         <div class="app" data-testid="sandbox">

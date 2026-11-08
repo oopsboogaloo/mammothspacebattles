@@ -42,7 +42,8 @@ const prefs = loadPrefs();
 export const sandbox = signal<Sandbox | null>(null);
 /** Bumped when the world changes; panels re-render from it (throttled while playing, SBX-040). */
 export const version = signal(0);
-export const screen = signal<"picker" | "sandbox">("picker");
+// The game (Mammoth Lander) opens straight from `?game=lander`.
+export const screen = signal<"picker" | "sandbox" | "lander">(typeof location !== "undefined" && new URLSearchParams(location.search).get("game") === "lander" ? "lander" : "picker");
 export const scenarioKey = signal<string>("");
 export const playing = signal(false);
 /** The game's normal pace, in game seconds a real second: 1× on the speed buttons is half real time,

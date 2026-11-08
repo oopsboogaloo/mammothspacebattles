@@ -56,3 +56,6 @@ export const BUILT_INS: BuiltIn[] = ORDER.flatMap(([name, id]) => {
   const blurb = description.replace(/^(Starter SC-\d+|RS-\d+b?)\.\s*/, "");
   return [{ file: name, id, title: String(raw.title ?? name), blurb, raw }];
 });
+
+/** A scenario file by name (for games, whose scenarios aren't in the picker). */
+export const scenarioFile = (name: string): Record<string, unknown> | undefined => Object.entries(files).find(([path]) => path.endsWith(`/${name}.json`))?.[1];

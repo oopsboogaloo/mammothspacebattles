@@ -3,6 +3,7 @@
 // order (DET-004). All edits go through commands (SBX-013), and every change
 // to the conserved totals is attributed in the ledger (LED-001…LED-003).
 
+import { landerCommands, landerStartJudge, startLander, updateLander, type LanderGame, type LanderSpec } from "./lander.ts";
 import { revealCompounds } from "./asteroid.ts";
 import { normalizePilot, runPilots, type Pilot, type PilotGoal, type PilotInput } from "./pilot.ts";
 import { applyCollectors, collectCaptured, normalizeCollector, type Collector, type CollectorInput } from "./collector.ts";
@@ -313,6 +314,8 @@ export interface World {
   pendingDebug: string[];
   /** A landing challenge, judged after every step (FLT-005). */
   challenge?: Challenge;
+  /** Mammoth Lander's game: ships, lives and pads (docs/games/mammoth-lander.md). */
+  lander?: LanderGame;
   /** A combat duel, judged after every step (DUEL-001). */
   duel?: Duel;
   /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
@@ -376,7 +379,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -406,6 +409,7 @@ export function createWorld(
   world.events = [];
   world.ledger.totals = computeTotals(world);
   if (extra.challenge) world.challenge = startLanding(world, structuredClone(extra.challenge));
+  if (extra.lander) world.lander = startLander(extra.lander);
   if (extra.duel) world.duel = startDuel(world, structuredClone(extra.duel));
   return world;
 }
@@ -1177,7 +1181,8 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   };
 
   const fromTick = world.tick;
-  applyCommands(world, commands, profile);
+  applyCommands(world, world.lander ? [...landerCommands(world), ...commands] : commands, profile);
+  if (world.lander) landerStartJudge(world);
   // AI pilots decide and set their own channels, as a player's keys would (AIP-001, AIP-002).
   if (world.bodies.some((b) => b.pilot)) runPilots(world, profile.timestep);
   mark("commands");
@@ -1499,6 +1504,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
       const st = world.challenge.status;
       pushEvent(world, { tick: world.tick, type: verdict, data: st.score !== undefined ? { reason: st.reason ?? "", score: st.score } : { reason: st.reason ?? "" } });
     }
+    if (world.lander) updateLander(world);
   }
 }
 
