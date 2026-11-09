@@ -7,6 +7,7 @@ import { scenarioFile } from "./scenarios.ts";
 import { addScore, best, loadScores, qualifies, type ScoreTable } from "./landerScores.ts";
 import { bindings, camera, edit, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
 import { shown } from "./smooth.ts";
+import { diag, liveStats, summary } from "./diag.ts";
 import { sim, View } from "./View.tsx";
 
 /** The six scenarios, in order; those without a file yet are shown as coming soon. */
@@ -218,6 +219,7 @@ function Play() {
           {playing.value ? "Pause" : "Resume"}
         </button>
       </div>
+      {diag.on && <DiagBox />}
       {landerKey.value === "lander-emergency" && !over && (
         <div class="lander-emergency" data-testid="lander-emergency">
           EMERGENCY
@@ -345,6 +347,40 @@ function Scores() {
           Back
         </button>
       </div>
+    </div>
+  );
+}
+
+/** `?diag=1`: live frame and step times, and a summary to copy and paste back. */
+function DiagBox() {
+  void version.value;
+  const [text, setText] = useState<string | null>(null);
+  const s = liveStats(performance.now());
+  const copy = () => {
+    const w = sandbox.value?.world;
+    const t = summary({
+      scenario: landerKey.value,
+      ship: w?.lander?.state.n ?? 0,
+      "bodies · parcels · wisps · dust · events": w ? `${w.bodies.length} · ${w.gas.parcels.length} · ${w.wisps?.length ?? 0} · ${w.dust?.length ?? 0} · ${w.events.length}` : "-",
+      "world size": w ? `${(JSON.stringify(w).length / 1024).toFixed(0)} kB` : "-",
+    });
+    setText(t);
+    navigator.clipboard?.writeText(t).catch(() => undefined);
+  };
+  return (
+    <div class="lander-diag" data-testid="lander-diag">
+      <span>
+        {s.fps.toFixed(0)} fps · worst frame {s.worstFrame.toFixed(0)} ms · step {s.msPerStep.toFixed(1)} ms · take {s.takeMs.toFixed(1)} ms
+      </span>
+      <button class="lander-btn small" onClick={copy} data-testid="lander-diag-copy">
+        Copy log
+      </button>
+      <button class="lander-btn small ghost" onClick={() => diag.reset()}>
+        Reset
+      </button>
+      {text && (
+        <textarea readOnly value={text} onFocus={(e) => (e.currentTarget as HTMLTextAreaElement).select()} onClick={() => setText(null)} aria-label="Diagnostics log (copied)" />
+      )}
     </div>
   );
 }

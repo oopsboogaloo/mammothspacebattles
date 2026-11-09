@@ -29,6 +29,7 @@ import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, 
 import { ENGINE, engineFor, HULL, TANK, withFreshChannels } from "./parts.ts";
 import { COLORS, FLAME, GLOW_FROM, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, temperatureFraction, type PortMarker, type Preview, type RulerView } from "./render.ts";
 import { extrapolate, nextShownTime, shown, sourceOf } from "./smooth.ts";
+import { diag } from "./diag.ts";
 import {
   achieved,
   bump,
@@ -212,6 +213,7 @@ export function View() {
     };
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
+      diag.frame(now);
       const sb = sandbox.value;
       const ctx = canvas.current?.getContext("2d");
       if (!sb || !ctx) return;

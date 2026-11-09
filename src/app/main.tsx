@@ -32,6 +32,8 @@ import { hashValue } from "../core/index.ts";
 import { shown } from "./smooth.ts";
 
 const pressGroups: Record<string, number> = {};
+/** In the game, the left and right Shift keys fly the left and right engines: hands apart, like the thumb pads. */
+const GAME_KEYS: Record<string, string> = { ShiftLeft: "left", ShiftRight: "right" };
 let pressCounter = 5_000_000;
 
 function isTyping(e: KeyboardEvent): boolean {
@@ -62,14 +64,16 @@ function App() {
         showToast(`${key.toUpperCase()} now drives "${channel}". Bound keys take priority over tool shortcuts.`);
         return;
       }
-      const channel = bindings.value[key];
+      const channel = (screen.value === "lander" && GAME_KEYS[e.code]) || bindings.value[key];
       if (channel && sandbox.value && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         if (!e.repeat) {
-          pressGroups[key] = ++pressCounter;
+          // Both Shift keys are "shift": the game's are told apart by where they are.
+          const pk = screen.value === "lander" && GAME_KEYS[e.code] ? e.code : key;
+          pressGroups[pk] = ++pressCounter;
           // In the game, keys go in as live input (no stall at each press).
-          if (screen.value === "lander") sendControl(channel, 1, `Key ${key.toUpperCase()}`, pressGroups[key]);
-          else edit([{ type: "control.set", channel, value: 1 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
+          if (screen.value === "lander") sendControl(channel, 1, `Key ${key.toUpperCase()}`, pressGroups[pk]);
+          else edit([{ type: "control.set", channel, value: 1 }], `Key ${key.toUpperCase()}`, pressGroups[pk]);
         }
         return;
       }
@@ -95,11 +99,12 @@ function App() {
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      const channel = bindings.value[key];
-      if (channel && sandbox.value && pressGroups[key] !== undefined) {
-        if (screen.value === "lander") sendControl(channel, 0, `Key ${key.toUpperCase()}`, pressGroups[key]);
-        else edit([{ type: "control.set", channel, value: 0 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
-        delete pressGroups[key];
+      const channel = (screen.value === "lander" && GAME_KEYS[e.code]) || bindings.value[key];
+      const pk = screen.value === "lander" && GAME_KEYS[e.code] ? e.code : key;
+      if (channel && sandbox.value && pressGroups[pk] !== undefined) {
+        if (screen.value === "lander") sendControl(channel, 0, `Key ${key.toUpperCase()}`, pressGroups[pk]);
+        else edit([{ type: "control.set", channel, value: 0 }], `Key ${key.toUpperCase()}`, pressGroups[pk]);
+        delete pressGroups[pk];
       }
     };
     window.addEventListener("keyup", onKeyUp);
