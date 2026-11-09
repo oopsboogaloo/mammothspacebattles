@@ -705,6 +705,32 @@ Profiled the reference battle (2 s from step 480). Gas was 12 ms of an 18 ms ste
 What would cut gas time further is fewer substeps (§19) or less work per parcel pair. Neither has a
 cheap, identical-result change left.
 
+## 21. The game's worker messages: events and snapshots (9 November 2026)
+
+A `?diag=1` log from a Galaxy Z Fold 5 (Chrome), 262 s of Emergency: 59 frames/s, but each worker
+result was a 1,059 kB world and the page took 9.1 ms to take it in (p95 21.8 ms, max 135 ms), about
+30 times a second. The event log was full (10,000 events, mostly `gas.left` and `collision`).
+
+On this machine, after 150 s of Emergency (4,870 events):
+
+| A copy of the world | kB | ms |
+|---|---|---|
+| Whole | 687 | 9.2 |
+| With the newest 20 events | 213 | 2.8 |
+
+- **Events: only the change is sent.** The page has the log the run began from, so the worker sends
+  how many events were trimmed from the front and the new ones (`src/app/eventDelta.ts`). The page's
+  log comes out the same, event for event (`tests/app/eventDelta.test.ts`).
+- **No scrub snapshots in the game.** Every 60 steps the worker also copied the whole world for
+  scrubbing and sent it; the page kept up to 600 of them (up to about 600 MB at 1 MB each). The game
+  has no scrubbing, so lander worlds take none.
+
+An iPad Pro log (iPadOS 26.6, Chrome, so WebKit), 181 s of Emergency, before these changes: 59
+frames/s and a mean step of 3.6 ms, but 10 frame gaps over 100 ms (max 514 ms) and a worker step of
+717 ms. WebKit reads a message before the page's handler runs, so its "taking a result" time (0.1 ms)
+leaves the copy out. Rare long pauses on both threads look like garbage collection; by then the page
+held about 360 snapshots. The log now lists each freeze over 100 ms and when it happened, to check.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

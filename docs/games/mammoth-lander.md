@@ -222,6 +222,8 @@ Priority: **M** must, **S** should.
 
 **Controls and camera**
 - **LND-030** `[M]` Two touch thrust buttons (multi-touch). Q/E and the arrow keys on a keyboard.
+  The browser must not zoom the game: two thumbs moving apart are a pinch, so pinch and double-tap
+  zoom are cancelled in the game, and if the page zooms anyway the game pauses until it is zoomed back.
 - **LND-031** `[S]` The camera follows the ship and zooms in near the ground.
 
 **Scenarios**
