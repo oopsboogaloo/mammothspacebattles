@@ -499,7 +499,9 @@ function buildWalls(bodies: WallBody[], joints: { a: string; b: string }[], marg
   const groups = new Map<string, WallBody[]>();
   for (const b of bodies) {
     const r = roots?.get(b.id) ?? b.id;
-    groups.set(r, [...(groups.get(r) ?? []), b]);
+    const g = groups.get(r);
+    if (g) g.push(b);
+    else groups.set(r, [b]);
   }
   const unitOf = new Map<string, number>();
   const units: Unit[] = [];

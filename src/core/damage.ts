@@ -19,6 +19,7 @@
 // and its joints and links break. A joint or link at 0 breaks. Damage only reads the world's
 // contacts; it never pushes on anything, so the ledger is unchanged.
 
+import { bodiesById } from "./bodies.ts";
 import { add, invRotate, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { SPECIES } from "./gas.ts";
 import { localVertices } from "./shapes.ts";
@@ -123,7 +124,7 @@ export function applyDamage(world: World): void {
     p.y += w * c.point.y;
     p.w += w;
   }
-  const byId = new Map(world.bodies.map((b) => [b.id, b]));
+  const byId = bodiesById(world);
   for (const p of pairs.values()) {
     const at = { x: p.x / p.w, y: p.y / p.w };
     for (const id of [p.a, p.b]) {

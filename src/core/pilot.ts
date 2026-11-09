@@ -257,7 +257,9 @@ function obstacles(world: World, own: Set<string>): Obstacle[] {
   for (const b of world.bodies) {
     if (own.has(b.id) || loaded.has(b.id) || shells.some((pre) => b.id.startsWith(pre))) continue;
     const r = roots.get(b.id)!;
-    groups.set(r, [...(groups.get(r) ?? []), b]);
+    const g = groups.get(r);
+    if (g) g.push(b);
+    else groups.set(r, [b]);
   }
   const out: Obstacle[] = [];
   for (const [root, bs] of groups) {
@@ -331,7 +333,9 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
   for (const b of world.bodies) {
     if (own.has(b.id) || b.fixed) continue;
     const r = roots.get(b.id)!;
-    groups.set(r, [...(groups.get(r) ?? []), b]);
+    const g = groups.get(r);
+    if (g) g.push(b);
+    else groups.set(r, [b]);
   }
   const out: Ship[] = [];
   for (const [root, bs] of groups) {

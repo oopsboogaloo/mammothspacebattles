@@ -249,7 +249,12 @@ export function generateAsteroid(spec: AsteroidSpec): { bodies: BodyInput[]; joi
  */
 export function revealCompounds(world: World): string[] {
   const groups = new Map<string, Body[]>();
-  for (const b of world.bodies) if (b.compound) groups.set(b.compound.id, [...(groups.get(b.compound.id) ?? []), b]);
+  for (const b of world.bodies) {
+    if (!b.compound) continue;
+    const g = groups.get(b.compound.id);
+    if (g) g.push(b);
+    else groups.set(b.compound.id, [b]);
+  }
   const out: string[] = [];
   for (const [cid, members] of groups) {
     const mass = members.reduce((s, b) => s + b.mass, 0);

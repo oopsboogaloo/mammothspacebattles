@@ -771,6 +771,26 @@ So the freezes come with stepping (none while paused), on WebKit only (the Fold'
 slow step. The log now gives each frozen step's parts (commands, forces, contacts, integrate, gas,
 ledger, other): a clean-up pause lands in any part, a slow step in the same one.
 
+The same freezes on Easy (Chrome, 14 in 181 s, 203 bodies, 2.5 ms a step) as on Emergency: so not
+the world's size. Live memory stays at about 15 MB (node, after a collection, 60 s of Emergency);
+what is high is the churn. Measured again with node's GC trace (MB thrown away a game second; the
+game steps 120 times a real second):
+
+| Case | Before | Shared bodies-by-id, kept fixed views and grids, no list copies |
+|---|---|---|
+| Easy, coasting | 157 | 113 |
+| Easy, engines pulsing | 328 | 273 |
+| Emergency, coasting | 480 | 392 |
+| Emergency, engines pulsing | 564 | 454 |
+
+- **Shared bodies-by-id** (`bodiesById`): five places built a map of every body each step.
+- **Fixed bodies' solver views kept** (`prepareBodies`) while each is unchanged.
+- **Fixed bodies' engine-chamber grid kept** (`bodyIndex`), as the wisps' is.
+- **Grouping by appending**, not copying the list for each member (`[...list, b]`): five places,
+  quadratic for a big assembly (Orbital's 130-part rock).
+- Identical results (same hashes); step time within noise. The rest is spread through the solver
+  and gas, a new object for each vector: near zero would need those loops in plain numbers.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
