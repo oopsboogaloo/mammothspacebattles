@@ -11576,14 +11576,15 @@
             ],
             "material": {
               "name": "tank",
-              "threshold": 100,
-              "toughness": 1500
+              "threshold": 60,
+              "toughness": 500
             },
             "explosive": {
               "charge": 0.05,
               "arm": 1000000,
               "fragments": 6,
-              "radius": 0.5
+              "radius": 0.5,
+              "whenDestroyed": true
             }
           },
           {
@@ -11731,11 +11732,12 @@
               "y": 0.4
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-head-right-l",
@@ -11750,11 +11752,12 @@
               "y": 0.4
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-left-throat-l",
@@ -11769,11 +11772,12 @@
               "y": 0.05
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-right-throat-l",
@@ -11788,11 +11792,12 @@
               "y": 0.05
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-throat-nozzle-left-l",
@@ -11807,11 +11812,12 @@
               "y": 0.3
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-throat-nozzle-right-l",
@@ -11826,11 +11832,12 @@
               "y": 0.3
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-head-left-r",
@@ -11845,11 +11852,12 @@
               "y": 0.4
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-head-right-r",
@@ -11864,11 +11872,12 @@
               "y": 0.4
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-left-throat-r",
@@ -11883,11 +11892,12 @@
               "y": 0.05
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-right-throat-r",
@@ -11902,11 +11912,12 @@
               "y": 0.05
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-throat-nozzle-left-r",
@@ -11921,11 +11932,12 @@
               "y": 0.3
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-throat-nozzle-right-r",
@@ -11940,11 +11952,12 @@
               "y": 0.3
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-wing-left",
@@ -11959,11 +11972,12 @@
               "y": 0.1
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-wing-right",
@@ -11978,11 +11992,12 @@
               "y": 0.1
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-wing-tank",
@@ -11997,11 +12012,12 @@
               "y": -0.25
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-tank-hull",
@@ -12016,11 +12032,12 @@
               "y": -0.5
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-wing-leg-left",
@@ -12035,11 +12052,12 @@
               "y": 1.021429
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           },
           {
             "id": "l{n}-w-wing-leg-right",
@@ -12054,11 +12072,12 @@
               "y": 1.021429
             },
             "limits": {
-              "tension": 5000,
-              "compression": 10000,
-              "shear": 3500,
-              "torque": 1200
-            }
+              "tension": 7650,
+              "compression": 15300,
+              "shear": 5350,
+              "torque": 1840
+            },
+            "yield": 0.3
           }
         ],
         "links": [
@@ -12146,9 +12165,8 @@
           "multiplier": 4
         }
       ],
-      "maxSpeed": 1.2,
-      "maxTilt": 10,
-      "explodeAbove": 3.5
+      "maxSpeed": 2,
+      "maxTilt": 10
     }
   },
   "timeline": [],

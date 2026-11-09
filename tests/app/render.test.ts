@@ -153,4 +153,23 @@ describe("gas plume", () => {
     renderFrame(ctx, w, { x: 0, y: 0, zoom: 100 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null });
     expect(calls.some((c) => c.startsWith("fillText(×4"))).toBe(true);
   });
+
+  it("LND-033 a faint starfield drifts behind the world, slower than the camera", () => {
+    const w = createWorld(1, []);
+    const draw = (x: number) => {
+      const { ctx, calls } = recorder();
+      renderFrame(ctx, w, { x, y: 0, zoom: 20 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null, stars: true });
+      return calls.filter((c) => c.startsWith("fillRect(") && !c.startsWith("fillRect(0,0,800,600)"));
+    };
+    const here = draw(0);
+    expect(here.length).toBeGreaterThan(30);
+    // Moving the camera 10 m (200 px at this zoom) moves the nearest stars 15 px: parallax, not the world's 200.
+    const xs = (calls: string[]) => calls.map((c) => Number(c.slice(9).split(",")[0]));
+    const moved = draw(10);
+    const shifts = xs(here).flatMap((a) => xs(moved).map((b) => a - b)).filter((d) => d > 0 && d < 40);
+    expect(shifts.some((d) => Math.abs(d - 15) <= 1)).toBe(true);
+    const { ctx, calls } = recorder();
+    renderFrame(ctx, w, { x: 0, y: 0, zoom: 20 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null });
+    expect(calls.filter((c) => c.startsWith("fillRect(")).length).toBe(1); // no stars unless asked
+  });
 });

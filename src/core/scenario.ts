@@ -355,12 +355,13 @@ function validateTractor(v: V, t: unknown, path: string): void {
 }
 
 function validateExplosive(v: V, e: unknown, mass: unknown, path: string): void {
-  if (!isObj(e)) return err(v, path, "must be {charge, heat?, fragments?, radius?, arm?}");
+  if (!isObj(e)) return err(v, path, "must be {charge, heat?, fragments?, radius?, arm?, whenDestroyed?}");
   if (num(v, e.charge, `${path}.charge`, { positive: true }) && typeof mass === "number" && (e.charge as number) > mass) err(v, `${path}.charge`, "must not exceed the shell's mass");
   if (e.heat !== undefined) num(v, e.heat, `${path}.heat`, { positive: true });
   if (e.fragments !== undefined) num(v, e.fragments, `${path}.fragments`, { int: true, min: 0, max: 8 });
   if (e.radius !== undefined) num(v, e.radius, `${path}.radius`, { positive: true });
   if (e.arm !== undefined) num(v, e.arm, `${path}.arm`, { min: 0 });
+  if (e.whenDestroyed !== undefined && typeof e.whenDestroyed !== "boolean") err(v, `${path}.whenDestroyed`, "must be true or false");
 }
 
 function validateInjector(v: V, i: unknown, path: string): void {
@@ -398,6 +399,7 @@ function validateJoint(v: V, j: unknown, path: string): void {
   if (j.referenceAngle !== undefined) num(v, j.referenceAngle, `${path}.referenceAngle`);
   if (j.limits !== undefined) validateLimits(v, j.limits, `${path}.limits`);
   if (j.integrity !== undefined) num(v, j.integrity, `${path}.integrity`, { positive: true, max: 1 });
+  if (j.yield !== undefined && num(v, j.yield, `${path}.yield`, { min: 0 }) && (j.yield as number) >= 1) err(v, `${path}.yield`, "must be below 1");
 }
 
 function validateLimits(v: V, l: unknown, path: string): void {
@@ -484,7 +486,7 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
     });
   num(v, g.maxSpeed, `${path}.maxSpeed`, { positive: true });
   num(v, g.maxTilt, `${path}.maxTilt`, { min: 0, max: 180 });
-  for (const k of ["ships", "pause", "explodeAbove", "clearBonus"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
+  for (const k of ["ships", "pause", "watch", "clearBonus"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
   if (g.lines !== undefined && (!Array.isArray(g.lines) || !g.lines.every((l) => Array.isArray(l) && l.length > 1 && l.every((p) => isObj(p) && Number.isFinite(p.x) && Number.isFinite(p.y)))))
     err(v, `${path}.lines`, "must be a list of lines, each of two or more points {x, y}");
 }

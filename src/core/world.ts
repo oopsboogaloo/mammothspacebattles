@@ -239,9 +239,15 @@ export interface Joint {
   load: { tension: number; compression: number; shear: number; torque: number; fraction: number };
   /** A hidden seam of a larger asteroid fragment (AST-007): the limits it takes once revealed. */
   hidden?: JointLimits;
+  /**
+   * Where it starts to bend (DMG-008): a load beyond this share of its whole limits costs integrity,
+   * down to 1 − (share − yield) ÷ (1 − yield), so it is left weaker and breaks sooner. The worst
+   * load sets it: bending doesn't heal. Absent: it holds whole until it breaks.
+   */
+  yield?: number;
 }
 
-export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity" | "hidden">> & { limits?: Partial<JointLimits> };
+export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity" | "hidden" | "yield">> & { limits?: Partial<JointLimits> };
 
 /** Zero-mass connections (ASM-006): feed links move a resource between stores; control links carry a channel to a component. */
 export type Link = (
@@ -443,6 +449,7 @@ export function addJoint(world: World, input: JointInput): void {
     integrity: input.integrity ?? 1,
     load: { tension: 0, compression: 0, shear: 0, torque: 0, fraction: 0 },
     ...(input.hidden ? { hidden: { ...input.hidden } } : {}),
+    ...(input.yield !== undefined ? { yield: input.yield } : {}),
   };
   world.joints = [...world.joints, joint].sort((p, q) => compareIds(p.id, q.id));
 }
@@ -728,7 +735,8 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
     // An engine whose walls enclose its chamber holds the gas there as one volume (§10.1).
     const shape = roots && inj.chamber ? holdingShape(world, b, roots, index) : null;
     if (shape) {
-      const drawn = status.firing ? drawPropellant(b, command * inj.rate * dt, gs) : null;
+      // A damaged engine delivers less: its flow falls with its integrity (LND-021).
+      const drawn = status.firing ? drawPropellant(b, command * inj.rate * b.integrity * dt, gs) : null;
       inj.credit = 0;
       for (const p of runVessel(world, b, shape, drawn, dt, limit)) {
         world.gas.parcels.push(p);
@@ -747,7 +755,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
       inj.credit = 0;
       continue;
     }
-    inj.credit += command * inj.rate * dt;
+    inj.credit += command * inj.rate * b.integrity * dt;
     while (inj.credit >= inj.parcelMass && world.gas.parcels.length < limit) {
       const stores = Object.entries(inj.mixture).filter(([, y]) => y > 0);
       if (stores.some(([res, y]) => (b.contents?.find((c) => c.resource === res)?.mass ?? 0) < (inj.parcelMass / (inj.economy ?? 1)) * y)) break;

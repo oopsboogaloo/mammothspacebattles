@@ -27,9 +27,16 @@ export interface LandingGoal {
   maxSpeed: number;
   /** Largest tilt from upright the ship may come to rest at, degrees. */
   maxTilt: number;
+  /**
+   * Mammoth Lander's physical rules: no speed limit and no crash for touching ground. The damage
+   * model decides: a landing is the ship at rest on an open pad on its legs (within `maxTilt`), in
+   * one piece, scored down for its damage; a crash is the ship broken. Resting anywhere else is
+   * allowed, and ends as stranded when out of fuel, or when the `abandon` control is set.
+   */
+  physical?: boolean;
 }
 
-export type LandingPhase = "flying" | "landed" | "crashed";
+export type LandingPhase = "flying" | "landed" | "crashed" | "stranded";
 
 export interface LandingStatus {
   phase: LandingPhase;
@@ -60,6 +67,8 @@ export interface LandingStatus {
   restSince?: number;
   /** Last time the ship touched the pad, s. */
   padAt?: number;
+  /** With `physical`: how damaged the ship is, its worst-hit part or weld, 0 (whole) to 1. */
+  damage?: number;
 }
 
 export interface Challenge {
@@ -189,6 +198,7 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
   // what it hits counts, and the ship coming apart is a crash.
   const ship = s.parts ? new Set(s.parts) : t.members;
   if (s.parts && s.parts.some((id) => world.bodies.some((b) => b.id === id) && !t.members.has(id))) return crash("The ship broke apart.");
+  if (goal.physical) return judgePhysical(world, c, t, open);
   // New touches between the ship and anything else.
   for (const e of world.events) {
     if (e.tick < fromTick || e.type !== "collision") continue;
@@ -235,5 +245,59 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
     s.reason = `Landed at ${fmt(touch)} m/s, ${fmt(Math.abs(t.tilt), 0)}° from upright, with ${fmt(s.fuel, 2)} kg of propellant left.`;
     return "landed";
   }
+  return null;
+}
+
+/** How damaged the ship is: its worst-hit part or weld's lost integrity, 0 (whole) to 1. */
+function shipDamage(world: World, parts: readonly string[]): number {
+  const ship = new Set(parts);
+  let worst = 0;
+  for (const b of world.bodies) if (ship.has(b.id)) worst = Math.max(worst, 1 - b.integrity);
+  for (const j of world.joints) if (ship.has(j.a) && ship.has(j.b)) worst = Math.max(worst, 1 - j.integrity);
+  return worst;
+}
+
+/**
+ * Mammoth Lander's physical judge (`physical`): the ship has already been checked to be in one
+ * piece. Landed when it settles on an open pad on its legs; stranded when it settles anywhere else
+ * with no fuel left, or is abandoned. Touching ground, however hard, is left to the damage model.
+ */
+function judgePhysical(world: World, c: Challenge, t: ReturnType<typeof landingTelemetry>, open: Set<string>): LandingPhase | null {
+  const { goal } = c;
+  const s = c.status;
+  s.damage = shipDamage(world, s.parts ?? [...t.members]);
+  const end = (phase: "stranded", reason: string): LandingPhase => {
+    s.phase = phase;
+    s.reason = reason;
+    s.at = world.tick;
+    return phase;
+  };
+  if ((world.controls.abandon ?? 0) > 0) return end("stranded", "Abandoned.");
+  const onOpen = world.contacts.find((k) => (open.has(k.a) && t.members.has(k.b)) || (open.has(k.b) && t.members.has(k.a)));
+  if (onOpen) {
+    s.padAt = world.time;
+    s.landedOn = open.has(onOpen.a) ? onOpen.a : onOpen.b;
+  }
+  const speed = Math.sqrt(t.vx * t.vx + t.vy * t.vy);
+  const touching = world.contacts.some((k) => t.members.has(k.a) !== t.members.has(k.b));
+  if (!(touching && speed < REST_SPEED && Math.abs(t.spin) < REST_SPIN)) {
+    s.restSince = undefined;
+    return null;
+  }
+  s.restSince ??= world.time;
+  if (world.time - s.restSince < SETTLE_TIME - 1e-9) return null;
+  const onPad = s.padAt !== undefined && world.time - s.padAt <= BOUNCE_TIME + 1e-9;
+  if (onPad && Math.abs(t.tilt) <= goal.maxTilt) {
+    const fuelPart = s.fuelStart > 0 ? s.fuel / s.fuelStart : 0;
+    const pad = goal.pads?.find((p) => p.id === s.landedOn);
+    // LND-013: 200 for landing and up to 100 for fuel left, times the pad's multiplier, less the share damaged.
+    s.score = Math.round((200 + 100 * fuelPart) * (pad?.multiplier ?? 1) * (1 - s.damage));
+    s.phase = "landed";
+    s.at = world.tick;
+    s.reason = `Landed ${fmt(100 * s.damage, 0)}% damaged, ${fmt(Math.abs(t.tilt), 0)}° from upright, with ${fmt(s.fuel, 2)} kg of propellant left.`;
+    return "landed";
+  }
+  // Resting off a pad (or tipped on one): the player may take off again, while there is fuel.
+  if (!(s.fuel > 1e-6)) return end("stranded", onPad ? "Tipped over on the pad, out of fuel." : "Out of fuel, off the pads.");
   return null;
 }

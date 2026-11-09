@@ -449,6 +449,7 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **DMG-004** `[M · M5 · S]` A damaged store shall leak its contents as parcels through the breach, at a rate depending on breach size and pressure.
 - **DMG-005** `[M · M5 · S]` Armour struck first shall absorb contact before the component behind it is affected.
 - **DMG-006** `[S · M5 · S]` Damage to chamber or nozzle geometry shall change the shape that gas collides with.
+- **DMG-008** `[S · M8 · S]` A weld may declare a yield: a load beyond that share of its limits shall cost it integrity, down to 1 − (share − yield) ÷ (1 − yield), so it is left weaker and breaks sooner. The worst load sets it; bending doesn't heal.
 - **DMG-007** `[M · M8 · S]` A non-fixed body that reaches 0 integrity shall leave the world in the step it is destroyed, with its welds and links, its stores and anything it holds. The ledger shall record its mass, momentum and energy as leaving through the boundary. Where it was, a burst of harmless dust shall drift off and fade over 20–30 s: 10–80 grains by its size, glowing for the first half second, coloured by what it was (rock, gold, hull). Dust has no mass, touches nothing and is outside the books. A pilot destroyed with its body lets go of its controls. *Added November 2026: destroyed asteroid pieces and ship parts used to stay as dark wreckage.*
 
 *Model as built (M5).*

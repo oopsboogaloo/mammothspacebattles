@@ -1,5 +1,7 @@
 // Mammoth Lander's game (docs/games/mammoth-lander.md): a ship at a time comes down onto one of
-// several pads. A landing banks its score and closes its pad; a crash costs a life. After each
+// several pads. The judge is physical: the damage model decides what a hit does. A landing banks its
+// score and closes its pad; a broken ship is a crash; a ship left resting off the pads, out of fuel
+// or abandoned, is stranded. Each ship flies once. After each
 // verdict a short pause, then the next ship starts at the top in the same world: wreckage and
 // parked ships stay all game (LND-020, LND-022). The game lives in the world, like the landing
 // judge, so a run, a replay and a scrub agree.
@@ -14,20 +16,21 @@ export interface LanderSpec {
   ship: { bodies: BodyInput[]; joints?: JointInput[]; links?: LinkInput[] };
   /** The ship body that is the ship for the judge (its tilt is the ship's), with `{n}`. */
   hull: string;
-  /** Its tank, with `{n}`: a crash harder than `explodeAbove` sets it off (it must carry an explosive). */
+  /** Its tank, with `{n}`. */
   tank?: string;
   /** Where each ship starts (the template's origin goes here) and how it is moving. */
   start: { position: Vec2; velocity: Vec2 };
   pads: { id: string; multiplier: number }[];
-  /** Fastest touchdown and largest tilt that still land (FLT-006, FLT-008). */
+  /** A touchdown speed above which the ship is likely to be damaged: a guide for the HUD, not a rule, m/s. */
   maxSpeed: number;
+  /** Largest tilt from upright that counts as standing on its legs, degrees. */
   maxTilt: number;
   /** Ships a game (default 3): landed or crashed, each flies once. */
   ships?: number;
-  /** Game time between a verdict and the next ship, s (default 2). */
+  /** Game time between a verdict and the next ship, s (default 2); after a crash, `watch` more. */
   pause?: number;
-  /** A crash touching down faster than this sets off the tank, m/s (default 3). */
-  explodeAbove?: number;
+  /** Game time to watch a crash play out before its verdict shows, s (default 1.25: 2.5 s at the game's half pace). */
+  watch?: number;
   /** Points for using every pad (default 1,000). */
   clearBonus?: number;
   /**
@@ -41,6 +44,8 @@ export interface LanderState {
   /** The ship flying, or the last one (1, 2, …). */
   n: number;
   crashes: number;
+  /** Ships left resting off the pads (out of fuel, or abandoned). */
+  stranded?: number;
   score: number;
   /** Pads landed on, in order. */
   used: string[];
@@ -57,7 +62,10 @@ export interface LanderGame {
   state: LanderState;
 }
 
-const DEFAULTS = { ships: 3, pause: 2, explodeAbove: 3, clearBonus: 1000 };
+const DEFAULTS = { ships: 3, pause: 2, watch: 1.25, clearBonus: 1000 };
+
+/** The control a player sets to give up on the ship flying (it is then stranded). */
+export const ABANDON = "abandon";
 
 const withN = <T>(x: T, n: number): T => JSON.parse(JSON.stringify(x).replaceAll("{n}", String(n))) as T;
 
@@ -75,7 +83,7 @@ export function landerShip(spec: LanderSpec, n: number): Command[] {
 /** The landing judge's goal for ship `n`, with the pads used so far closed. */
 function goalFor(game: LanderGame): LandingGoal {
   const { spec, state } = game;
-  return { kind: "landing", ship: withN(spec.hull, state.n), pad: spec.pads[0].id, pads: spec.pads, used: [...state.used], maxSpeed: spec.maxSpeed, maxTilt: spec.maxTilt };
+  return { kind: "landing", ship: withN(spec.hull, state.n), pad: spec.pads[0].id, pads: spec.pads, used: [...state.used], maxSpeed: spec.maxSpeed, maxTilt: spec.maxTilt, physical: true };
 }
 
 /** A new game: ship 1 is added by the first step's commands. */
@@ -97,7 +105,8 @@ export function landerCommands(world: World): Command[] {
   game.state.n += 1;
   game.state.phase = "flying";
   game.state.next = undefined;
-  return landerShip(game.spec, game.state.n);
+  // A fresh ship isn't abandoned.
+  return [{ type: "control.set", channel: ABANDON, value: 0 }, ...landerShip(game.spec, game.state.n)];
 }
 
 /** After the step's commands: the judge for the ship just added. */
@@ -121,12 +130,8 @@ export function updateLander(world: World): void {
     state.used.push(st.landedOn);
     state.landings.push({ pad: st.landedOn, score: st.score ?? 0 });
     state.score += st.score ?? 0;
-  } else {
-    state.crashes += 1;
-    // A hard crash sets off the tank: the blast, shrapnel and dust are the explosion (LND-021).
-    const tank = spec.tank ? world.bodies.find((b) => b.id === withN(spec.tank!, state.n)) : undefined;
-    if (tank?.explosive && crashSpeed(world, c.goal.ship, st.at ?? world.tick, st.parts) >= o.explodeAbove) tank.explosive.trigger = true;
-  }
+  } else if (st.phase === "stranded") state.stranded = (state.stranded ?? 0) + 1;
+  else state.crashes += 1;
   // The keys fly only the next ship: this one's engines lose their control links.
   const members = new Set(assemblyOf(world, c.goal.ship));
   world.links = world.links.filter((l) => !(l.kind === "control" && members.has(l.to)));
@@ -135,19 +140,9 @@ export function updateLander(world: World): void {
     state.ended = "cleared";
     state.score += o.clearBonus;
   } else {
-    // The pause after the last life's crash too, so its explosion plays before the game ends.
+    // The pause after the last life's verdict too, so a crash plays out before the game ends; a
+    // crash is watched a while before its verdict shows.
     state.phase = "between";
-    state.next = world.time + o.pause;
+    state.next = world.time + o.pause + (st.phase === "crashed" ? o.watch : 0);
   }
-}
-
-/** The hardest touch between the ship (its parts at the start) and anything else, in the steps of its crash, m/s. */
-function crashSpeed(world: World, ship: string, tick: number, parts?: string[]): number {
-  const members = new Set(parts ?? assemblyOf(world, ship));
-  let v = 0;
-  for (const e of world.events) {
-    if (e.type !== "collision" || e.tick < tick - 1) continue;
-    if (members.has(String(e.data.a)) !== members.has(String(e.data.b))) v = Math.max(v, Number(e.data.speed));
-  }
-  return v;
 }

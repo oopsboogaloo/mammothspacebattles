@@ -42,8 +42,10 @@ export interface Explosive {
   /** State: the body that loaded it (its gun), and whether it has left that gun's assembly. */
   from?: string;
   armed?: boolean;
-  /** Set to make it go off at the next step whatever it touches (a lander's tank in a crash, LND-021). */
+  /** Set to make it go off at the next step whatever it touches. */
   trigger?: boolean;
+  /** Goes off when its body is destroyed (integrity 0): a tank damaged until it bursts (LND-021). */
+  whenDestroyed?: boolean;
 }
 
 /** Share of a charge's energy that drives the casing outward (the Gurney energy); the rest goes with the gas. */
@@ -126,7 +128,7 @@ export function detonate(world: World, roots: ReadonlyMap<string, string> | null
     if (!e.armed) continue;
     let J = 0;
     for (const c of world.contacts) if (c.a === s.id || c.b === s.id) J = Math.max(J, c.normalImpulse);
-    if (e.trigger || J > (e.arm ?? 5) * bodyMass(s)) struck.push(s);
+    if (e.trigger || (e.whenDestroyed && s.integrity <= 0) || J > (e.arm ?? 5) * bodyMass(s)) struck.push(s);
   }
   for (const s of struck) burst(world, s, dt);
   if (struck.length) breakWreckage(world);

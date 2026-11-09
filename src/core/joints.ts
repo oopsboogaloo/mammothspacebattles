@@ -537,6 +537,14 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     const compression = Math.max(0, axial);
     const shear = Math.abs(cross(axis, F));
     const torque = Math.abs(T / dt);
+    // Bending (DMG-008): a load beyond the weld's yield, as a share of its whole limits, costs integrity.
+    if (j.yield !== undefined) {
+      const share = Math.max(tension / j.limits.tension, compression / j.limits.compression, shear / j.limits.shear, torque / j.limits.torque);
+      if (share > j.yield) {
+        const left = 1 - (share - j.yield) / (1 - j.yield);
+        if (left < j.integrity) j.integrity = Math.max(0, left);
+      }
+    }
     const k = j.integrity;
     const parts = {
       tension: tension / (j.limits.tension * k),
