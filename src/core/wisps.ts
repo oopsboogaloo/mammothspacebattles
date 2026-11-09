@@ -58,40 +58,110 @@ export function spawnWisps(world: World, gone: readonly Parcel[], temperature: (
  * Moves every wisp for one step, bounces it off the bodies it meets (changing only their
  * velocities), and drops those that have faded out. Returns how many bounced.
  */
+/** Grid cell size for finding the bodies near a wisp, m. A body reaching over 4 cells is "big": checked against every wisp. */
+const CELL = 4;
+const cellKey = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
+
+/**
+ * The fixed bodies' grid cells, kept between steps while they stay as they were. A lander's ground
+ * is hundreds of fixed bodies, and filing them all into the grid every step was most of the memory
+ * a step churned through (an iPad paused for half a second now and then to clear it up).
+ */
+interface FixedGrid {
+  bodies: Body[];
+  index: number[];
+  x: number[];
+  y: number[];
+  angle: number[];
+  shape: Body["shape"][];
+  /** Each cell's fixed bodies, by their index in the world's list, in order. */
+  cells: Map<number, number[]>;
+  /** Big fixed bodies, by index, in order. */
+  big: number[];
+  /** Every body's reach (bounding radius), by index; the fixed ones' are kept. */
+  reach: number[];
+}
+const fixedGrids = new WeakMap<World, FixedGrid>();
+
+/** Files a body's bounding circle into `cells` by its index. */
+function file(cells: Map<number, number[]>, b: Body, i: number, r: number): void {
+  const x0 = Math.floor((b.position.x - r) / CELL);
+  const x1 = Math.floor((b.position.x + r) / CELL);
+  const y0 = Math.floor((b.position.y - r) / CELL);
+  const y1 = Math.floor((b.position.y + r) / CELL);
+  for (let cx = x0; cx <= x1; cx++)
+    for (let cy = y0; cy <= y1; cy++) {
+      const k = cellKey(cx, cy);
+      const list = cells.get(k);
+      if (list) list.push(i);
+      else cells.set(k, [i]);
+    }
+}
+
+/** The world's fixed grid: the kept one if no fixed body has moved, changed or shifted in the list since. */
+function fixedGrid(world: World): FixedGrid {
+  const bodies = world.bodies;
+  const kept = fixedGrids.get(world);
+  if (kept) {
+    let j = 0;
+    let same = true;
+    for (let i = 0; i < bodies.length && same; i++) {
+      const b = bodies[i];
+      if (!b.fixed) continue;
+      same = j < kept.bodies.length && kept.bodies[j] === b && kept.index[j] === i && kept.x[j] === b.position.x && kept.y[j] === b.position.y && kept.angle[j] === b.angle && kept.shape[j] === b.shape;
+      j++;
+    }
+    if (same && j === kept.bodies.length) return kept;
+  }
+  const g: FixedGrid = { bodies: [], index: [], x: [], y: [], angle: [], shape: [], cells: new Map(), big: [], reach: [] };
+  bodies.forEach((b, i) => {
+    if (!b.fixed) return;
+    const r = massProps(b.shape, 1).boundingRadius;
+    g.bodies.push(b);
+    g.index.push(i);
+    g.x.push(b.position.x);
+    g.y.push(b.position.y);
+    g.angle.push(b.angle);
+    g.shape.push(b.shape);
+    g.reach[i] = r;
+    if (r > 4 * CELL) g.big.push(i);
+    else file(g.cells, b, i, r);
+  });
+  fixedGrids.set(world, g);
+  return g;
+}
+
+/**
+ * Moves every wisp for one step, bounces it off the bodies it meets (changing only their
+ * velocities), and drops those that have faded out. Returns how many bounced.
+ */
 export function stepWisps(world: World, dt: number): number {
   const list = world.wisps;
   if (!list?.length) return 0;
   const g = world.gravity;
-  // Bodies on a coarse grid by their bounding circles; big ones are checked against every wisp.
-  const CELL = 4;
-  const grid = new Map<number, Body[]>();
-  const big: Body[] = [];
-  const key = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
-  const reach = new Map<Body, number>();
-  for (const b of world.bodies) {
+  const bodies = world.bodies;
+  // Bodies on a coarse grid by their bounding circles; big ones are checked against every wisp. The
+  // fixed ones' cells are kept between steps; the moving ones are filed afresh. A wisp meets the
+  // bodies of its cell in the world's order, then the big ones, also in order.
+  const fixed = fixedGrid(world);
+  const reach = fixed.reach;
+  const moving = new Map<number, number[]>();
+  const bigMoving: number[] = [];
+  for (let i = 0; i < bodies.length; i++) {
+    const b = bodies[i];
+    if (b.fixed) continue;
     const r = massProps(b.shape, 1).boundingRadius;
-    reach.set(b, r);
-    if (r > 4 * CELL) {
-      big.push(b);
-      continue;
-    }
-    const x0 = Math.floor((b.position.x - r) / CELL);
-    const x1 = Math.floor((b.position.x + r) / CELL);
-    const y0 = Math.floor((b.position.y - r) / CELL);
-    const y1 = Math.floor((b.position.y + r) / CELL);
-    for (let cx = x0; cx <= x1; cx++)
-      for (let cy = y0; cy <= y1; cy++) {
-        const k = key(cx, cy);
-        const cellList = grid.get(k);
-        if (cellList) cellList.push(b);
-        else grid.set(k, [b]);
-      }
+    reach[i] = r;
+    if (r > 4 * CELL) bigMoving.push(i);
+    else file(moving, b, i, r);
   }
+  const big = merge(fixed.big, bigMoving);
   let bounces = 0;
   /** Bounces wisp w (mass m, radius r) off body b if it has run into it. */
-  const touch = (w: Wisp, m: number, r: number, b: Body): void => {
+  const touch = (w: Wisp, m: number, r: number, i: number): void => {
+    const b = bodies[i];
     const d = sub(w.position, b.position);
-    const R = reach.get(b)! + r;
+    const R = reach[i] + r;
     if (dot(d, d) > R * R) return;
     const hit = collide({ shape: { kind: "disc", radius: r }, position: w.position, rot: { c: 1, s: 0 } }, { shape: b.shape, position: b.position, rot: sinCos(b.angle) }, 0, 0);
     if (!hit || !hit.points.length) return;
@@ -125,12 +195,29 @@ export function stepWisps(world: World, dt: number): number {
     w.position = add(w.position, scale(w.velocity, dt));
     const m = wispMass(w);
     const r = wispRadius(w);
-    const near = grid.get(key(Math.floor(w.position.x / CELL), Math.floor(w.position.y / CELL)));
-    // Each nearby body, then each big one: the same order as before, without a combined list per wisp.
-    if (near) for (const b of near) touch(w, m, r, b);
-    for (const b of big) touch(w, m, r, b);
+    const k = cellKey(Math.floor(w.position.x / CELL), Math.floor(w.position.y / CELL));
+    const a = fixed.cells.get(k);
+    const c = moving.get(k);
+    // Each nearby body in the world's order (the two lists merged), then each big one.
+    if (a && c) {
+      let p = 0;
+      let q = 0;
+      while (p < a.length || q < c.length) touch(w, m, r, q >= c.length || (p < a.length && a[p] < c[q]) ? a[p++] : c[q++]);
+    } else if (a) for (const i of a) touch(w, m, r, i);
+    else if (c) for (const i of c) touch(w, m, r, i);
+    for (const i of big) touch(w, m, r, i);
     kept.push(w);
   }
   world.wisps = kept;
   return bounces;
+}
+
+/** Two ascending lists as one. */
+function merge(a: readonly number[], b: readonly number[]): number[] {
+  if (!b.length) return a as number[];
+  const out: number[] = [];
+  let p = 0;
+  let q = 0;
+  while (p < a.length || q < b.length) out.push(q >= b.length || (p < a.length && a[p] < b[q]) ? a[p++] : b[q++]);
+  return out;
 }

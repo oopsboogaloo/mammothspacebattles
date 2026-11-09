@@ -738,6 +738,25 @@ moment (5.4 s: step 654, frame 509; 170.1 s: 749 and 705), so both threads stop 
 pausing the whole page (memory clean-up or the system), not the physics or the copying. Next: the
 same run on the page alone (`&worker=0`), to tell the worker's part from the page's.
 
+On the page alone (`&worker=0`), 89 s: 5 freezes (364 to 858 ms), about one every 18 s against one
+every 12 s with the worker. So the worker isn't the cause. What the physics allocates is: Emergency
+with the engines pulsing churns through 812 MB of short-lived objects a second of game time (node's
+sampling heap profiler, counting what is collected). A quarter was the wisps filing every body into
+their grid each step, ground included: hundreds of fixed bodies, about 25 cells each.
+
+| Emergency, engines pulsing | Before | Fixed bodies' cells kept |
+|---|---|---|
+| Allocated, MB a game second | 812 | 582 |
+| ms a step (this machine) | 4.54 | 3.75 |
+| Cave, ms a step | 5.08 | 4.75 |
+
+- **Kept: the fixed bodies' grid.** Built once and kept while no fixed body moves, changes or shifts
+  in the list (checked each step, `wisps.ts`); moving bodies are filed each step, and a wisp meets
+  its cell's bodies in the world's order as before. Identical results (same hashes for Emergency,
+  Cave and Orbital after 12 s); a test moves a fixed body and checks the grid follows.
+- **Left:** the rest is spread thin. The biggest single part (13%) is the disc-against-polygon
+  test building the polygon in world coordinates for each wisp it checks.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
