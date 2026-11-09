@@ -542,7 +542,18 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
       const share = Math.max(tension / j.limits.tension, compression / j.limits.compression, shear / j.limits.shear, torque / j.limits.torque);
       if (share > j.yield) {
         const left = 1 - (share - j.yield) / (1 - j.yield);
-        if (left < j.integrity) j.integrity = Math.max(0, left);
+        if (left <= 0) {
+          // Bent all the way: it breaks. Its load and whole limit as they are (finite: a share
+          // of a limit at 0 integrity would be infinite).
+          const loads = { tension, compression, shear, torque };
+          const worst = (Object.keys(loads) as (keyof typeof loads)[]).reduce((w, q) => (loads[q] / j.limits[q] > loads[w] / j.limits[w] ? q : w), "tension");
+          j.integrity = 0;
+          j.load = { tension, compression, shear, torque, fraction: share };
+          broken.add(j.id);
+          world.events.push({ tick: world.tick, type: "joint.break", data: { id: j.id, a: j.a, b: j.b, quantity: worst, load: loads[worst], limit: j.limits[worst] } });
+          continue;
+        }
+        if (left < j.integrity) j.integrity = left;
       }
     }
     const k = j.integrity;

@@ -198,7 +198,11 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
   // what it hits counts, and the ship coming apart is a crash.
   const ship = s.parts ? new Set(s.parts) : t.members;
   if (s.parts && s.parts.some((id) => world.bodies.some((b) => b.id === id) && !t.members.has(id))) return crash("The ship broke apart.");
-  if (goal.physical) return judgePhysical(world, c, t, open);
+  if (goal.physical) {
+    // A part destroyed outright leaves the world (DMG-007): the ship is broken just the same.
+    if (s.parts?.some((id) => !world.bodies.some((b) => b.id === id))) return crash("A part of the ship was destroyed.");
+    return judgePhysical(world, c, t, open);
+  }
   // New touches between the ship and anything else.
   for (const e of world.events) {
     if (e.tick < fromTick || e.type !== "collision") continue;

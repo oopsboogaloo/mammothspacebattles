@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { bodyMass, getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
+import { bodyMass, getProfile, hashValue, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
 // Mammoth Lander (docs/games/mammoth-lander.md), on the Easy scenario.
 const raw = JSON.parse(readFileSync(new URL("../../scenarios/lander-easy.json", import.meta.url), "utf8"));
@@ -110,6 +110,24 @@ describe("Mammoth Lander", () => {
     // Most of the ship is still there as wreckage.
     expect(w.bodies.filter((b) => b.id.startsWith("l1-")).length).toBeGreaterThan(10);
     expect(w.ledger.violations).toBe(0);
+  });
+
+  it("DMG-008 a weld bent all the way breaks with a finite load, so a hard crash still hashes", () => {
+    const { w, step } = game(15);
+    step(0.5);
+    const breaks = w.events.filter((e) => e.type === "joint.break");
+    expect(breaks.length).toBeGreaterThan(0);
+    for (const e of breaks) expect(Number.isFinite(Number(e.data.load)) && Number.isFinite(Number(e.data.limit))).toBe(true);
+    expect(() => hashValue(w)).not.toThrow();
+  });
+
+  it("LND-014 a part destroyed outright (and gone) is a crash, not a lighter ship", () => {
+    const { w, step } = game(1);
+    step(1 / 240);
+    w.bodies.find((b) => b.id === "l1-leg-left")!.integrity = 0;
+    step(1 / 60);
+    expect(w.challenge!.status.phase).toBe("crashed");
+    expect(w.challenge!.status.reason).toBe("A part of the ship was destroyed.");
   });
 
   it("LND-021 a crash that only cracks the tank leaks it, and doesn't set it off", () => {
