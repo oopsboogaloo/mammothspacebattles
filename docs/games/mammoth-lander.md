@@ -169,8 +169,9 @@ the same weight and thrust.
 - **Terrain:** Hard's.
 - **The leak:** the ship starts with a breach in its tank. The leak drains fuel and its jet pushes
   the ship with about a tenth of one engine's thrust, using the existing leak physics (LND-040). As built:
-  the tank starts at 60% integrity with its hole facing sideways: about 5.5 N of push, and a full
-  tank leaks away in about 40 s on its own.
+  the tank starts at 40% integrity with its hole facing sideways, the gas jetting out at 30 m/s:
+  about 10 N of push (raised after play: 5.5 N could barely be felt), and a full tank leaks away
+  in about 28 s on its own.
 - **Warnings:** a flashing red EMERGENCY banner. With sound, a siren (LND-051).
 - **Plan:** land fast before the tank empties, while fighting the push.
 

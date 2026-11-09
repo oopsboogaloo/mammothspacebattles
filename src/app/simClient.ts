@@ -4,6 +4,7 @@
 import type { Sandbox } from "./controller.ts";
 import type { RunRequest, RunResult } from "./simWorker.ts";
 import type { Command } from "../core/index.ts";
+import { diag } from "./diag.ts";
 
 export class SimClient {
   private worker: Worker | null = null;
@@ -29,7 +30,12 @@ export class SimClient {
     if (q?.has("helpers")) this.helpers = Math.max(0, Number(q.get("helpers")) || 0);
     try {
       this.worker = new Worker(new URL("./simWorker.ts", import.meta.url), { type: "module" });
-      this.worker.onmessage = (e: MessageEvent<RunResult>) => this.take(e.data);
+      this.worker.onmessage = (e: MessageEvent<RunResult>) => {
+        const t0 = performance.now();
+        const res = e.data;
+        this.take(res);
+        if (diag.on && res.run) diag.run({ at: t0, steps: res.run.steps, ms: res.run.timing.ms, worst: res.run.timing.worstMs, gasMs: res.run.timing.gasMs, takeMs: performance.now() - t0 });
+      };
       this.worker.onerror = () => {
         this.worker = null; // carry on stepping on the page
         this.inFlight = null;

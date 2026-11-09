@@ -30,6 +30,8 @@ const WELD = { tension: 5000, compression: 10000, shear: 3500, torque: 1200 };
 interface Leak {
   integrity: number;
   normal: Vec;
+  /** How fast the gas jets out, m/s: the push, for the same loss of fuel. */
+  speed?: number;
 }
 
 function ship(economy: number, leak?: Leak) {
@@ -44,7 +46,7 @@ function ship(economy: number, leak?: Leak) {
       if (b.id === "tank" && leak) {
         const box = b.shape as { width: number; height: number };
         out.integrity = leak.integrity;
-        out.breach = { point: { x: (leak.normal.x * box.width) / 2, y: (leak.normal.y * box.height) / 2 }, normal: leak.normal, credit: 0, count: 0 };
+        out.breach = { point: { x: (leak.normal.x * box.width) / 2, y: (leak.normal.y * box.height) / 2 }, normal: leak.normal, credit: 0, count: 0, speed: leak.speed };
       }
       return out;
     });
@@ -67,7 +69,10 @@ interface Pad {
  * the opposite edges, so a ship near an edge stands on real ground (nothing collides across the
  * seam itself: FLT-012's known limit, LND-042).
  */
-function terrain(points: Vec[], pads: Pad[], opts: { bottom: number; width?: number; seam?: number }) {
+/** How deep the ground goes under its surface, m. Nothing reaches below it. */
+const CRUST = 15;
+
+function terrain(points: Vec[], pads: Pad[], opts: { width?: number; seam?: number }) {
   const bodies: Json[] = [];
   const quad = (a: Vec, b: Vec, n: string) =>
     bodies.push({
@@ -79,7 +84,9 @@ function terrain(points: Vec[], pads: Pad[], opts: { bottom: number; width?: num
       velocity: { x: 0, y: 0 },
       angle: 0,
       angularVelocity: 0,
-      shape: { kind: "polygon", vertices: [{ x: a.x, y: opts.bottom }, { x: b.x, y: opts.bottom }, b, a] },
+      // A crust under the surface, not a column to the bottom: a small body has a small bounding box,
+      // so the ground costs little in the contact search and the wisps' (a column of 100 m was a box of 200).
+      shape: { kind: "polygon", vertices: [{ x: a.x, y: Math.min(a.y, b.y) - CRUST }, { x: b.x, y: Math.min(a.y, b.y) - CRUST }, b, a] },
     });
   for (let i = 0; i + 1 < points.length; i++) quad(points[i], points[i + 1], `ground-${i}`);
   if (opts.width && opts.seam) {
@@ -180,7 +187,7 @@ function scenario(o: { name: string; title: string; description: string; bodies:
       name: "lander-easy",
       title: "Mammoth Lander: Easy",
       description: "Gently rolling ground, five pads and plenty of fuel. Smaller pads score more. The ground wraps round.",
-      bodies: terrain(pts, pads, { bottom: -60, width: W, seam: 30 }),
+      bodies: terrain(pts, pads, { width: W, seam: 30 }),
       bounds: { min: { x: -W / 2, y: -2000 }, max: { x: W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
       economy: 5,
       start: { position: { x: -270, y: 120 }, velocity: { x: 15, y: 0 } },
@@ -220,7 +227,7 @@ write(
     name: "lander-medium",
     title: "Mammoth Lander: Medium",
     description: "Lunar peaks and spikes. Pads in the valleys and on shelves in the mountain sides. Fuel matters. The ground wraps round.",
-    bodies: terrain(MEDIUM.pts, MEDIUM.pads, { bottom: -100, width: MEDIUM.W, seam: 30 }),
+    bodies: terrain(MEDIUM.pts, MEDIUM.pads, { width: MEDIUM.W, seam: 30 }),
     bounds: { min: { x: -MEDIUM.W / 2, y: -2000 }, max: { x: MEDIUM.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
     economy: 4,
     start: { position: { x: -380, y: 170 }, velocity: { x: 10, y: 0 } },
@@ -259,7 +266,7 @@ const HARD = (() => {
 const hard = (o: { name: string; title: string; description: string; leak?: Leak; economy: number }) =>
   scenario({
     ...o,
-    bodies: terrain(HARD.pts, HARD.pads, { bottom: -120, width: HARD.W, seam: 30 }),
+    bodies: terrain(HARD.pts, HARD.pads, { width: HARD.W, seam: 30 }),
     bounds: { min: { x: -HARD.W / 2, y: -2000 }, max: { x: HARD.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
     start: { position: { x: -390, y: 200 }, velocity: { x: 10, y: 0 } },
     pads: HARD.pads,
@@ -280,6 +287,6 @@ write(
     title: "Mammoth Lander: Emergency",
     description: "Hard's mountains, with a leaking tank: fuel drains and the leak pushes you about. Get down fast.",
     economy: 3.5,
-    leak: { integrity: 0.6, normal: { x: 1, y: 0 } },
+    leak: { integrity: 0.4, normal: { x: 1, y: 0 }, speed: 30 },
   }),
 );

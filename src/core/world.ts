@@ -862,7 +862,8 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
       // Across the breach in mirrored pairs (as injectors do), and staggered along the jet by when in
       // the step each parcel's mass would have left, so parcels never start on top of each other.
       const spread = (br.count % 2 === 0 ? 1 : -1) * (((Math.floor(br.count / 2) * GOLDEN) % 1) * 0.5) * BREACH_WIDTH * (1 - b.integrity);
-      const ahead = LEAK_RADIUS + 0.01 + ((br.credit - LEAK_PARCEL) / rate) * LEAK_SPEED;
+      const speed = br.speed ?? LEAK_SPEED;
+      const ahead = LEAK_RADIUS + 0.01 + ((br.credit - LEAK_PARCEL) / rate) * speed;
       const point = add(b.position, add(rotate(q, br.point), add(scale(n, ahead), scale({ x: -n.y, y: n.x }, spread))));
       // Nothing leaks into another body: a breach pressed against something stays shut until it moves off.
       // Only bodies that reach within the clearance can block it (a wreck-strewn world has hundreds).
@@ -875,7 +876,7 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
       if (!clearOf(wallBodies(near))(point.x, point.y, LEAK_RADIUS)) break;
       const r = sub(point, b.position);
       const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
-      const p = emitParcel(world, b, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, LEAK_SPEED)), LEAK_RADIUS);
+      const p = emitParcel(world, b, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, speed)), LEAK_RADIUS);
       world.gas.parcels.push(p);
       br.credit -= LEAK_PARCEL;
       br.count += 1;

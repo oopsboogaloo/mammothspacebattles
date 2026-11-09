@@ -115,9 +115,9 @@ describe("Mammoth Lander", () => {
     for (let k = 0; k < 2 * 240; k++) stepInPlace(w, [], prof);
     const st = w.challenge!.status;
     expect(st.fuel).toBeLessThan(st.fuelStart - 0.2); // no engine firing
-    // A tenth or so of one engine's thrust, sideways: about 0.2 m/s² on the 27 kg ship.
-    expect(Math.abs(st.vx)).toBeGreaterThan(0.25);
-    expect(Math.abs(st.vx)).toBeLessThan(0.6);
+    // About a fifth of one engine's thrust, sideways: nearly 0.4 m/s² on the 27 kg ship.
+    expect(Math.abs(st.vx)).toBeGreaterThan(0.5);
+    expect(Math.abs(st.vx)).toBeLessThan(1.1);
     expect(w.ledger.violations).toBe(0);
   });
 

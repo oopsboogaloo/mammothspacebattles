@@ -137,7 +137,8 @@ function pairKey(a: string, b: string, key: number): string {
 }
 
 /** Sort-and-sweep broad phase on fattened AABBs (NFR-003). Returns index pairs i<j in a deterministic order. */
-export function broadPhase(boxes: { minX: number; minY: number; maxX: number; maxY: number }[]): [number, number][] {
+/** Pairs of boxes that overlap, in order. With `fixed`, two fixed bodies are never a pair: they can't touch each other. */
+export function broadPhase(boxes: { minX: number; minY: number; maxX: number; maxY: number }[], fixed?: readonly boolean[]): [number, number][] {
   const order = boxes.map((_, i) => i).sort((i, j) => boxes[i].minX - boxes[j].minX || i - j);
   const pairs: [number, number][] = [];
   const active: number[] = [];
@@ -149,7 +150,7 @@ export function broadPhase(boxes: { minX: number; minY: number; maxX: number; ma
       if (boxes[j].maxX < bi.minX) continue; // falls out of the sweep
       active[w++] = j;
       const bj = boxes[j];
-      if (bj.minY <= bi.maxY && bi.minY <= bj.maxY) pairs.push(i < j ? [i, j] : [j, i]);
+      if (bj.minY <= bi.maxY && bi.minY <= bj.maxY && !(fixed?.[i] && fixed[j])) pairs.push(i < j ? [i, j] : [j, i]);
     }
     active.length = w;
     active.push(i);
@@ -192,7 +193,9 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
 
   const roots = world.joints.length ? assemblyRoots(world) : null;
   const contacts: SolverContact[] = [];
-  for (const [i, j] of broadPhase(boxes)) {
+  // Fixed bodies never touch each other: a lander's ground is hundreds of them, overlapping their
+  // neighbours' boxes (12,000 pairs a step, all thrown away).
+  for (const [i, j] of broadPhase(boxes, rbs.map((r) => r.invMass === 0))) {
     const a = rbs[i];
     const b = rbs[j];
     if (a.invMass === 0 && b.invMass === 0) continue;

@@ -49,6 +49,8 @@ export interface Breach {
   /** Leaked mass owed but not yet emitted, kg; parcels emitted so far. */
   credit: number;
   count: number;
+  /** How fast the gas leaves, m/s (default LEAK_SPEED): a narrower, harder jet pushes more for the same loss. */
+  speed?: number;
 }
 
 /**
