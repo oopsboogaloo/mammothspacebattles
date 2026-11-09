@@ -50,3 +50,26 @@ describe("plume tail (GAS-011)", () => {
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 });
+
+describe("wisps' grid of fixed bodies, kept between steps", () => {
+  // A wisp falling onto a wall that is then moved: the kept grid must follow, so the world steps
+  // exactly as a fresh copy (which builds its grid anew) does.
+  const world = () => {
+    const w = createWorld(1, [{ id: "wall", fixed: true, shape: { kind: "box", width: 4, height: 1 }, mass: 1, position: { x: -20, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 }]);
+    w.wisps = [{ position: { x: 3, y: 2 }, velocity: { x: 0, y: -4 }, mass: 0.01, radius: 0.1, age: 0, temperature: 300 }];
+    return w;
+  };
+  it("GAS-011 a moved fixed body is filed afresh", () => {
+    const kept = world();
+    stepWisps(kept, 1 / 240); // files the wall where it is
+    kept.bodies[0].position = { x: 3, y: 0 }; // under the wisp now
+    const fresh = structuredClone(kept);
+    for (let k = 0; k < 120; k++) {
+      stepWisps(kept, 1 / 240);
+      stepWisps(fresh, 1 / 240);
+    }
+    expect(kept.wisps).toEqual(fresh.wisps);
+    // It bounced off the wall where it now is, so it hasn't fallen through it.
+    expect(kept.wisps![0].position.y).toBeGreaterThan(0.5);
+  });
+});

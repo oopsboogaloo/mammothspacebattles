@@ -574,13 +574,16 @@ function drawAssemblyCom(ctx: Ctx, s: Vec2): void {
 function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string, label = "PAD", used = false): void {
   const b = world.bodies.find((x) => x.id === id);
   if (!b || b.shape.kind === "disc") return;
+  // The pad's top edge in its own frame: on a turned pad (riding an asteroid, LND-011) it is still its top.
   const q = sinCos(b.angle);
-  const vs = localVertices(b.shape).map((v) => add(b.position, rotate(q, v)));
-  const top = Math.max(...vs.map((v) => v.y));
-  const edge = vs.filter((v) => v.y > top - 1e-6).sort((u, v) => u.x - v.x);
+  const local = localVertices(b.shape);
+  const top = Math.max(...local.map((v) => v.y));
+  const edge = local.filter((v) => v.y > top - 1e-6).sort((u, v) => u.x - v.x);
   if (edge.length < 2) return;
-  const a = toScreen(c, vp, edge[0]);
-  const z = toScreen(c, vp, edge[edge.length - 1]);
+  const a = toScreen(c, vp, add(b.position, rotate(q, edge[0])));
+  const z = toScreen(c, vp, add(b.position, rotate(q, edge[edge.length - 1])));
+  // The pad's "up" on screen (screen y points down): straight up for a level pad.
+  const up = { x: -q.s, y: -q.c };
   // A used pad (Mammoth Lander, LND-012) is dim, its label struck out.
   ctx.globalAlpha = used ? 0.35 : 1;
   ctx.strokeStyle = COLORS.preview;
@@ -590,18 +593,18 @@ function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string, la
   ctx.lineTo(z.x, z.y);
   for (const p of [a, z]) {
     ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x, p.y - 12);
+    ctx.lineTo(p.x + up.x * 12, p.y + up.y * 12);
   }
   ctx.stroke();
   ctx.fillStyle = COLORS.preview;
   ctx.font = "12px 'IBM Plex Mono', monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  const mid = (a.x + z.x) / 2;
-  ctx.fillText(label, mid, a.y - 4);
+  const mid = { x: (a.x + z.x) / 2 + up.x * 4, y: (a.y + z.y) / 2 + up.y * 4 };
+  ctx.fillText(label, mid.x, mid.y);
   if (used) {
     const w = 7.5 * label.length; // the 12px mono font's advance, near enough
-    ctx.fillRect(mid - w / 2 - 2, a.y - 10, w + 4, 1.5);
+    ctx.fillRect(mid.x - w / 2 - 2, mid.y - 6, w + 4, 1.5);
   }
   ctx.globalAlpha = 1;
 }
