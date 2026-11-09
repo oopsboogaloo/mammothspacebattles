@@ -121,9 +121,31 @@ describe("Mammoth Lander", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("LND-010 Cave: the deepest pad scores ×6, and the cave doesn't wrap", () => {
+    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-cave.json", import.meta.url), "utf8"));
+    expect(scn.world.bounds.wrap).toBe(false);
+    const deep = scn.world.bodies.find((b: { id: string }) => b.id === "pad-5");
+    expect(scn.world.lander.pads.find((p: { id: string }) => p.id === "pad-5").multiplier).toBe(6);
+    // Deeper pads score more.
+    const ys = scn.world.lander.pads.map((p: { id: string }) => scn.world.bodies.find((b: { id: string }) => b.id === p.id).position.y);
+    expect(ys).toEqual([...ys].sort((a: number, b: number) => b - a));
+    scn.world.lander.start = { position: { x: deep.position.x, y: deep.position.y + 0.2 + REACH + 0.1 }, velocity: { x: 0, y: -1 } };
+    const s = parseScenario(scn);
+    const prof = getProfile(s.profile);
+    const w = initialWorld(s);
+    for (let k = 0; k < 1.5 * 240; k++) stepInPlace(w, [], prof);
+    expect(w.lander!.state.landings.map((l) => l.pad)).toEqual(["pad-5"]);
+    // (100 + a little for softness, about 1.2 m/s of the 1.5 allowed, + 100 for a full tank) × 6.
+    expect(w.lander!.state.score).toBeGreaterThan(1300);
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("LND-041 the scenario is checked: the hull must be one of the ship's bodies", () => {
     const scn = structuredClone(raw);
     scn.world.lander.hull = "l{n}-nothing";
     expect(() => parseScenario(scn)).toThrow(/hull/);
+    const lines = structuredClone(raw);
+    lines.world.lander.lines = [[{ x: 0, y: 0 }]];
+    expect(() => parseScenario(lines)).toThrow(/lines/);
   });
 });

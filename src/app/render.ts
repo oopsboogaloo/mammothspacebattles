@@ -616,6 +616,18 @@ function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   ctx.strokeStyle = "#cfd8ea";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
+  // Lines the scenario draws itself (a cave's floor and roof).
+  const lines = world.lander?.spec.lines;
+  if (lines) {
+    for (const l of lines)
+      l.forEach((p, i) => {
+        const s = toScreen(c, vp, p);
+        if (i === 0) ctx.moveTo(s.x, s.y);
+        else ctx.lineTo(s.x, s.y);
+      });
+    ctx.stroke();
+    return;
+  }
   for (const b of fixed) {
     const q = sinCos(b.angle);
     const vs = localVertices(b.shape).map((v) => add(b.position, rotate(q, v)));

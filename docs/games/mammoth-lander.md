@@ -148,11 +148,14 @@ the same weight and thrust.
 
 ### Cave
 
-- **Layout:** you start at the cave mouth.
-- **Route:** stalactites and stalagmites make a winding route before even the first pad.
-- **Pads:** deeper ones score more (multipliers up to ×6).
-- **World:** bounded, no wrap.
-- **Fuel:** a concern. Getting deep and back down safely is the challenge.
+- **Layout:** a cave about 500 m long, running down from its mouth 150 m into the rock. You start
+  at the mouth, still.
+- **Route:** a stalagmite or a stalactite between each pair of pads, so the way down weaves. The
+  cave is 34 m high, and never under 12 m at its tightest (the generator checks).
+- **Pads:** five, ×2 near the mouth to ×6 in the end chamber, each deeper than the last.
+- **World:** bounded, no wrap. The rock over the cave is solid; the end wall closes it.
+- **Drawing:** the floor and the roof are two lines (`lander.lines`), drawn as given.
+- **Fuel:** a concern (economy 4). Getting deep and back down safely is the challenge.
 
 ### Orbital
 

@@ -137,7 +137,20 @@ function write(file: string, scn: Json) {
   console.log(`wrote scenarios/${file}.json`);
 }
 
-function scenario(o: { name: string; title: string; description: string; bodies: Json[]; bounds: Json; economy: number; leak?: Leak; start: { position: Vec; velocity: Vec }; pads: Pad[]; maxSpeed: number; maxTilt: number }): Json {
+function scenario(o: {
+  name: string;
+  title: string;
+  description: string;
+  bodies: Json[];
+  bounds: Json;
+  economy: number;
+  leak?: Leak;
+  start: { position: Vec; velocity: Vec };
+  pads: Pad[];
+  maxSpeed: number;
+  maxTilt: number;
+  lines?: Vec[][];
+}): Json {
   return {
     schema: 1,
     name: o.name,
@@ -158,6 +171,7 @@ function scenario(o: { name: string; title: string; description: string; bodies:
         maxSpeed: o.maxSpeed,
         maxTilt: o.maxTilt,
         explodeAbove: 3.5,
+        ...(o.lines ? { lines: o.lines } : {}),
       },
     },
     timeline: [],
@@ -290,3 +304,72 @@ write(
     leak: { integrity: 0.4, normal: { x: 1, y: 0 }, speed: 30 },
   }),
 );
+
+// Cave: a bounded cave running down from its mouth, round stalactites and stalagmites that make a
+// winding route before even the first pad. Five pads, deeper ones scoring more (×2 to ×6). Tight
+// fuel: getting deep and down safely is the challenge. The ship starts at the mouth, still.
+{
+  /** The cave's floor before its stalagmites: down from the mouth to the end chamber. */
+  const base = (x: number) => {
+    const at: [number, number][] = [
+      [-80, 0],
+      [40, 0],
+      [110, -20],
+      [200, -50],
+      [290, -85],
+      [380, -115],
+      [470, -150],
+      [540, -150],
+    ];
+    for (let i = 0; i + 1 < at.length; i++) {
+      const [x0, y0] = at[i];
+      const [x1, y1] = at[i + 1];
+      if (x <= x1) return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
+    }
+    return at[at.length - 1][1];
+  };
+  const pads: Pad[] = [
+    { x: 105, width: 10, multiplier: 2 },
+    { x: 200, width: 8, multiplier: 3 },
+    { x: 290, width: 7, multiplier: 4 },
+    { x: 380, width: 6, multiplier: 5 },
+    { x: 480, width: 6, multiplier: 6 },
+  ];
+  const MOUTH = 40;
+  const END = 530;
+  // Stalagmites rise from the floor, stalactites hang from the roof: between pads, one of each, so
+  // the route weaves down and up.
+  const floor = sum(base, wave(1.5, 23), spike(70, 11, 7), spike(160, 12, 7), spike(250, 13, 7), spike(335, 12, 6), spike(430, 14, 7));
+  const height = () => 34;
+  const roof = sum(base, height, wave(1.5, 17, 1), spike(140, -13, 6), spike(225, -14, 6), spike(315, -14, 6), spike(405, -15, 6), spike(455, -12, 5));
+  const fl = line(-80, END, 2.5, floor, pads, 1.5);
+  const rf: Vec[] = [];
+  for (let x = MOUTH; x <= END + 1e-9; x += 2.5) rf.push({ x, y: roof(x) });
+  let narrow = Infinity;
+  for (let x = MOUTH; x <= END; x += 0.5) narrow = Math.min(narrow, roof(x) - floor(x));
+  if (narrow < 12) throw new Error(`the cave narrows to ${narrow.toFixed(1)} m somewhere: too tight for the ship`);
+  const TOP = 260;
+  const bodies = terrain(fl, pads, {});
+  // The rock over the cave, solid to the top of the world, and the end wall.
+  const rock = (vertices: Vec[], n: string) =>
+    bodies.push({ id: n, fixed: true, mass: 1, friction: 0.9, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape: { kind: "polygon", vertices } });
+  for (let i = 0; i + 1 < rf.length; i++) rock([rf[i], rf[i + 1], { x: rf[i + 1].x, y: rf[i + 1].y + CRUST }, { x: rf[i].x, y: rf[i].y + CRUST }], `roof-${i}`);
+  const endFloor = floor(END);
+  rock([{ x: END, y: endFloor - CRUST }, { x: END + 10, y: endFloor - CRUST }, { x: END + 10, y: TOP }, { x: END, y: TOP }], "cave-end");
+  write(
+    "lander-cave",
+    scenario({
+      name: "lander-cave",
+      title: "Mammoth Lander: Cave",
+      description: "A cave running down from its mouth, round stalactites and stalagmites. Deeper pads score more, up to ×6. Tight fuel.",
+      bodies,
+      bounds: { min: { x: -80, y: -200 }, max: { x: 560, y: 300 }, wrap: false, farField: 10, depth: 2 },
+      economy: 4,
+      start: { position: { x: 10, y: 3.4 + 0.2 + 8 }, velocity: { x: 0, y: 0 } },
+      pads,
+      maxSpeed: 1.5,
+      maxTilt: 12,
+      lines: [fl.filter((p) => p.x <= END), [{ x: MOUTH, y: TOP }, ...rf, { x: END, y: endFloor }]],
+    }),
+  );
+}

@@ -484,6 +484,8 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
   num(v, g.maxSpeed, `${path}.maxSpeed`, { positive: true });
   num(v, g.maxTilt, `${path}.maxTilt`, { min: 0, max: 180 });
   for (const k of ["ships", "pause", "explodeAbove", "clearBonus"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
+  if (g.lines !== undefined && (!Array.isArray(g.lines) || !g.lines.every((l) => Array.isArray(l) && l.length > 1 && l.every((p) => isObj(p) && Number.isFinite(p.x) && Number.isFinite(p.y)))))
+    err(v, `${path}.lines`, "must be a list of lines, each of two or more points {x, y}");
 }
 
 function validateDuel(v: V, c: unknown, bodies: unknown, path: string): void {
