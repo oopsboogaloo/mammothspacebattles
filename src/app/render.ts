@@ -652,22 +652,43 @@ function drawStars(ctx: Ctx, c: Camera, vp: Viewport): void {
 /** Ground in the game: fixed terrain, and the pieces of an asteroid (they carry its gravity field, LND-011). */
 const isGround = (b: Body) => b.fixed || !!b.gravity;
 
+/** How far the ground's fill reaches past its surface, m: well past any view, so nothing under it shows. */
+const GROUND_DEPTH = 3000;
+const GROUND_FILL = "#05070d";
+
 function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   const fixed = world.bodies.filter((b) => isGround(b) && b.shape.kind !== "disc");
   // An asteroid's surface faces away from its centre; flat ground's faces up.
   const centre = world.bodies.find((b) => b.gravity && b.gravity.mu > 0)?.position;
-  ctx.fillStyle = "#05070d";
+  ctx.fillStyle = GROUND_FILL;
   for (const b of fixed) {
     bodyPath(ctx, c, vp, b);
     ctx.fill();
   }
-  ctx.strokeStyle = "#cfd8ea";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  // Lines the scenario draws itself (a cave's floor and roof).
-  const lines = world.lander?.spec.lines;
-  if (lines) {
-    for (const l of lines)
+  // Lines the scenario draws itself (a cave's floor and roof), each filled solid on its rock side.
+  const spec = world.lander?.spec;
+  if (spec?.lines) {
+    spec.lines.forEach((l, i) => {
+      const side = spec.solid?.[i];
+      if (!side || l.length < 2) return;
+      const dy = side === "below" ? -GROUND_DEPTH : GROUND_DEPTH;
+      ctx.beginPath();
+      l.forEach((p, k) => {
+        const s = toScreen(c, vp, p);
+        if (k === 0) ctx.moveTo(s.x, s.y);
+        else ctx.lineTo(s.x, s.y);
+      });
+      const end = toScreen(c, vp, { x: l[l.length - 1].x, y: l[l.length - 1].y + dy });
+      const start = toScreen(c, vp, { x: l[0].x, y: l[0].y + dy });
+      ctx.lineTo(end.x, end.y);
+      ctx.lineTo(start.x, start.y);
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.strokeStyle = "#cfd8ea";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (const l of spec.lines)
       l.forEach((p, i) => {
         const s = toScreen(c, vp, p);
         if (i === 0) ctx.moveTo(s.x, s.y);
@@ -676,6 +697,8 @@ function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
     ctx.stroke();
     return;
   }
+  // The surface: each body's edges but its sides and back.
+  const edges: [Vec2, Vec2, boolean][] = []; // ends, and whether it is flat ground (to fill below)
   for (const b of fixed) {
     const q = sinCos(b.angle);
     const vs = localVertices(b.shape).map((v) => add(b.position, rotate(q, v)));
@@ -685,11 +708,32 @@ function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
     vs.forEach((v, i) => {
       const w = vs[(i + 1) % vs.length];
       if (out[i] <= bottom + 1e-3 || out[(i + 1) % vs.length] <= bottom + 1e-3) return; // a side or the back
-      const a = toScreen(c, vp, v);
-      const z = toScreen(c, vp, w);
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(z.x, z.y);
+      edges.push([v, w, !(b.gravity && centre)]);
     });
+  }
+  // Flat ground is solid all the way down: fill under each surface edge, past the bottom of any view.
+  ctx.beginPath();
+  for (const [v, w, flat] of edges) {
+    if (!flat) continue;
+    const a = toScreen(c, vp, v);
+    const z = toScreen(c, vp, w);
+    const zd = toScreen(c, vp, { x: w.x, y: w.y - GROUND_DEPTH });
+    const ad = toScreen(c, vp, { x: v.x, y: v.y - GROUND_DEPTH });
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(z.x, z.y);
+    ctx.lineTo(zd.x, zd.y);
+    ctx.lineTo(ad.x, ad.y);
+    ctx.closePath();
+  }
+  ctx.fill();
+  ctx.strokeStyle = "#cfd8ea";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (const [v, w] of edges) {
+    const a = toScreen(c, vp, v);
+    const z = toScreen(c, vp, w);
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(z.x, z.y);
   }
   ctx.stroke();
 }
@@ -868,7 +912,14 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     for (const [ox, oy] of wrapImages(world, c, vp)) {
       const ci = { ...c, x: c.x - ox, y: c.y - oy };
       drawGas(ctx, world, ci, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
+      // The game's copies look like the world itself: ground as ground, and its pads.
+      if (opts.groundLine) {
+        drawGroundLine(ctx, world, ci, vp);
+        const g = world.challenge?.goal;
+        if (g?.pads) for (const p of g.pads) drawPad(ctx, world, ci, vp, p.id, `×${p.multiplier}`, g.used?.includes(p.id));
+      }
       for (const b of world.bodies) {
+        if (opts.groundLine && isGround(b)) continue; // drawn as ground above; ships and debris still show
         bodyPath(ctx, ci, vp, b);
         ctx.fillStyle = b.fixed ? COLORS.fixed : COLORS.body;
         ctx.fill();
@@ -877,7 +928,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
         ctx.stroke();
       }
     }
-    drawSeam(ctx, world, c, vp);
+    // The seam is the sandbox's: the game hides it.
+    if (!opts.groundLine) drawSeam(ctx, world, c, vp);
   }
   // Gas under bodies, so walls stay crisp.
   drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");

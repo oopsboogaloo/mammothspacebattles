@@ -158,6 +158,31 @@ describe("Mammoth Lander", () => {
     expect(burn(0.5) / whole).toBeCloseTo(0.5, 1);
   });
 
+  it("LND-034 when a ship breaks up, the keys reach none of it, and a broken-off engine fires its last propellant", () => {
+    const { w, step } = game(0);
+    step(1 / 240);
+    w.gravity = { x: 0, y: 0 };
+    w.controls.left = 1; // firing as it breaks
+    step(0.25);
+    // The left engine's mounting gives way: the ship has broken apart.
+    w.joints = w.joints.filter((j) => j.id !== "l1-w-wing-left");
+    step(1 / 240);
+    expect(w.challenge!.status.phase).toBe("crashed");
+    const engine = w.bodies.find((b) => b.id === "l1-engine-l")!;
+    // Its feed lines snapped where the ship came apart; it fires on a channel of its own.
+    expect(w.links.some((l) => l.kind === "feed" && l.to === "l1-engine-l")).toBe(false);
+    expect(engine.injector!.channel).toBe("l1-sputter");
+    step(0.1);
+    expect(engine.injector!.firing).toBe(true);
+    // The keys move nothing of ship 1 now, and the sputter stops by itself.
+    step(0.6);
+    expect(engine.injector!.firing).toBe(false);
+    w.controls.left = 1;
+    w.controls.right = 1;
+    step(0.2);
+    expect(w.bodies.filter((b) => b.id.startsWith("l1-") && b.injector?.firing)).toEqual([]);
+  });
+
   it("LND-032 a crash plays out before its verdict shows: the next ship waits the watch time too", () => {
     const { w, step } = game(15, { pause: 0.5, watch: 1.25 });
     step(1 / 240);
