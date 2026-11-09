@@ -474,16 +474,19 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
   if (typeof g.hull !== "string" || !g.hull.includes("{n}")) err(v, `${path}.hull`, 'must be an id with "{n}"');
   if (g.tank !== undefined && (typeof g.tank !== "string" || !g.tank.includes("{n}"))) err(v, `${path}.tank`, 'must be an id with "{n}"');
   if (!isObj(g.start) || !isObj(g.start.position) || !isObj(g.start.velocity)) err(v, `${path}.start`, "must be {position, velocity}");
-  const ids = new Set((Array.isArray(bodies) ? bodies.filter(isObj) : []).filter((b) => b.fixed === true).map((b) => b.id));
+  // A pad is a body of the world: fixed, or on a moving body such as an asteroid (LND-011).
+  const ids = new Set((Array.isArray(bodies) ? bodies.filter(isObj) : []).map((b) => b.id));
   if (!Array.isArray(g.pads) || !g.pads.length) err(v, `${path}.pads`, "must be a list of {id, multiplier}");
   else
     g.pads.forEach((p, i) => {
-      if (!isObj(p) || !ids.has(p.id)) err(v, `${path}.pads[${i}].id`, "must be the id of a fixed body in the world");
+      if (!isObj(p) || !ids.has(p.id)) err(v, `${path}.pads[${i}].id`, "must be the id of a body in the world");
       else num(v, p.multiplier, `${path}.pads[${i}].multiplier`, { positive: true });
     });
   num(v, g.maxSpeed, `${path}.maxSpeed`, { positive: true });
   num(v, g.maxTilt, `${path}.maxTilt`, { min: 0, max: 180 });
   for (const k of ["ships", "pause", "explodeAbove", "clearBonus"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
+  if (g.lines !== undefined && (!Array.isArray(g.lines) || !g.lines.every((l) => Array.isArray(l) && l.length > 1 && l.every((p) => isObj(p) && Number.isFinite(p.x) && Number.isFinite(p.y)))))
+    err(v, `${path}.lines`, "must be a list of lines, each of two or more points {x, y}");
 }
 
 function validateDuel(v: V, c: unknown, bodies: unknown, path: string): void {

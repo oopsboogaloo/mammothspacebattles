@@ -731,6 +731,13 @@ frames/s and a mean step of 3.6 ms, but 10 frame gaps over 100 ms (max 514 ms) a
 leaves the copy out. Rare long pauses on both threads look like garbage collection; by then the page
 held about 360 snapshots. The log now lists each freeze over 100 ms and when it happened, to check.
 
+After these changes, the same iPad, 296 s of Emergency: the world message is 561 kB (5,542 events,
+sent as a change now) and the page takes results in 0.0 ms, but 25 freezes remain, about every
+10 to 20 s, mostly 300 to 750 ms (one of 2,952 ms). Each worker freeze has a frame freeze at the same
+moment (5.4 s: step 654, frame 509; 170.1 s: 749 and 705), so both threads stop together: something
+pausing the whole page (memory clean-up or the system), not the physics or the copying. Next: the
+same run on the page alone (`&worker=0`), to tell the worker's part from the page's.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

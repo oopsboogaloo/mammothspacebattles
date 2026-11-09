@@ -217,7 +217,8 @@ function Play() {
       const zoom = Math.min(18, Math.max(3, vp.height / (1.5 * alt + 45)));
       const c = camera.value;
       const z = c.zoom + (zoom - c.zoom) * 0.04;
-      // The ship sits above the middle, so the ground below it is in view.
+      // The ship sits above the middle, so the ground below it is in view. The view never turns,
+      // also on Orbital: under the asteroid you land upside down, which is part of the challenge.
       camera.value = { x, y: y - 0.35 * alt, zoom: z };
     };
     raf = requestAnimationFrame(tick);

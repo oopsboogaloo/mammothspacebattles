@@ -148,21 +148,31 @@ the same weight and thrust.
 
 ### Cave
 
-- **Layout:** you start at the cave mouth.
-- **Route:** stalactites and stalagmites make a winding route before even the first pad.
-- **Pads:** deeper ones score more (multipliers up to ×6).
-- **World:** bounded, no wrap.
-- **Fuel:** a concern. Getting deep and back down safely is the challenge.
+- **Layout:** a cave about 500 m long, running down from its mouth 150 m into the rock. You start
+  at the mouth, still.
+- **Route:** a stalagmite or a stalactite between each pair of pads, so the way down weaves. The
+  cave is 34 m high, and never under 12 m at its tightest (the generator checks).
+- **Pads:** five, ×2 near the mouth to ×6 in the end chamber, each deeper than the last.
+- **World:** bounded, no wrap. The rock over the cave is solid; the end wall closes it.
+- **Drawing:** the floor and the roof are two lines (`lander.lines`), drawn as given.
+- **Fuel:** a concern (economy 4). Getting deep and back down safely is the challenge.
 
 ### Orbital
 
-- **The asteroid:** a very large, slowly spinning rock, about 150 m across, turning once every
-  5–10 minutes. It has mountains, plateaus and crater floors.
-- **Pads:** fixed to the surface, so they move with the spin. Landing is judged on speed relative
-  to the pad (LND-011).
-- **Start:** the ship is in a circular orbit and must burn to come down.
-- **Gravity:** the asteroid's own, pulling toward its centre. "Up" is away from the asteroid, and
-  tilt is measured from there.
+- **The asteroid:** 150 m across, turning once in 7 minutes, with mountains, plateaus and crater
+  floors. About 1,000 t, so the ship hardly moves it.
+- **Built as:** one welded assembly of ordinary bodies: a core and a ring of wedges out to the
+  surface (each convex, so the surface can be any shape). Parts of one assembly never collide with
+  each other, and it moves as one rigid body. It is centred on its centre of mass, so it spins in
+  place.
+- **Gravity:** the core's own (FLT-011), about 0.9 m/s² at the surface, pulling toward its centre.
+  The other parts carry a field of strength 0, so they feel none. "Up" is away from the asteroid,
+  but the view never turns: under the asteroid you land upside down, part of the challenge.
+- **Pads:** six, welded to the rock, so they move with the spin: two plateaus, two crater floors,
+  a mountain top and the plain (×2 to ×5). Height, speed and tilt are measured in the nearest
+  pad's own frame and relative to its motion (LND-011); for a level, still pad that is the world's.
+- **Start:** a circular orbit 60 m up, moving the way the rock turns. You must burn to come down.
+- **Fuel:** moderate (economy 8). Touchdown 1.5 m/s relative to the pad, 12°.
 
 ### Emergency
 

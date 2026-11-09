@@ -30,6 +30,11 @@ export interface LanderSpec {
   explodeAbove?: number;
   /** Points for using every pad (default 1,000). */
   clearBonus?: number;
+  /**
+   * The terrain's surface as lines to draw (a cave's floor and roof). Absent: the top edges of the
+   * fixed bodies are drawn. Drawing only: the bodies are what collides.
+   */
+  lines?: Vec2[][];
 }
 
 export interface LanderState {
