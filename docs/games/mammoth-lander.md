@@ -166,8 +166,8 @@ the same weight and thrust.
   each other, and it moves as one rigid body. It is centred on its centre of mass, so it spins in
   place.
 - **Gravity:** the core's own (FLT-011), about 0.9 m/s² at the surface, pulling toward its centre.
-  The other parts carry a field of strength 0, so they feel none. "Up" is away from the asteroid:
-  the view turns so that it is drawn up.
+  The other parts carry a field of strength 0, so they feel none. "Up" is away from the asteroid,
+  but the view never turns: under the asteroid you land upside down, part of the challenge.
 - **Pads:** six, welded to the rock, so they move with the spin: two plateaus, two crater floors,
   a mountain top and the plain (×2 to ×5). Height, speed and tilt are measured in the nearest
   pad's own frame and relative to its motion (LND-011); for a level, still pad that is the world's.

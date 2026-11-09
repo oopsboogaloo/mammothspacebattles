@@ -217,23 +217,12 @@ function Play() {
       const zoom = Math.min(18, Math.max(3, vp.height / (1.5 * alt + 45)));
       const c = camera.value;
       const z = c.zoom + (zoom - c.zoom) * 0.04;
-      // "Up" is away from the asteroid on Orbital (its gravity pulls to its centre), else straight up.
-      const rock = w.bodies.find((b) => b.gravity && b.gravity.mu > 0);
-      const d = rock ? Math.hypot(x - rock.position.x, y - rock.position.y) : 0;
-      const up = rock && d > 0 ? { x: (x - rock.position.x) / d, y: (y - rock.position.y) / d } : { x: 0, y: 1 };
-      // The view turns with it, gently, the short way round.
-      const want = Math.atan2(-up.x, up.y);
-      const was = c.angle ?? want;
-      const angle = was + Math.atan2(Math.sin(want - was), Math.cos(want - was)) * 0.1;
-      // The ship sits above the middle, so the ground below it is in view.
-      camera.value = { x: x - up.x * 0.35 * alt, y: y - up.y * 0.35 * alt, zoom: z, ...(rock ? { angle } : {}) };
+      // The ship sits above the middle, so the ground below it is in view. The view never turns,
+      // also on Orbital: under the asteroid you land upside down, which is part of the challenge.
+      camera.value = { x, y: y - 0.35 * alt, zoom: z };
     };
     raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      // The sandbox's view doesn't turn.
-      camera.value = { x: camera.value.x, y: camera.value.y, zoom: camera.value.zoom };
-    };
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   const over = game?.state.phase === "over";
