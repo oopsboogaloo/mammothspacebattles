@@ -172,4 +172,13 @@ describe("gas plume", () => {
     renderFrame(ctx, w, { x: 0, y: 0, zoom: 20 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null });
     expect(calls.filter((c) => c.startsWith("fillRect(")).length).toBe(1); // no stars unless asked
   });
+
+  it("LND-042 in the game, a ship just across a wrapped world's edge still draws in the copy, its ground as ground", () => {
+    const w = createWorld(1, [disc("ship", { position: { x: -9, y: 0 } }), box("rock", 2, 1, { fixed: true, position: { x: -8, y: -2 } })], { x: 0, y: 0 }, { bounds: { min: { x: -10, y: -10 }, max: { x: 10, y: 10 }, wrap: true } });
+    const { ctx, calls } = recorder();
+    renderFrame(ctx, w, { x: 9, y: 0, zoom: 100 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null, groundLine: true });
+    // The copy of the ship, one world width (20 m = 2000 px) to the right: x = 400 + (−9 + 20 − 9) × 100 = 600.
+    expect(calls).toContain("arc(600,300,50,0,6)");
+    expect(calls.some((c) => c === "setLineDash(2,6)")).toBe(false); // no seam line in the game
+  });
 });

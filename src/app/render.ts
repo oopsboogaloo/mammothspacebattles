@@ -917,9 +917,9 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
         drawGroundLine(ctx, world, ci, vp);
         const g = world.challenge?.goal;
         if (g?.pads) for (const p of g.pads) drawPad(ctx, world, ci, vp, p.id, `×${p.multiplier}`, g.used?.includes(p.id));
-        continue;
       }
       for (const b of world.bodies) {
+        if (opts.groundLine && isGround(b)) continue; // drawn as ground above; ships and debris still show
         bodyPath(ctx, ci, vp, b);
         ctx.fillStyle = b.fixed ? COLORS.fixed : COLORS.body;
         ctx.fill();
