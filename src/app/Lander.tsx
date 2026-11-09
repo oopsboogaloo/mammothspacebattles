@@ -45,7 +45,49 @@ function startGame(key: string): void {
   playing.value = true;
 }
 
+/** The page is zoomed in by the browser (a pinch on iPad): the game pauses until it's back. */
+const zoomed = signal(false);
+
+/**
+ * Keeps the browser from zooming the game (LND-030). Two thumbs on the pads moving apart are a pinch,
+ * and Safari zooms on a pinch whatever the page says (it ignores `user-scalable=no`), so the pinch
+ * and double-tap gestures are cancelled here. If it zooms anyway, the game pauses until it's back.
+ */
+function useNoZoom(): void {
+  useEffect(() => {
+    // Once zoomed, a pinch is let through: it's the way back out.
+    const stop = (e: Event) => {
+      if (!zoomed.value) e.preventDefault();
+    };
+    const twoFingers = (e: TouchEvent) => {
+      if (e.touches.length > 1 && !zoomed.value) e.preventDefault();
+    };
+    const opts = { passive: false } as const;
+    for (const type of ["gesturestart", "gesturechange", "gestureend", "dblclick"]) document.addEventListener(type, stop, opts);
+    document.addEventListener("touchmove", twoFingers, opts);
+    // Browsers that honour it (not Safari) won't zoom at all; on iOS, setting it can also undo a zoom.
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    const was = meta?.content;
+    if (meta) meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+    const vv = window.visualViewport;
+    const check = () => {
+      zoomed.value = !!vv && vv.scale > 1.02;
+      if (zoomed.value) playing.value = false;
+    };
+    vv?.addEventListener("resize", check);
+    check();
+    return () => {
+      for (const type of ["gesturestart", "gesturechange", "gestureend", "dblclick"]) document.removeEventListener(type, stop);
+      document.removeEventListener("touchmove", twoFingers);
+      if (meta && was !== undefined) meta.content = was;
+      vv?.removeEventListener("resize", check);
+      zoomed.value = false;
+    };
+  }, []);
+}
+
 export function LanderApp() {
+  useNoZoom();
   return (
     <main class="lander" data-testid="lander">
       {landerScreen.value === "title" && <Title />}
@@ -138,6 +180,8 @@ function Thrust({ channel, label, side }: { channel: string; label: string; side
       onPointerCancel={() => set(false)}
       onLostPointerCapture={() => set(false)}
       onContextMenu={(e) => e.preventDefault()}
+      // No click, so no double-tap zoom, from fast presses (the press itself is a pointer event).
+      onTouchEnd={(e) => e.preventDefault()}
     >
       {label}
     </button>
@@ -234,7 +278,8 @@ function Play() {
       {!playing.value && !over && (
         <div class="lander-modal">
           <h2>Paused</h2>
-          <button class="lander-btn" onClick={() => (playing.value = true)}>
+          {zoomed.value && <p data-testid="lander-zoomed">The page is zoomed in. Pinch outwards to zoom back out, then resume.</p>}
+          <button class="lander-btn" disabled={zoomed.value} onClick={() => (playing.value = true)}>
             Resume
           </button>
           <button class="lander-btn ghost" onClick={quit}>

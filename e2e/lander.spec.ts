@@ -55,3 +55,19 @@ test("LND-030 a thrust released while paused stays released on resume", async ({
   const left1 = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls.left ?? 0);
   expect(left1).toBe(0);
 });
+
+test("LND-030 the game cancels the browser's pinch zoom, and gives it back to the sandbox", async ({ page }) => {
+  await page.goto("./?game=lander");
+  const viewport = () => page.evaluate(() => document.querySelector('meta[name="viewport"]')!.getAttribute("content"));
+  const pinchCancelled = () =>
+    page.evaluate(() => {
+      const e = new Event("gesturestart", { cancelable: true });
+      document.dispatchEvent(e);
+      return e.defaultPrevented;
+    });
+  await expect.poll(viewport).toContain("maximum-scale=1.0");
+  expect(await pinchCancelled()).toBe(true);
+  await page.goto("./");
+  expect(await viewport()).toBe("width=device-width, initial-scale=1.0");
+  expect(await pinchCancelled()).toBe(false);
+});
