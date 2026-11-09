@@ -77,14 +77,17 @@ export function summary(extra: Record<string, string | number>): string {
   const takes = runs.map((r) => r.takeMs);
   const gaps: number[] = [];
   for (let i = 1; i < runs.length; i++) gaps.push(runs[i].at - runs[i - 1].at);
+  // Rates over the samples kept (older ones are dropped past MAX), not the whole session.
+  const frameSecs = fr.reduce((a, b) => a + b, 0) / 1000;
+  const runSecs = runs.length > 1 ? (runs[runs.length - 1].at - runs[0].at) / 1000 : secs;
   const lines = [
     `MSB diag ${new Date().toISOString()}`,
     `device: ${navigator.userAgent}`,
     `cores ${navigator.hardwareConcurrency ?? "?"}, dpr ${devicePixelRatio}, view ${innerWidth}x${innerHeight}`,
     ...Object.entries(extra).map(([k, v]) => `${k}: ${v}`),
     `played ${f1(secs)} s`,
-    `frames: ${fr.length} (${f1(fr.length / Math.max(1e-9, secs))}/s); gap p50 ${f1(q(fr, 0.5))} p95 ${f1(q(fr, 0.95))} max ${f1(Math.max(0, ...fr))} ms; over 33 ms ${fr.filter((x) => x > 33).length}, over 50 ${fr.filter((x) => x > 50).length}, over 100 ${fr.filter((x) => x > 100).length}`,
-    `worker runs: ${runs.length}, ${f1(steps / Math.max(1, runs.length))} steps each, ${f1(steps / Math.max(1e-9, secs))} steps/s (real time needs 120 at 1x)`,
+    `frames: ${fr.length} (${f1(fr.length / Math.max(1e-9, frameSecs))}/s); gap p50 ${f1(q(fr, 0.5))} p95 ${f1(q(fr, 0.95))} max ${f1(Math.max(0, ...fr))} ms; over 33 ms ${fr.filter((x) => x > 33).length}, over 50 ${fr.filter((x) => x > 50).length}, over 100 ${fr.filter((x) => x > 100).length}`,
+    `worker runs: ${runs.length}, ${f1(steps / Math.max(1, runs.length))} steps each, ${f1(steps / Math.max(1e-9, runSecs))} steps/s (real time needs 120 at 1x)`,
     `worker step: mean ${f1(stepMs)} ms, gas ${f1(runs.reduce((a, r) => a + r.gasMs, 0) / Math.max(1, steps))} ms, worst ${f1(Math.max(0, ...runs.map((r) => r.worst)))} ms; worst steps over 30 ms: ${runs.filter((r) => r.worst > 30).length} runs`,
     `between results: p50 ${f1(q(gaps, 0.5))} p95 ${f1(q(gaps, 0.95))} max ${f1(Math.max(0, ...gaps))} ms`,
     `page taking a result: mean ${f1(mean(takes))} p95 ${f1(q(takes, 0.95))} max ${f1(Math.max(0, ...takes))} ms`,
