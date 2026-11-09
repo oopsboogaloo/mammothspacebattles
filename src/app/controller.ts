@@ -87,7 +87,12 @@ export interface RunTiming {
   ms: number;
   gasMs: number;
   worstMs: number;
+  /** The slowest step's parts that took over 1 ms, and its time in none of them, e.g. "gas 820, other 3" (diagnostics). */
+  worstParts?: string;
 }
+
+/** The step's own parts, in order (world.ts marks them). */
+const PARTS = ["commands", "forces", "contacts", "integrate", "gas", "ledger"];
 
 const now = () => performance.now();
 /** Times one step into `run.timing`; `out` collects the step's own phase timings (LED-004). */
@@ -95,7 +100,17 @@ function timed(run: StepRun, out: Record<string, number>, t0: number): void {
   const ms = now() - t0;
   run.timing.ms += ms;
   run.timing.gasMs += out.gas ?? 0;
-  run.timing.worstMs = Math.max(run.timing.worstMs, ms);
+  if (ms > run.timing.worstMs) {
+    run.timing.worstMs = ms;
+    let other = ms;
+    const big: string[] = [];
+    for (const k of PARTS) {
+      other -= out[k] ?? 0;
+      if ((out[k] ?? 0) > 1) big.push(`${k} ${(out[k] ?? 0).toFixed(0)}`);
+    }
+    if (other > 1) big.push(`other ${other.toFixed(0)}`);
+    run.timing.worstParts = big.join(", ");
+  }
   for (const k in out) delete out[k];
 }
 

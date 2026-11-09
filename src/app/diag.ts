@@ -13,6 +13,8 @@ export interface RunLog {
   gasMs: number;
   /** Main-thread time taking it in (reading the message and accepting the run), ms. */
   takeMs: number;
+  /** Where its slowest step's time went. */
+  worstParts?: string;
 }
 
 const on = typeof location !== "undefined" && new URLSearchParams(location.search).get("diag") === "1";
@@ -24,7 +26,7 @@ export const diag = {
   frames: [] as number[], // gaps between frames, ms
   runs: [] as RunLog[],
   /** Freezes: frame gaps and worker steps over 100 ms, and when (s into play). */
-  hitches: [] as { at: number; kind: "frame" | "step"; ms: number }[],
+  hitches: [] as { at: number; kind: "frame" | "step"; ms: number; parts?: string }[],
   lastFrame: 0,
   frame(now: number): void {
     if (!on) return;
@@ -34,14 +36,14 @@ export const diag = {
     if (this.frames.length > MAX) this.frames.splice(0, this.frames.length - MAX);
     if (this.frames.length && this.frames[this.frames.length - 1] > 100) this.hitch("frame", this.frames[this.frames.length - 1], now);
   },
-  hitch(kind: "frame" | "step", ms: number, now: number): void {
-    this.hitches.push({ at: (now - this.start) / 1000, kind, ms });
+  hitch(kind: "frame" | "step", ms: number, now: number, parts?: string): void {
+    this.hitches.push({ at: (now - this.start) / 1000, kind, ms, parts });
     if (this.hitches.length > 100) this.hitches.shift();
   },
   run(r: RunLog): void {
     if (!on) return;
     this.runs.push(r);
-    if (r.worst > 100) this.hitch("step", r.worst, r.at);
+    if (r.worst > 100) this.hitch("step", r.worst, r.at, r.worstParts);
     if (this.runs.length > MAX) this.runs.splice(0, this.runs.length - MAX);
   },
   reset(): void {
@@ -100,7 +102,7 @@ export function summary(extra: Record<string, string | number>): string {
     `worker step: mean ${f1(stepMs)} ms, gas ${f1(runs.reduce((a, r) => a + r.gasMs, 0) / Math.max(1, steps))} ms, worst ${f1(Math.max(0, ...runs.map((r) => r.worst)))} ms; worst steps over 30 ms: ${runs.filter((r) => r.worst > 30).length} runs`,
     `between results: p50 ${f1(q(gaps, 0.5))} p95 ${f1(q(gaps, 0.95))} max ${f1(Math.max(0, ...gaps))} ms`,
     `page taking a result: mean ${f1(mean(takes))} p95 ${f1(q(takes, 0.95))} max ${f1(Math.max(0, ...takes))} ms`,
-    `freezes over 100 ms (s into play): ${diag.hitches.map((h) => `${f1(h.at)} ${h.kind} ${h.ms.toFixed(0)}`).join(", ") || "none"}`,
+    `freezes over 100 ms (s into play): ${diag.hitches.map((h) => `${f1(h.at)} ${h.kind} ${h.ms.toFixed(0)}${h.parts ? ` (${h.parts})` : ""}`).join(", ") || "none"}`,
   ];
   return lines.join("\n");
 }

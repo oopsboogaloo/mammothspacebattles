@@ -757,6 +757,20 @@ their grid each step, ground included: hundreds of fixed bodies, about 25 cells 
 - **Left:** the rest is spread thin. The biggest single part (13%) is the disc-against-polygon
   test building the polygon in world coordinates for each wisp it checks.
 
+iPad logs after that (Emergency, about 3 minutes each):
+
+| Run | Freezes over 100 ms | Notes |
+|---|---|---|
+| Chrome, before | 32 in 296 s | worker and page together |
+| Chrome, after the fixed grid | 17 in 182 s | the same: 28% less garbage didn't help |
+| Chrome, paused for 97 s | none while paused | one as play resumed (step 920, frame 622) |
+| Safari | 14 in 185 s | half are the worker alone, the page drawing on |
+
+So the freezes come with stepping (none while paused), on WebKit only (the Fold's worst step was
+88 ms), mostly 0.4 to 0.7 s, every 10 to 20 s. Memory clean-up in the worker fits; so would a rare
+slow step. The log now gives each frozen step's parts (commands, forces, contacts, integrate, gas,
+ledger, other): a clean-up pause lands in any part, a slow step in the same one.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

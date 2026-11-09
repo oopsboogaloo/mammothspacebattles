@@ -35,7 +35,7 @@ export class SimClient {
         const t0 = performance.now();
         const res = e.data;
         this.take(res);
-        if (diag.on && res.run) diag.run({ at: t0, steps: res.run.steps, ms: res.run.timing.ms, worst: res.run.timing.worstMs, gasMs: res.run.timing.gasMs, takeMs: performance.now() - t0 });
+        if (diag.on && res.run) diag.run({ at: t0, steps: res.run.steps, ms: res.run.timing.ms, worst: res.run.timing.worstMs, gasMs: res.run.timing.gasMs, takeMs: performance.now() - t0, worstParts: res.run.timing.worstParts });
       };
       this.worker.onerror = () => {
         this.worker = null; // carry on stepping on the page

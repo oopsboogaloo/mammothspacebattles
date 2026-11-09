@@ -141,4 +141,11 @@ describe("stepping elsewhere (the simulation worker)", () => {
       expect(hashValue(sb.world)).toBe(before);
     }
   });
+
+  it("PRF a run says where its slowest step's time went, part by part (for the diagnostics log)", () => {
+    const sb = new Sandbox(scenario());
+    const run = runSteps(structuredClone(sb.world), sb.plan, 20);
+    // Each part over 1 ms, with its time; a quick step may have none.
+    expect(run.timing.worstParts).toMatch(/^((commands|forces|contacts|integrate|gas|ledger|other) \d+(, |$))*$/);
+  });
 });
