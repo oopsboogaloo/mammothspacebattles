@@ -4,9 +4,8 @@ test("LND-001 LND-002 LND-030 Mammoth Lander: title, mission select, and a fligh
   await page.goto("./?game=lander");
   await page.getByTestId("lander-title").click();
   await expect(page.getByTestId("lander-select")).toBeVisible();
-  // All but Orbital are ready.
-  for (const k of ["easy", "medium", "hard", "cave", "emergency"]) await expect(page.getByTestId(`lander-pick-lander-${k}`)).toBeEnabled();
-  await expect(page.getByTestId("lander-pick-lander-orbital")).toBeDisabled();
+  // All six missions are ready.
+  for (const k of ["easy", "medium", "hard", "cave", "orbital", "emergency"]) await expect(page.getByTestId(`lander-pick-lander-${k}`)).toBeEnabled();
   await page.getByTestId("lander-pick-lander-easy").click();
   const hud = page.getByTestId("lander-hud");
   await expect(hud).toContainText("FUEL 8.10 kg");

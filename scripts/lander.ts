@@ -373,3 +373,155 @@ write(
     }),
   );
 }
+
+// Orbital: a big, slowly spinning asteroid with its own gravity (FLT-011), 150 m across, turning
+// once in 7 minutes, with mountains, plateaus and crater floors. Its pads ride on it (LND-011), so
+// landing is judged against the pad's own motion and "up". The ship starts in a circular orbit.
+//
+// The rock is one welded assembly of ordinary bodies: a core, and a ring of wedges out to the
+// surface (each convex, so the surface can be any shape). Parts of one assembly never collide with
+// each other, and it moves as one rigid body. Only the core pulls: the other parts carry a field of
+// strength 0, so they feel none and the rock doesn't pull itself apart.
+{
+  const R = 75;
+  const INNER = 40;
+  const TURN = 420; // s a turn
+  const w = (2 * Math.PI) / TURN;
+  const mu = 5625; // about 0.9 m/s² at the surface, softened inside by `core`
+  // Pads: the angle round the rock (radians, anticlockwise from straight up), how far out, how wide.
+  const pads: (Pad & { at: number; r: number })[] = [
+    { at: 0.5, r: R + 9, x: 0, width: 10, multiplier: 2 }, // a plateau
+    { at: 1.45, r: R - 7, x: 0, width: 7, multiplier: 4 }, // a crater floor
+    { at: 2.4, r: R + 14, x: 0, width: 6, multiplier: 5 }, // a mountain top
+    { at: 3.3, r: R + 2, x: 0, width: 12, multiplier: 2 }, // the plain
+    { at: 4.3, r: R - 9, x: 0, width: 6, multiplier: 5 }, // a deep crater
+    { at: 5.3, r: R + 6, x: 0, width: 8, multiplier: 3 }, // a plateau
+  ];
+  const bump = (at: number, height: number, half: number) => (a: number) => {
+    let d = Math.abs(a - at) % (2 * Math.PI);
+    d = Math.min(d, 2 * Math.PI - d);
+    return Math.max(0, 1 - d / half) * height;
+  };
+  const rough = sum(
+    (a: number) => 3 * Math.sin(5 * a + 1) + 2 * Math.sin(11 * a + 2) + 1.2 * Math.sin(23 * a),
+    bump(0.95, 16, 0.18), // mountains between the pads
+    bump(1.9, 12, 0.15),
+    bump(2.85, 18, 0.16),
+    bump(3.8, 11, 0.14),
+    bump(4.8, 15, 0.17),
+    bump(5.8, 13, 0.15),
+  );
+  // Each pad sits on a flat stretch of surface: a straight line `r` out, across its width and a margin.
+  const radius = (a: number) => {
+    for (const p of pads) {
+      let d = a - p.at;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      const half = Math.atan((p.width / 2 + 3) / p.r);
+      if (Math.abs(d) <= half) return p.r / Math.cos(d);
+      // Blend into the rough ground over 10° either side.
+      const blend = Math.abs(d) - half;
+      if (blend < 0.17) {
+        const k = blend / 0.17;
+        return (1 - k) * (p.r / Math.cos(half)) + k * (R + rough(a));
+      }
+    }
+    return R + rough(a);
+  };
+  const N = 96;
+  const angles: number[] = [];
+  for (let i = 0; i < N; i++) angles.push((2 * Math.PI * i) / N);
+  // The pads' flat edges exactly, so each pad sits on level ground.
+  for (const p of pads) for (const s of [-1, 1]) angles.push(p.at + s * Math.atan((p.width / 2 + 3) / p.r));
+  angles.sort((a, b) => a - b);
+  const up = (a: number) => ({ x: -Math.sin(a), y: Math.cos(a) });
+  const surface = angles.map((a) => ({ x: up(a).x * radius(a), y: up(a).y * radius(a) }));
+  const inner = angles.map((a) => ({ x: up(a).x * INNER, y: up(a).y * INNER }));
+  // A body of the rock: placed at its centroid, spinning with the rest.
+  const DENSITY = 50; // kg/m²: heavy, so the ship hardly moves it
+  const bodies: Json[] = [];
+  const joints: Json[] = [];
+  const centroidOf = (vs: Vec[]) => {
+    let A = 0;
+    let cx = 0;
+    let cy = 0;
+    for (let i = 0; i < vs.length; i++) {
+      const a = vs[i];
+      const b = vs[(i + 1) % vs.length];
+      const k = a.x * b.y - b.x * a.y;
+      A += k;
+      cx += (a.x + b.x) * k;
+      cy += (a.y + b.y) * k;
+    }
+    return { area: Math.abs(A / 2), c: { x: cx / (3 * A), y: cy / (3 * A) } };
+  };
+  const piece = (n: string, vs: Vec[], extra: Json = {}) => {
+    const { area, c } = centroidOf(vs);
+    bodies.push({
+      id: n,
+      mass: DENSITY * area,
+      friction: 0.9,
+      restitution: 0,
+      position: c,
+      angle: 0,
+      shape: { kind: "polygon", vertices: vs.map((v) => ({ x: v.x - c.x, y: v.y - c.y })) },
+      gravity: { mu: 0, core: 1 },
+      ...extra,
+    });
+  };
+  // The core: a regular polygon through the wedges' inner corners. It alone pulls.
+  const core: Vec[] = [];
+  for (let i = 0; i < 16; i++) core.push(up((2 * Math.PI * i) / 16));
+  piece("rock-core", core.map((u) => ({ x: u.x * (INNER + 2), y: u.y * (INNER + 2) })), { gravity: { mu, core: 20 } });
+  for (let i = 0; i < angles.length; i++) {
+    const j = (i + 1) % angles.length;
+    // Counter-clockwise: inner corners, then out along the next angle and back along the surface.
+    piece(`rock-${i}`, [inner[i], surface[i], surface[j], inner[j]].reverse());
+  }
+  // Pads: on the flat stretches, facing out, riding with the rock.
+  pads.forEach((p, k) => {
+    const u = up(p.at);
+    const c = { x: u.x * (p.r + 0.2), y: u.y * (p.r + 0.2) };
+    bodies.push({
+      id: `pad-${k + 1}`,
+      mass: 1000,
+      friction: 0.9,
+      restitution: 0,
+      position: c,
+      angle: p.at,
+      shape: { kind: "box", width: p.width, height: 0.4 },
+      gravity: { mu: 0, core: 1 },
+    });
+  });
+  // Centred on its centre of mass, so it spins in place (the surface isn't symmetric: about 1 m off),
+  // then set spinning, and welded to the core where each part's centre is.
+  const at = (b: Json) => b.position as Vec;
+  const M = bodies.reduce((m, b) => m + (b.mass as number), 0);
+  const com = { x: bodies.reduce((t, b) => t + (b.mass as number) * at(b).x, 0) / M, y: bodies.reduce((t, b) => t + (b.mass as number) * at(b).y, 0) / M };
+  for (const b of bodies) {
+    const c = { x: at(b).x - com.x, y: at(b).y - com.y };
+    b.position = c;
+    b.velocity = { x: -w * c.y, y: w * c.x };
+    b.angularVelocity = w;
+  }
+  const corePos = at(bodies[0]);
+  for (const b of bodies.slice(1))
+    joints.push({ id: `rock-w-${String(b.id)}`, a: "rock-core", b: b.id, anchorA: { x: at(b).x - corePos.x, y: at(b).y - corePos.y }, anchorB: { x: 0, y: 0 }, limits: { tension: 1e15, compression: 1e15, shear: 1e15, torque: 1e15 } });
+  // In a circular orbit 60 m up, over the top and moving anticlockwise like the rock.
+  const r0 = R + 60;
+  const g0 = (mu * r0) / Math.pow(r0 * r0 + 20 * 20, 1.5);
+  const scn = scenario({
+    name: "lander-orbital",
+    title: "Mammoth Lander: Orbital",
+    description: "A big asteroid, slowly spinning, with its own gravity. Come down from orbit onto pads that ride on it. Down is towards the rock.",
+    bodies,
+    bounds: { min: { x: -1000, y: -1000 }, max: { x: 1000, y: 1000 }, wrap: false, farField: 10, depth: 2 },
+    economy: 8,
+    start: { position: { x: 0, y: r0 }, velocity: { x: -Math.sqrt(g0 * r0), y: 0 } },
+    pads,
+    maxSpeed: 1.5,
+    maxTilt: 12,
+  }) as Json & { world: Json };
+  scn.world.gravity = { x: 0, y: 0 };
+  scn.world.joints = joints;
+  write("lander-orbital", scn);
+}

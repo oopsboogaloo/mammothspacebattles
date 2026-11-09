@@ -606,8 +606,13 @@ function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string, la
   ctx.globalAlpha = 1;
 }
 
+/** Ground in the game: fixed terrain, and the pieces of an asteroid (they carry its gravity field, LND-011). */
+const isGround = (b: Body) => b.fixed || !!b.gravity;
+
 function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
-  const fixed = world.bodies.filter((b) => b.fixed && b.shape.kind !== "disc");
+  const fixed = world.bodies.filter((b) => isGround(b) && b.shape.kind !== "disc");
+  // An asteroid's surface faces away from its centre; flat ground's faces up.
+  const centre = world.bodies.find((b) => b.gravity && b.gravity.mu > 0)?.position;
   ctx.fillStyle = "#05070d";
   for (const b of fixed) {
     bodyPath(ctx, c, vp, b);
@@ -631,10 +636,12 @@ function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   for (const b of fixed) {
     const q = sinCos(b.angle);
     const vs = localVertices(b.shape).map((v) => add(b.position, rotate(q, v)));
-    const bottom = Math.min(...vs.map((v) => v.y));
+    // How far each vertex is out: its height, or on an asteroid its distance from the centre.
+    const out = b.gravity && centre ? vs.map((v) => Math.hypot(v.x - centre.x, v.y - centre.y)) : vs.map((v) => v.y);
+    const bottom = Math.min(...out);
     vs.forEach((v, i) => {
       const w = vs[(i + 1) % vs.length];
-      if (v.y <= bottom + 1e-6 || w.y <= bottom + 1e-6) return; // a side or the bottom
+      if (out[i] <= bottom + 1e-3 || out[(i + 1) % vs.length] <= bottom + 1e-3) return; // a side or the back
       const a = toScreen(c, vp, v);
       const z = toScreen(c, vp, w);
       ctx.moveTo(a.x, a.y);
@@ -843,7 +850,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   // the surface drawn, not the sides and bottoms where the pieces meet.
   if (opts.groundLine) drawGroundLine(ctx, world, c, vp);
   for (const b of world.bodies) {
-    if (opts.groundLine && b.fixed) continue;
+    if (opts.groundLine && isGround(b)) continue;
     const selected = opts.selection.has(b.id);
     const hover = opts.hover === b.id;
     // Gold shows once it can be seen: not while hidden inside a larger fragment (AST-006).

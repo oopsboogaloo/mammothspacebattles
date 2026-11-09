@@ -6,6 +6,8 @@ export interface Camera {
   x: number; // world point at the centre of the view, m
   y: number;
   zoom: number; // pixels per metre
+  /** Turns the view (radians): the world direction at this angle from straight up is drawn up. Absent: 0. */
+  angle?: number;
 }
 
 export interface Viewport {
@@ -17,11 +19,21 @@ export const MIN_ZOOM = 2;
 export const MAX_ZOOM = 4000;
 
 export function toScreen(c: Camera, vp: Viewport, p: Vec2): Vec2 {
-  return { x: vp.width / 2 + (p.x - c.x) * c.zoom, y: vp.height / 2 - (p.y - c.y) * c.zoom };
+  const dx = p.x - c.x;
+  const dy = p.y - c.y;
+  if (!c.angle) return { x: vp.width / 2 + dx * c.zoom, y: vp.height / 2 - dy * c.zoom };
+  const cos = Math.cos(c.angle);
+  const sin = Math.sin(c.angle);
+  return { x: vp.width / 2 + (cos * dx + sin * dy) * c.zoom, y: vp.height / 2 - (cos * dy - sin * dx) * c.zoom };
 }
 
 export function toWorld(c: Camera, vp: Viewport, s: Vec2): Vec2 {
-  return { x: c.x + (s.x - vp.width / 2) / c.zoom, y: c.y - (s.y - vp.height / 2) / c.zoom };
+  const rx = (s.x - vp.width / 2) / c.zoom;
+  const ry = -(s.y - vp.height / 2) / c.zoom;
+  if (!c.angle) return { x: c.x + rx, y: c.y + ry };
+  const cos = Math.cos(c.angle);
+  const sin = Math.sin(c.angle);
+  return { x: c.x + cos * rx - sin * ry, y: c.y + sin * rx + cos * ry };
 }
 
 /** Zooms by `factor` keeping the world point under `screen` fixed (SBX-030). */

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
+import { bodyMass, getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
 // Mammoth Lander (docs/games/mammoth-lander.md), on the Easy scenario.
 const raw = JSON.parse(readFileSync(new URL("../../scenarios/lander-easy.json", import.meta.url), "utf8"));
@@ -137,6 +137,57 @@ describe("Mammoth Lander", () => {
     expect(w.lander!.state.landings.map((l) => l.pad)).toEqual(["pad-5"]);
     // (100 + a little for softness, about 1.2 m/s of the 1.5 allowed, + 100 for a full tank) × 6.
     expect(w.lander!.state.score).toBeGreaterThan(1300);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("LND-011 Orbital: a gentle touchdown on a pad riding the spinning asteroid lands, judged against the pad", () => {
+    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-orbital.json", import.meta.url), "utf8"));
+    const core = scn.world.bodies.find((b: { id: string }) => b.id === "rock-core");
+    expect(core.gravity.mu).toBeGreaterThan(0);
+    const w0 = core.angularVelocity;
+    expect(w0).toBeGreaterThan(0); // it spins: one turn in 5 to 10 minutes
+    expect((2 * Math.PI) / w0).toBeGreaterThan(300);
+    expect((2 * Math.PI) / w0).toBeLessThan(600);
+    // Just above pad 2 (a crater floor, on the rock's side), tilted to its "up", moving with it and
+    // coming down at 1 m/s.
+    const pad = scn.world.bodies.find((b: { id: string }) => b.id === "pad-2");
+    const a = pad.angle;
+    const up = { x: -Math.sin(a), y: Math.cos(a) };
+    const h = 0.2 + REACH + 0.1;
+    const at = { x: pad.position.x + up.x * h, y: pad.position.y + up.y * h };
+    scn.world.lander.start = { position: at, velocity: { x: -w0 * at.y - up.x, y: w0 * at.x - up.y } };
+    scn.world.lander.ship.bodies = scn.world.lander.ship.bodies.map((b: { position: { x: number; y: number }; angle?: number }) => ({
+      ...b,
+      position: { x: Math.cos(a) * b.position.x - Math.sin(a) * b.position.y, y: Math.sin(a) * b.position.x + Math.cos(a) * b.position.y },
+      angle: (b.angle ?? 0) + a,
+    }));
+    const s = parseScenario(scn);
+    const prof = getProfile(s.profile);
+    const w = initialWorld(s);
+    for (let k = 0; k < 2 * 240; k++) stepInPlace(w, [], prof);
+    expect(w.events.filter((e) => e.type === "crashed")).toEqual([]);
+    expect(w.lander!.state.landings.map((l) => l.pad)).toEqual(["pad-2"]);
+    // Measured against the pad: at rest on it, upright to it, though both are moving and turned.
+    expect(Math.abs(w.challenge!.status.tilt)).toBeLessThan(3);
+    expect(Math.hypot(w.challenge!.status.vx, w.challenge!.status.vy)).toBeLessThan(0.3);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("LND-011 Orbital: the asteroid holds together and spins in place, and the ship starts in orbit", () => {
+    const s = parseScenario(JSON.parse(readFileSync(new URL("../../scenarios/lander-orbital.json", import.meta.url), "utf8")));
+    const prof = getProfile(s.profile);
+    const w = initialWorld(s);
+    for (let k = 0; k < 10 * 240; k++) stepInPlace(w, [], prof);
+    // Its centre of mass stays put (it was built centred on it).
+    const rock = w.bodies.filter((b) => b.id.startsWith("rock-") || b.id.startsWith("pad-"));
+    const M = rock.reduce((m, b) => m + bodyMass(b), 0);
+    const com = rock.reduce((c, b) => ({ x: c.x + (bodyMass(b) * b.position.x) / M, y: c.y + (bodyMass(b) * b.position.y) / M }), { x: 0, y: 0 });
+    expect(Math.hypot(com.x, com.y)).toBeLessThan(0.01);
+    expect(w.joints.filter((j) => j.a === "rock-core")).toHaveLength(w.bodies.filter((b) => b.id.startsWith("rock-") || b.id.startsWith("pad-")).length - 1);
+    // Still in orbit, about 60 m up.
+    const hull = w.bodies.find((b) => b.id === "l1-hull")!;
+    expect(Math.hypot(hull.position.x, hull.position.y)).toBeGreaterThan(130);
+    expect(w.lander!.state.crashes).toBe(0);
     expect(w.ledger.violations).toBe(0);
   });
 

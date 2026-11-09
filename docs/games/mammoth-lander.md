@@ -159,13 +159,20 @@ the same weight and thrust.
 
 ### Orbital
 
-- **The asteroid:** a very large, slowly spinning rock, about 150 m across, turning once every
-  5–10 minutes. It has mountains, plateaus and crater floors.
-- **Pads:** fixed to the surface, so they move with the spin. Landing is judged on speed relative
-  to the pad (LND-011).
-- **Start:** the ship is in a circular orbit and must burn to come down.
-- **Gravity:** the asteroid's own, pulling toward its centre. "Up" is away from the asteroid, and
-  tilt is measured from there.
+- **The asteroid:** 150 m across, turning once in 7 minutes, with mountains, plateaus and crater
+  floors. About 1,000 t, so the ship hardly moves it.
+- **Built as:** one welded assembly of ordinary bodies: a core and a ring of wedges out to the
+  surface (each convex, so the surface can be any shape). Parts of one assembly never collide with
+  each other, and it moves as one rigid body. It is centred on its centre of mass, so it spins in
+  place.
+- **Gravity:** the core's own (FLT-011), about 0.9 m/s² at the surface, pulling toward its centre.
+  The other parts carry a field of strength 0, so they feel none. "Up" is away from the asteroid:
+  the view turns so that it is drawn up.
+- **Pads:** six, welded to the rock, so they move with the spin: two plateaus, two crater floors,
+  a mountain top and the plain (×2 to ×5). Height, speed and tilt are measured in the nearest
+  pad's own frame and relative to its motion (LND-011); for a level, still pad that is the world's.
+- **Start:** a circular orbit 60 m up, moving the way the rock turns. You must burn to come down.
+- **Fuel:** moderate (economy 8). Touchdown 1.5 m/s relative to the pad, 12°.
 
 ### Emergency
 

@@ -81,19 +81,17 @@ const degrees = (a: number) => {
   return d;
 };
 
-function lowest(shape: Shape, position: Vec2, angle: number): number {
-  if (shape.kind === "disc") return position.y - shape.radius;
+/** How far `shape` reaches along the unit vector `u`: its least (`sign` −1) or greatest (+1) projection. */
+function reach(shape: Shape, position: Vec2, angle: number, u: Vec2, sign: 1 | -1): number {
+  const at = position.x * u.x + position.y * u.y;
+  if (shape.kind === "disc") return at + sign * shape.radius;
   const q = sinCos(angle);
-  let y = Infinity;
-  for (const v of localVertices(shape)) y = Math.min(y, position.y + rotate(q, v).y);
-  return y;
-}
-
-function highest(shape: Shape, position: Vec2, angle: number): number {
-  if (shape.kind === "disc") return position.y + shape.radius;
-  const q = sinCos(angle);
-  let y = -Infinity;
-  for (const v of localVertices(shape)) y = Math.max(y, position.y + rotate(q, v).y);
+  let y = sign * -Infinity;
+  for (const v of localVertices(shape)) {
+    const r = rotate(q, v);
+    const d = at + r.x * u.x + r.y * u.y;
+    y = sign > 0 ? Math.max(y, d) : Math.min(y, d);
+  }
   return y;
 }
 
@@ -109,7 +107,8 @@ export function landingTelemetry(world: World, goal: LandingGoal): Omit<LandingS
   const members = new Set(assemblyOf(world, goal.ship));
   const ship = world.bodies.find((b) => b.id === goal.ship);
   const totals = assemblyTotals(world, goal.ship);
-  // Height above the pad nearest across (of those still open), or the only pad.
+  // The pad nearest across (of those still open), or the only pad. Measured in each pad's own frame,
+  // with a pad above the ship counting as further off (a pad over a cave's roof isn't the one below).
   const open = openPads(goal);
   let pad = world.bodies.find((b) => b.id === goal.pad);
   if (goal.pads && totals) {
@@ -117,25 +116,40 @@ export function landingTelemetry(world: World, goal: LandingGoal): Omit<LandingS
     pad = undefined;
     for (const b of world.bodies) {
       if (!open.has(b.id)) continue;
-      const d = Math.abs(b.position.x - totals.centre.x);
-      if (d < best) [best, pad] = [d, b];
+      const q = sinCos(-b.angle);
+      const d = rotate(q, { x: totals.centre.x - b.position.x, y: totals.centre.y - b.position.y });
+      const off = Math.abs(d.x) + Math.max(0, -d.y);
+      if (off < best) [best, pad] = [off, b];
     }
   }
+  // Everything is measured in the pad's frame (LND-011): its "up", and relative to its motion, so a
+  // pad on a spinning asteroid reads like a still one. A level, still pad is the world's frame.
+  const q = sinCos(pad?.angle ?? 0);
+  const up = { x: -q.s, y: q.c };
+  const along = { x: q.c, y: q.s };
   let low = Infinity;
   let fuel = 0;
   for (const b of world.bodies) {
     if (!members.has(b.id)) continue;
     for (const st of b.contents ?? []) fuel += st.mass;
-    low = Math.min(low, lowest(b.shape, b.position, b.angle));
+    low = Math.min(low, reach(b.shape, b.position, b.angle, up, -1));
   }
-  const padTop = pad ? highest(pad.shape, pad.position, pad.angle) : 0;
+  const padTop = pad ? reach(pad.shape, pad.position, pad.angle, up, 1) : 0;
+  let v = totals?.velocity ?? { x: 0, y: 0 };
+  let spin = totals?.angularVelocity ?? 0;
+  if (pad && totals) {
+    // The pad's own velocity at the ship's centre.
+    const w = pad.angularVelocity;
+    v = { x: v.x - (pad.velocity.x - w * (totals.centre.y - pad.position.y)), y: v.y - (pad.velocity.y + w * (totals.centre.x - pad.position.x)) };
+    spin -= w;
+  }
   return {
     members,
     altitude: Number.isFinite(low) ? low - padTop : 0,
-    vx: totals?.velocity.x ?? 0,
-    vy: totals?.velocity.y ?? 0,
-    spin: totals?.angularVelocity ?? 0,
-    tilt: ship ? degrees(ship.angle) : 0,
+    vx: v.x * along.x + v.y * along.y,
+    vy: v.x * up.x + v.y * up.y,
+    spin,
+    tilt: ship ? degrees(ship.angle - (pad?.angle ?? 0)) : 0,
     fuel,
   };
 }
@@ -188,7 +202,7 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
     if (!open.has(other)) {
       if (goal.used?.includes(other)) return crash(`Touched a pad already used, at ${fmt(speed)} m/s.`);
       const body = world.bodies.find((x) => x.id === other);
-      return crash(body?.fixed ? `Touched the ground off the pad, at ${fmt(speed)} m/s.` : `Hit ${other}.`);
+      return crash(body?.fixed || body?.gravity ? `Touched the ground off the pad, at ${fmt(speed)} m/s.` : `Hit ${other}.`);
     }
     if (speed > goal.maxSpeed) return crash(`Hit the pad at ${fmt(speed, 2)} m/s: land slower than ${fmt(goal.maxSpeed)} m/s.`);
     if (s.touchdown === undefined) s.touchdown = speed;
