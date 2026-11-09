@@ -4,6 +4,7 @@
 /// <reference lib="webworker" />
 import { applyCommands, getProfile, runClusterJob, runGasJob, stepGasClustered, type ClusterJob, type ClusterResult, type Command, type GasJob, type World } from "../core/index.ts";
 import { runStepsAsync, type Edit, type Series, type StepRun } from "./controller.ts";
+import { eventDelta, type EventDelta } from "./eventDelta.ts";
 
 export interface RunRequest {
   type: "run";
@@ -28,7 +29,9 @@ export interface RunRequest {
 export interface RunResult {
   type: "done";
   version: number;
+  /** Its world's event log is left empty: `events` is the change to the page's log. */
   run: StepRun;
+  events: EventDelta;
   /** Gas cluster jobs the helper threads ran in this run. */
   helperJobs: number;
 }
@@ -112,6 +115,7 @@ self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
   if (req.world) world = req.world;
   else if (version !== (req.inputs ? req.version - 1 : req.version) || !world) return; // a stale request: the page will resend
   if (req.inputs && !req.world) applyCommands(world, req.inputs, getProfile(req.profile));
+  const before = world.events.slice();
   const start = performance.now();
   helperJobs = 0;
   const run = await runStepsAsync(world, { profile: getProfile(req.profile), timeline: new Map(req.timeline), edits: req.edits, series: req.series }, req.steps, runGas, {
@@ -120,5 +124,7 @@ self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
   });
   // The page takes the result as its next version; this copy carries on from it.
   version = req.version + 1;
-  (self as unknown as Worker).postMessage({ type: "done", version: req.version, run, helperJobs } satisfies RunResult);
+  const events = eventDelta(before, world.events);
+  const sent: StepRun = { ...run, world: { ...world, events: [] } };
+  (self as unknown as Worker).postMessage({ type: "done", version: req.version, run: sent, events, helperJobs } satisfies RunResult);
 };

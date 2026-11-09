@@ -5,6 +5,7 @@ import type { Sandbox } from "./controller.ts";
 import type { RunRequest, RunResult } from "./simWorker.ts";
 import type { Command } from "../core/index.ts";
 import { diag } from "./diag.ts";
+import { applyEventDelta } from "./eventDelta.ts";
 
 export class SimClient {
   private worker: Worker | null = null;
@@ -119,6 +120,8 @@ export class SimClient {
     const f = this.inFlight;
     this.inFlight = null;
     if (!f || f.version !== res.version) return;
+    // The run began from the page's world at this version, so its log is the one the change is to.
+    res.run.world.events = applyEventDelta(f.sb.world.events, res.events);
     if (!f.cancelled && f.sb.acceptRun(res.run, res.version)) {
       f.sb.version++;
       // The worker's copy carries on from the world just taken in.

@@ -155,7 +155,8 @@ function afterStep(run: StepRun, plan: StepPlan, flying: boolean, opts: { deadli
   const world = run.world;
   run.steps++;
   const t = world.tick;
-  if (t % SNAPSHOT_EVERY === 0) run.snapshots.push([t, structuredClone(world)]);
+  // Snapshots are for scrubbing back through a run; the game has no scrubbing (each one is a whole world).
+  if (t % SNAPSHOT_EVERY === 0 && !world.lander) run.snapshots.push([t, structuredClone(world)]);
   const pending = plan.edits.filter((e) => e.tick === t).flatMap((e) => e.commands);
   if (pending.length) applyCommands(world, pending, plan.profile);
   for (const s of plan.series) {
