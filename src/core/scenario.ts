@@ -476,6 +476,7 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
   if (typeof g.hull !== "string" || !g.hull.includes("{n}")) err(v, `${path}.hull`, 'must be an id with "{n}"');
   if (g.tank !== undefined && (typeof g.tank !== "string" || !g.tank.includes("{n}"))) err(v, `${path}.tank`, 'must be an id with "{n}"');
   if (!isObj(g.start) || !isObj(g.start.position) || !isObj(g.start.velocity)) err(v, `${path}.start`, "must be {position, velocity}");
+  else if (g.start.spin !== undefined) num(v, g.start.spin, `${path}.start.spin`);
   // A pad is a body of the world: fixed, or on a moving body such as an asteroid (LND-011).
   const ids = new Set((Array.isArray(bodies) ? bodies.filter(isObj) : []).map((b) => b.id));
   if (!Array.isArray(g.pads) || !g.pads.length) err(v, `${path}.pads`, "must be a list of {id, multiplier}");

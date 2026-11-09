@@ -7,6 +7,7 @@
 // judge, so a run, a replay and a scrub agree.
 
 import type { Vec2 } from "./math.ts";
+import { bodyMass } from "./bodies.ts";
 import { assemblyOf, assemblyRoots } from "./joints.ts";
 import { startLanding, type LandingGoal } from "./landing.ts";
 import type { BodyInput, Command, JointInput, LinkInput, World } from "./world.ts";
@@ -18,8 +19,8 @@ export interface LanderSpec {
   hull: string;
   /** Its tank, with `{n}`. */
   tank?: string;
-  /** Where each ship starts (the template's origin goes here) and how it is moving. */
-  start: { position: Vec2; velocity: Vec2 };
+  /** Where each ship starts (the template's origin goes here), how it is moving, and how fast it spins (rad/s, anticlockwise). */
+  start: { position: Vec2; velocity: Vec2; spin?: number };
   pads: { id: string; multiplier: number }[];
   /** A touchdown speed above which the ship is likely to be damaged: a guide for the HUD, not a rule, m/s. */
   maxSpeed: number;
@@ -79,9 +80,22 @@ const withN = <T>(x: T, n: number): T => JSON.parse(JSON.stringify(x).replaceAll
 /** The commands that add ship number `n` at the start, moving as the start says. */
 export function landerShip(spec: LanderSpec, n: number): Command[] {
   const s = withN(spec.ship, n);
-  const { position: at, velocity } = spec.start;
+  const { position: at, velocity, spin = 0 } = spec.start;
+  // Spinning as one rigid body about its centre of mass: each part moves with the ship's velocity
+  // plus the spin's swing about that centre.
+  let m = 0;
+  let cx = 0;
+  let cy = 0;
+  for (const b of s.bodies) {
+    const mb = bodyMass(b);
+    m += mb;
+    cx += mb * b.position.x;
+    cy += mb * b.position.y;
+  }
+  const c = m > 0 ? { x: cx / m, y: cy / m } : { x: 0, y: 0 };
+  const moving = (b: BodyInput) => (spin ? { velocity: { x: velocity.x - spin * (b.position.y - c.y), y: velocity.y + spin * (b.position.x - c.x) }, angularVelocity: spin } : { velocity: { ...velocity } });
   return [
-    ...s.bodies.map((b): Command => ({ type: "body.add", body: { ...b, position: { x: at.x + b.position.x, y: at.y + b.position.y }, velocity: { ...velocity } } })),
+    ...s.bodies.map((b): Command => ({ type: "body.add", body: { ...b, position: { x: at.x + b.position.x, y: at.y + b.position.y }, ...moving(b) } })),
     ...(s.joints ?? []).map((joint): Command => ({ type: "joint.add", joint })),
     ...(s.links ?? []).map((link): Command => ({ type: "link.add", link })),
   ];

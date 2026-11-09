@@ -328,6 +328,23 @@ describe("Mammoth Lander", () => {
     }
   });
 
+  it("LND-040 Emergency's ship comes in fast and spinning, as one rigid body", () => {
+    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-emergency.json", import.meta.url), "utf8"));
+    const { velocity, spin } = scn.world.lander.start;
+    expect(Math.abs(velocity.x)).toBeGreaterThanOrEqual(20);
+    expect(spin).toBeGreaterThan(1);
+    const s = parseScenario(scn);
+    const w = initialWorld(s);
+    stepInPlace(w, [], getProfile(s.profile));
+    const ship = w.bodies.filter((b) => b.id.startsWith("l1-"));
+    // Every part turns at the spin, and the ship as a whole moves at the start velocity.
+    for (const b of ship) expect(b.angularVelocity).toBeCloseTo(spin, 2);
+    const m = ship.reduce((a, b) => a + bodyMass(b), 0);
+    const px = ship.reduce((a, b) => a + bodyMass(b) * b.velocity.x, 0) / m;
+    expect(px).toBeCloseTo(velocity.x, 1);
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("LND-041 the scenario is checked: the hull must be one of the ship's bodies", () => {
     const scn = structuredClone(raw);
     scn.world.lander.hull = "l{n}-nothing";

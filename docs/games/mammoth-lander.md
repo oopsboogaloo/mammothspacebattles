@@ -202,8 +202,14 @@ the same weight and thrust.
   the tank starts at 40% integrity with its hole facing sideways, the gas jetting out at 30 m/s:
   about 10 N of push (raised after play: 5.5 N could barely be felt), and a full tank leaks away
   in about 28 s on its own.
+- **The start (made more drastic 9 November 2026 after play):** the ship comes in at 25 m/s
+  sideways (Hard: 10) and spinning at 1.5 rad/s, about a quarter turn a second (`start.spin`: the
+  ship spins as one rigid body about its centre of mass). One engine stops the spin in about half a
+  second. Fuel economy 4.5 (Hard: 3.5): the leak empties the tank in about 20 s whatever you do, and
+  this gives about 4 s more burning to sort it out.
 - **Warnings:** a flashing red EMERGENCY banner. With sound, a siren (LND-051).
-- **Plan:** land fast before the tank empties, while fighting the push.
+- **Plan:** stop the spin, kill the sideways speed, and land fast before the tank empties, while
+  fighting the push.
 
 ## 6. Look and sound
 
