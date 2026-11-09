@@ -725,6 +725,12 @@ On this machine, after 150 s of Emergency (4,870 events):
   scrubbing and sent it; the page kept up to 600 of them (up to about 600 MB at 1 MB each). The game
   has no scrubbing, so lander worlds take none.
 
+An iPad Pro log (iPadOS 26.6, Chrome, so WebKit), 181 s of Emergency, before these changes: 59
+frames/s and a mean step of 3.6 ms, but 10 frame gaps over 100 ms (max 514 ms) and a worker step of
+717 ms. WebKit reads a message before the page's handler runs, so its "taking a result" time (0.1 ms)
+leaves the copy out. Rare long pauses on both threads look like garbage collection; by then the page
+held about 360 snapshots. The log now lists each freeze over 100 ms and when it happened, to check.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
