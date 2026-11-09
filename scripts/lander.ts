@@ -156,6 +156,7 @@ function scenario(o: {
   maxSpeed: number;
   maxTilt: number;
   lines?: Vec[][];
+  solid?: ("below" | "above")[];
 }): Json {
   return {
     schema: 1,
@@ -177,6 +178,7 @@ function scenario(o: {
         maxSpeed: o.maxSpeed,
         maxTilt: o.maxTilt,
         ...(o.lines ? { lines: o.lines } : {}),
+        ...(o.solid ? { solid: o.solid } : {}),
       },
     },
     timeline: [],
@@ -388,6 +390,7 @@ write(
       maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
       maxTilt: 12,
       lines: [fl, [{ x: MOUTH, y: TOP }, ...rf]],
+      solid: ["below", "above"],
     }),
   );
 }

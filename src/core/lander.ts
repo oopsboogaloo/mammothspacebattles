@@ -38,6 +38,8 @@ export interface LanderSpec {
    * fixed bodies are drawn. Drawing only: the bodies are what collides.
    */
   lines?: Vec2[][];
+  /** Which side of each of `lines` is rock, drawn solid to past the edge of any view. */
+  solid?: ("below" | "above")[];
 }
 
 export interface LanderState {
