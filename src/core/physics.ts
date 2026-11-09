@@ -152,8 +152,11 @@ function pairKey(a: string, b: string, key: number): string {
 }
 
 /** Sort-and-sweep broad phase on fattened AABBs (NFR-003). Returns index pairs i<j in a deterministic order. */
-/** Pairs of boxes that overlap, in order. With `fixed`, two fixed bodies are never a pair: they can't touch each other. */
-export function broadPhase(boxes: { minX: number; minY: number; maxX: number; maxY: number }[], fixed?: readonly boolean[]): [number, number][] {
+/**
+ * Pairs of boxes that overlap, in order. With `fixed`, two fixed bodies are never a pair: they can't
+ * touch each other. With `group`, two in the same group (an assembly: its parts don't collide) never are.
+ */
+export function broadPhase(boxes: { minX: number; minY: number; maxX: number; maxY: number }[], fixed?: readonly boolean[], group?: readonly number[]): [number, number][] {
   const order = boxes.map((_, i) => i).sort((i, j) => boxes[i].minX - boxes[j].minX || i - j);
   const pairs: [number, number][] = [];
   const active: number[] = [];
@@ -165,7 +168,7 @@ export function broadPhase(boxes: { minX: number; minY: number; maxX: number; ma
       if (boxes[j].maxX < bi.minX) continue; // falls out of the sweep
       active[w++] = j;
       const bj = boxes[j];
-      if (bj.minY <= bi.maxY && bi.minY <= bj.maxY && !(fixed?.[i] && fixed[j])) pairs.push(i < j ? [i, j] : [j, i]);
+      if (bj.minY <= bi.maxY && bi.minY <= bj.maxY && !(fixed?.[i] && fixed[j]) && !(group && group[i] === group[j])) pairs.push(i < j ? [i, j] : [j, i]);
     }
     active.length = w;
     active.push(i);
@@ -210,7 +213,19 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   const contacts: SolverContact[] = [];
   // Fixed bodies never touch each other: a lander's ground is hundreds of them, overlapping their
   // neighbours' boxes (12,000 pairs a step, all thrown away).
-  for (const [i, j] of broadPhase(boxes, rbs.map((r) => r.invMass === 0))) {
+  // Parts of one assembly never touch each other either: a welded asteroid's 130 parts overlapped
+  // their neighbours' boxes, hundreds of pairs a step, all thrown away below.
+  let group: number[] | undefined;
+  if (roots) {
+    const index = new Map<string, number>();
+    group = rbs.map((r) => {
+      const root = roots.get(r.body.id) ?? r.body.id;
+      let k = index.get(root);
+      if (k === undefined) index.set(root, (k = index.size));
+      return k;
+    });
+  }
+  for (const [i, j] of broadPhase(boxes, rbs.map((r) => r.invMass === 0), group)) {
     const a = rbs[i];
     const b = rbs[j];
     if (a.invMass === 0 && b.invMass === 0) continue;
@@ -513,21 +528,31 @@ export function integratePositions(rbs: RB[], dt: number, world?: World): Map<st
         px += m.mass * m.body.velocity.x;
         py += m.mass * m.body.velocity.y;
       }
-      const com = { x: cx / M, y: cy / M };
-      const vcom = { x: px / M, y: py / M };
+      // In plain numbers (every welded part, every step), the same operations in the same order
+      // as the vector helpers (sub, dot, cross, rotate, add, scale), so the results are identical.
+      const comX = cx / M;
+      const comY = cy / M;
+      const vcomX = px / M;
+      const vcomY = py / M;
       let I = 0;
       let Lrel = 0;
       for (const m of members) {
-        const d = sub(m.body.position, com);
-        I += m.inertia + m.mass * dot(d, d);
-        Lrel += m.mass * cross(d, sub(m.body.velocity, vcom)) + m.inertia * m.body.angularVelocity;
+        const dx = m.body.position.x - comX;
+        const dy = m.body.position.y - comY;
+        I += m.inertia + m.mass * (dx * dx + dy * dy);
+        Lrel += m.mass * (dx * (m.body.velocity.y - vcomY) - dy * (m.body.velocity.x - vcomX)) + m.inertia * m.body.angularVelocity;
       }
       const q = sinCos((Lrel / I) * dt);
-      const newCom = { x: com.x + vcom.x * dt, y: com.y + vcom.y * dt };
+      const newComX = comX + vcomX * dt;
+      const newComY = comY + vcomY * dt;
       for (const m of members) {
-        m.body.position = add(newCom, rotate(q, sub(m.body.position, com)));
-        const v = add(vcom, rotate(q, sub(m.body.velocity, vcom)));
-        rigidImpulse.set(m.body.id, scale(sub(v, m.body.velocity), m.mass));
+        const rx = m.body.position.x - comX;
+        const ry = m.body.position.y - comY;
+        m.body.position = { x: newComX + (q.c * rx - q.s * ry), y: newComY + (q.s * rx + q.c * ry) };
+        const ux = m.body.velocity.x - vcomX;
+        const uy = m.body.velocity.y - vcomY;
+        const v = { x: vcomX + (q.c * ux - q.s * uy), y: vcomY + (q.s * ux + q.c * uy) };
+        rigidImpulse.set(m.body.id, { x: (v.x - m.body.velocity.x) * m.mass, y: (v.y - m.body.velocity.y) * m.mass });
         m.body.velocity = v;
         m.body.angle += m.body.angularVelocity * dt;
         grouped.add(m);

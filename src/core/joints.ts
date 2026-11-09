@@ -6,7 +6,7 @@
 // The solver follows Box2D's weld joint (Erin Catto) without softness.
 
 import { bodiesById } from "./bodies.ts";
-import { add, cross, crossSV, dot, rotate, scale, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
+import { add, cross, dot, rotate, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
 import type { Body, Joint, World } from "./world.ts";
 
 /** What the rigid-body view of a body needs; matches physics.ts's RB. */
@@ -56,7 +56,9 @@ interface JointSolver {
   hi: number;
   shear: number;
   torque: number;
-  P: Vec2;
+  /** This step's accumulated impulse on b: linear (as two numbers, no object a pass) and angular. */
+  px: number;
+  py: number;
   L: number;
 }
 
@@ -232,30 +234,42 @@ export function prepareJoints(world: World, byId: Map<string, JointBody>, dt: nu
       // after the load has changed (an impact ending, thrust cut, gas pressure dropping) made the
       // solve create kinetic energy, up to 19 J in a crash, which the ledger reported. Loads come
       // from this step's impulse anyway (evaluateJoints).
-      P: { x: 0, y: 0 },
+      px: 0,
+      py: 0,
       L: 0,
     });
   }
   return out;
 }
 
-const pointVel = (r: JointBody, rr: Vec2): Vec2 => add(r.body.velocity, crossSV(r.body.angularVelocity, rr));
+// The weld solve runs every weld several times a step: a 130-part asteroid made it most of a step's
+// garbage. So these work in plain numbers, with the same operations in the same order as the vector
+// helpers they replace (add, sub, scale, cross, dot, crossSV), so the results are identical.
 
-function applyLinear(s: JointSolver, P: Vec2, acc: ConstraintAccount): void {
-  if (P.x === 0 && P.y === 0) return;
-  const before = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
+/** Relative velocity of b's anchor over a's, x. */
+const relX = (s: JointSolver) => s.b.body.velocity.x + -s.b.body.angularVelocity * s.rB.y - (s.a.body.velocity.x + -s.a.body.angularVelocity * s.rA.y);
+/** Relative velocity of b's anchor over a's, y. */
+const relY = (s: JointSolver) => s.b.body.velocity.y + s.b.body.angularVelocity * s.rB.x - (s.a.body.velocity.y + s.a.body.angularVelocity * s.rA.x);
+
+function applyLinear(s: JointSolver, Px: number, Py: number, acc: ConstraintAccount): void {
+  if (Px === 0 && Py === 0) return;
+  const bx = relX(s);
+  const by = relY(s);
   const A = s.a.body;
   const B = s.b.body;
-  A.velocity = sub(A.velocity, scale(P, s.a.invMass));
-  A.angularVelocity -= s.a.invInertia * cross(s.rA, P);
-  B.velocity = add(B.velocity, scale(P, s.b.invMass));
-  B.angularVelocity += s.b.invInertia * cross(s.rB, P);
-  const after = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
-  acc.predictedKE += dot(P, add(before, after)) / 2;
-  if (s.a.invMass !== 0) acc.angular -= cross(add(A.position, s.rA), P);
-  if (s.b.invMass !== 0) acc.angular += cross(add(B.position, s.rB), P);
-  if (s.a.invMass === 0) acc.externalImpulse = add(acc.externalImpulse, P);
-  else if (s.b.invMass === 0) acc.externalImpulse = sub(acc.externalImpulse, P);
+  const mA = s.a.invMass;
+  const mB = s.b.invMass;
+  A.velocity = { x: A.velocity.x - Px * mA, y: A.velocity.y - Py * mA };
+  A.angularVelocity -= s.a.invInertia * (s.rA.x * Py - s.rA.y * Px);
+  B.velocity = { x: B.velocity.x + Px * mB, y: B.velocity.y + Py * mB };
+  B.angularVelocity += s.b.invInertia * (s.rB.x * Py - s.rB.y * Px);
+  const ax = relX(s);
+  const ay = relY(s);
+  acc.predictedKE += (Px * (bx + ax) + Py * (by + ay)) / 2;
+  if (mA !== 0) acc.angular -= (A.position.x + s.rA.x) * Py - (A.position.y + s.rA.y) * Px;
+  if (mB !== 0) acc.angular += (B.position.x + s.rB.x) * Py - (B.position.y + s.rB.y) * Px;
+  if (mA === 0) acc.externalImpulse = { x: acc.externalImpulse.x + Px, y: acc.externalImpulse.y + Py };
+  else if (mB === 0) acc.externalImpulse = { x: acc.externalImpulse.x - Px, y: acc.externalImpulse.y - Py };
 }
 
 function applyAngular(s: JointSolver, L: number, acc: ConstraintAccount): void {
@@ -288,21 +302,28 @@ export function solveJoints(js: JointSolver[], acc: ConstraintAccount): void {
     const L = clamp(s.L - wRel * s.angularMass, -s.torque, s.torque);
     applyAngular(s, L - s.L, acc);
     s.L = L;
-    const c = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
-    const dP = { x: -(s.m11 * c.x + s.m12 * c.y), y: -(s.m12 * c.x + s.m22 * c.y) };
-    const n = s.axis;
-    const t = { x: -n.y, y: n.x };
-    const pn = dot(s.P, n);
-    const pt = dot(s.P, t);
-    const dn = dot(dP, n);
-    const dq = dot(dP, t);
+    const cx = relX(s);
+    const cy = relY(s);
+    const dPx = -(s.m11 * cx + s.m12 * cy);
+    const dPy = -(s.m12 * cx + s.m22 * cy);
+    const nx = s.axis.x;
+    const ny = s.axis.y;
+    // t = (−n.y, n.x)
+    const tx = -ny;
+    const ty = nx;
+    const pn = s.px * nx + s.py * ny;
+    const pt = s.px * tx + s.py * ty;
+    const dn = dPx * nx + dPy * ny;
+    const dq = dPx * tx + dPy * ty;
     const f = Math.min(reach(pn, dn, s.lo, s.hi), reach(pt, dq, -s.shear, s.shear));
-    const step = scale(dP, f);
-    s.P = add(s.P, step);
-    applyLinear(s, step, acc);
+    const stepX = dPx * f;
+    const stepY = dPy * f;
+    s.px = s.px + stepX;
+    s.py = s.py + stepY;
+    applyLinear(s, stepX, stepY, acc);
     if (f < 1) {
-      slide(s, n, s.lo, s.hi, acc);
-      slide(s, t, -s.shear, s.shear, acc);
+      slide(s, nx, ny, s.lo, s.hi, acc);
+      slide(s, tx, ty, -s.shear, s.shear, acc);
     }
   }
 }
@@ -310,21 +331,24 @@ export function solveJoints(js: JointSolver[], acc: ConstraintAccount): void {
 /** Clears every weld's impulse for this step, to solve it again from the start. */
 export function resetJoints(js: JointSolver[]): void {
   for (const s of js) {
-    s.P = { x: 0, y: 0 };
+    s.px = 0;
+    s.py = 0;
     s.L = 0;
   }
 }
 
-/** Solves the point constraint along one direction only, keeping that component in [lo, hi]. */
-function slide(s: JointSolver, d: Vec2, lo: number, hi: number, acc: ConstraintAccount): void {
-  const k = s.k11 * d.x * d.x + 2 * s.k12 * d.x * d.y + s.k22 * d.y * d.y;
+/** Solves the point constraint along one direction (dx, dy) only, keeping that component in [lo, hi]. */
+function slide(s: JointSolver, dx: number, dy: number, lo: number, hi: number, acc: ConstraintAccount): void {
+  const k = s.k11 * dx * dx + 2 * s.k12 * dx * dy + s.k22 * dy * dy;
   if (!(k > 0)) return;
-  const c = dot(sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA)), d);
-  const now = dot(s.P, d);
+  const c = relX(s) * dx + relY(s) * dy;
+  const now = s.px * dx + s.py * dy;
   const next = clamp(now - c / k, lo, hi);
-  const step = scale(d, next - now);
-  s.P = add(s.P, step);
-  applyLinear(s, step, acc);
+  const stepX = dx * (next - now);
+  const stepY = dy * (next - now);
+  s.px = s.px + stepX;
+  s.py = s.py + stepY;
+  applyLinear(s, stepX, stepY, acc);
 }
 
 /**
@@ -335,14 +359,15 @@ export function finishJoints(js: JointSolver[], acc: ConstraintAccount): Map<str
   const capped = new Map<string, JointImpulse>();
   const near = (x: number, limit: number) => x >= limit * (1 - 1e-9);
   for (const s of js) {
-    s.j.impulse = { x: s.P.x, y: s.P.y, angular: s.L };
-    const axial = dot(s.P, s.axis);
-    if (near(-axial, -s.lo) || near(axial, s.hi) || near(Math.abs(cross(s.axis, s.P)), s.shear) || near(Math.abs(s.L), s.torque)) {
-      const c = sub(pointVel(s.b, s.rB), pointVel(s.a, s.rA));
+    s.j.impulse = { x: s.px, y: s.py, angular: s.L };
+    const axial = s.px * s.axis.x + s.py * s.axis.y;
+    if (near(-axial, -s.lo) || near(axial, s.hi) || near(Math.abs(s.axis.x * s.py - s.axis.y * s.px), s.shear) || near(Math.abs(s.L), s.torque)) {
+      const cx = relX(s);
+      const cy = relY(s);
       const wRel = s.b.body.angularVelocity - s.a.body.angularVelocity;
-      capped.set(s.j.id, { x: s.P.x - (s.m11 * c.x + s.m12 * c.y), y: s.P.y - (s.m12 * c.x + s.m22 * c.y), angular: s.L - wRel * s.angularMass });
+      capped.set(s.j.id, { x: s.px - (s.m11 * cx + s.m12 * cy), y: s.py - (s.m12 * cx + s.m22 * cy), angular: s.L - wRel * s.angularMass });
     }
-    if (s.P.x !== 0 || s.P.y !== 0 || s.L !== 0) {
+    if (s.px !== 0 || s.py !== 0 || s.L !== 0) {
       acc.involved.add(s.j.a);
       acc.involved.add(s.j.b);
     }
@@ -500,12 +525,17 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     if (!A || !B) continue;
     // A joint held at a limit is loaded by what it would have needed, not by what it carried.
     const own = capped.get(j.id) ?? j.impulse;
-    let P = { x: own.x, y: own.y };
+    // In plain numbers (every weld, every step), the same operations in the same order as the
+    // vector helpers they replace (add, rotate, scale, dot, cross), so the results are identical.
+    let px = own.x;
+    let py = own.y;
     let T = own.angular;
     // b's side of a weld not in a loop: b's subtree if b hangs below a, else the assembly less a's
     // subtree. Its rigid impulses' torque about the anchor is Σ(r × J) − p_B × ΣJ.
     if (tree && sumJ && rigidImpulse.has(j.b) && tree.bridge.has(j.id)) {
-      const pB = add(B.position, rotate(sinCos(B.angle), j.anchorB));
+      const qB = sinCos(B.angle);
+      const pBx = B.position.x + (qB.c * j.anchorB.x - qB.s * j.anchorB.y);
+      const pBy = B.position.y + (qB.s * j.anchorB.x + qB.c * j.anchorB.y);
       let sx: number;
       let sy: number;
       let sq: number;
@@ -521,21 +551,27 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
         sy = all.y - s.y;
         sq = all.q - s.q;
       }
-      P = { x: P.x + sx, y: P.y + sy };
-      T += sq - (pB.x * sy - pB.y * sx);
+      px = px + sx;
+      py = py + sy;
+      T += sq - (pBx * sy - pBy * sx);
     }
     // Gas pushing the assembly last step (one step behind, so a break is evaluated, and its excess
     // impulse taken back, against this step's solver state).
     if (j.gasImpulse) {
-      P = add(P, j.gasImpulse);
+      px = px + j.gasImpulse.x;
+      py = py + j.gasImpulse.y;
       T += j.gasImpulse.angular;
     }
-    const F = scale(P, 1 / dt); // force on b
-    const axis = rotate(sinCos(A.angle), j.axis);
-    const axial = dot(F, axis);
+    const perDt = 1 / dt;
+    const Fx = px * perDt; // force on b
+    const Fy = py * perDt;
+    const qA = sinCos(A.angle);
+    const axx = qA.c * j.axis.x - qA.s * j.axis.y;
+    const axy = qA.s * j.axis.x + qA.c * j.axis.y;
+    const axial = Fx * axx + Fy * axy;
     const tension = Math.max(0, -axial);
     const compression = Math.max(0, axial);
-    const shear = Math.abs(cross(axis, F));
+    const shear = Math.abs(axx * Fy - axy * Fx);
     const torque = Math.abs(T / dt);
     // Bending (DMG-008): a load beyond the weld's yield, as a share of its whole limits, costs integrity.
     if (j.yield !== undefined) {
@@ -622,21 +658,29 @@ export function correctJoints(world: World, byId: Map<string, JointBody>): void 
       A.angle -= iA * L;
       B.angle += iB * L;
     }
-    const rA = rotate(sinCos(A.angle), j.anchorA);
-    const rB = rotate(sinCos(B.angle), j.anchorB);
-    const C = sub(add(B.position, rB), add(A.position, rA));
+    // In plain numbers, the same operations in the same order as the vector helpers (rotate, add,
+    // sub, scale, cross): every weld, every step, so no objects but the two new positions.
+    const qA = sinCos(A.angle);
+    const qB = sinCos(B.angle);
+    const rAx = qA.c * j.anchorA.x - qA.s * j.anchorA.y;
+    const rAy = qA.s * j.anchorA.x + qA.c * j.anchorA.y;
+    const rBx = qB.c * j.anchorB.x - qB.s * j.anchorB.y;
+    const rBy = qB.s * j.anchorB.x + qB.c * j.anchorB.y;
+    const Cx = B.position.x + rBx - (A.position.x + rAx);
+    const Cy = B.position.y + rBy - (A.position.y + rAy);
     const mA = a.invMass;
     const mB = b.invMass;
-    const k11 = mA + mB + iA * rA.y * rA.y + iB * rB.y * rB.y;
-    const k12 = -iA * rA.x * rA.y - iB * rB.x * rB.y;
-    const k22 = mA + mB + iA * rA.x * rA.x + iB * rB.x * rB.x;
+    const k11 = mA + mB + iA * rAy * rAy + iB * rBy * rBy;
+    const k12 = -iA * rAx * rAy - iB * rBx * rBy;
+    const k22 = mA + mB + iA * rAx * rAx + iB * rBx * rBx;
     const det = k11 * k22 - k12 * k12;
     if (det === 0) continue;
     const inv = 1 / det;
-    const P = scale({ x: -(inv * k22 * C.x - inv * k12 * C.y), y: -(-inv * k12 * C.x + inv * k11 * C.y) }, JOINT_BAUMGARTE);
-    A.position = sub(A.position, scale(P, mA));
-    A.angle -= iA * cross(rA, P);
-    B.position = add(B.position, scale(P, mB));
-    B.angle += iB * cross(rB, P);
+    const Px = -(inv * k22 * Cx - inv * k12 * Cy) * JOINT_BAUMGARTE;
+    const Py = -(-inv * k12 * Cx + inv * k11 * Cy) * JOINT_BAUMGARTE;
+    A.position = { x: A.position.x - Px * mA, y: A.position.y - Py * mA };
+    A.angle -= iA * (rAx * Py - rAy * Px);
+    B.position = { x: B.position.x + Px * mB, y: B.position.y + Py * mB };
+    B.angle += iB * (rBx * Py - rBy * Px);
   }
 }

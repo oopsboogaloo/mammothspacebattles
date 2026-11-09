@@ -318,6 +318,16 @@ describe("Mammoth Lander", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("LND-042 a wrapped level's ground reaches both edges exactly, so there is no hole at the seam", () => {
+    for (const name of ["easy", "medium", "hard", "emergency"]) {
+      const scn = JSON.parse(readFileSync(new URL(`../../scenarios/lander-${name}.json`, import.meta.url), "utf8"));
+      const xs = scn.world.bodies
+        .filter((b: { id: string }) => b.id.startsWith("ground-") && !b.id.startsWith("ground-seam"))
+        .flatMap((b: { position: { x: number }; shape: { vertices: { x: number }[] } }) => b.shape.vertices.map((v) => v.x + b.position.x));
+      expect([Math.min(...xs), Math.max(...xs)]).toEqual([scn.world.bounds.min.x, scn.world.bounds.max.x]);
+    }
+  });
+
   it("LND-041 the scenario is checked: the hull must be one of the ship's bodies", () => {
     const scn = structuredClone(raw);
     scn.world.lander.hull = "l{n}-nothing";

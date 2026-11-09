@@ -9,7 +9,7 @@ import { normalizePilot, runPilots, type Pilot, type PilotGoal, type PilotInput 
 import { applyCollectors, collectCaptured, normalizeCollector, type Collector, type CollectorInput } from "./collector.ts";
 import { applyTractors, normalizeTractor, type Tractor, type TractorInput } from "./tractor.ts";
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
-import { bodyMass, type Store } from "./bodies.ts";
+import { bodiesById, bodyMass, type Store } from "./bodies.ts";
 import { assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
 import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, solveContacts, type RB } from "./physics.ts";
@@ -482,14 +482,11 @@ export function controlInputs(world: World, bodyId: string): Record<string, numb
 function runFeeds(world: World, dt: number): { touchedFixed: boolean; spinShift: number } {
   let touchedFixed = false;
   let spinShift = 0;
-  // Bodies by id, the first of each id as find() would give, built once rather than searched per link.
-  let byId: Map<string, Body> | undefined;
+  // Bodies by id (ids are unique: adding a duplicate throws), shared and kept between steps.
+  let byId: ReadonlyMap<string, Body> | undefined;
   for (const l of world.links) {
     if (l.kind !== "feed") continue;
-    if (!byId) {
-      byId = new Map();
-      for (const b of world.bodies) if (!byId.has(b.id)) byId.set(b.id, b);
-    }
+    byId ??= bodiesById(world);
     const from = l.from === undefined ? undefined : byId.get(l.from);
     const to = byId.get(l.to);
     const src = from?.contents?.find((s) => s.resource === l.resource);
@@ -597,9 +594,14 @@ function wrapAround(world: World): boolean {
   const w = b.max.x - b.min.x;
   const h = b.max.y - b.min.y;
   const roots = world.joints.length ? assemblyRoots(world) : null;
+  // Free assemblies only: one with a fixed part never wraps. Hundreds of fixed ground bodies were
+  // grouped every step only to be skipped; the free groups keep the same order.
+  const anchored = new Set<string>();
+  for (const body of world.bodies) if (body.fixed) anchored.add(roots?.get(body.id) ?? body.id);
   const groups = new Map<string, Body[]>();
   for (const body of world.bodies) {
     const r = roots?.get(body.id) ?? body.id;
+    if (anchored.has(r)) continue;
     const g = groups.get(r);
     if (g) g.push(body);
     else groups.set(r, [body]);
@@ -623,7 +625,11 @@ function wrapAround(world: World): boolean {
     cx /= m;
     cy /= m;
     let rad = 0;
-    for (const x of members) rad = Math.max(rad, length(sub(x.position, { x: cx, y: cy })) + massProps(x.shape, x.mass).boundingRadius);
+    for (const x of members) {
+      const dx = x.position.x - cx;
+      const dy = x.position.y - cy;
+      rad = Math.max(rad, Math.sqrt(dx * dx + dy * dy) + massProps(x.shape, x.mass).boundingRadius);
+    }
     const r2 = (rad + reach) * (rad + reach);
     const sx = cx < b.min.x ? w : cx >= b.max.x ? -w : 0;
     const sy = cy < b.min.y ? h : cy >= b.max.y ? -h : 0;

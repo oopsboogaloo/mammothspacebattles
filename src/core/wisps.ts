@@ -9,7 +9,7 @@
 
 import { add, cross, dot, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
-import { collide } from "./collide.ts";
+import { collideDisc, worldPolygon, type Placed, type WorldPoly } from "./collide.ts";
 import { massProps } from "./shapes.ts";
 import type { Parcel } from "./gas.ts";
 import type { Body, World } from "./world.ts";
@@ -158,12 +158,19 @@ export function stepWisps(world: World, dt: number): number {
   const big = merge(fixed.big, bigMoving);
   let bounces = 0;
   /** Bounces wisp w (mass m, radius r) off body b if it has run into it. */
+  // Each body as placed this step, and its outline in world coordinates, worked out once when a wisp
+  // first comes near it and shared by every wisp after (wisps change bodies' velocities, not where they are).
+  const placed: (Placed | undefined)[] = [];
+  const outline: (WorldPoly | undefined)[] = [];
   const touch = (w: Wisp, m: number, r: number, i: number): void => {
     const b = bodies[i];
-    const d = sub(w.position, b.position);
+    const dx = w.position.x - b.position.x;
+    const dy = w.position.y - b.position.y;
     const R = reach[i] + r;
-    if (dot(d, d) > R * R) return;
-    const hit = collide({ shape: { kind: "disc", radius: r }, position: w.position, rot: { c: 1, s: 0 } }, { shape: b.shape, position: b.position, rot: sinCos(b.angle) }, 0, 0);
+    if (dx * dx + dy * dy > R * R) return;
+    const at = (placed[i] ??= { shape: b.shape, position: b.position, rot: sinCos(b.angle) });
+    if (b.shape.kind !== "disc") outline[i] ??= worldPolygon(at);
+    const hit = collideDisc({ shape: { kind: "disc", radius: r }, position: w.position, rot: { c: 1, s: 0 } }, at, 0, outline[i]);
     if (!hit || !hit.points.length) return;
     const pt = hit.points.reduce((a, c) => (c.separation < a.separation ? c : a));
     if (pt.separation >= 0) return;
@@ -191,8 +198,12 @@ export function stepWisps(world: World, dt: number): number {
   for (const w of list) {
     w.age += dt;
     if (w.age >= WISP_LIFE) continue;
-    w.velocity = { x: w.velocity.x + g.x * dt, y: w.velocity.y + g.y * dt };
-    w.position = add(w.position, scale(w.velocity, dt));
+    // In place, the same arithmetic as before: a wisp's vectors are its own (spawnWisps copies them),
+    // and a thousand wisps made two new objects each, every step.
+    w.velocity.x = w.velocity.x + g.x * dt;
+    w.velocity.y = w.velocity.y + g.y * dt;
+    w.position.x = w.position.x + w.velocity.x * dt;
+    w.position.y = w.position.y + w.velocity.y * dt;
     const m = wispMass(w);
     const r = wispRadius(w);
     const k = cellKey(Math.floor(w.position.x / CELL), Math.floor(w.position.y / CELL));
