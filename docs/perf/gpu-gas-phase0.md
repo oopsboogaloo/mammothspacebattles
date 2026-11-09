@@ -791,6 +791,35 @@ game steps 120 times a real second):
 - Identical results (same hashes); step time within noise. The rest is spread through the solver
   and gas, a new object for each vector: near zero would need those loops in plain numbers.
 
+## 22. Plain-number hot loops, part 1 (9 November 2026)
+
+An iPad log from Hard after §21 (462 s): 10 freezes, about 1.3 a minute against 4.5–6.5 before, and
+each frozen step's parts were different (gas 4, forces 3, ledger 2, integrate 1): garbage collection,
+which lands wherever the code is. So the rest of the garbage goes, starting where a profile says.
+
+Orbital was the worst: its 130-part welded asteroid made the weld solve, run for every weld several
+times a step, most of a step's garbage. The fixes, each checked bit for bit (the same hashes for
+Easy, Emergency, Cave, Orbital and the reference battle after 12 s of pulsed thrust):
+
+- **The weld solve in plain numbers** (`applyLinear`, `solveJoints`, `slide`, `finishJoints`,
+  `correctJoints`, `evaluateJoints`): the same operations in the same order as the vector helpers
+  they replace, so the same bits; a weld's impulse is two numbers, not an object a pass.
+- **No pairs within an assembly in the broad phase:** parts of one assembly never collide, so
+  their pairs were made and thrown away (hundreds a step for the asteroid).
+- **Welded groups' rigid motion** (`integratePositions`) in plain numbers.
+- **Wisps:** each body's outline in world coordinates worked out once a step, not once a wisp
+  (`collideDisc`); a wisp's own vectors updated in place (nothing else holds them).
+- **Small tables:** feed links use the shared bodies-by-id; wrapping groups only free assemblies.
+
+| MB thrown away a game second (node GC trace) | main | Now |
+|---|---|---|
+| Easy, coasting | 112 | 90 |
+| Emergency, engines pulsing | 448 | 324 |
+| Orbital, coasting | 489 | 235 |
+| Reference battle | 1085 | 699 |
+
+Step times are within noise. Left: the gas step and contact solve, a few percent each.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

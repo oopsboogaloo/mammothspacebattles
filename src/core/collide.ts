@@ -28,7 +28,7 @@ export interface Placed {
   rot: Rot;
 }
 
-interface WorldPoly {
+export interface WorldPoly {
   vertices: Vec2[];
   normals: Vec2[];
 }
@@ -55,9 +55,9 @@ function discDisc(a: Placed, b: Placed, margin: number): Manifold | null {
 }
 
 /** Polygon A against disc B. */
-function polyDisc(a: Placed, b: Placed, margin: number): Manifold | null {
+function polyDisc(a: Placed, b: Placed, margin: number, given?: WorldPoly): Manifold | null {
   const r = (b.shape as { radius: number }).radius;
-  const poly = worldPolygon(a);
+  const poly = given ?? worldPolygon(a);
   const c = b.position;
   const n = poly.vertices.length;
   let best = 0;
@@ -189,6 +189,17 @@ export function collide(a: Placed, b: Placed, margin: number, slop: number): Man
     return m && { normal: scale(m.normal, -1), points: m.points };
   }
   return polyPoly(a, b, margin, slop);
+}
+
+/**
+ * collide(disc, body) for many discs against the same body: a polygon body's outline in world
+ * coordinates, `poly` (worldPolygon of it), is worked out once by the caller and shared. The same
+ * result as collide(disc, body, margin, 0).
+ */
+export function collideDisc(disc: Placed, body: Placed, margin: number, poly?: WorldPoly): Manifold | null {
+  if (body.shape.kind === "disc") return discDisc(disc, body, margin);
+  const m = polyDisc(body, disc, margin, poly);
+  return m && { normal: scale(m.normal, -1), points: m.points };
 }
 
 /** Point-in-shape test, used for picking in the UI. */
