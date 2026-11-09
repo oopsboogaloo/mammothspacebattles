@@ -7,7 +7,7 @@
 // judge, so a run, a replay and a scrub agree.
 
 import type { Vec2 } from "./math.ts";
-import { assemblyOf } from "./joints.ts";
+import { assemblyOf, assemblyRoots } from "./joints.ts";
 import { startLanding, type LandingGoal } from "./landing.ts";
 import type { BodyInput, Command, JointInput, LinkInput, World } from "./world.ts";
 
@@ -57,6 +57,8 @@ export interface LanderState {
   next?: number;
   /** Why the game ended. */
   ended?: "ships" | "cleared";
+  /** Broken-off engines firing their last propellant (LND-034): their channel, and when it stops, s. */
+  sputter?: { channel: string; until: number };
 }
 
 export interface LanderGame {
@@ -65,6 +67,9 @@ export interface LanderGame {
 }
 
 const DEFAULTS = { ships: 3, pause: 2, watch: 1.25, clearBonus: 1000 };
+
+/** How long a broken-off engine fires its last propellant, s (game time: 1 s at the half pace). */
+const SPUTTER = 0.5;
 
 /** The control a player sets to give up on the ship flying (it is then stranded). */
 export const ABANDON = "abandon";
@@ -96,7 +101,14 @@ export function startLander(spec: LanderSpec): LanderGame {
 /** Commands for this step: the next ship, when its time has come. Call before the step's other commands. */
 export function landerCommands(world: World): Command[] {
   const game = world.lander;
-  if (!game || game.state.phase !== "between" || world.time < (game.state.next ?? 0) - 1e-9) return [];
+  if (!game) return [];
+  // Broken-off engines stop firing once their moment is over.
+  const sputter = game.state.sputter;
+  if (sputter && world.time >= sputter.until - 1e-9) {
+    game.state.sputter = undefined;
+    return [{ type: "control.set", channel: sputter.channel, value: 0 }];
+  }
+  if (game.state.phase !== "between" || world.time < (game.state.next ?? 0) - 1e-9) return [];
   // Every ship has flown, and the last one's verdict has played out (an explosion included): the game is over.
   if (game.state.n >= (game.spec.ships ?? DEFAULTS.ships)) {
     game.state.phase = "over";
@@ -134,9 +146,28 @@ export function updateLander(world: World): void {
     state.score += st.score ?? 0;
   } else if (st.phase === "stranded") state.stranded = (state.stranded ?? 0) + 1;
   else state.crashes += 1;
-  // The keys fly only the next ship: this one's engines lose their control links.
-  const members = new Set(assemblyOf(world, c.goal.ship));
-  world.links = world.links.filter((l) => !(l.kind === "control" && members.has(l.to)));
+  // The keys fly only the next ship: every part of this one loses its control links, the pieces
+  // broken off it included.
+  const ship = new Set(st.parts ?? assemblyOf(world, c.goal.ship));
+  const roots = assemblyRoots(world);
+  const hull = roots.get(c.goal.ship);
+  // Where the ship came apart, its feed lines snap: a broken-off engine has only what is in it.
+  world.links = world.links.filter((l) => !(l.kind === "feed" && ship.has(l.from) && ship.has(l.to) && roots.get(l.from) !== roots.get(l.to)));
+  // A broken-off engine fires that last propellant for a moment (LND-034), on a channel of its own.
+  const channel = `l${state.n}-sputter`;
+  let sputters = false;
+  world.links = world.links.flatMap((l) => {
+    if (l.kind !== "control" || !ship.has(l.to)) return [l];
+    const engine = world.bodies.find((b) => b.id === l.to);
+    if (st.phase !== "crashed" || !engine?.injector || roots.get(l.to) === hull) return [];
+    sputters = true;
+    engine.injector.channel = channel; // its own channel, so the keys no longer reach it
+    return [{ ...l, channel }];
+  });
+  if (sputters) {
+    world.controls[channel] = 1;
+    state.sputter = { channel, until: world.time + SPUTTER };
+  }
   if (state.used.length >= spec.pads.length) {
     state.phase = "over";
     state.ended = "cleared";

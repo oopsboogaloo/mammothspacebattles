@@ -97,6 +97,9 @@ Each landing scores:
 - **The tank:** a damaged tank leaks (DMG-004); a tank damaged until it is destroyed bursts, and its
   propellant burns in a blast. Nothing else sets it off.
 - **Engines:** a damaged engine fires with less force: its flow falls with its integrity.
+- **Breaking up:** once a ship's turn ends, the keys reach none of it, the pieces broken off it
+  included. Where it came apart, its feed lines snap, and a broken-off engine fires the little
+  propellant left in it for a moment, then stops (LND-034).
 - **The verdict waits:** after a crash, the CRASHED banner shows only after the wreck has played out
   for about 2.5 s, and the next ship waits that long too (LND-032).
 - **Wreckage stays for the whole game** (LND-022). It is ordinary physics: you can hit it, push it
@@ -261,6 +264,9 @@ Priority: **M** must, **S** should.
 - **LND-031** `[S]` The camera follows the ship and zooms in near the ground.
 - **LND-032** `[S]` After a crash, the verdict shows only once the wreck has played out (about
   2.5 s), and the next ship waits that long too.
+- **LND-034** `[S]` When a ship breaks up, the keys reach none of its parts. Its feed lines snap
+  where it came apart, and an engine broken off fires its last propellant for half a second (game
+  time) on a channel of its own.
 - **LND-033** `[S]` A faint starfield drifts behind every scenario at three depths (parallax), so
   the ship's motion reads, above all in Orbital's open space.
 
