@@ -10,6 +10,7 @@ import { shown } from "./smooth.ts";
 import { diag, liveStats, summary } from "./diag.ts";
 import { sim, View } from "./View.tsx";
 import { ABANDON } from "../core/index.ts";
+import { levelPreview } from "./levelPreview.ts";
 
 /** The six scenarios, in order; those without a file yet are shown as coming soon. */
 export const LANDER_SCENARIOS: { key: string; title: string; blurb: string }[] = [
@@ -116,11 +117,16 @@ export function LanderApp() {
   );
 }
 
+const CREDIT = "by Chloe Bolland © 2026";
+
 function Title() {
   return (
     <button class="lander-title" onClick={() => (landerScreen.value = "select")} data-testid="lander-title">
       <h1>MAMMOTH LANDER</h1>
-      <p>Tap to start</p>
+      <p class="credit" data-testid="lander-credit">
+        {CREDIT}
+      </p>
+      <p class="tap">Tap to start</p>
     </button>
   );
 }
@@ -129,6 +135,7 @@ function Select() {
   const table = loadScores();
   return (
     <div class="lander-select" data-testid="lander-select">
+      <h1 class="lander-heading">MAMMOTH LANDER</h1>
       <h2>Choose a mission</h2>
       <div class="lander-cards">
         {LANDER_SCENARIOS.map((s) => {
@@ -136,6 +143,7 @@ function Select() {
           const top = best(table, s.key);
           return (
             <button key={s.key} class="lander-card" disabled={!ready} onClick={() => startGame(s.key)} data-testid={`lander-pick-${s.key}`}>
+              {ready && <Preview level={s.key} />}
               <span class="name">{s.title}</span>
               <span class="blurb">{ready ? s.blurb : "Coming soon"}</span>
               {top && (
@@ -155,8 +163,19 @@ function Select() {
           Back to the sandbox
         </button>
       </div>
+      <p class="lander-credit">{CREDIT}</p>
     </div>
   );
+}
+
+/** A picture of the level on its card, drawn once the screen is up (the first drawing takes a moment). */
+function Preview({ level }: { level: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => setUrl(levelPreview(level, rawOf(level))), 0);
+    return () => clearTimeout(t);
+  }, [level]);
+  return <span class="preview">{url && <img src={url} alt="" data-testid={`lander-preview-${level}`} />}</span>;
 }
 
 /**

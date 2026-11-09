@@ -2,8 +2,11 @@ import { expect, test } from "@playwright/test";
 
 test("LND-001 LND-002 LND-030 Mammoth Lander: title, mission select, and a flight with the HUD and thrust", async ({ page }) => {
   await page.goto("./?game=lander");
+  await expect(page.getByTestId("lander-credit")).toHaveText("by Chloe Bolland © 2026");
   await page.getByTestId("lander-title").click();
   await expect(page.getByTestId("lander-select")).toBeVisible();
+  // Each mission card shows a picture of its level, drawn from the level itself.
+  await expect(page.getByTestId("lander-preview-lander-orbital")).toBeVisible({ timeout: 10_000 });
   // All six missions are ready.
   for (const k of ["easy", "medium", "hard", "cave", "orbital", "emergency"]) await expect(page.getByTestId(`lander-pick-lander-${k}`)).toBeEnabled();
   await page.getByTestId("lander-pick-lander-easy").click();
