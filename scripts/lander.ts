@@ -157,7 +157,7 @@ function scenario(o: {
   bounds: Json;
   economy: number;
   leak?: Leak;
-  start: { position: Vec; velocity: Vec };
+  start: { position: Vec; velocity: Vec; spin?: number };
   pads: Pad[];
   maxSpeed: number;
   maxTilt: number;
@@ -290,12 +290,12 @@ const HARD = (() => {
   ];
   return { W, f, pads, pts: line(-W / 2, W / 2, 3, f, pads, 1) };
 })();
-const hard = (o: { name: string; title: string; description: string; leak?: Leak; economy: number }) =>
+const hard = (o: { name: string; title: string; description: string; leak?: Leak; economy: number; start?: { position: Vec; velocity: Vec; spin?: number } }) =>
   scenario({
     ...o,
     bodies: terrain(HARD.pts, HARD.pads, { width: HARD.W, seam: 30 }),
     bounds: { min: { x: -HARD.W / 2, y: -2000 }, max: { x: HARD.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
-    start: { position: { x: -390, y: 200 }, velocity: { x: 10, y: 0 } },
+    start: o.start ?? { position: { x: -390, y: 200 }, velocity: { x: 10, y: 0 } },
     pads: HARD.pads,
     maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
     maxTilt: 10,
@@ -312,8 +312,12 @@ write(
   hard({
     name: "lander-emergency",
     title: "Mammoth Lander: Emergency",
-    description: "Hard's mountains, with a leaking tank: fuel drains and the leak pushes you about. Get down fast.",
-    economy: 3.5,
+    description: "Hard's mountains, with a leaking tank, and you come in fast and spinning: fuel drains and the leak pushes you about. Get it under control and get down fast.",
+    // Coming in drastic: fast sideways and spinning (about a quarter turn a second). One engine stops
+    // the spin in about half a second; the leak empties the tank in about 20 s whatever you do, so a
+    // little more economy than Hard (about 4 s more burning) gives a chance to sort it out.
+    economy: 4.5,
+    start: { position: { x: -390, y: 200 }, velocity: { x: 25, y: 0 }, spin: 1.5 },
     leak: { integrity: 0.4, normal: { x: 1, y: 0 }, speed: 30 },
   }),
 );

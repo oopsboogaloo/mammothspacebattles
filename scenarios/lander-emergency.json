@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "lander-emergency",
   "title": "Mammoth Lander: Emergency",
-  "description": "Hard's mountains, with a leaking tank: fuel drains and the leak pushes you about. Get down fast.",
+  "description": "Hard's mountains, with a leaking tank, and you come in fast and spinning: fuel drains and the leak pushes you about. Get it under control and get down fast.",
   "profile": "sandbox",
   "seed": 1,
   "world": {
@@ -11229,7 +11229,7 @@
                 "width": 1,
                 "length": 1.45
               },
-              "economy": 3.5
+              "economy": 4.5
             },
             "material": {
               "name": "hull",
@@ -11293,7 +11293,7 @@
                 "width": 1,
                 "length": 1.45
               },
-              "economy": 3.5
+              "economy": 4.5
             },
             "material": {
               "name": "hull",
@@ -12186,9 +12186,10 @@
           "y": 200
         },
         "velocity": {
-          "x": 10,
+          "x": 25,
           "y": 0
-        }
+        },
+        "spin": 1.5
       },
       "pads": [
         {
