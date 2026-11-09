@@ -15,7 +15,7 @@
 // being enclosed releases its gas as parcels where the chamber was. Every exchange keeps mass,
 // momentum and energy exact.
 
-import { bodyMass } from "./bodies.ts";
+import { bodyMass, bodiesById } from "./bodies.ts";
 import { burn, mixture, type Parcel, type WallBody } from "./gas.ts";
 import { assemblyRoots, topologyToken } from "./joints.ts";
 import { add, cross, dot, invRotate, length, powPos, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
@@ -446,7 +446,10 @@ function computeShape(b: Body, f: Frame, members: Body[], poses: Map<string, { p
  * one where the bodies stand still for a run of holdingShape calls (it reads positions once).
  */
 export interface BodyIndex {
+  /** The moving bodies, filed afresh. */
   grid: Map<number, number[]>;
+  /** The fixed bodies, filed once and kept while none of them moves, changes or shifts in the list. */
+  fixed: Map<number, number[]>;
   big: number[]; // bodies too large to file cell by cell, checked by every query
   r: Float64Array;
   stamp: Int32Array;
@@ -457,32 +460,86 @@ const INDEX_MAX_CELLS = 64; // a body over more cells than this goes in `big`
 const cellKey = (cx: number, cy: number) => (cx + 32768) * 65536 + (cy + 32768);
 const cellOf = (v: number) => Math.max(-32767, Math.min(32767, Math.floor(v / INDEX_CELL)));
 
+/** Files body i into `grid`, or into `big` if it covers too many cells. */
+function fileBody(grid: Map<number, number[]>, big: number[], o: Body, i: number, ro: number): void {
+  const x0 = cellOf(o.position.x - ro);
+  const x1 = cellOf(o.position.x + ro);
+  const y0 = cellOf(o.position.y - ro);
+  const y1 = cellOf(o.position.y + ro);
+  if ((x1 - x0 + 1) * (y1 - y0 + 1) > INDEX_MAX_CELLS) {
+    big.push(i);
+    return;
+  }
+  for (let cx = x0; cx <= x1; cx++)
+    for (let cy = y0; cy <= y1; cy++) {
+      const k = cellKey(cx, cy);
+      const list = grid.get(k);
+      if (list) list.push(i);
+      else grid.set(k, [i]);
+    }
+}
+
+/**
+ * The fixed bodies' cells, kept between steps: a lander's ground is hundreds of fixed bodies, and
+ * filing them every step was a large share of the step's garbage. Checked each time against each
+ * fixed body's object, place in the list, position and shape.
+ */
+interface FixedIndex {
+  bodies: Body[];
+  at: number[];
+  x: number[];
+  y: number[];
+  shape: Body["shape"][];
+  grid: Map<number, number[]>;
+  big: number[];
+  r: Map<number, number>;
+}
+const fixedIndexes = new WeakMap<object, FixedIndex>();
+function fixedIndex(world: World): FixedIndex {
+  const bodies = world.bodies;
+  const kept = fixedIndexes.get(bodies);
+  if (kept) {
+    let j = 0;
+    let same = true;
+    for (let i = 0; i < bodies.length && same; i++) {
+      const o = bodies[i];
+      if (!o.fixed) continue;
+      same = j < kept.bodies.length && kept.bodies[j] === o && kept.at[j] === i && kept.x[j] === o.position.x && kept.y[j] === o.position.y && kept.shape[j] === o.shape;
+      j++;
+    }
+    if (same && j === kept.bodies.length) return kept;
+  }
+  const f: FixedIndex = { bodies: [], at: [], x: [], y: [], shape: [], grid: new Map(), big: [], r: new Map() };
+  bodies.forEach((o, i) => {
+    if (!o.fixed) return;
+    const ro = reach(o.shape);
+    f.bodies.push(o);
+    f.at.push(i);
+    f.x.push(o.position.x);
+    f.y.push(o.position.y);
+    f.shape.push(o.shape);
+    f.r.set(i, ro);
+    fileBody(f.grid, f.big, o, i, ro);
+  });
+  fixedIndexes.set(bodies, f);
+  return f;
+}
+
 export function bodyIndex(world: World): BodyIndex {
   const n = world.bodies.length;
+  const fixed = fixedIndex(world);
   const grid = new Map<number, number[]>();
-  const big: number[] = [];
+  const big = [...fixed.big];
   const r = new Float64Array(n);
+  for (const [i, ro] of fixed.r) r[i] = ro;
   for (let i = 0; i < n; i++) {
     const o = world.bodies[i];
+    if (o.fixed) continue;
     const ro = reach(o.shape);
     r[i] = ro;
-    const x0 = cellOf(o.position.x - ro);
-    const x1 = cellOf(o.position.x + ro);
-    const y0 = cellOf(o.position.y - ro);
-    const y1 = cellOf(o.position.y + ro);
-    if ((x1 - x0 + 1) * (y1 - y0 + 1) > INDEX_MAX_CELLS) {
-      big.push(i);
-      continue;
-    }
-    for (let cx = x0; cx <= x1; cx++)
-      for (let cy = y0; cy <= y1; cy++) {
-        const k = cellKey(cx, cy);
-        const list = grid.get(k);
-        if (list) list.push(i);
-        else grid.set(k, [i]);
-      }
+    fileBody(grid, big, o, i, ro);
   }
-  return { grid, big, r, stamp: new Int32Array(n), query: 0 };
+  return { grid, fixed: fixed.grid, big, r, stamp: new Int32Array(n), query: 0 };
 }
 
 /** The vessel's shape, if it holds its gas now: enclosed, and nothing else inside it. */
@@ -510,19 +567,24 @@ export function holdingShape(world: World, b: Body, roots: ReadonlyMap<string, s
     seen[i] = q;
     if (blocks(world.bodies[i], index.r[i])) return null;
   }
+  // Does a body in this cell's list, not tried yet, sit inside the chamber?
+  const hits = (list: number[] | undefined): boolean => {
+    if (!list) return false;
+    for (const i of list) {
+      if (seen[i] === q) continue;
+      seen[i] = q;
+      if (blocks(world.bodies[i], index.r[i])) return true;
+    }
+    return false;
+  };
   const x0 = cellOf(b.position.x - R);
   const x1 = cellOf(b.position.x + R);
   const y0 = cellOf(b.position.y - R);
   const y1 = cellOf(b.position.y + R);
   for (let cx = x0; cx <= x1; cx++)
     for (let cy = y0; cy <= y1; cy++) {
-      const list = index.grid.get(cellKey(cx, cy));
-      if (!list) continue;
-      for (const i of list) {
-        if (seen[i] === q) continue;
-        seen[i] = q;
-        if (blocks(world.bodies[i], index.r[i])) return null;
-      }
+      const k = cellKey(cx, cy);
+      if (hits(index.fixed.get(k)) || hits(index.grid.get(k))) return null;
     }
   return shape;
 }
@@ -760,7 +822,7 @@ export function wallLoads(world: World, b: Body, shape: VesselShape, dt: number)
   const P = vesselPressure(v, shape.area);
   if (!(P > 0)) return out;
   const q = sinCos(b.angle);
-  const byId = new Map(world.bodies.map((x) => [x.id, x]));
+  const byId = bodiesById(world);
   for (const l of shape.loads) {
     const body = byId.get(l.id);
     if (!body) continue;

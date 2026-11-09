@@ -85,8 +85,23 @@ const placed = (r: RB): Placed => ({ shape: r.body.shape, position: r.body.posit
 
 export { rigid };
 
+/**
+ * A fixed body's solver view, kept while it is unchanged: a lander's ground is hundreds of fixed
+ * bodies, and making each a new one every step was a share of the step's garbage. Nothing changes
+ * a view once made.
+ */
+const fixedViews = new WeakMap<Body, { rb: RB; angle: number; shape: Body["shape"]; mass: number }>();
+function fixedView(body: Body): RB {
+  const kept = fixedViews.get(body);
+  const mass = bodyMass(body);
+  if (kept && kept.angle === body.angle && kept.shape === body.shape && kept.mass === mass) return kept.rb;
+  const rb = rigid(body);
+  fixedViews.set(body, { rb, angle: body.angle, shape: body.shape, mass });
+  return rb;
+}
+
 export function prepareBodies(world: World): RB[] {
-  return world.bodies.map(rigid);
+  return world.bodies.map((b) => (b.fixed ? fixedView(b) : rigid(b)));
 }
 
 /** Applies uniform gravity to dynamic bodies; returns the impulse and angular impulse delivered. */
@@ -480,7 +495,9 @@ export function integratePositions(rbs: RB[], dt: number, world?: World): Map<st
     const groups = new Map<string, RB[]>();
     for (const r of rbs) {
       const root = roots.get(r.body.id)!;
-      groups.set(root, [...(groups.get(root) ?? []), r]);
+      const g = groups.get(root);
+      if (g) g.push(r);
+      else groups.set(root, [r]);
     }
     for (const members of groups.values()) {
       if (members.length < 2 || members.some((m) => m.invMass === 0)) continue;

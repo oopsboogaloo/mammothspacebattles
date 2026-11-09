@@ -5,6 +5,7 @@
 // load (tension, compression, shear, torque); past a limit it breaks.
 // The solver follows Box2D's weld joint (Erin Catto) without softness.
 
+import { bodiesById } from "./bodies.ts";
 import { add, cross, crossSV, dot, rotate, scale, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
 import type { Body, Joint, World } from "./world.ts";
 
@@ -470,7 +471,7 @@ function sideOf(adj: Adjacency, start: string, skip: string, stop: string): Set<
 export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<string, Vec2>, capped: ReadonlyMap<string, JointImpulse>): void {
   const broken = new Set<string>();
   const t = topology(world);
-  const byId = new Map(world.bodies.map((b) => [b.id, b]));
+  const byId = bodiesById(world);
   // Each body's subtree sums of the rigid impulses: ΣJ and Σ(position × J), up the weld tree.
   let tree: WeldTree | undefined;
   let sumJ: Map<string, { x: number; y: number; q: number }> | undefined;
@@ -560,7 +561,7 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
  */
 export function recordGasLoads(world: World, supplied: Map<string, { x: number; y: number; angular: number }>): void {
   const t = topology(world);
-  const byId = new Map(world.bodies.map((b) => [b.id, b]));
+  const byId = bodiesById(world);
   for (const j of world.joints) {
     j.gasImpulse = undefined;
     if (!supplied.size || !supplied.has(j.b)) continue;

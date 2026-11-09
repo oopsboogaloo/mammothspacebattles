@@ -17,3 +17,22 @@ export function bodyMass(b: { mass: number; contents?: Store[]; magazine?: { cou
   if (b.magazine) m += b.magazine.count * bodyMass(b.magazine.shell);
   return m;
 }
+
+/**
+ * The world's bodies by id (the last of an id, as `new Map(bodies.map(...))` gives), kept while the
+ * list holds the same body objects in the same order. Several steps' worth of code each built this
+ * for every body, every step, a large share of what a step allocated. Shared: callers only read it.
+ */
+const byIdCache = new WeakMap<object, { list: object[]; map: Map<string, never> }>();
+export function bodiesById<B extends { id: string }>(world: { bodies: B[] }): ReadonlyMap<string, B> {
+  const bodies = world.bodies;
+  const kept = byIdCache.get(bodies);
+  if (kept && kept.list.length === bodies.length) {
+    let same = true;
+    for (let i = 0; i < bodies.length && same; i++) same = kept.list[i] === bodies[i];
+    if (same) return kept.map as unknown as Map<string, B>;
+  }
+  const map = new Map(bodies.map((b) => [b.id, b]));
+  byIdCache.set(bodies, { list: [...bodies], map: map as unknown as Map<string, never> });
+  return map;
+}

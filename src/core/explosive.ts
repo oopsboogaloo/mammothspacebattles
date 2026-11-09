@@ -18,7 +18,7 @@
 // recorded as a transfer.
 
 import { breakWreckage, damageBody } from "./damage.ts";
-import { bodyMass } from "./bodies.ts";
+import { bodyMass, bodiesById } from "./bodies.ts";
 import { collide } from "./collide.ts";
 import { storeChemical, storeThermal, type Parcel } from "./gas.ts";
 import { add, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
@@ -108,7 +108,7 @@ export const explosiveEnergy = (e: Explosive, scale = 1): number => (e.charge * 
 export function detonate(world: World, roots: ReadonlyMap<string, string> | null, dt: number): string[] {
   const shells = world.bodies.filter((b) => b.explosive);
   if (!shells.length) return [];
-  const byId = new Map(world.bodies.map((b) => [b.id, b]));
+  const byId = bodiesById(world);
   const reach = (b: Body) => massProps(b.shape, 1).boundingRadius;
   // Arm: no part of the gun's assembly within reach any more.
   for (const s of shells) {
