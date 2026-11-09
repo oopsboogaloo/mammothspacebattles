@@ -381,6 +381,8 @@ export interface RenderOptions {
   pad?: string;
   /** Draw fixed bodies as plain ground with a single surface line (Mammoth Lander). */
   groundLine?: boolean;
+  /** A faint starfield behind everything, drifting slower than the world (parallax), so motion reads. */
+  stars?: boolean;
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -609,6 +611,44 @@ function drawPad(ctx: Ctx, world: World, c: Camera, vp: Viewport, id: string, la
   ctx.globalAlpha = 1;
 }
 
+/**
+ * Stars at three depths: each layer drifts a small share of the camera's motion, the farthest least,
+ * so the sky slides gently past as the ship moves. They are far away, so they don't scale with the
+ * zoom: their drift is in pixels a metre. Placed by a fixed hash per tile, so the same sky comes back.
+ */
+const STAR_LAYERS = [
+  { drift: 0.03, size: 1, alpha: 0.35 },
+  { drift: 0.07, size: 1.3, alpha: 0.5 },
+  { drift: 0.15, size: 1.7, alpha: 0.65 },
+];
+const STAR_TILE = 256; // px
+const STARS_PER_TILE = 5;
+const STAR_PX_PER_M = 10;
+function starHash(a: number, b: number, c: number): number {
+  let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function drawStars(ctx: Ctx, c: Camera, vp: Viewport): void {
+  ctx.fillStyle = "#dfe7ff";
+  STAR_LAYERS.forEach((layer, l) => {
+    // Where the sky's origin sits on screen for this layer.
+    const ox = -c.x * STAR_PX_PER_M * layer.drift;
+    const oy = c.y * STAR_PX_PER_M * layer.drift;
+    const tx0 = Math.floor(-ox / STAR_TILE);
+    const ty0 = Math.floor(-oy / STAR_TILE);
+    ctx.globalAlpha = layer.alpha;
+    for (let tx = tx0; tx * STAR_TILE + ox < vp.width; tx++)
+      for (let ty = ty0; ty * STAR_TILE + oy < vp.height; ty++)
+        for (let k = 0; k < STARS_PER_TILE; k++) {
+          const x = ox + (tx + starHash(tx, ty, l * 16 + 2 * k)) * STAR_TILE;
+          const y = oy + (ty + starHash(tx, ty, l * 16 + 2 * k + 1)) * STAR_TILE;
+          ctx.fillRect(x, y, layer.size, layer.size);
+        }
+  });
+  ctx.globalAlpha = 1;
+}
+
 /** Ground in the game: fixed terrain, and the pieces of an asteroid (they carry its gravity field, LND-011). */
 const isGround = (b: Body) => b.fixed || !!b.gravity;
 
@@ -821,6 +861,7 @@ function drawDust(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
+  if (opts.stars) drawStars(ctx, c, vp);
   if (opts.overlays.has("grid")) drawGrid(ctx, c, vp);
   // A wrapped world (FLT-012): its neighbouring copies first, plain, so the seam doesn't show.
   if (world.bounds.wrap) {

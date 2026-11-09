@@ -9,6 +9,7 @@ import { bindings, camera, edit, openScenario, overlays, playing, sandbox, scree
 import { shown } from "./smooth.ts";
 import { diag, liveStats, summary } from "./diag.ts";
 import { sim, View } from "./View.tsx";
+import { ABANDON } from "../core/index.ts";
 
 /** The six scenarios, in order; those without a file yet are shown as coming soon. */
 export const LANDER_SCENARIOS: { key: string; title: string; blurb: string }[] = [
@@ -228,7 +229,13 @@ function Play() {
   const over = game?.state.phase === "over";
   const between = game?.state.phase === "between";
   const fuelShare = status && status.fuelStart > 0 ? status.fuel / status.fuelStart : 0;
+  // A guide, not a rule (the damage model decides): faster than this, expect damage.
   const speedBad = status && goal ? Math.abs(status.vy) > goal.maxSpeed || Math.abs(status.vx) > goal.maxSpeed : false;
+  const damage = status?.damage ?? 0;
+  // A crash plays out a while before its verdict shows (the world's own pause, `watch`).
+  const watched = !status || status.phase !== "crashed" || status.at === undefined || (sb.world.tick - status.at) * sb.profile.timestep >= (game?.spec.watch ?? 1.25) - 1e-9;
+  // At rest, the player may give the ship up (it is then stranded).
+  const resting = game?.state.phase === "flying" && status?.phase === "flying" && Math.hypot(status.vx, status.vy) < 0.3;
   const tiltBad = status && goal ? Math.abs(status.tilt) > goal.maxTilt : false;
   const last = game?.state.landings.at(-1);
   return (
@@ -246,6 +253,9 @@ function Play() {
           </span>
           <span class={tiltBad ? "bad" : ""}>
             TILT <b>{status ? Math.abs(status.tilt).toFixed(0) : "–"}</b>°
+          </span>
+          <span class={damage > 0.005 ? "bad" : ""} data-testid="lander-damage">
+            DAMAGE <b>{(100 * damage).toFixed(0)}</b>%
           </span>
         </div>
         <div class="lander-fuel" title="Fuel">
@@ -270,11 +280,16 @@ function Play() {
           EMERGENCY
         </div>
       )}
-      {between && status && (
+      {between && status && watched && (
         <div class={`lander-banner ${status.phase === "landed" ? "good" : "bad"}`} data-testid="lander-verdict">
-          {status.phase === "landed" ? `LANDED ×${goal?.pads?.find((p) => p.id === status.landedOn)?.multiplier ?? 1}  +${last?.score ?? 0}` : "CRASHED"}
+          {status.phase === "landed" ? `LANDED ×${goal?.pads?.find((p) => p.id === status.landedOn)?.multiplier ?? 1}  +${last?.score ?? 0}` : status.phase === "stranded" ? "STRANDED" : "CRASHED"}
           <small>{status.reason}</small>
         </div>
+      )}
+      {resting && playing.value && (
+        <button class="lander-btn small lander-abandon" onClick={() => sendControl(ABANDON, 1, "Abandon ship", Math.floor(Math.random() * 1e9))} data-testid="lander-abandon">
+          Abandon ship
+        </button>
       )}
       {!playing.value && !over && (
         <div class="lander-modal">

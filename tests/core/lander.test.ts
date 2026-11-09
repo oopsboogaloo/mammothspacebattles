@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { bodyMass, getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
+import { bodyMass, getProfile, hashValue, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
 // Mammoth Lander (docs/games/mammoth-lander.md), on the Easy scenario.
 const raw = JSON.parse(readFileSync(new URL("../../scenarios/lander-easy.json", import.meta.url), "utf8"));
@@ -25,10 +25,28 @@ describe("Mammoth Lander", () => {
     step(1.5);
     expect(w.events.find((e) => e.type === "landed")).toBeDefined();
     expect(w.lander!.state.landings.map((l) => l.pad)).toEqual(["pad-1"]);
-    // (100 + 100 × softness + 100 × fuel left) × 2: about 1 m/s of the 2 allowed, a full tank.
-    expect(w.lander!.state.score).toBeGreaterThan(480);
-    expect(w.lander!.state.score).toBeLessThan(520);
+    // (200 + 100 × fuel left) × 2, less the share damaged: undamaged, a full tank.
+    expect(w.challenge!.status.damage).toBe(0);
+    expect(w.lander!.state.score).toBe(600);
     expect(w.ledger.violations).toBe(0);
+  });
+
+  it("LND-014 DMG-008 no speed limit: the welds decide. Gentle is unharmed, firmer bends the legs, hard breaks one off", () => {
+    const at = (v: number) => {
+      const { w, step } = game(v);
+      step(2);
+      return { phase: w.events.find((e) => e.type === "landed" || e.type === "crashed")?.type, damage: w.challenge!.status.damage ?? 0, score: w.lander!.state.score };
+    };
+    const soft = at(2);
+    expect(soft).toMatchObject({ phase: "landed", damage: 0 });
+    // Firmer: still a landing, the leg welds bent, the score cut by the share damaged.
+    const firm = at(3.5);
+    expect(firm.phase).toBe("landed");
+    expect(firm.damage).toBeGreaterThan(0.1);
+    expect(firm.damage).toBeLessThan(0.4);
+    expect(firm.score).toBe(Math.round(600 * (1 - firm.damage)));
+    // Hard: a leg comes off, and the ship is broken.
+    expect(at(5).phase).toBe("crashed");
   });
 
   it("LND-012 LND-020 a used pad is closed, and the next ship starts in the same world", () => {
@@ -42,19 +60,49 @@ describe("Mammoth Lander", () => {
     expect(w.challenge!.goal.used).toEqual(["pad-1"]);
     // Ship 2 starts where ship 1 did, so it comes down on ship 1: the world carried on.
     step(1);
-    expect(String(w.events.filter((e) => e.type === "crashed").at(-1)?.data.reason)).toMatch(/^Hit l1-/);
+    expect(w.events.some((e) => e.type === "collision" && [String(e.data.a), String(e.data.b)].some((id) => id.startsWith("l1-")) && [String(e.data.a), String(e.data.b)].some((id) => id.startsWith("l2-")))).toBe(true);
   });
 
-  it("LND-012 touching a used pad is a crash", () => {
+  it("LND-012 LND-015 a used pad is ground: resting on it is no landing, and no crash", () => {
     const { w, step } = game(1);
+    step(1 / 240); // the ship arrives
     w.lander!.state.used = ["pad-1"]; // as if landed on earlier
-    step(1.5);
-    const reasons = w.events.filter((e) => e.type === "crashed").map((e) => String(e.data.reason));
-    expect(reasons.some((r) => r.startsWith("Touched a pad already used"))).toBe(true);
+    w.challenge!.goal.used = ["pad-1"];
+    step(2);
+    expect(w.lander!.state.landings).toEqual([]);
+    expect(w.lander!.state.crashes).toBe(0);
+    expect(w.challenge!.status.phase).toBe("flying"); // resting, free to take off again
   });
 
-  it("LND-021 a hard crash sets off the tank and leaves wreckage, with the ledger exact", () => {
-    const { w, step } = game(8);
+  it("LND-015 a ship at rest off the pads may be abandoned: stranded, no score, the next ship comes", () => {
+    const { w, step } = game(1, { pause: 0.5 });
+    step(1 / 240);
+    w.lander!.state.used = ["pad-1"];
+    w.challenge!.goal.used = ["pad-1"];
+    step(2);
+    w.controls.abandon = 1;
+    step(0.1);
+    expect(w.challenge!.status.phase).toBe("stranded");
+    expect(w.lander!.state.stranded).toBe(1);
+    expect(w.lander!.state.score).toBe(0);
+    step(1);
+    expect(w.lander!.state.n).toBe(2);
+    expect(w.controls.abandon).toBe(0); // the new ship isn't abandoned
+  });
+
+  it("LND-015 a ship at rest off the pads with no fuel left is stranded", () => {
+    const { w, step } = game(1);
+    step(1 / 240);
+    w.lander!.state.used = ["pad-1"];
+    w.challenge!.goal.used = ["pad-1"];
+    for (const b of w.bodies) if (b.id.startsWith("l1-")) for (const st of b.contents ?? []) st.mass = 0;
+    step(2);
+    expect(w.challenge!.status.phase).toBe("stranded");
+    expect(w.challenge!.status.reason).toMatch(/out of fuel/i);
+  });
+
+  it("LND-021 a hard crash breaks the ship, bursts its tank and leaves wreckage, with the ledger exact", () => {
+    const { w, step } = game(15);
     step(2);
     expect(w.events.some((e) => e.type === "crashed")).toBe(true);
     expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);
@@ -64,9 +112,64 @@ describe("Mammoth Lander", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("DMG-008 a weld bent all the way breaks with a finite load, so a hard crash still hashes", () => {
+    const { w, step } = game(15);
+    step(0.5);
+    const breaks = w.events.filter((e) => e.type === "joint.break");
+    expect(breaks.length).toBeGreaterThan(0);
+    for (const e of breaks) expect(Number.isFinite(Number(e.data.load)) && Number.isFinite(Number(e.data.limit))).toBe(true);
+    expect(() => hashValue(w)).not.toThrow();
+  });
+
+  it("LND-014 a part destroyed outright (and gone) is a crash, not a lighter ship", () => {
+    const { w, step } = game(1);
+    step(1 / 240);
+    w.bodies.find((b) => b.id === "l1-leg-left")!.integrity = 0;
+    step(1 / 60);
+    expect(w.challenge!.status.phase).toBe("crashed");
+    expect(w.challenge!.status.reason).toBe("A part of the ship was destroyed.");
+  });
+
+  it("LND-021 a crash that only cracks the tank leaks it, and doesn't set it off", () => {
+    const { w, step } = game(10);
+    step(2);
+    const tank = w.bodies.find((b) => b.id === "l1-tank")!;
+    expect(w.events.some((e) => e.type === "crashed")).toBe(true);
+    expect(tank.integrity).toBeGreaterThan(0);
+    expect(tank.integrity).toBeLessThan(1);
+    expect(tank.breach).toBeDefined();
+    expect(w.events.some((e) => e.type === "detonation")).toBe(false);
+  });
+
+  it("LND-021 a damaged engine fires with less force", () => {
+    const burn = (integrity: number) => {
+      const { w, step } = game(0);
+      step(1 / 240);
+      w.gravity = { x: 0, y: 0 };
+      w.bodies.find((b) => b.id === "l1-engine-l")!.integrity = integrity;
+      const fuel = () => w.bodies.filter((b) => b.id.startsWith("l1-")).reduce((m, b) => m + (b.contents ?? []).reduce((a, st) => a + st.mass, 0), 0);
+      const before = fuel();
+      w.controls.left = 1;
+      step(0.5);
+      return before - fuel();
+    };
+    const whole = burn(1);
+    expect(whole).toBeGreaterThan(0);
+    expect(burn(0.5) / whole).toBeCloseTo(0.5, 1);
+  });
+
+  it("LND-032 a crash plays out before its verdict shows: the next ship waits the watch time too", () => {
+    const { w, step } = game(15, { pause: 0.5, watch: 1.25 });
+    step(1 / 240);
+    while (w.lander!.state.phase === "flying") step(1 / 240);
+    expect(w.challenge!.status.phase).toBe("crashed");
+    // A landing waits `pause`; a crash `pause` and `watch`, while the UI holds the banner back.
+    expect(w.lander!.state.next! - w.time).toBeCloseTo(0.5 + 1.25, 2);
+  });
+
   it("LND-020 the game ends when every ship has flown", () => {
-    const { w, step } = game(8, { ships: 2, pause: 0.5 });
-    step(5);
+    const { w, step } = game(15, { ships: 2, pause: 0.5 });
+    step(8);
     expect(w.lander!.state.crashes).toBe(2);
     expect(w.lander!.state.phase).toBe("over");
     expect(w.lander!.state.ended).toBe("ships");
@@ -80,9 +183,9 @@ describe("Mammoth Lander", () => {
     expect(w.lander!.state.ended).toBe("ships");
   });
 
-  it("LND-021 the last ship's hard crash still explodes before the game ends", () => {
-    const { w, step } = game(8, { ships: 1, pause: 0.5 });
-    step(2);
+  it("LND-021 the last ship's hard crash still bursts its tank before the game ends", () => {
+    const { w, step } = game(15, { ships: 1, pause: 0.5 });
+    step(4);
     expect(w.lander!.state.phase).toBe("over");
     expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);
   });
@@ -96,13 +199,12 @@ describe("Mammoth Lander", () => {
       const sn = Math.sin(0.4);
       return { ...b, position: { x: c * b.position.x - sn * b.position.y, y: sn * b.position.x + c * b.position.y }, angle: (b.angle ?? 0) + 0.4 };
     });
-    scn.world.lander.ship.joints = scn.world.lander.ship.joints.map((j: Record<string, unknown>) => j);
     const s = parseScenario(scn);
     const prof = getProfile(s.profile);
     const w = initialWorld(s);
     for (let k = 0; k < 2 * 240; k++) stepInPlace(w, [], prof);
     expect(w.lander!.state.crashes).toBe(1);
-    expect(w.events.some((e) => e.type === "detonation" && e.data.id === "l1-tank")).toBe(true);
+    expect(w.events.find((e) => e.type === "crashed")?.data.reason).toBe("The ship broke apart.");
   });
 
   it("LND-040 Emergency: the tank leaks from the start, draining fuel and pushing the ship sideways", () => {

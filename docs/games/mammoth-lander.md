@@ -43,7 +43,7 @@ milestone is scheduled.
 ### Ships
 
 - **Ships:** 3 per game. Each flies once.
-- **A landing** banks its score; **a crash** scores nothing.
+- **A landing** banks its score; **a crash** or **a stranded ship** scores nothing.
 - **The game ends** when all three have flown (changed 8 November 2026 after play: rounds were
   too long when only crashes counted).
 - **Each new ship** starts at the scenario's start point, with that scenario's start velocity and a
@@ -51,39 +51,56 @@ milestone is scheduled.
 - **The world carries on between ships.** Wreckage, parked ships and loose debris stay where they
   are until the game ends (LND-020).
 
-### Landing
+### Landing: physical (changed 9 November 2026 after play)
 
-The existing judge (FLT-005…FLT-008) decides, extended to several pads (LND-010):
+No speed limit and no crash for touching ground: the damage model decides what a hit does (LND-014).
 
-- **Land:** touch a pad slower than the scenario's touchdown limit, then come to rest within its
-  tilt limit.
-- **Crash:**
-  - touching anything that isn't a pad;
-  - touching a pad too fast;
-  - coming to rest too tilted;
-  - the ship breaking apart.
-- **A landed ship stays parked on its pad.** That pad is then *used*: it is closed for the rest of the game (LND-012).
+- **Land:** come to rest on an open pad, standing on the legs (within the scenario's tilt), in one
+  piece. Damage costs points, not the landing.
+- **Crash:** the ship broken. A weld snapping or a part destroyed breaks it.
+- **Rest anywhere else:** touching the ground, a used pad or wreckage is allowed. You can take off
+  again. The ship is **stranded** when it comes to rest there with no fuel left, or when you tap
+  **Abandon ship**; the next ship then comes (LND-015).
+- **The welds bend before they break** (DMG-008). Dropped upright onto a pad (the ship's tests):
+
+| Touchdown | What happens |
+|---|---|
+| up to about 2 m/s | no harm |
+| 3 m/s | leg welds bent: about 15% damage |
+| 4 m/s | badly bent: about 35% |
+| about 4.5 m/s and up | a leg comes off: a crash |
+| 10 m/s | the tank cracks and leaks |
+| 15 m/s and up | the tank bursts |
+
+- **The HUD's speed turns red above 2 m/s:** a guide to where damage starts, not a rule.
+- **A landed ship stays parked on its pad.** That pad is then *used*: it is closed for the rest of
+  the game (LND-012).
 
 ### Scoring
 
 Each landing scores:
 
-> (100 base + up to 100 for a soft touchdown + up to 100 for fuel left) × the pad's multiplier
+> (200 + up to 100 for fuel left) × the pad's multiplier × (1 − damage)
 
+- **Damage:** the worst-hit part or weld of the ship, from 0 (whole) to 100%. A clean landing on a
+  full tank on a ×2 pad scores 600; the same at 35% damage, 390.
 - **Pads:** each shows its multiplier as ×2, ×3, ×4 or ×5. Smaller and harder pads have bigger
   multipliers.
 - **Cave:** the multiplier rises with depth.
 - **Used pads:** a pad landed on is closed for the rest of the game. It is drawn dim, with its
-  multiplier struck out. Touching it counts as touching the ground. Using every pad gives a
-  1,000-point bonus and ends the game (LND-012).
+  multiplier struck out. Using every pad gives a 1,000-point bonus and ends the game (LND-012).
 - **Game total:** the sum of the landings, plus the clear bonus.
 
 ### Crashes, explosions and wreckage
 
-- **A crash is physical.** A hard enough hit breaks the ship's welds. The tank ruptures and its
-  propellant burns in a blast (LND-021). The flash, dust and flying parts show it.
-- **Wreckage stays for the whole game** (LND-022). It is ordinary physics: you can hit it or push
-  it. Touching it is a crash, because it isn't a pad. A new game starts with clean terrain.
+- **A crash is physical.** A hard enough hit breaks the ship's welds (LND-021).
+- **The tank:** a damaged tank leaks (DMG-004); a tank damaged until it is destroyed bursts, and its
+  propellant burns in a blast. Nothing else sets it off.
+- **Engines:** a damaged engine fires with less force: its flow falls with its integrity.
+- **The verdict waits:** after a crash, the CRASHED banner shows only after the wreck has played out
+  for about 2.5 s, and the next ship waits that long too (LND-032).
+- **Wreckage stays for the whole game** (LND-022). It is ordinary physics: you can hit it, push it
+  or rest on it. A new game starts with clean terrain.
 
 ## 4. Controls, HUD and camera
 
@@ -222,12 +239,19 @@ Priority: **M** must, **S** should.
 - **LND-012** `[M]` A pad landed on is used: it closes for the rest of the game, and touching it
   counts as touching the ground. Using every pad ends the game with a 1,000-point bonus.
 - **LND-013** `[M]` Each landing is scored as in §3.
+- **LND-014** `[M]` Landing is physical: no touchdown speed limit and no crash for touching ground.
+  Landed is at rest on an open pad, on the legs, in one piece, scored down by the damage; a broken
+  ship is a crash. The ship's welds bend (DMG-008), tuned so about 2 m/s does no harm and about
+  4.5 m/s breaks a leg off.
+- **LND-015** `[M]` A ship may rest off the pads and take off again. It is stranded (no score) when
+  it rests there with no fuel left, or when the player abandons it.
 
 **Lives and the persistent world**
 - **LND-020** `[M]` The world persists between ships. A new ship is added at the start point; the
   old one stays, parked or wrecked.
 - **LND-021** `[M]` The LAND ship can break. Its parts have materials and its welds have break
-  limits, so a hard impact breaks it apart. The tank ruptures and burns as a blast.
+  limits, so a hard impact breaks it apart. Its tank leaks when damaged and bursts only when
+  destroyed; a damaged engine fires with less force.
 - **LND-022** `[M]` Wreckage and parked ships stay for the whole game. A new game starts clean.
 
 **Controls and camera**
@@ -235,6 +259,10 @@ Priority: **M** must, **S** should.
   The browser must not zoom the game: two thumbs moving apart are a pinch, so pinch and double-tap
   zoom are cancelled in the game, and if the page zooms anyway the game pauses until it is zoomed back.
 - **LND-031** `[S]` The camera follows the ship and zooms in near the ground.
+- **LND-032** `[S]` After a crash, the verdict shows only once the wreck has played out (about
+  2.5 s), and the next ship waits that long too.
+- **LND-033** `[S]` A faint starfield drifts behind every scenario at three depths (parallax), so
+  the ship's motion reads, above all in Orbital's open space.
 
 **Scenarios**
 - **LND-040** `[M]` A ship may start with a breach (Emergency), using the existing leak physics.

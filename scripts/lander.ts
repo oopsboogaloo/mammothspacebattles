@@ -22,9 +22,14 @@ const origin = hull.position as Vec;
 const id = (x: unknown) => `l{n}-${String(x)}`;
 
 /** Each part's material: thin metal, so a crash bends and breaks it (energies in J). */
-const material = (bid: string) => (bid === "tank" ? { name: "tank", threshold: 100, toughness: 1500 } : { name: "hull", threshold: 150, toughness: 3000 });
-/** Weld limits: a landing's loads are far below them, a crash's are not. */
-const WELD = { tension: 5000, compression: 10000, shear: 3500, torque: 1200 };
+const material = (bid: string) => (bid === "tank" ? { name: "tank", threshold: 60, toughness: 500 } : { name: "hull", threshold: 150, toughness: 3000 });
+/**
+ * Weld limits, and where the welds start to bend (DMG-008): a share of the limits, beyond which a
+ * load costs the weld integrity. Tuned by dropping the ship upright onto a pad: about 2 m/s does no
+ * harm, 3 m/s bends the leg welds a little, 4 m/s badly, and about 4.5 m/s breaks a leg off.
+ */
+const WELD = { tension: 7650, compression: 15300, shear: 5350, torque: 1840 };
+const YIELD = 0.3;
 
 /** A leak in the tank (Emergency, LND-040): how damaged it is (1 whole), and where the hole faces in its frame. */
 interface Leak {
@@ -40,8 +45,9 @@ function ship(economy: number, leak?: Leak) {
     .map((b) => {
       const out: Json = { ...b, id: id(b.id), position: { x: (b.position as Vec).x - origin.x, y: (b.position as Vec).y - origin.y }, material: material(String(b.id)) };
       if (out.injector) out.injector = { ...(out.injector as Json), economy };
-      // The tank's charge: the propellant's stored energy, set off by the game in a hard crash.
-      if (b.id === "tank") out.explosive = { charge: 0.05, arm: 1e6, fragments: 6, radius: 0.5 };
+      // The tank's charge: the propellant's stored energy. It goes off when the tank is damaged until
+      // it bursts; before that, a damaged tank leaks (DMG-004).
+      if (b.id === "tank") out.explosive = { charge: 0.05, arm: 1e6, fragments: 6, radius: 0.5, whenDestroyed: true };
       // A leaking tank: damaged from the start, its hole on the side the leak faces (DMG-004).
       if (b.id === "tank" && leak) {
         const box = b.shape as { width: number; height: number };
@@ -50,7 +56,7 @@ function ship(economy: number, leak?: Leak) {
       }
       return out;
     });
-  const joints = land.world.joints.map((j) => ({ ...j, id: id(j.id), a: id(j.a), b: id(j.b), limits: WELD }));
+  const joints = land.world.joints.map((j) => ({ ...j, id: id(j.id), a: id(j.a), b: id(j.b), limits: WELD, yield: YIELD }));
   const links = land.world.links.map((l) => ({ ...l, id: id(l.id), ...(l.from !== undefined ? { from: id(l.from) } : {}), to: id(l.to) }));
   return { bodies, joints, links };
 }
@@ -170,7 +176,6 @@ function scenario(o: {
         pads: o.pads.map((p, k) => ({ id: `pad-${k + 1}`, multiplier: p.multiplier })),
         maxSpeed: o.maxSpeed,
         maxTilt: o.maxTilt,
-        explodeAbove: 3.5,
         ...(o.lines ? { lines: o.lines } : {}),
       },
     },
@@ -206,7 +211,7 @@ function scenario(o: {
       economy: 5,
       start: { position: { x: -270, y: 120 }, velocity: { x: 15, y: 0 } },
       pads,
-      maxSpeed: 2,
+      maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
       maxTilt: 15,
     }),
   );
@@ -246,7 +251,7 @@ write(
     economy: 4,
     start: { position: { x: -380, y: 170 }, velocity: { x: 10, y: 0 } },
     pads: MEDIUM.pads,
-    maxSpeed: 1.5,
+    maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
     maxTilt: 12,
   }),
 );
@@ -284,7 +289,7 @@ const hard = (o: { name: string; title: string; description: string; leak?: Leak
     bounds: { min: { x: -HARD.W / 2, y: -2000 }, max: { x: HARD.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
     start: { position: { x: -390, y: 200 }, velocity: { x: 10, y: 0 } },
     pads: HARD.pads,
-    maxSpeed: 1.2,
+    maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
     maxTilt: 10,
   });
 write(
@@ -336,17 +341,25 @@ write(
     { x: 480, width: 6, multiplier: 6 },
   ];
   const MOUTH = 40;
-  const END = 530;
   // Stalagmites rise from the floor, stalactites hang from the roof: between pads, one of each, so
   // the route weaves down and up.
   const floor = sum(base, wave(1.5, 23), spike(70, 11, 7), spike(160, 12, 7), spike(250, 13, 7), spike(335, 12, 6), spike(430, 14, 7));
   const height = () => 34;
   const roof = sum(base, height, wave(1.5, 17, 1), spike(140, -13, 6), spike(225, -14, 6), spike(315, -14, 6), spike(405, -15, 6), spike(455, -12, 5));
-  const fl = line(-80, END, 2.5, floor, pads, 1.5);
+  // The far end is rounded: from XC the floor and roof close in a half circle across the cave.
+  const XC = 513;
+  const cy = (floor(XC) + roof(XC)) / 2;
+  const r = (roof(XC) - floor(XC)) / 2;
+  const END = XC + r;
+  const cap: number[] = [];
+  for (let k = 1; k <= 12; k++) cap.push((Math.PI / 2) * (k / 12));
+  const fl = [...line(-80, XC, 2.5, floor, pads, 1.5), ...cap.map((t) => ({ x: XC + r * Math.sin(t), y: cy - r * Math.cos(t) }))];
   const rf: Vec[] = [];
-  for (let x = MOUTH; x <= END + 1e-9; x += 2.5) rf.push({ x, y: roof(x) });
+  for (let x = MOUTH; x <= XC + 1e-9; x += 2.5) rf.push({ x, y: roof(x) });
+  if (rf[rf.length - 1].x < XC - 1e-9) rf.push({ x: XC, y: roof(XC) });
+  for (const t of cap) rf.push({ x: XC + r * Math.sin(t), y: cy + r * Math.cos(t) });
   let narrow = Infinity;
-  for (let x = MOUTH; x <= END; x += 0.5) narrow = Math.min(narrow, roof(x) - floor(x));
+  for (let x = MOUTH; x <= XC; x += 0.5) narrow = Math.min(narrow, roof(x) - floor(x));
   if (narrow < 12) throw new Error(`the cave narrows to ${narrow.toFixed(1)} m somewhere: too tight for the ship`);
   const TOP = 300; // the top of the world
   const bodies = terrain(fl, pads, {});
@@ -354,8 +367,8 @@ write(
   const rock = (vertices: Vec[], n: string) =>
     bodies.push({ id: n, fixed: true, mass: 1, friction: 0.9, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape: { kind: "polygon", vertices } });
   for (let i = 0; i + 1 < rf.length; i++) rock([rf[i], rf[i + 1], { x: rf[i + 1].x, y: rf[i + 1].y + CRUST }, { x: rf[i].x, y: rf[i].y + CRUST }], `roof-${i}`);
-  const endFloor = floor(END);
-  rock([{ x: END, y: endFloor - CRUST }, { x: END + 10, y: endFloor - CRUST }, { x: END + 10, y: TOP }, { x: END, y: TOP }], "cave-end");
+  // Behind the rounded end, solid rock.
+  rock([{ x: END, y: cy - r - CRUST }, { x: END + 10, y: cy - r - CRUST }, { x: END + 10, y: TOP }, { x: END, y: TOP }], "cave-end");
   // The cliff over the mouth, up to the top of the world: the roof is a 15 m crust, so this seals the
   // space over it (cheaper than roof pieces each reaching the top).
   rock([{ x: MOUTH, y: rf[0].y }, { x: MOUTH + 5, y: rf[0].y }, { x: MOUTH + 5, y: TOP }, { x: MOUTH, y: TOP }], "cave-cliff");
@@ -372,9 +385,9 @@ write(
       economy: 4,
       start: { position: { x: 10, y: 3.4 + 0.2 + 8 }, velocity: { x: 0, y: 0 } },
       pads,
-      maxSpeed: 1.5,
+      maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
       maxTilt: 12,
-      lines: [fl.filter((p) => p.x <= END), [{ x: MOUTH, y: TOP }, ...rf, { x: END, y: endFloor }]],
+      lines: [fl, [{ x: MOUTH, y: TOP }, ...rf]],
     }),
   );
 }
@@ -523,7 +536,7 @@ write(
     economy: 8,
     start: { position: { x: 0, y: r0 }, velocity: { x: -Math.sqrt(g0 * r0), y: 0 } },
     pads,
-    maxSpeed: 1.5,
+    maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
     maxTilt: 12,
   }) as Json & { world: Json };
   scn.world.gravity = { x: 0, y: 0 };
