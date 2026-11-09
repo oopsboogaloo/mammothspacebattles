@@ -144,4 +144,13 @@ describe("gas plume", () => {
     renderFrame(ctx, w, { x: 0, y: 0, zoom: 100 }, { width: 200, height: 200 }, { overlays: new Set(), selection: new Set(), hover: null, gasStyle: "plume" });
     expect(calls.some((c) => c.startsWith("arc(100,100"))).toBe(true);
   });
+
+  it("LND-011 a pad turned with an asteroid still draws its edge and multiplier", () => {
+    const pad = box("pad-1", 6, 0.4, { position: { x: 0, y: 0 }, angle: 0.7 } as never);
+    const w = createWorld(1, [pad]);
+    w.challenge = { goal: { kind: "landing", ship: "pad-1", pad: "pad-1", pads: [{ id: "pad-1", multiplier: 4 }], maxSpeed: 1, maxTilt: 10 }, status: { phase: "flying", altitude: 0, vx: 0, vy: 0, tilt: 0, fuel: 0, fuelStart: 0 } };
+    const { ctx, calls } = recorder();
+    renderFrame(ctx, w, { x: 0, y: 0, zoom: 100 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null });
+    expect(calls.some((c) => c.startsWith("fillText(×4"))).toBe(true);
+  });
 });
