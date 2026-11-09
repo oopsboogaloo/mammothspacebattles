@@ -348,7 +348,7 @@ write(
   let narrow = Infinity;
   for (let x = MOUTH; x <= END; x += 0.5) narrow = Math.min(narrow, roof(x) - floor(x));
   if (narrow < 12) throw new Error(`the cave narrows to ${narrow.toFixed(1)} m somewhere: too tight for the ship`);
-  const TOP = 260;
+  const TOP = 300; // the top of the world
   const bodies = terrain(fl, pads, {});
   // The rock over the cave, solid to the top of the world, and the end wall.
   const rock = (vertices: Vec[], n: string) =>
@@ -356,6 +356,11 @@ write(
   for (let i = 0; i + 1 < rf.length; i++) rock([rf[i], rf[i + 1], { x: rf[i + 1].x, y: rf[i + 1].y + CRUST }, { x: rf[i].x, y: rf[i].y + CRUST }], `roof-${i}`);
   const endFloor = floor(END);
   rock([{ x: END, y: endFloor - CRUST }, { x: END + 10, y: endFloor - CRUST }, { x: END + 10, y: TOP }, { x: END, y: TOP }], "cave-end");
+  // The cliff over the mouth, up to the top of the world: the roof is a 15 m crust, so this seals the
+  // space over it (cheaper than roof pieces each reaching the top).
+  rock([{ x: MOUTH, y: rf[0].y }, { x: MOUTH + 5, y: rf[0].y }, { x: MOUTH + 5, y: TOP }, { x: MOUTH, y: TOP }], "cave-cliff");
+  // And a lid over it all, so nothing gets in from above either.
+  rock([{ x: MOUTH, y: TOP }, { x: END + 10, y: TOP }, { x: END + 10, y: TOP + 5 }, { x: MOUTH, y: TOP + 5 }], "cave-lid");
   write(
     "lander-cave",
     scenario({
@@ -363,7 +368,7 @@ write(
       title: "Mammoth Lander: Cave",
       description: "A cave running down from its mouth, round stalactites and stalagmites. Deeper pads score more, up to ×6. Tight fuel.",
       bodies,
-      bounds: { min: { x: -80, y: -200 }, max: { x: 560, y: 300 }, wrap: false, farField: 10, depth: 2 },
+      bounds: { min: { x: -80, y: -200 }, max: { x: 560, y: 320 }, wrap: false, farField: 10, depth: 2 },
       economy: 4,
       start: { position: { x: 10, y: 3.4 + 0.2 + 8 }, velocity: { x: 0, y: 0 } },
       pads,
