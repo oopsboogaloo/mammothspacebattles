@@ -77,7 +77,24 @@ function useNoZoom(): void {
     };
     vv?.addEventListener("resize", check);
     check();
+    // The game fills the screen and never scrolls: iPadOS scrolled the page to show a focused text
+    // box (the diagnostics log), leaving the view shifted up with empty space below.
+    const html = document.documentElement;
+    const was2 = { html: html.style.overflow, body: document.body.style.overflow };
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    const unscroll = () => {
+      // Not while zoomed in: the player may need to move about to pinch back out.
+      if (!zoomed.value && (window.scrollX !== 0 || window.scrollY !== 0)) window.scrollTo(0, 0);
+    };
+    window.addEventListener("scroll", unscroll);
+    vv?.addEventListener("scroll", unscroll);
+    unscroll();
     return () => {
+      html.style.overflow = was2.html;
+      document.body.style.overflow = was2.body;
+      window.removeEventListener("scroll", unscroll);
+      vv?.removeEventListener("scroll", unscroll);
       for (const type of ["gesturestart", "gesturechange", "gestureend", "dblclick"]) document.removeEventListener(type, stop);
       document.removeEventListener("touchmove", twoFingers);
       if (meta && was !== undefined) meta.content = was;

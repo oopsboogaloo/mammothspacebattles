@@ -129,6 +129,12 @@ function line(x0: number, x1: number, step: number, f: (x: number) => number, pa
     const pad = pads.find((p) => Math.abs(x - p.x) <= p.width / 2 + margin);
     pts.push({ x, y: pad ? f(pad.x) : f(x) });
   }
+  // The line ends exactly at x1, whatever the step: Hard's 800 m at 3 m steps stopped at 398 m,
+  // leaving a 2 m hole in the ground at the wrap seam.
+  if (pts[pts.length - 1].x < x1 - 1e-9) {
+    const pad = pads.find((p) => Math.abs(x1 - p.x) <= p.width / 2 + margin);
+    pts.push({ x: x1, y: pad ? f(pad.x) : f(x1) });
+  }
   // The pads' flat edges exactly, so a pad sits on level ground.
   for (const p of pads)
     for (const e of [p.x - p.width / 2 - margin, p.x + p.width / 2 + margin]) if (!pts.some((q) => Math.abs(q.x - e) < 1e-6)) pts.push({ x: e, y: f(p.x) });
