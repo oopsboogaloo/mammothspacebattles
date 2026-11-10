@@ -49,6 +49,21 @@ test("LND-060 the game's own page: the same game, with no way back to the sandbo
   await expect(page.getByText("Paused")).toBeVisible();
 });
 
+test("LND-060 the game's own page never shows the diagnostics log, even with ?diag=1", async ({ page }) => {
+  // The sandbox's game shows it with ?diag=1 ...
+  await page.goto("./?game=lander&diag=1");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-diag")).toBeVisible();
+  // ... the game's own page never does.
+  await page.goto("./lander.html?diag=1");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-hud")).toBeVisible();
+  await expect(page.getByTestId("lander-diag")).toHaveCount(0);
+  await expect(page.getByText("Copy log")).toHaveCount(0);
+});
+
 test("LND-001 the sandbox picker opens the game", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("open-lander").click();

@@ -334,7 +334,8 @@ Priority: **M** must, **S** should.
 **Release**
 - **LND-060** `[M]` The game has its own page (`lander.html`), to deploy on its own: the same game
   as `?game=lander`, opening on the title screen, with nothing that leads back to the sandbox (no
-  "Back to the sandbox" button, no sandbox keys). Built with the site; on GitHub Pages it is
+  "Back to the sandbox" button, no sandbox keys, and no diagnostics log even with `?diag=1`). Built
+  with the site; on GitHub Pages it is
   `/mammothspacebattles/lander.html`.
 
 ## 8. What the engine needs (gaps found in the code)
