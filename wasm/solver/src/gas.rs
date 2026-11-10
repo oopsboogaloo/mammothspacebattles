@@ -132,6 +132,8 @@ struct Gas {
     h_head: Vec<i32>,
     h_tail: Vec<i32>,
     occ: Vec<usize>,
+    occ_cx: Vec<i32>,
+    occ_cy: Vec<i32>,
     p_slot: Vec<usize>,
     w_next: Vec<i32>,
     w_wall: Vec<usize>,
@@ -426,6 +428,8 @@ pub extern "C" fn gas_step(n: usize, nw: usize, nu: usize, dt: f64, timed: u32) 
         h_head,
         h_tail,
         occ,
+        occ_cx,
+        occ_cy,
         p_slot,
         w_next,
         w_wall,
@@ -566,6 +570,8 @@ pub extern "C" fn gas_step(n: usize, nw: usize, nu: usize, dt: f64, timed: u32) 
     let h_mask = h_len - 1;
     let h_shift = 32 - h_bits;
     ensure(occ, n);
+    ensure(occ_cx, n);
+    ensure(occ_cy, n);
     ensure(p_slot, n);
     ensure(c_start, n + 1);
     for i in 0..n {
@@ -645,6 +651,8 @@ pub extern "C" fn gas_step(n: usize, nw: usize, nu: usize, dt: f64, timed: u32) 
                 h_cy[h] = pcy as i32;
                 h_head[h] = -1;
                 occ[n_occ] = h;
+                occ_cx[n_occ] = pcx as i32;
+                occ_cy[n_occ] = pcy as i32;
                 n_occ += 1;
             }
             p_slot[i] = h;
@@ -707,11 +715,26 @@ pub extern "C" fn gas_step(n: usize, nw: usize, nu: usize, dt: f64, timed: u32) 
                     gx += 1.0;
                 }
             } else {
-                // Fewer gas cells than cells under the wall: test each gas cell instead.
-                for o in 0..n_occ {
-                    let h = occ[o];
-                    if h_cx[h] as f64 >= x0 && h_cx[h] as f64 <= x1 && h_cy[h] as f64 >= y0 && h_cy[h] as f64 <= y1 {
-                        file_wall!(h);
+                // Fewer gas cells than cells under the wall: test each gas cell instead, in the order
+                // the cells were first met. Most walls are filed this way (a ship's part covers far
+                // more cells than a small cluster's gas is in), so the cells' coordinates are kept
+                // side by side and compared as integers: cells lie within ±32767 and the bounds are
+                // whole numbers (or infinite), so clamping the bounds changes no comparison.
+                if x0.is_nan() || x1.is_nan() || y0.is_nan() || y1.is_nan() {
+                    for o in 0..n_occ {
+                        let h = occ[o];
+                        if h_cx[h] as f64 >= x0 && h_cx[h] as f64 <= x1 && h_cy[h] as f64 >= y0 && h_cy[h] as f64 <= y1 {
+                            file_wall!(h);
+                        }
+                    }
+                } else {
+                    let bound = |v: f64| if v < -32768.0 { -32768 } else if v > 32768.0 { 32768 } else { v as i32 };
+                    let (ix0, ix1, iy0, iy1) = (bound(x0), bound(x1), bound(y0), bound(y1));
+                    for (o, (&cx, &cy)) in occ_cx[..n_occ].iter().zip(&occ_cy[..n_occ]).enumerate() {
+                        if cx >= ix0 && cx <= ix1 && cy >= iy0 && cy <= iy1 {
+                            let h = occ[o];
+                            file_wall!(h);
+                        }
                     }
                 }
             }
@@ -906,6 +929,9 @@ pub extern "C" fn gas_step(n: usize, nw: usize, nu: usize, dt: f64, timed: u32) 
         gb.clear();
         gr.clear();
         let mut stencil_at = [0usize; 4];
+        // The sorted entries as slices of exactly the entries, so the inner loop below walks them
+        // without a bounds check on every candidate.
+        let (sxs, sys, idxs) = (&sx[..ne], &sy[..ne], &idx[..ne]);
         for r in 0..n_runs {
             let a0 = run_start[r];
             let a1 = run_start[r + 1];
@@ -929,17 +955,18 @@ pub extern "C" fn gas_step(n: usize, nw: usize, nu: usize, dt: f64, timed: u32) 
                     b1 = run_start[at + 1];
                 }
                 for a in a0..a1 {
-                    let en = idx[a];
-                    let ex_a = sx[a];
-                    let ey_a = sy[a];
-                    for b in (if st == 0 { a + 1 } else { b0 })..b1 {
-                        let dx = ex_a - sx[b];
-                        let dy = ey_a - sy[b];
+                    let en = idxs[a];
+                    let ex_a = sxs[a];
+                    let ey_a = sys[a];
+                    let from = if st == 0 { a + 1 } else { b0 };
+                    for (off, (&sx_b, &sy_b)) in sxs[from..b1].iter().zip(&sys[from..b1]).enumerate() {
+                        let dx = ex_a - sx_b;
+                        let dy = ey_a - sy_b;
                         let r2 = dx * dx + dy * dy;
                         if r2 >= hmax2 {
                             continue; // most candidates are rejected here
                         }
-                        let f = idx[b];
+                        let f = idxs[from + off];
                         let eg = en >= n;
                         let fg = f >= n;
                         if eg && fg {

@@ -926,6 +926,20 @@ step outside the gas loop itself. The step's parts, ms (Node, engines pulsing, 6
   now reuse the totals they already have: 2 of about 13 walks a step on a lander level, 4 of about
   15 in a battle. The same hashes in all 46 scenarios; about 1% of a step.
 
+**Inside the Rust gas loop** (the reference battle; a cluster's substep has about 52 parcels, 55
+walls, 34 wall contacts and 99 pairs, and a step has about 52 such substeps):
+
+- Filing walls under the gas's cells was a quarter of the loop. Most walls cover far more cells than
+  a small cluster's gas is in, so each is tested against every gas cell: 2,300 tests a substep,
+  each reaching into the hash table. The cells' coordinates are now kept side by side and compared
+  as integers (the same tests, so the same lists): the wall-contact phase is about 13% faster.
+- The pair search's inner loop walks slices of exactly the entries, without a bounds check on each
+  candidate. The filters after it (`separated`, `same_face`) are small: about 230 steps a substep.
+- Together with the ledger change: the step 1.02× faster in the battle, 1.04× on Gunship 2, 1.06× in
+  the AI duel, unchanged on Emergency. The same hashes.
+- What is left in the loop is its arithmetic: about 570 pair candidates and 100 pairs a substep. It
+  can't go much faster and give the same bits; fewer substeps or clusters would change the physics.
+
 So porting one more function at a time buys a percent or two each. The gain left is in the gas part
 as a whole: its state (the parcels, and the bodies' walls) held in the module's memory, so that
 clustering, the loop, free flight and the finish all run there without packing and unpacking
