@@ -280,13 +280,45 @@ the numeric core moves only where a profile says it pays: the gas part's cluster
 (a third of the gas part in dense gas), then the contact pipeline round the solver. Each such move
 is checked with `hash-compare.ts` against the commit before it.
 
+## The gas's state out of objects (decided 10 November 2026)
+
+After the ports the cost left is spread thin (perf notes §28): outside the Rust gas loop no piece is
+much over a tenth of a step, and the gas part's TypeScript is a third or more of a step in gas-heavy
+scenes. That time goes on walking parcels as objects (`{ position: {x, y}, velocity: {x, y}, … }`),
+packing them into the module and back, and making new vectors for each every step. Porting one more
+function at a time buys a percent or two. So the gas's state changes shape instead. Decided with
+Chloe: do it, in stages, and drop the gas helper threads, whose jobs passed parcels as objects.
+
+**The design**
+
+- **The world owns the gas as arrays, one per field** (x, y, vx, vy, mass, thermal energy, radius,
+  id, age, keep, and an index into a table of compositions), not a list of objects. They are plain
+  typed arrays, so the world can still be copied to the worker, saved, hashed and replayed.
+- **The module gets them by copying whole arrays** in and out, not parcel by parcel. Then clustering,
+  the loop, free flight and the step's finish can each move into the module without packing code.
+- **Saved scenarios keep parcels as objects.** Reading turns them into arrays; writing turns them
+  back, so files don't change.
+- **Not the module's own memory as the store.** The page and the worker each have their own module,
+  and the world crosses between them every run: its data has to be the world's.
+
+**Stages**, each a pull request with the same results as the commit before
+(`scripts/hash-compare.ts`, which will compare the gas by value, since the world's shape changes):
+
+1. **Helper threads removed** (done): `?helpers=N`, `gasHelper.ts`, `runGasJob`, `stepInPlaceAsync`;
+   the step is a plain function again. Measured earlier at no gain (spec §10.1).
+2. **Gas as arrays in the world.** `world.gas` holds the arrays; everything that reads parcels (the
+   step, ledger, vessels, explosives, drawing, panels, tests) reads them. No change to the physics.
+3. **Whole-array copies into the module**, replacing the per-parcel packing in `stepGas`.
+4. **Clustering, walls, free flight and the finish into the module**, by what a profile says after 3.
+5. **The same for wisps**, if a profile then says so.
+
+**Expected:** about 1.2–1.4× on gas-heavy scenes and 1.1–1.2× on the lander levels, and far less
+garbage (no new vector per parcel per step). An estimate from §28's table, to be measured at 2 and 3.
+
 ## Next
 
 1. **Emergency on the iPad** (`?game=lander&diag=1`), 5 minutes: the same check where it froze most.
-2. ~~The wisps~~ Done the same day, in TypeScript, with no port needed: big bodies on a grid, the
-   step 1.4–1.6× faster on Orbital, Heavy Orbital and Emergency (perf notes §26).
-3. **Clustering and `buildWalls`** into the module, which would also end the gas part's last typed
-   arrays.
+2. **Stage 2 above:** the gas as arrays in the world.
 
 ## Decision (10 November 2026)
 
