@@ -337,6 +337,9 @@ Priority: **M** must, **S** should.
   "Back to the sandbox" button, no sandbox keys, and no diagnostics log even with `?diag=1`). Built
   with the site; on GitHub Pages it is
   `/mammothspacebattles/lander.html`.
+- **LND-061** `[S]` Mission select has **How to play** (the goal, touch and keyboard controls,
+  landing and scoring, a few tips) and **The physics** (a short account of what the game simulates:
+  rigid parts, gas thrust, welds, damage, gravity, the ledger), each with a Back button.
 
 ## 8. What the engine needs (gaps found in the code)
 

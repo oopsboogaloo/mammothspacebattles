@@ -27,7 +27,7 @@ export const LANDER_SCENARIOS: { key: string; title: string; blurb: string }[] =
 
 const rawOf = (key: string) => scenarioFile(key);
 
-export const landerScreen = signal<"title" | "select" | "play" | "scores">("title");
+export const landerScreen = signal<"title" | "select" | "play" | "scores" | "howto" | "physics">("title");
 /** The scenario being played (or whose scores are shown). */
 export const landerKey = signal<string>("lander-easy");
 
@@ -161,6 +161,8 @@ export function LanderApp() {
       {landerScreen.value === "select" && <Select />}
       {landerScreen.value === "play" && sandbox.value && <Play />}
       {landerScreen.value === "scores" && <Scores />}
+      {landerScreen.value === "howto" && <HowToPlay />}
+      {landerScreen.value === "physics" && <Physics />}
     </main>
   );
 }
@@ -206,6 +208,12 @@ function Select() {
       <div class="lander-row">
         <button class="lander-btn" onClick={() => (landerScreen.value = "scores")}>
           High scores
+        </button>
+        <button class="lander-btn ghost" onClick={() => (landerScreen.value = "howto")} data-testid="lander-howto">
+          How to play
+        </button>
+        <button class="lander-btn ghost" onClick={() => (landerScreen.value = "physics")} data-testid="lander-physics">
+          The physics
         </button>
         {!standalone.value && (
           <button class="lander-btn ghost" onClick={() => (screen.value = "picker")}>
@@ -464,6 +472,137 @@ function GameOver({ score, landings, cleared }: { score: number; landings: numbe
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** How to play: the goal, the controls, landing and scoring, and a few tips. */
+function HowToPlay() {
+  return (
+    <div class="lander-select lander-info" data-testid="lander-howto-screen">
+      <h2>How to play</h2>
+      <section>
+        <h3>The goal</h3>
+        <p>
+          Land on the pads. Each pad shows its multiplier (×2, ×5 …): harder pads score more. A pad can be used once, so each landing brings a new ship to try the next. You have three ships; land on
+          every pad to clear the level for a 1,000 point bonus.
+        </p>
+      </section>
+      <section>
+        <h3>Controls</h3>
+        <table>
+          <tbody>
+            <tr>
+              <th></th>
+              <th>Touch</th>
+              <th>Keyboard</th>
+            </tr>
+            <tr>
+              <td>Left engine</td>
+              <td>hold L</td>
+              <td>Q, Left Shift or ←</td>
+            </tr>
+            <tr>
+              <td>Right engine</td>
+              <td>hold R</td>
+              <td>E, Right Shift or →</td>
+            </tr>
+            <tr>
+              <td>Pause</td>
+              <td>Pause button</td>
+              <td>P or Esc</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Both engines together push you along the ship's axis. One engine alone turns you: the left engine turns the nose right, the right engine turns it left. To move sideways, tip over a
+          little and burn both.
+        </p>
+      </section>
+      <section>
+        <h3>Landing</h3>
+        <p>
+          You've landed when the ship comes to rest on an open pad, on its legs (within the level's tilt limit, 10–15°) and in one piece. There is no speed limit, but the legs feel the impact: about
+          2 m/s does no harm, 3 m/s bends them and 4.5 m/s snaps one off. A ship that breaks apart has crashed.
+        </p>
+        <p>
+          Score: 200, plus up to 100 for fuel left, times the pad's multiplier, less the share of the ship that's damaged (the DAMAGE readout).
+        </p>
+        <p>
+          Resting anywhere else is fine, and you can take off again. Out of fuel there, the ship is stranded. After 4 seconds at rest, Abandon ship gives it up for the next one.
+        </p>
+      </section>
+      <section>
+        <h3>Tips</h3>
+        <ul>
+          <li>Short bursts. Kill your sideways speed high up, then come straight down.</li>
+          <li>Watch the speed and tilt readouts in the last few metres; they turn red when they're risky.</li>
+          <li>Rocks are fatal at speed: the ship spins, then breaks up, and a ruptured tank explodes.</li>
+          <li>On the asteroids, down is towards the rock, but the view never turns. The pads ride on the spinning rock: match their speed before you touch down.</li>
+          <li>Emergency: stop the spin first (one engine), then deal with the leak's push.</li>
+        </ul>
+      </section>
+      <div class="lander-row">
+        <button class="lander-btn" onClick={() => (landerScreen.value = "select")} data-testid="lander-info-back">
+          Back
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** The physics behind the game, short. */
+function Physics() {
+  return (
+    <div class="lander-select lander-info" data-testid="lander-physics-screen">
+      <h2>The physics</h2>
+      <p class="lead">Nothing in Mammoth Lander is scripted: the ship flies, lands and breaks because of the physics.</p>
+      <section>
+        <h3>Rigid bodies</h3>
+        <p>
+          The ship is a set of real parts (hull, legs, tank and each engine's chamber and nozzle walls) welded together, each with its own mass and inertia. Every contact pushes equal and
+          opposite, with friction. The world runs 240 steps a second and is deterministic: the same inputs always give the same flight.
+        </p>
+      </section>
+      <section>
+        <h3>Thrust is gas</h3>
+        <p>
+          There is no thrust force. The engines draw hydrogen and oxygen from the tank and burn them in their chambers at about 3,000 K. The hot gas pushes on the chamber walls and leaves through
+          the throat as a choked jet; thrust and turning come only from gas pushing on the engine. The exhaust is simulated as particles of gas (smoothed-particle hydrodynamics) that hit the ground
+          and push back, which is why the ground pushes up when you hover low. The tank drains as you burn, so the ship gets lighter, as the rocket equation says. (To give you enough flying time,
+          each level lets the propellant go further than it would for real.)
+        </p>
+      </section>
+      <section>
+        <h3>Welds bend and break</h3>
+        <p>
+          Every weld has limits in tension, compression, shear and torque. A load beyond 30% of them bends it, leaving it permanently weaker; beyond its limit it snaps. That's why a hard touchdown
+          bends the legs and a harder one breaks them off.
+        </p>
+      </section>
+      <section>
+        <h3>Damage</h3>
+        <p>
+          Impact energy beyond a part's material threshold costs it integrity. A damaged engine gives less thrust. A damaged tank leaks through the breach, and the escaping gas pushes the ship
+          (Emergency starts that way). A destroyed tank explodes. An engine that breaks off burns what's left in it for half a second.
+        </p>
+      </section>
+      <section>
+        <h3>Gravity</h3>
+        <p>
+          The surface levels have the Moon's gravity, 1.6 m/s². Each asteroid pulls towards its centre (softened inside the rock). Binary's two rocks also pull on each other, in proportion to their
+          masses, so they orbit their common centre.
+        </p>
+      </section>
+      <section>
+        <h3>Nothing created, nothing lost</h3>
+        <p>A ledger tracks mass, momentum, spin and energy every step, and flags anything the physics creates or loses that it can't account for.</p>
+      </section>
+      <div class="lander-row">
+        <button class="lander-btn" onClick={() => (landerScreen.value = "select")} data-testid="lander-info-back">
+          Back
+        </button>
+      </div>
     </div>
   );
 }

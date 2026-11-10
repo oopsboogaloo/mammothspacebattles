@@ -64,6 +64,20 @@ test("LND-060 the game's own page never shows the diagnostics log, even with ?di
   await expect(page.getByText("Copy log")).toHaveCount(0);
 });
 
+test("LND-061 How to play and The physics open from mission select and come back", async ({ page }) => {
+  await page.goto("./lander.html");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-howto").click();
+  const how = page.getByTestId("lander-howto-screen");
+  await expect(how).toContainText("Controls");
+  await expect(how).toContainText("Q, Left Shift or ←");
+  await page.getByTestId("lander-info-back").click();
+  await page.getByTestId("lander-physics").click();
+  await expect(page.getByTestId("lander-physics-screen")).toContainText("Thrust is gas");
+  await page.getByTestId("lander-info-back").click();
+  await expect(page.getByTestId("lander-select")).toBeVisible();
+});
+
 test("LND-001 the sandbox picker opens the game", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("open-lander").click();
