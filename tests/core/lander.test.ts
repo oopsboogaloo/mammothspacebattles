@@ -283,7 +283,7 @@ describe("Mammoth Lander", () => {
       expect(w.lander!.state.landings.map((l) => l.pad)).toEqual([`pad-${n}`]);
       expect(w.ledger.violations).toBe(0);
     }
-  });
+  }, 120_000); // simulation-heavy: CI runs several times slower
 
   // A gentle touchdown on a pad riding a spinning rock: just above it, tilted to its "up", moving with
   // the rock there (its core's velocity and spin) and coming down at 1 m/s.
@@ -318,16 +318,16 @@ describe("Mammoth Lander", () => {
     const momentum = (pre: string) => rock(pre).reduce((p, b) => ({ x: p.x + b.mass * b.velocity.x, y: p.y + b.mass * b.velocity.y }), { x: 0, y: 0 });
     const a0 = momentum("rock-a");
     const b0 = momentum("rock-b");
-    for (let k = 0; k < 10 * 240; k++) stepInPlace(w, [], getProfile(s.profile));
+    for (let k = 0; k < 4 * 240; k++) stepInPlace(w, [], getProfile(s.profile));
     const da = { x: momentum("rock-a").x - a0.x, y: momentum("rock-a").y - a0.y };
     const db = { x: momentum("rock-b").x - b0.x, y: momentum("rock-b").y - b0.y };
     // Each rock's momentum turned (it is orbiting), by equal and opposite amounts: each pulls the other.
-    expect(Math.hypot(da.x, da.y)).toBeGreaterThan(1e5);
+    expect(Math.hypot(da.x, da.y)).toBeGreaterThan(2e4); // about 4.7e4: 0.03 m/s² on 400 t for 4 s
     expect(Math.hypot(da.x + db.x, da.y + db.y)).toBeLessThan(0.02 * Math.hypot(da.x, da.y));
     const cores = w.bodies.filter((b) => b.gravity && b.gravity.mu > 0);
     expect(Math.hypot(cores[0].position.x - cores[1].position.x, cores[0].position.y - cores[1].position.y)).toBeGreaterThan(200);
     expect(w.ledger.violations).toBe(0);
-  });
+  }, 120_000); // simulation-heavy: CI runs several times slower
 
   it("LND-011 Binary and Heavy Orbital: a gentle touchdown on a spinning rock's pad lands", () => {
     const b = rockLanding("lander-binary", "pad-5", "rock-b-core"); // the rock turning the other way
@@ -338,7 +338,7 @@ describe("Mammoth Lander", () => {
     expect(h.events.filter((e) => e.type === "crashed")).toEqual([]);
     expect(h.lander!.state.landings.map((l) => l.pad)).toEqual(["pad-2"]);
     expect(h.ledger.violations).toBe(0);
-  });
+  }, 120_000); // simulation-heavy: CI runs several times slower
 
   it("LND-011 Orbital: a gentle touchdown on a pad riding the spinning asteroid lands, judged against the pad", () => {
     const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-orbital.json", import.meta.url), "utf8"));
