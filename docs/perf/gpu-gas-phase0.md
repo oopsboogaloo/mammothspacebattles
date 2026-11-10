@@ -907,6 +907,45 @@ about 1,300 lines, with `?wasm=0` and the log's `solver:` line. The same hashes 
 scenarios. A change is now checked against the commit before it (`scripts/hash-compare.ts`).
 Details and the line between the two languages: [`rust-trial.md`](rust-trial.md).
 
+## 28. Where the step's time is after the ports (10 November 2026)
+
+With the solver and the gas loop in Rust and the wisps fixed, no piece is much over a tenth of a
+step outside the gas loop itself. The step's parts, ms (Node, engines pulsing, 600 steps):
+
+| | Step | Gas loop (Rust) | Gas: clusters | Gas: setup, mask, free flight, finish | Rest of the gas part | Forces | Integrate | Contacts |
+|---|---|---|---|---|---|---|---|---|
+| Reference battle (321 parcels) | 6.34 | 2.13 | 0.51 | 0.56 | 1.05 | 0.90 | 0.69 | 0.35 |
+| Gunship 2 (88 parcels) | 2.24 | 0.59 | 0.21 | 0.17 | 0.45 | 0.36 | 0.25 | 0.15 |
+| AI duel (174 parcels) | 2.49 | 0.27 | 0.22 | 0.23 | 0.51 | 0.51 | 0.37 | 0.21 |
+
+- **The gas part outside its Rust loop** (clustering, packing and walls, free flight, the finish, and
+  the wisps and totals round them) is a third or more of a step in these scenes, all of it
+  walking parcels and bodies as JavaScript objects. No one function in it is much over 3%.
+- **The ledger's totals** were worked out again where the world had not changed since the last time:
+  before the magazines, the railguns and the injectors, and after drag springs with no drags. Those
+  now reuse the totals they already have: 2 of about 13 walks a step on a lander level, 4 of about
+  15 in a battle. The same hashes in all 46 scenarios; about 1% of a step.
+
+**Inside the Rust gas loop** (the reference battle; a cluster's substep has about 52 parcels, 55
+walls, 34 wall contacts and 99 pairs, and a step has about 52 such substeps):
+
+- Filing walls under the gas's cells was a quarter of the loop. Most walls cover far more cells than
+  a small cluster's gas is in, so each is tested against every gas cell: 2,300 tests a substep,
+  each reaching into the hash table. The cells' coordinates are now kept side by side and compared
+  as integers (the same tests, so the same lists): the wall-contact phase is about 13% faster.
+- The pair search's inner loop walks slices of exactly the entries, without a bounds check on each
+  candidate. The filters after it (`separated`, `same_face`) are small: about 230 steps a substep.
+- Together with the ledger change: the step 1.02× faster in the battle, 1.04× on Gunship 2, 1.06× in
+  the AI duel, unchanged on Emergency. The same hashes.
+- What is left in the loop is its arithmetic: about 570 pair candidates and 100 pairs a substep. It
+  can't go much faster and give the same bits; fewer substeps or clusters would change the physics.
+
+So porting one more function at a time buys a percent or two each. The gain left is in the gas part
+as a whole: its state (the parcels, and the bodies' walls) held in the module's memory, so that
+clustering, the loop, free flight and the finish all run there without packing and unpacking
+objects every step. That changes how the world holds its gas, which the page, the worker and the
+ledger all read, so it is a design decision, not a port of a function.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

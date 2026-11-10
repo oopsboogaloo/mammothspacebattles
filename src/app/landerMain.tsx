@@ -43,7 +43,7 @@ function Game() {
   },
   hash: () => (sandbox.value ? hashValue(sandbox.value.world) : null),
   shown: () => shown.time,
-  sim: () => ({ worker: sim.available, runs: sim.runs, helperJobs: sim.helperJobs }),
+  sim: () => ({ worker: sim.available, runs: sim.runs }),
 };
 
 render(<Game />, document.getElementById("root")!);

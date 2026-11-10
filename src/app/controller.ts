@@ -10,11 +10,8 @@ import {
   parseScenario,
   resolveProbe,
   stepInPlace,
-  stepInPlaceAsync,
   timelineByStep,
   scenarioStep,
-  type GasAccount,
-  type GasJob,
   type Command,
   type Profile,
   type Scenario,
@@ -126,26 +123,6 @@ export function runSteps(world: World, plan: StepPlan, n: number, opts: { deadli
     const flying = undecided(world);
     const t0 = now();
     stepInPlace(world, plan.timeline.get(world.tick) ?? [], plan.profile, { clock: now, out });
-    timed(run, out, t0);
-    if (afterStep(run, plan, flying, opts)) break;
-  }
-  return run;
-}
-
-/** As `runSteps`, with each step's gas phase run by `runGas` (helper threads). Same results. */
-export async function runStepsAsync(
-  world: World,
-  plan: StepPlan,
-  n: number,
-  runGas: (job: GasJob) => Promise<GasAccount>,
-  opts: { deadline?: () => boolean; stopOnVerdict?: boolean } = {},
-): Promise<StepRun> {
-  const run = startRun(world, plan);
-  const out: Record<string, number> = {};
-  while (run.steps < n) {
-    const flying = undecided(world);
-    const t0 = now();
-    await stepInPlaceAsync(world, plan.timeline.get(world.tick) ?? [], plan.profile, runGas, { clock: now, out });
     timed(run, out, t0);
     if (afterStep(run, plan, flying, opts)) break;
   }

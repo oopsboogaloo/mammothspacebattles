@@ -1,7 +1,7 @@
 // The gas split into clusters that can't meet within a step, each stepped on its own (§10.1).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { computeTotals, createWorld, getProfile, gasClusters, hashValue, initialWorld, normalizeBody, parseScenario, runClusterJob, runGasJob, stepGas, stepInPlace, stepInPlaceAsync, wallBodies, type Command, type World } from "../../src/core/index.ts";
+import { computeTotals, createWorld, getProfile, gasClusters, hashValue, initialWorld, normalizeBody, parseScenario, stepGas, stepInPlace, wallBodies, type Command, type World } from "../../src/core/index.ts";
 import { box, readJson, ROOT } from "../helpers.ts";
 
 const sandbox = getProfile("sandbox");
@@ -31,25 +31,6 @@ describe("gas clusters", () => {
     // §9.9 (they predate clusters); mass and momentum stay exact.
     expect(w.ledger.maxResidual.mass).toBeLessThan(1e-9);
     expect(Math.hypot(w.ledger.maxResidual.momentumX, w.ledger.maxResidual.momentumY)).toBeLessThan(1e-9);
-  }, 300_000);
-
-  it("NFR-004 DET-001 cluster jobs run on copies (as in helper threads), in any order, give the same world as stepping in place", async () => {
-    const here = fleet();
-    const there = fleet();
-    // Copies as a thread would get them, run in reverse order, answered in job order.
-    const elsewhere = async (jobs: Parameters<typeof runClusterJob>[0][]) => {
-      const copies = jobs.map((j) => structuredClone(j));
-      const results = copies.map(() => null as ReturnType<typeof runClusterJob> | null);
-      for (let k = copies.length - 1; k >= 0; k--) results[k] = structuredClone(runClusterJob(copies[k]));
-      return results as ReturnType<typeof runClusterJob>[];
-    };
-    for (let i = 0; i < 150; i++) {
-      const cmds = i === 0 ? [set("left", 1), set("right", 1)] : [];
-      stepInPlace(here, cmds, sandbox);
-      await stepInPlaceAsync(there, cmds, sandbox, (job) => runGasJob(job, elsewhere));
-    }
-    expect(hashValue(there)).toBe(hashValue(here));
-    expect(there.ledger.violations).toBe(0);
   }, 300_000);
 });
 
