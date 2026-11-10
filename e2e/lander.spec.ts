@@ -27,6 +27,43 @@ test("LND-001 LND-002 LND-030 Mammoth Lander: title, mission select, and a fligh
   await expect(page.getByText("Paused")).toHaveCount(0);
 });
 
+test("LND-060 the game's own page: the same game, with no way back to the sandbox", async ({ page }) => {
+  await page.goto("./lander.html");
+  await expect(page).toHaveTitle("Mammoth Lander");
+  await expect(page.getByTestId("lander-credit")).toHaveText("by Chloe Bolland © 2026");
+  await page.getByTestId("lander-title").click();
+  await expect(page.getByTestId("lander-select")).toBeVisible();
+  for (const k of ["easy", "medium", "hard", "cave", "cave-2", "emergency", "orbital", "binary", "heavy-orbital"]) await expect(page.getByTestId(`lander-pick-lander-${k}`)).toBeEnabled();
+  await expect(page.getByText("Back to the sandbox")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "High scores" })).toBeVisible();
+  // It flies, from the keyboard too: holding E fires the right engine and burns fuel.
+  await page.getByTestId("lander-pick-lander-easy").click();
+  const hud = page.getByTestId("lander-hud");
+  await expect(hud).toContainText("FUEL 8.10 kg");
+  await page.keyboard.down("e");
+  await expect(hud).not.toContainText("FUEL 8.10 kg", { timeout: 10_000 });
+  await page.keyboard.up("e");
+  await expect(page.getByTestId("sandbox")).toHaveCount(0);
+  // P pauses.
+  await page.keyboard.press("p");
+  await expect(page.getByText("Paused")).toBeVisible();
+});
+
+test("LND-060 the game's own page never shows the diagnostics log, even with ?diag=1", async ({ page }) => {
+  // The sandbox's game shows it with ?diag=1 ...
+  await page.goto("./?game=lander&diag=1");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-diag")).toBeVisible();
+  // ... the game's own page never does.
+  await page.goto("./lander.html?diag=1");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-hud")).toBeVisible();
+  await expect(page.getByTestId("lander-diag")).toHaveCount(0);
+  await expect(page.getByText("Copy log")).toHaveCount(0);
+});
+
 test("LND-001 the sandbox picker opens the game", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("open-lander").click();

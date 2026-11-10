@@ -16,7 +16,6 @@ import {
   dialog,
   keyToAction,
   persist,
-  playing,
   probeMenu,
   sandbox,
   screen,
@@ -26,14 +25,12 @@ import {
   violationsOpen,
 } from "./state.ts";
 import { sim, View } from "./View.tsx";
-import { LanderApp, sendControl } from "./Lander.tsx";
+import { gameKeyDown, gameKeyUp, LanderApp } from "./Lander.tsx";
 import { toScreen } from "./camera.ts";
 import { hashValue } from "../core/index.ts";
 import { shown } from "./smooth.ts";
 
 const pressGroups: Record<string, number> = {};
-/** In the game, the left and right Shift keys fly the left and right engines: hands apart, like the thumb pads. */
-const GAME_KEYS: Record<string, string> = { ShiftLeft: "left", ShiftRight: "right" };
 let pressCounter = 5_000_000;
 
 function isTyping(e: KeyboardEvent): boolean {
@@ -53,6 +50,11 @@ function App() {
         return;
       }
       if (cmdkOpen.value) return;
+      // In the game only its keys work (Lander.tsx, shared with the game's own page).
+      if (screen.value === "lander") {
+        gameKeyDown(e);
+        return;
+      }
       const key = e.key.toLowerCase();
       if (bindingFor.value && !e.ctrlKey && !e.metaKey && key.length === 1) {
         // Capture this key for the channel waiting to be bound (SBX-020).
@@ -64,24 +66,12 @@ function App() {
         showToast(`${key.toUpperCase()} now drives "${channel}". Bound keys take priority over tool shortcuts.`);
         return;
       }
-      const channel = (screen.value === "lander" && GAME_KEYS[e.code]) || bindings.value[key];
+      const channel = bindings.value[key];
       if (channel && sandbox.value && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         if (!e.repeat) {
-          // Both Shift keys are "shift": the game's are told apart by where they are.
-          const pk = screen.value === "lander" && GAME_KEYS[e.code] ? e.code : key;
-          pressGroups[pk] = ++pressCounter;
-          // In the game, keys go in as live input (no stall at each press).
-          if (screen.value === "lander") sendControl(channel, 1, `Key ${key.toUpperCase()}`, pressGroups[pk]);
-          else edit([{ type: "control.set", channel, value: 1 }], `Key ${key.toUpperCase()}`, pressGroups[pk]);
-        }
-        return;
-      }
-      // In the game only its keys work: the engines (above), and P or Esc to pause.
-      if (screen.value === "lander") {
-        if ((key === "p" || key === "escape") && sandbox.value) {
-          e.preventDefault();
-          playing.value = !playing.value;
+          pressGroups[key] = ++pressCounter;
+          edit([{ type: "control.set", channel, value: 1 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
         }
         return;
       }
@@ -98,13 +88,15 @@ function App() {
       if (sandbox.value?.dirty && screen.value !== "lander") e.preventDefault();
     };
     const onKeyUp = (e: KeyboardEvent) => {
+      if (screen.value === "lander") {
+        gameKeyUp(e);
+        return;
+      }
       const key = e.key.toLowerCase();
-      const channel = (screen.value === "lander" && GAME_KEYS[e.code]) || bindings.value[key];
-      const pk = screen.value === "lander" && GAME_KEYS[e.code] ? e.code : key;
-      if (channel && sandbox.value && pressGroups[pk] !== undefined) {
-        if (screen.value === "lander") sendControl(channel, 0, `Key ${key.toUpperCase()}`, pressGroups[pk]);
-        else edit([{ type: "control.set", channel, value: 0 }], `Key ${key.toUpperCase()}`, pressGroups[pk]);
-        delete pressGroups[pk];
+      const channel = bindings.value[key];
+      if (channel && sandbox.value && pressGroups[key] !== undefined) {
+        edit([{ type: "control.set", channel, value: 0 }], `Key ${key.toUpperCase()}`, pressGroups[key]);
+        delete pressGroups[key];
       }
     };
     window.addEventListener("keyup", onKeyUp);

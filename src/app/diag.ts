@@ -17,7 +17,8 @@ export interface RunLog {
   worstParts?: string;
 }
 
-const on = typeof location !== "undefined" && new URLSearchParams(location.search).get("diag") === "1";
+// Never on the game's own page (lander.html, LND-060): what players get has no log, whatever the URL.
+const on = typeof location !== "undefined" && new URLSearchParams(location.search).get("diag") === "1" && !location.pathname.endsWith("/lander.html");
 const MAX = 20_000;
 
 export const diag = {
