@@ -218,15 +218,17 @@ The same iPad, Orbital, ship 3, played with thrust, on the build with the gas lo
 |---|---|---|---|---|---|
 | TypeScript (`wasm=0`) | 239.5 s | 5 (1.3 a minute): gas 3, contacts 2 | 4 | 715 ms | 119.0 |
 | WebAssembly | 171.7 s | 0 | 0 | 44 ms | 120.0 |
-| WebAssembly | 583.2 s | 0 | 2, both where the game was left for 76 s | 18 ms | 120 while played |
+| WebAssembly | 583.2 s | 0 | 2, both round 76 s with no frames drawn | 18 ms | 120 while played |
 
 - **No frozen step in 11.3 minutes of WebAssembly play** (about 680 s; 12.5 minutes with the 76 s
-  the game was left). At the TypeScript run's rate there would have been about 14, and at the rate
+  when no frames were drawn). At the TypeScript run's rate there would have been about 14, and at the rate
   of the earlier WebAssembly run, with the gas loop still in TypeScript (3.8 a minute, all in the
   gas part), about 40.
 - **The long run's two frame gaps are not freezes:** one of 76 s and one of 113 ms straight after,
-  with no slow step. The page was not drawing (in the background, or the iPad locked). Its frame
-  and step rates in the log are low only because that minute is counted.
+  with no slow step, and no results from the worker in between. The player did not leave the game
+  and saw no freeze, so the frame loop was most likely not running (it stops when the flying view
+  is not on screen, as on a menu); not traced further. The log's frame and step rates are low only
+  because those 76 s are counted.
 - **The TypeScript run froze far less than the first one** (1.3 a minute against 5.1) on the same
   code, with a quarter less gas time a step. Runs played by hand differ that much, so the first
   pair's 5.1 against 3.8 said little; what holds is where the freezes land and that they stop.
