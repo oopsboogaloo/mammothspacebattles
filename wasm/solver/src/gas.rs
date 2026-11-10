@@ -1,7 +1,10 @@
-//! The gas step's substep loop in Rust: a line-for-line port of the loop in `gasCoreTs`
-//! (src/core/gas.ts): wall contacts, mirror ghosts, the neighbour search, density, impulses and
-//! energy with their retries, the elastic bounce and the drift. Every operation is the
-//! TypeScript's, in the same order, so the results are the same bits (see lib.rs).
+//! The gas step's substep loop: wall contacts, mirror ghosts, the neighbour search, density,
+//! impulses and energy with their retries, the elastic bounce and the drift. The model is described
+//! at the top of src/core/gas.ts.
+//!
+//! Ported line for line from TypeScript and checked bit for bit against it (docs/perf/rust-trial.md);
+//! that copy is gone, so this is the loop. `Math.max`/`Math.min` semantics (lib.rs's `jmax`/`jmin`)
+//! and the order of every operation are kept: results must not change by a bit.
 //!
 //! TypeScript packs the parcels straight into the buffers here, builds the walls and rigid units
 //! (`buildWalls`) and writes them in, calls `gas_step`, and finishes the step from the same buffers
@@ -33,13 +36,22 @@ const US: usize = 14;
 /// then ms in contacts, neighbours, density, impulses, move.
 const OUT_LEN: usize = 12;
 
+/// Substep = CFL × h ÷ (sound speed + speed), with h the kernel's full support radius (≈ 0.5 in the
+/// usual half-support convention).
 const CFL: f64 = 0.25;
 const MAX_SUBSTEPS: f64 = 2000.0;
+/// Halvings of a substep tried before thermal energy is clamped at zero (and the ledger reports it).
 const MAX_RETRIES: usize = 20;
+/// Tries (substeps, retries included) one step may spend before it finishes in one substep and
+/// clamps. Normal steps take 20–60. Was 4 × MAX_SUBSTEPS = 8,000: a spinning shell fragment in a
+/// plume used them all (157 ms, a visible stutter) and clamped the same 66 J it would have after a
+/// few hundred.
 const MAX_TRIES: usize = 500;
 const VISC_ALPHA: f64 = 1.0;
 const VISC_BETA: f64 = 2.0;
+/// A parcel closer than this × radius to a surface and still approaching bounces elastically.
 const HARD_WALL: f64 = 0.5;
+/// The kernel (2D Wendland C2): W = W_C2/h² · (1 − q)⁴(1 + 4q), and |dW/dr| = G_C2/h³ · q(1 − q)³.
 const W_C2: f64 = 7.0 / PI;
 const G_C2: f64 = 140.0 / PI;
 const BIG_WALL_CELLS: f64 = 4096.0;
@@ -223,7 +235,7 @@ pub extern "C" fn gas_ptr(which: u32) -> *mut u8 {
     }
 }
 
-// ---------- Helpers (the closures of gasCoreTs) ----------
+// ---------- Helpers ----------
 
 #[inline]
 fn clamp_cell(c: f64) -> f64 {
@@ -339,6 +351,12 @@ fn same_face(c_start: &[usize], c_w: &[usize], c_nx: &[f64], c_ny: &[f64], i: us
     false
 }
 
+/// Parcel i's share of a pair's pressure work, by its own pressure term (A = P/ρ²). When a pair's
+/// impulse turns heat into motion (work > 0), all of that heat comes from pressure (viscosity only
+/// heats), so it is drawn by this share. Drawing it by the impulse's share instead, viscosity part
+/// included, charged a cold parcel (A ≈ 0) for its hot neighbour's push: it went below zero at any
+/// substep, and halving the substep 20 times over took one step of the reference battle to 413
+/// substeps and 8,000 tries, then clamped 11 J.
 #[inline]
 fn pressure_share(ai: f64, aj: f64) -> f64 {
     if ai + aj > 0.0 {
@@ -556,7 +574,7 @@ pub extern "C" fn gas_step(n: usize, nw: usize, nu: usize, dt: f64, timed: u32) 
 
     let mut t_done = 0.0;
     let mut nsub = 0.0;
-    // Substeps tried this step, retries included (see MAX_TRIES in gas.ts).
+    // Substeps tried this step, retries included (see MAX_TRIES).
     let mut tries = 0;
     while t_done < dt {
         // signalSpeed

@@ -1,11 +1,17 @@
-//! The constraint solve (welds and contacts) in Rust, compiled to WebAssembly: the Rust trial.
+//! The constraint solve (welds and contacts), compiled to WebAssembly.
 //!
-//! A line-for-line port of `solveContacts`' velocity solve, `prepareJoints`, `solveJoints`,
-//! `finishJoints`' limit test, `correctJoints` and `correctPositions` (src/core/physics.ts and
-//! joints.ts). Every operation is the TypeScript's, in the same order, so the results are the same
-//! bits: WebAssembly's f64 arithmetic is IEEE 754 like JavaScript's, with no fused multiply-add, and
-//! Rust never reorders float operations. `Math.max`/`Math.min`/`Math.round` are copied exactly
-//! (NaN and the sign of zero), and `sinCos` is the same fdlibm port as math.ts.
+//! Each component stays a rigid body. A weld joins two bodies at a pair of anchor points and holds
+//! their relative angle; it is solved with the contacts by sequential impulses, and the impulse it
+//! needs each step gives its load (src/core/joints.ts `evaluateJoints`). The weld follows Box2D's
+//! weld joint (Erin Catto) without softness. Finding and building contacts, breaking welds and the
+//! ledger are in TypeScript (src/core/physics.ts, joints.ts).
+//!
+//! Ported line for line from TypeScript and checked bit for bit against it (docs/perf/rust-trial.md);
+//! that copy is gone, so this is the solver. Results must not change by a bit: WebAssembly's f64
+//! arithmetic is IEEE 754 like JavaScript's, with no fused multiply-add, and Rust never reorders
+//! float operations; `Math.max`/`Math.min`/`Math.round` are copied exactly (NaN and the sign of
+//! zero), and `sin_cos` is the same fdlibm port as math.ts's `sinCos`. Keep the order of every
+//! operation when changing anything here.
 //!
 //! TypeScript writes the inputs into the buffers below (in this module's memory), calls a solve, and
 //! reads the results back. Nothing here makes garbage for the JavaScript collector.
@@ -90,13 +96,19 @@ const LBY: usize = 15;
 /// Accounts: contacts' external impulse x, y, angular, predicted KE; the same for welds; retried.
 const ACC_LEN: usize = 9;
 
+/// Normal approach speed below which restitution is ignored, so resting contacts don't jitter, m/s.
 const RESTITUTION_THRESHOLD: f64 = 0.1;
+/// Position correction: passes a step, the share of an overlap taken out a pass, and the most a pass
+/// moves a point, m.
 const POSITION_ITERATIONS: usize = 4;
 const BAUMGARTE: f64 = 0.2;
 const MAX_CORRECTION: f64 = 0.2;
+/// The share of a weld's anchor gap and angle error taken out a pass.
 const JOINT_BAUMGARTE: f64 = 0.5;
 
-/// A weld's solver state for one step (JointSolver in joints.ts).
+/// A weld's solver state for one step: lever arms, the 2×2 point-constraint matrix (k) and its
+/// inverse (m), the axis in world space (impulse on b along it is compression), this step's impulse
+/// limits (the weld's limits × dt: along the axis, across it, angular) and its accumulated impulse on b.
 #[derive(Clone, Copy, Default)]
 struct Weld {
     a: usize,
@@ -301,7 +313,7 @@ struct Acc {
     ke: f64,
 }
 
-/// Relative velocity of b's anchor over a's (relX, relY in joints.ts; relVel in physics.ts).
+/// Relative velocity of b's anchor over a's.
 #[inline]
 fn rel(b: &[f64], a: usize, bb: usize, rax: f64, ray: f64, rbx: f64, rby: f64) -> (f64, f64) {
     let (ao, bo) = (a * BS, bb * BS);
@@ -343,7 +355,8 @@ fn apply_linear(b: &mut [f64], a: usize, bb: usize, rax: f64, ray: f64, rbx: f64
     de
 }
 
-/// A contact impulse lambda along (dx, dy) at point p (physics.ts's `apply`).
+/// A contact impulse lambda along (dx, dy) at point p: +B, −A. Tracks energy and the external
+/// impulse exactly.
 #[inline]
 fn apply_contact(b: &mut [f64], pts: &mut [f64], a: usize, bb: usize, po: usize, dx: f64, dy: f64, lambda: f64, acc: &mut Acc) {
     if lambda == 0.0 {
@@ -411,12 +424,13 @@ fn weld_angular(b: &mut [f64], s: &Weld, l: f64, acc: &mut Acc) {
     }
 }
 
-/// The largest t in [0, 1] that keeps x + t·d within [lo, hi] (joints.ts `reach`).
+/// The largest t in [0, 1] that keeps x + t·d within [lo, hi], given x inside it.
 #[inline]
 fn reach(x: f64, d: f64, lo: f64, hi: f64) -> f64 {
     jmax(0.0, if d > 0.0 && x + d > hi { (hi - x) / d } else if d < 0.0 && x + d < lo { (lo - x) / d } else { 1.0 })
 }
 
+/// Solves the point constraint along one direction (dx, dy) only, keeping that component in [lo, hi].
 fn slide(b: &mut [f64], s: &mut Weld, dx: f64, dy: f64, lo: f64, hi: f64, acc: &mut Acc) {
     let k = s.k11 * dx * dx + 2.0 * s.k12 * dx * dy + s.k22 * dy * dy;
     if !(k > 0.0) {
@@ -433,6 +447,12 @@ fn slide(b: &mut [f64], s: &mut Weld, dx: f64, dy: f64, lo: f64, hi: f64, acc: &
     weld_linear(b, s, step_x, step_y, acc);
 }
 
+/// One pass of the weld solve. A weld carries at most its limits (ASM-003): each accumulated impulse
+/// stays inside its limit box. Every update minimises kinetic energy over a convex set that contains
+/// the current impulse, so no update can add energy, capped or not. The point constraint is solved
+/// as a block, cut short where it would leave the box, then slid along the box's faces by
+/// one-direction solves. Taking back a capped weld's excess after the solve instead could create
+/// kinetic energy, because the other welds had been solved against the full impulse.
 fn solve_welds(b: &mut [f64], welds: &mut [Weld], acc: &mut Acc) {
     for s in welds.iter_mut() {
         let w_rel = b[s.b * BS + W] - b[s.a * BS + W];
@@ -464,7 +484,8 @@ fn solve_welds(b: &mut [f64], welds: &mut [Weld], acc: &mut Acc) {
     }
 }
 
-/// prepareJoints for the nj welds in the buffer (already the ones with both bodies, not both fixed).
+/// Sets up the nj welds in the buffer for this step (already the ones with both bodies in the solve,
+/// not both fixed).
 fn prepare_welds(b: &[f64], j: &[f64], welds: &mut [Weld], dt: f64) {
     for (i, s) in welds.iter_mut().enumerate() {
         let o = i * JS;
@@ -503,10 +524,15 @@ fn prepare_welds(b: &[f64], j: &[f64], welds: &mut [Weld], dt: f64) {
             angular_mass: if ia + ib > 0.0 { 1.0 / (ia + ib) } else { 0.0 },
             axx: ca * j[o + AXX] - sa * j[o + AXY],
             axy: sa * j[o + AXX] + ca * j[o + AXY],
+            // A damaged weld carries less (DMG-001): its limits scale with its integrity.
             lo: -j[o + TEN] * integ * dt,
             hi: j[o + COMP] * integ * dt,
             shear: j[o + SHR] * integ * dt,
             torque: j[o + TOR] * integ * dt,
+            // No warm start: each step's weld impulse starts from zero. Reapplying last step's
+            // impulse after the load has changed (an impact ending, thrust cut, gas pressure
+            // dropping) made the solve create kinetic energy, up to 19 J in a crash, which the
+            // ledger reported. Loads come from this step's impulse anyway (evaluateJoints).
             px: 0.0,
             py: 0.0,
             l: 0.0,
@@ -514,6 +540,8 @@ fn prepare_welds(b: &[f64], j: &[f64], welds: &mut [Weld], dt: f64) {
     }
 }
 
+/// One solve: contacts warm started from the previous step's impulses if `warm`, then the
+/// iterations (welds, then each contact's friction and non-penetration), then restitution.
 fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc: usize, iterations: u32, dt: f64, warm: bool, ca: &mut Acc, ja: &mut Acc) {
     if warm {
         for ci in 0..nc {
@@ -539,6 +567,7 @@ fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc:
             for p in p0..p0 + np {
                 let po = p * PS;
                 let (rx, ry) = rel(b, a, bb, pts[po + RAX], pts[po + RAY], pts[po + RBX], pts[po + RBY]);
+                // Friction, limited by the current normal impulse (Coulomb).
                 let vt = rx * tx + ry * ty;
                 let max_f = friction * pts[po + NI];
                 let new_t = jmax(-max_f, jmin(max_f, pts[po + TI] - vt * pts[po + TM]));
@@ -548,6 +577,8 @@ fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc:
             for p in p0..p0 + np {
                 let po = p * PS;
                 let (rx, ry) = rel(b, a, bb, pts[po + RAX], pts[po + RAY], pts[po + RBX], pts[po + RBY]);
+                // Non-penetration. A positive separation lets the bodies close exactly that gap
+                // this step (speculative contact).
                 let vn = rx * nx + ry * ny;
                 let bias = if pts[po + SEP] > 0.0 { pts[po + SEP] / dt } else { 0.0 };
                 let new_n = jmax(0.0, pts[po + NI] - (vn + bias) * pts[po + NM]);
@@ -557,7 +588,9 @@ fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc:
             }
         }
     }
-    // Restitution.
+    // Restitution: contacts that engaged this step leave at −e × their approach speed. This also
+    // runs for e = 0, so a speculative impact finishes within one step instead of carrying leftover
+    // approach speed into the next step (where the normal has rotated).
     for ci in 0..nc {
         let o = ci * CS;
         let (a, bb, nx, ny) = (c[o + CA] as usize, c[o + CB] as usize, c[o + CNX], c[o + CNY]);
@@ -572,6 +605,10 @@ fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc:
             let vn = rx * nx + ry * ny;
             let nm = pts[po + NM];
             let mut new_n = jmax(0.0, pts[po + NI] - (vn + restitution * pts[po + VN0]) * nm);
+            // Newton's restitution with friction can add energy in off-centre impacts (Kane's
+            // paradox). Cap the extra impulse so this point never returns more energy than it has
+            // absorbed this step: the work of impulse λ is λ·vn + λ²/(2·normalMass), which must
+            // stay ≤ energyLost.
             let extra = new_n - pts[po + NI];
             if extra > 0.0 && nm > 0.0 {
                 let l0 = jmax(0.0, pts[po + EL]);
@@ -587,7 +624,8 @@ fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc:
 }
 
 /// The velocity solve of one step: welds and contacts by sequential impulses, warm started, solved
-/// again from zero if warm starting gained energy, then each weld's limit test (finishJoints).
+/// again from zero if warm starting gained energy, then each weld's impulse (its load) and whether
+/// the solver held it at a limit, so it breaks, with the impulse it would have needed: its demand.
 #[no_mangle]
 pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: u32, dt: f64, tol_energy: f64) {
     let s = st();
@@ -623,6 +661,11 @@ pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: 
     let mut ca = Acc::default();
     let mut ja = Acc::default();
     solve_pass(b, c, pts, welds, nc, iterations, dt, true, &mut ca, &mut ja);
+    // Every weld and contact update lowers kinetic energy or leaves it, except reapplying contacts'
+    // last impulses (warm starting). Iterations usually take that back, but not always: a ship
+    // coming apart on a rock gained up to 13 J a step, its contacts adding far more than its welds
+    // removed. If the solve gained more than the ledger allows, solve the step again with every
+    // contact starting from zero, which can't gain energy.
     let gained = ca.ke + ja.ke;
     let mut retried = 0.0;
     if gained > tol_energy + 1e-5 * ke0 && any_warm {
@@ -654,7 +697,7 @@ pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: 
         solve_pass(b, c, pts, welds, nc, iterations, dt, false, &mut ca, &mut ja);
     }
 
-    // finishJoints' numbers: the impulse, and whether the solver held it at a limit with its demand.
+    // Each weld's impulse, and whether the solver held it at a limit, with its demand.
     let j = &mut s.joints;
     let near = |x: f64, limit: f64| x >= limit * (1.0 - 1e-9);
     for (i, w) in welds.iter().enumerate() {
@@ -679,8 +722,9 @@ pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: 
 
 // ---------- Position correction ----------
 
-/// correctPositions: welds pulled back together (correctJoints) then contacts pushed apart, four
-/// times. Reads and writes the bodies' positions and angles; the welds' a, b, anchors and
+/// Position correction, without touching velocities (non-linear Gauss–Seidel): weld anchors pulled
+/// back together and the welded angle restored, then overlapping pairs pushed apart along their
+/// normals, four times. Reads and writes the bodies' positions and angles; the welds' a, b, anchors and
 /// reference angle; the contacts' bodies, normal and points' local anchors.
 #[no_mangle]
 pub extern "C" fn correct_positions(nb: usize, nj: usize, nc: usize, slop: f64) {

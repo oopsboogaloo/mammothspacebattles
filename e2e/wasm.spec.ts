@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// The constraint solve runs in WebAssembly by default (docs/perf/rust-trial.md), in the simulation
-// worker and on the page; `?wasm=0` uses the TypeScript one. The game must play the same either way.
+// The constraint solve and the gas loop run in WebAssembly (docs/perf/rust-trial.md), in the
+// simulation worker and on the page: the module must load and step in both.
 async function playOrbital(page: Page, query: string): Promise<string> {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -24,10 +24,22 @@ async function playOrbital(page: Page, query: string): Promise<string> {
   return log;
 }
 
-test("the game steps with the WebAssembly solver in the worker by default", async ({ page }) => {
-  expect(await playOrbital(page, "")).toContain("solver: WebAssembly");
+test("the game steps in the worker, with the WebAssembly module loaded there", async ({ page }) => {
+  expect(await playOrbital(page, "")).toContain("scenario: lander-orbital");
 });
 
-test("?wasm=0 steps with the TypeScript solver", async ({ page }) => {
-  expect(await playOrbital(page, "&wasm=0")).toContain("solver: TypeScript");
+test("?worker=0 steps on the page, with the module loaded there", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("./?game=lander&diag=1&worker=0");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-orbital").click();
+  const hud = page.getByTestId("lander-hud");
+  await expect(hud).toBeVisible();
+  const start = await hud.innerText();
+  await page.keyboard.down("e");
+  await expect(hud).not.toHaveText(start, { timeout: 10_000 });
+  await page.waitForTimeout(1500);
+  await page.keyboard.up("e");
+  expect(errors).toEqual([]);
 });

@@ -10,19 +10,16 @@
 
 import { bodyMass } from "./bodies.ts";
 import { collide, type Manifold, type Placed } from "./collide.ts";
-import { assemblyOf, assemblyRoots, topologyToken, correctJoints, emptyAccount, finishJoints, prepareJoints, resetJoints, solveJoints, type ConstraintAccount, type JointBody } from "./joints.ts";
+import { assemblyOf, assemblyRoots, topologyToken, emptyAccount, type ConstraintAccount, type JointBody, type JointImpulse } from "./joints.ts";
 import { add, cross, crossSV, dot, invRotate, length, rotate, scale, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
 import type { Profile } from "./profile.ts";
 import { massProps } from "./shapes.ts";
-import { correctPositionsWasm, solveVelocitiesWasm, wasmSolverOn } from "./solverWasm.ts";
+import { correctPositionsWasm, solveVelocitiesWasm } from "./solverWasm.ts";
 import type { Body, Contact, World } from "./world.ts";
 export type { JointBody };
 
-/** Normal approach speed below which restitution is ignored, so resting contacts don't jitter. m/s */
-const RESTITUTION_THRESHOLD = 0.1;
-const POSITION_ITERATIONS = 4;
-const BAUMGARTE = 0.2;
-const MAX_CORRECTION = 0.2; // m per iteration
+// The solver's constants (the approach speed below which restitution is ignored, the position
+// correction's iterations, share and limit) are with the solver, in wasm/solver/src/lib.rs.
 
 export interface RB {
   body: Body;
@@ -256,7 +253,7 @@ function assemblyGroups(world: World): Groups {
  * Velocity solve for one step: contacts and joints together (sequential impulses).
  * Bodies in the same assembly don't collide with each other.
  */
-export function solveContacts(world: World, rbs: RB[], profile: Profile): { account: ContactAccount; jointAccount: ConstraintAccount; capped: ReturnType<typeof finishJoints>; solved: SolvedContacts } {
+export function solveContacts(world: World, rbs: RB[], profile: Profile): { account: ContactAccount; jointAccount: ConstraintAccount; capped: Map<string, JointImpulse>; solved: SolvedContacts } {
   const dt = profile.timestep;
   const slop = profile.tol.penetration / 2;
   const sweep = rbs.map((r) => (r.invMass === 0 ? 0 : (length(r.body.velocity) + Math.abs(r.body.angularVelocity) * r.radius) * dt));
@@ -357,132 +354,10 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   const account: ContactAccount = emptyAccount();
   const jointAccount = emptyAccount();
   const byId = new Map<string, JointBody>(rbs.map((r) => [r.body.id, r]));
-  // The same solve in WebAssembly (solverWasm.ts), unless turned off (`?wasm=0`).
-  const wasm = wasmSolverOn();
-  const joints = wasm ? [] : prepareJoints(world, byId, dt);
-
-  // Applies impulse `lambda` along `dir` at a contact point: +B, −A. Tracks energy and external impulse exactly.
-  const relVel = (c: SolverContact, p: SolverPoint): Vec2 =>
-    sub(add(c.b.body.velocity, crossSV(c.b.body.angularVelocity, p.rB)), add(c.a.body.velocity, crossSV(c.a.body.angularVelocity, p.rA)));
-  const apply = (c: SolverContact, p: SolverPoint, dir: Vec2, lambda: number) => {
-    if (lambda === 0) return;
-    const before = dot(relVel(c, p), dir);
-    const P = scale(dir, lambda);
-    const A = c.a.body;
-    const B = c.b.body;
-    A.velocity = sub(A.velocity, scale(P, c.a.invMass));
-    A.angularVelocity -= c.a.invInertia * cross(p.rA, P);
-    B.velocity = add(B.velocity, scale(P, c.b.invMass));
-    B.angularVelocity += c.b.invInertia * cross(p.rB, P);
-    const after = dot(relVel(c, p), dir);
-    const dE = (lambda * (before + after)) / 2;
-    p.energyLost -= dE;
-    account.predictedKE += dE;
-    // Moment of each impulse about the origin, on the dynamic bodies it acts on.
-    if (c.a.invMass !== 0) account.angular -= cross(add(A.position, p.rA), P);
-    if (c.b.invMass !== 0) account.angular += cross(add(B.position, p.rB), P);
-    if (c.a.invMass === 0) account.externalImpulse = add(account.externalImpulse, P);
-    else if (c.b.invMass === 0) account.externalImpulse = sub(account.externalImpulse, P);
-  };
-
-  const solve = (warm: boolean) => {
-    // Warm start contacts from the previous step's impulses (welds start from zero: see prepareJoints).
-    if (warm) {
-      for (const c of contacts) {
-        const t = { x: c.normal.y, y: -c.normal.x };
-        for (const p of c.points) {
-          apply(c, p, c.normal, p.normalImpulse);
-          apply(c, p, t, p.tangentImpulse);
-        }
-      }
-    }
-
-    for (let it = 0; it < profile.solverIterations; it++) {
-      solveJoints(joints, jointAccount);
-      for (const c of contacts) {
-        const n = c.normal;
-        const t = { x: n.y, y: -n.x };
-        for (const p of c.points) {
-          // Friction, limited by the current normal impulse (Coulomb).
-          const vt = dot(relVel(c, p), t);
-          const maxF = c.friction * p.normalImpulse;
-          const newT = Math.max(-maxF, Math.min(maxF, p.tangentImpulse - vt * p.tangentMass));
-          apply(c, p, t, newT - p.tangentImpulse);
-          p.tangentImpulse = newT;
-        }
-        for (const p of c.points) {
-          // Non-penetration. A positive separation lets the bodies close exactly that gap this step (speculative contact).
-          const vn = dot(relVel(c, p), n);
-          const bias = p.separation > 0 ? p.separation / dt : 0;
-          const newN = Math.max(0, p.normalImpulse - (vn + bias) * p.normalMass);
-          apply(c, p, n, newN - p.normalImpulse);
-          p.normalImpulse = newN;
-          p.maxNormalImpulse = Math.max(p.maxNormalImpulse, newN);
-        }
-      }
-    }
-
-    // Restitution: contacts that engaged this step leave at −e × their approach speed.
-    // This also runs for e = 0, so a speculative impact finishes within one step instead of
-    // carrying leftover approach speed into the next step (where the normal has rotated).
-    for (const c of contacts) {
-      for (const p of c.points) {
-        if (p.vn0 > -RESTITUTION_THRESHOLD || p.maxNormalImpulse === 0) continue;
-        const vn = dot(relVel(c, p), c.normal);
-        let newN = Math.max(0, p.normalImpulse - (vn + c.restitution * p.vn0) * p.normalMass);
-        // Newton's restitution with friction can add energy in off-centre impacts (Kane's paradox).
-        // Cap the extra impulse so this point never returns more energy than it has absorbed this step:
-        // the work of impulse λ is λ·vn + λ²/(2·normalMass), which must stay ≤ energyLost.
-        const extra = newN - p.normalImpulse;
-        if (extra > 0 && p.normalMass > 0) {
-          const L0 = Math.max(0, p.energyLost);
-          const limit = p.normalMass * (-vn + Math.sqrt(vn * vn + (2 * L0) / p.normalMass));
-          if (extra > limit) newN = p.normalImpulse + Math.max(0, limit);
-        }
-        apply(c, p, c.normal, newN - p.normalImpulse);
-        p.normalImpulse = newN;
-      }
-    }
-  };
-  let wasmCapped: ReturnType<typeof finishJoints> | undefined;
-  if (wasm) wasmCapped = solveVelocitiesWasm(world, rbs, contacts, byId, dt, profile.solverIterations, profile.tol.energy, account, jointAccount);
-  else solveVelocities();
-
-  /** The TypeScript velocity solve, the reference the WebAssembly one matches bit for bit. */
-  function solveVelocities() {
-    // Keep what the solve starts from, in case it has to run again.
-    const v0 = rbs.map((r) => ({ v: r.body.velocity, w: r.body.angularVelocity }));
-    const ke0 = rbs.reduce((e, r) => (r.invMass === 0 ? e : e + 0.5 * r.mass * (r.body.velocity.x ** 2 + r.body.velocity.y ** 2) + 0.5 * r.inertia * r.body.angularVelocity ** 2), 0);
-    const warmImpulses = contacts.map((c) => c.points.map((p) => ({ n: p.normalImpulse, t: p.tangentImpulse })));
-    solve(true);
-    // Every weld and contact update lowers kinetic energy or leaves it, except reapplying contacts' last
-    // impulses (warm starting). Iterations usually take that back, but not always: a ship coming apart
-    // on a rock gained up to 13 J a step, its contacts adding far more than its welds removed. If the
-    // solve gained more than the ledger allows (finishLedger), solve the step again with every contact
-    // starting from zero, which can't gain energy.
-    const gained = account.predictedKE + jointAccount.predictedKE;
-    if (gained > profile.tol.energy + 1e-5 * ke0 && warmImpulses.some((ps) => ps.some((q) => q.n !== 0 || q.t !== 0))) {
-      rbs.forEach((r, i) => {
-        r.body.velocity = v0[i].v;
-        r.body.angularVelocity = v0[i].w;
-      });
-      for (const c of contacts)
-        for (const p of c.points) {
-          p.normalImpulse = 0;
-          p.tangentImpulse = 0;
-          p.maxNormalImpulse = 0;
-          p.energyLost = 0;
-        }
-      for (const acc of [account, jointAccount]) {
-        acc.externalImpulse = { x: 0, y: 0 };
-        acc.angular = 0;
-        acc.predictedKE = 0;
-        acc.involved.clear();
-      }
-      resetJoints(joints);
-      solve(false);
-    }
-  }
+  // The velocity solve (welds and contacts together: warm start, iterations, restitution, and the
+  // redo from zero if warm starting gained energy) is in the WebAssembly module (solverWasm.ts,
+  // wasm/solver/src/lib.rs).
+  const capped = solveVelocitiesWasm(world, rbs, contacts, byId, dt, profile.solverIterations, profile.tol.energy, account, jointAccount);
 
   // Record contacts for warm starting, overlays and damage (COL-006).
   const records: Contact[] = [];
@@ -515,7 +390,6 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
     }
   }
   world.contacts = records;
-  const capped = wasmCapped ?? finishJoints(joints, jointAccount);
   return { account, jointAccount, capped, solved: { contacts, byId, rbs } };
 }
 
@@ -646,33 +520,5 @@ export function integratePositions(rbs: RB[], dt: number, world?: World): Map<st
 /** Pushes overlapping pairs apart along their normals without touching velocities (non-linear Gauss–Seidel). */
 export function correctPositions(world: World, solved: SolvedContacts, profile: Profile): void {
   const slop = profile.tol.penetration / 2;
-  const contacts = solved.contacts;
-  if (wasmSolverOn()) return correctPositionsWasm(world, solved.rbs, contacts, solved.byId, slop);
-  for (let it = 0; it < POSITION_ITERATIONS; it++) {
-    correctJoints(world, solved.byId);
-    for (const c of contacts) {
-      const A = c.a.body;
-      const B = c.b.body;
-      for (const p of c.points) {
-        const qA = sinCos(A.angle);
-        const qB = sinCos(B.angle);
-        const pA = add(A.position, rotate(qA, p.localA));
-        const pB = add(B.position, rotate(qB, p.localB));
-        const sep = dot(sub(pB, pA), c.normal);
-        const C = Math.max(-MAX_CORRECTION, Math.min(0, BAUMGARTE * (sep + slop)));
-        if (C >= 0) continue;
-        const rA = sub(pA, A.position);
-        const rB = sub(pB, B.position);
-        const rnA = cross(rA, c.normal);
-        const rnB = cross(rB, c.normal);
-        const K = c.a.invMass + c.b.invMass + c.a.invInertia * rnA * rnA + c.b.invInertia * rnB * rnB;
-        if (K <= 0) continue;
-        const P = scale(c.normal, -C / K);
-        A.position = sub(A.position, scale(P, c.a.invMass));
-        A.angle -= c.a.invInertia * cross(rA, P);
-        B.position = add(B.position, scale(P, c.b.invMass));
-        B.angle += c.b.invInertia * cross(rB, P);
-      }
-    }
-  }
+  correctPositionsWasm(world, solved.rbs, solved.contacts, solved.byId, slop);
 }

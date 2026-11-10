@@ -1,5 +1,10 @@
 # The Rust trial: the constraint solve, then the gas loop, in WebAssembly (10 November 2026)
 
+**Where it stands** (after the same day's work, below): the constraint solve and the gas step's
+substep loop are in Rust, and their TypeScript copies are deleted ("One copy", near the end). The
+sections before that are the trial as it ran, when `?wasm=0` and the TypeScript copies still
+existed.
+
 **Question:** would moving the simulation core from TypeScript to Rust compiled to WebAssembly pay?
 The earlier test (spec §10, "What was tried") ported only the gas neighbour search to C and found
 1.25–1.45×, too little for a second copy of the gas. Since then the main problem has become the
@@ -239,6 +244,42 @@ So on Orbital the freezes are gone with the gas loop's typed arrays, which point
 storage is outside the heap, where §23's measure could not see) as what drove the collections.
 Not yet checked on the iPad: Emergency, which froze most, and the other levels.
 
+## One copy: the TypeScript solver and gas loop removed (10 November 2026)
+
+With the iPad result in, nothing needed the TypeScript copies any more, and two copies of the same
+physics that must match bit for bit are the dearest state to keep. So they are gone:
+
+- **Deleted:** the TypeScript velocity solve, weld solve and position correction (physics.ts,
+  joints.ts) and `gasCoreTs` (gas.ts): about 1,300 lines. Their explanations (why welds start each
+  step from zero, the restitution cap, the redo when warm starting gains energy, the gas loop's
+  constants) moved into the Rust, which is now the only place they are.
+- **No switch:** `?wasm=0`, `setWasmSolver` and the diagnostics log's `solver:` line are gone. The
+  core loads the module on first use and cannot step without it; Node, the page and the worker all
+  run the same Rust. Every browser the game supports has WebAssembly.
+- **Same results:** the same world hash every step as before the removal in all 46 scenarios with
+  engines pulsing (600 steps).
+- **How to check a change now:** `node scripts/hash-compare.ts --against <another checkout> --thrust
+  scenarios/*.json` steps both checkouts' cores and compares the hash every step (`--time` for
+  speed). It replaces `wasm-compare.ts`: the reference is the commit before, not a second copy.
+- **Changing the Rust:** keep the order of every operation (the results must not change by a bit
+  unless the physics is meant to change), run `node scripts/build-wasm.ts`, commit the generated
+  `src/core/wasm/solver.wasm.ts`, and compare hashes against the commit before.
+
+**The line between the two languages**, as it is and as it is meant to go:
+
+| In Rust (the numeric core) | In TypeScript |
+|---|---|
+| The velocity solve: welds and contacts | Finding and building contacts, the broad phase |
+| Position correction | Weld loads and breaking, damage |
+| The gas step's substep loop | Gas clustering, walls, free flight, ignition, the step's finish |
+| | Wisps, dust, the ledger, injectors and vessels |
+| | The game: lander rules, the judge, pilots, scenarios |
+
+The rules and the game stay in TypeScript, where they change often and are quick to edit. More of
+the numeric core moves only where a profile says it pays: the gas part's clustering and walls first
+(a third of the gas part in dense gas), then the contact pipeline round the solver. Each such move
+is checked with `hash-compare.ts` against the commit before it.
+
 ## Next
 
 1. **Emergency on the iPad** (`?game=lander&diag=1`), 5 minutes: the same check where it froze most.
@@ -256,5 +297,5 @@ done and nothing needs comparing against it.
 
 After the iPad test the same day: the gas loop moved too (above), for speed as much as for the
 freezes: every part that runs 1.5–2× faster leaves room to put more into the game. The TypeScript
-solver and gas loop stay for now as the reference for the next ports. What comes next is under
-"Next" above, not the candidates listed here.
+solver and gas loop stayed as the reference until the iPad result was in, and were then removed
+("One copy" above). What comes next is under "Next" above, not the candidates listed here.

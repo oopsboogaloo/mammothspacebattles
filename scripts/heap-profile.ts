@@ -1,11 +1,10 @@
-// The Rust trial: which functions allocate, by V8's sampling heap profiler (counting what is collected too).
-//   node scripts/wasm-heap.ts scenario.json ts|wasm [steps]
+// Which functions allocate, by V8's sampling heap profiler (counting what is collected too).
+//   node scripts/heap-profile.ts scenario.json [steps]
 import { Session } from "node:inspector/promises";
 import { readFileSync } from "node:fs";
-import { getProfile, initialWorld, parseScenario, setWasmSolver, stepInPlace, timelineByStep } from "../src/core/index.ts";
+import { getProfile, initialWorld, parseScenario, stepInPlace, timelineByStep } from "../src/core/index.ts";
 
-const [file, mode, stepsArg] = process.argv.slice(2);
-setWasmSolver(mode === "wasm");
+const [file, stepsArg] = process.argv.slice(2);
 const scn = parseScenario(JSON.parse(readFileSync(file, "utf8")));
 const profile = getProfile(scn.profile);
 const byStep = timelineByStep(scn);
