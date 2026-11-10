@@ -428,6 +428,8 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **FLT-012** `[M · M4b · S]` A world may wrap round at its bounds. A free assembly whose centre of mass leaves them shall come back at the opposite side whole, with the gas near it, and the ledger shall record what the move changes under `boundary`. Gravity acts from a source's nearest copy. The view shall draw the copies it overlaps, and the seam faintly, so flying across shows no edge.
 - **FLT-013** `[M · M4b · S]` The flight-test scenario (RS-18, **FT**) shall fly the LAND ship, with the same weight and tank and an economy of 20, among drifting, spinning asteroids with gravity in a wrapped arena. Nothing ends the run; collisions are ordinary contacts, and welds break only past their limits.
 - **FLT-014** `[S · M5 · S]` A body carrying gravity may also feel it (`gravity.feels`): it is then pulled by every other source as any free body is, but never by a source in its own welded assembly, so two rocks can orbit each other. Without it, sources feel no gravity (FLT-011).
+- **FLT-015** `[M · M9 · P]` In a wrapped world, bodies shall collide across the edges: a contact uses the nearest copy of each body, so a pair meeting across an edge (or a corner) moves exactly as the same pair would away from the edges, and the ledger stays exact. A world that doesn't wrap is unchanged. (Mammoth Asteroids; it replaces Lander's duplicated terrain past its edges.)
+- **FLT-016** `[M · M9 · S]` In a wrapped world, a blast's reach and everything an AI pilot measures (what it sees, what it aims at, the gravity it predicts, what it avoids) shall use the nearest copy. Gas and tractor beams don't yet.
 - **FLT-009** `[M · M4b · E]` While a challenge runs, the sandbox shall show height, vertical and sideways speed, tilt and propellant; then the verdict with its reason and score, and a way to try again. This shall work by touch too.
 
 *Model as built (M4b).*
@@ -538,6 +540,8 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **AST-006** `[M · M7 · U]` A generated asteroid may hold valuable mineral pieces: `gold` of its pieces, chosen at random from its seed, are gold. They are denser than the rock and much tougher, and they are drawn gold once they can be seen.
 - **AST-007** `[M · M7 · U]` A generated asteroid may hold `compounds` larger fragments: a few neighbouring pieces joined by hidden seams much stronger than its bonds, so they hold and are drawn as one piece. Once one has taken enough damage, its seams shall show and take ordinary bond limits, so it can be broken up further; a gold piece inside it shows then. So shall a larger fragment one of whose hidden seams breaks.
 - **AST-008** `[M · M8 · S]` Mining by railgun, from the physics alone: in the Gunship 3 scenarios a rubble asteroid's first explosive hit shall damage it round the hit without destroying a piece, a few more shall knock pieces off and split it, and by about the eighth it shall be in several chunks, most of its pieces still there to mine. *Tuned November 2026 by shooting asteroids of four shapes eight times each (1 kg shells at 96 m/s, 0.3 kg charge, 2 m radius) while varying the rock and the bonds:* rock toughness 200 J let each hit destroy two to seven pieces (vaporised, nothing to mine); bond strength made no difference while pieces were that weak (their bonds broke by damage, not load). Tough rock (threshold 100 J, toughness 20,000 J) with weak bonds (3,500 N/m) does it: pieces survive hits, and the blast's push breaks the bonds. A side effect: a ship's exhaust blowing on a rock from close by can now crack a bond (the AI patrol cracks a few in a minute). Measured: hit 1 damages 3–6 pieces and destroys none (on two of four shapes it also knocks one or two edge pieces off); the rock splits by hit 3–4; by hit 8 it is in 4–10 chunks, having lost 1–4 of its 12 pieces.
+- **AST-009** `[M · M9 · U]` A generated asteroid may give every piece gravity in proportion to its mass (`gravity: {G, core}`: mu = G × the piece's mass, felt by other rocks as FLT-014), so a rock's pull follows its pieces as it breaks. (Mammoth Asteroids.)
+- **AST-010** `[M · M9 · U]` A generated asteroid's gold may be indestructible (`goldIndestructible`): its pieces carry no material, so nothing damages or removes them, while their welds still break.
 
 *Model as built so far (M7, first look: AST-001…003).*
 - **Generator (AST-002).** `generateAsteroid` cuts a lumpy convex outline (11 points at 0.75–1.1 × the radius) into the requested number of convex pieces. The pieces are Voronoi cells around seeded points, relaxed twice towards their centroids so they come out of similar size. Each piece is a body of mass density × area. Neighbours are welded at the middle of their shared edge, with the weld's axis across the border. Limits: tension and shear `bond × edge length`, compression 4×, torque `bond × length² / 4`. The same seed gives the same asteroid. A scenario declares one in `world.asteroids` ({id, seed, pieces, radius, density, bond, material, position, velocity, angle, angularVelocity}); `material` is given to every piece, and the asteroid scenarios use `rock`, so sliders can set pieces and bond strength. Mineral composition (the rest of AST-001) is not modelled yet.
@@ -670,6 +674,8 @@ Enemy and neutral ships flown by the computer. For now they fly the gunship (Gun
   - a cautious ship holds fire until fired on, then returns fire;
   - an evader keeps its distance from a pursuing ship;
   - a mad ship changes mode every 60 s.
+
+- **AIP-020** `[M · M9 · S]` A pilot may be in **clearing** mode (Mammoth Asteroids' demo): it collects visible gold within reach by flying into it slowly, otherwise shoots the rock pieces welded to the nearest gold to free it, otherwise the nearest rock, always avoiding collisions, through its own channels only.
 
 *Model as built (phase 1: foundations; `src/core/pilot.ts`).*
 - **Where it lives.** A `pilot` component on one body of a ship (for now: a computer built into it), flying that body's whole assembly. It runs at the start of each step, after the step's commands, every `interval` steps (default 8: 30 decisions a second). It sets only its own channels, so a player's key on the same channel is overridden. Its state (goal, what it has learned, what it last commanded) lives in the world, so saves, replays and branches carry it.
@@ -919,7 +925,7 @@ Logged November 2026. The work builds towards a few playable mini games, each a 
 | Step | What it is | State, and what it needs |
 |---|---|---|
 | **Mini game 1: Lander** | Land a ship on a pad under gravity (FLT-005). | Done (LAND). |
-| **Mini game 2: Asteroids** | Clear waves of asteroids. | Getting there: breakable rubble asteroids with gold and larger fragments (M7, GS-R, GS-X). Needs waves (a new wave once the field is cleared), scoring, and losing (the ship wrecked). |
+| **Mini game 2: Asteroids** | Clear waves of asteroids. | In progress (M9): **Mammoth Asteroids**, `docs/games/mammoth-asteroids.md` (spec) and `mammoth-asteroids-design.md` (design and plan). |
 | **Mini game 3: Combat duel** | A duel with an AI ship among the asteroids. | First version built (AI-3, §9.11), on AI pilots phases 1–3 (§9.10). |
 | **Main game MVP** | A small economy with a tech and crafting tree; the home base (§9.8c); some kind of sector selection; mining in each sector, with combat threats in the more dangerous sectors. | Needs the rest: Mining and Mad pilots, sectors with exits (ships come and go), spending what is delivered (recipes, buildings, ship upgrades), and the cockpit with its mammoth pilot (§9.9). |
 
@@ -941,6 +947,7 @@ Each milestone ends with: all its `M` requirements passing their stated verifica
 | **M6 Weapons** | Gas-driven cannon, shells, fuzes, explosions | RS-12, RS-13 pass. |
 | **M7 Asteroids** | Aggregate asteroid generator and fracture | RS-14 passes. |
 | **M8 AI pilots** | Pilots that fly any ship through its controls: calibration, thrust allocation, flying, aiming, firing, tractor; skills; modes Ignoring, Evading, Mining, Cautious, Hunting, Mad (§9.10) | Every AIP scenario test passes. A Hunting Gunship 2 fights the player in the sandbox. |
+| **M9 Mammoth Asteroids** | Collisions across wrap edges, wrap-aware blasts and AI, rocks whose every piece pulls, indestructible gold, the clearing pilot, and the game (`docs/games/mammoth-asteroids.md`) | FLT-015, FLT-016, AST-009, AST-010, AIP-020 tests pass; the game's MAS tests pass; review `docs/reviews/M9.md`. |
 
 ## 13. Deferred: Game Layer
 

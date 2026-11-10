@@ -1,0 +1,316 @@
+# Mammoth Asteroids: game spec
+
+An Asteroids mini game built on the Mammoth Space Battles physics (mini game 2 of the roadmap,
+`docs/spec.md` §12.1). You fly the LAND twin-engine ship, now with a railgun on its nose, in a
+wrap-around arena of drifting rubble asteroids. You break the rocks with the railgun and collect
+their gold by flying into it. The rocks pull each other and you with gentle gravity. They break
+along their welds and chip each other when they collide. Your ship takes damage the same way
+Lander's does.
+
+Status: agreed 10 November 2026, from Chloe's brief and three rounds of questions (§10). The
+requirement IDs (MAS-…) are this game's own. The engine changes the game needs are requirements in
+`docs/spec.md` (§8 of this doc). Design and plan: `mammoth-asteroids-design.md`.
+
+## 1. Decisions
+
+| Question | Decision |
+|---|---|
+| Ship | The LAND ship from Lander as it is for now, plus a railgun on the nose firing forward. Two engines, Q and E: both together push forward; one alone turns. |
+| Arena | One fixed screen: the whole arena is the view, as in the classic game. It wraps exactly at the screen's edges, with no hidden margin. Something leaving one edge shows at the other at once. |
+| Arena size | 160 m high; its width follows the screen's shape (about 213 m on an iPad in landscape, 284 m at 16:9), within 1.2–2.2 × the height. |
+| Levels | Level N has N asteroids, each holding 2 or 3 gold pieces. A level is cleared when every gold piece has been collected. |
+| Gold | Can't be destroyed. Collected by touching it with the ship, once it can be seen: any gold not hidden inside an unrevealed larger fragment, whether or not it is still in a rock. |
+| Gravity | Every rock piece pulls by its own mass. Each rock's pull is about 1 m/s² at its surface (a quarter of the ship's thrust). Rocks pull each other; the ship pulls nothing. In the wrapped arena each rock pulls from its nearest copy (as now). |
+| Rocks | The mining tuning (tough pieces, weaker bonds), retuned for the light slug. Rocks chip and crack each other when they collide. |
+| Railgun | A light solid slug (about 0.1 kg at 200 m/s, about 4 shots a second). Each shot kicks the ship back about 0.7 m/s. |
+| Life lost | The hull destroyed, or no working engine still welded to it (the duel's rule). Damage short of that is flown with. |
+| Lives | 3. The wreck stays as debris for the rest of the level. The next ship beams in at a safe spot after about 2.5 s, protected from damage for 2 s. |
+| Supplies | A full tank and magazine with every new ship and at every new level. |
+| Repair | At a level clear, the surviving ship is swapped for a fresh one where it is. |
+| Gunship | From level 3: the AI Gunship 3 beams in at 20 s, then once a minute. Gunships pile up if you don't kill them. They get more skilled with each level. One hit damages you; it doesn't kill you outright. |
+| Speed | Lander's pace (1× = half real time), to be tuned after play. |
+| Name | **Mammoth Asteroids**, on its own page, `asteroids.html`. |
+| Look | Black, simple lines. Buttons: black rectangles with a white border and white sans-serif text (this game only; Lander keeps its own look). |
+
+## 2. Flow
+
+1. **Title screen.**
+   - Behind it, an AI-flown LAND ship plays the game for real: shooting rocks, chasing gold and
+     dodging, level after level.
+   - Over it, in white: **MAMMOTH ASTEROIDS**, and buttons **Play**, **How to play**,
+     **The physics** and **High scores**.
+2. **Play.** Level 1 starts: one asteroid, the ship at the centre.
+3. **Level clear.** Once the last gold is collected: a "LEVEL N CLEAR" banner with the bonus. The
+   level's rocks, debris and gunships beam out, the ship is repaired, and level N + 1's rocks
+   beam in, away from the ship.
+4. **Life lost.** The wreck stays where it is. After about 2.5 s the next ship beams in.
+5. **Game over** when the third ship is lost. Shows the score and the level reached.
+6. **New high score.** If it makes the top 10, enter 3 initials, then see the table with the new
+   entry highlighted.
+7. **Again or title.**
+
+The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
+
+## 3. Rules
+
+### The arena
+
+- **Fixed and whole.** The camera never moves. The arena fills the screen (letterboxed only if the
+  screen is very tall or very wide).
+- **Perfect wrap** in both directions. What crosses an edge is already showing at the opposite
+  edge. Collisions, gravity, blasts and the gunship's aim all work across the edges.
+
+### Asteroids
+
+- **Large rocks** about 12 m across their radius, of about 20 pieces welded along their shared
+  edges, with one or two larger fragments (AST-007). They drift at 2–6 m/s, turning slowly.
+- **Medium and small rocks** are what comes off when they break: chunks of welded pieces, and
+  single pieces.
+- **Breaking** is the weld model: hits and collisions load and damage the welds, and those past
+  their limits break (AST-003). Pieces take damage from hits, and destroyed pieces leave as dust
+  (DMG-007).
+- **Gravity:** every piece pulls with its own mass. A large rock pulls about 1 m/s² at its surface.
+  A broken-off chunk pulls by its own mass, so loose pieces fall back onto big rocks and chunks can
+  re-collect. The ship is pulled, too: left idle it drifts in. Parts of one rock don't pull each
+  other.
+- **Gold:** each rock holds 2 or 3 gold pieces, denser than rock, drawn gold. They can't be
+  damaged or destroyed, but their welds to the rock can break, so they come free.
+
+### Gold and clearing a level
+
+- **Collect** a gold piece by touching it with any part of the ship. Gold hidden inside an
+  unrevealed larger fragment can't be collected until its seams show.
+- **A collected piece** leaves the arena, and its welds to any rock go with it.
+- **The level is cleared** when every gold piece of the level has been collected. You don't need
+  to destroy the rocks, but you need to break most of them open, and clearing many makes the arena
+  safer.
+
+### The ship
+
+- **The LAND ship** with Lander's materials and bending welds (DMG-008): a grazing hit on a small
+  rock may survive, with damage. Damage can affect flight: a damaged engine pushes less, a bent or
+  lost leg shifts the balance, and a damaged tank leaks (and its leak pushes).
+- **The railgun** sits on the nose and fires forward. Each shot pushes the ship back.
+- **Lost** when the hull is destroyed or no working engine is still welded to it.
+- **The wreck stays** as ordinary debris until the level ends.
+- **The next ship** beams in about 2.5 s after the loss. It appears at the spot near the centre
+  that stays clearest of rocks for the next few seconds, at rest, pointing up. For 2 s it takes no
+  damage, shown by flashing. Its welds can still break under a big enough load.
+- **Supplies:** every new ship, and every ship at a level start, has a full tank (fuel economy
+  cheat, FLT-010) and a full magazine (about 60 slugs).
+
+### Gunships
+
+- **From level 3:** a Gunship 3 beams in 20 s into the level, then another every minute after.
+  They pile up if not killed.
+- **AI:** hunting you (AIP, Hunting mode), aiming across the edges. Its combat skill rises with
+  each level.
+- **Shells:** sized so one hit damages the LAND ship without usually destroying it. Measured and
+  tuned in tests.
+- **Killed** like any ship: its hull destroyed or no working engine left. Its wreck stays as
+  debris.
+- **At a level clear** the remaining gunships beam out with the rocks. A gunship doesn't need
+  killing to clear a level.
+- **Beaming in** shows a brief ring at the spot first, so you have a moment's warning.
+
+### Scoring
+
+| What | Points |
+|---|---|
+| A gold piece collected | 500 |
+| A rock weld broken by your slugs | 10 |
+| A gunship destroyed | 1,000 |
+| Level N cleared | 1,000 × N, plus 10 for each second under 2 minutes |
+
+"By your slugs": the weld broke within a quarter of a second of one of your slugs touching that
+rock.
+
+**High scores:** top 10 on this device, with 3 initials, the score, the level reached and the
+date.
+
+## 4. Controls, HUD and view
+
+### Controls
+
+| | Keyboard | Touch |
+|---|---|---|
+| Left engine | Q, ←, Left Shift | bottom-left button |
+| Right engine | E, →, Right Shift | bottom-right button |
+| Both engines | both keys, or ↑ | both buttons |
+| Fire | Space or W (hold to repeat) | a fire button, bottom centre |
+| Pause | P or Esc | pause button |
+
+As in Lander, the browser must not zoom the game (LND-030's rules).
+
+### HUD
+
+Along the top, in white sans-serif, kept small so the arena stays clear:
+
+- score, level, and lives (as small ship outlines);
+- gold left in this level ("GOLD 3 / 5");
+- fuel bar, slugs left, and damage (the worst-hit part, as in Lander).
+
+### View
+
+- **The whole arena** at a fixed scale. The ship is about 15 px across on a laptop.
+- **Copies across the edges** are drawn the same as the originals (gold, wreck colours, flashing
+  included), so an object half over an edge reads as one object.
+- **A faint starfield** behind (still, since the view never moves).
+
+## 5. How to play and The physics
+
+From the title screen, each with a Back button, in the game's black-and-white style:
+
+- **How to play:** the goal (collect all the gold), the controls table, the rules for gold,
+  lives, damage, gunships and scoring, and a few tips (shoot near gold to free it, mind the recoil,
+  rocks pull you in).
+- **The physics:** a short account of what is simulated: rigid welded parts, thrust from burning
+  gas, the railgun's recoil, welds that bend and break, material damage, rocks breaking along their
+  welds, every piece's gravity, the perfect wrap, and the conservation ledger. It says plainly
+  where the game cheats: the fuel economy, gold that can't be destroyed, and the arena's two-axis
+  wrap.
+
+## 6. Look and sound
+
+- **Black space, simple lines.** Rocks drawn as their pieces (dark grey, light edges), with
+  cracks showing as bonds break. Gold is bright gold. The ship and gunships use the normal body
+  drawing. Exhaust, dust and wisps stay as they are.
+- **Beam in and out:** a brief expanding white ring.
+- **Sound:** later.
+
+## 7. Requirements
+
+Priority: **M** must, **S** should.
+
+**Game shell**
+- **MAS-001** `[M]` A title screen with the game's name in white, over a live AI-played game, and
+  buttons Play, How to play, The physics and High scores.
+- **MAS-002** `[M]` A game screen with only the arena, the HUD, the touch buttons and pause.
+- **MAS-003** `[M]` Play runs at the fixed game pace (1× = half real time), with no speed
+  controls.
+- **MAS-004** `[M]` A pause menu with Resume and Quit to title. P and Esc pause.
+- **MAS-005** `[M]` A game-over screen, then initials if the score makes the top 10, then the
+  table. High scores: top 10 with 3 initials, score, level and date, stored on the device and kept
+  through a reload.
+- **MAS-006** `[M]` Buttons are black rectangles with a white border and white sans-serif text.
+- **MAS-007** `[M]` How to play and The physics pages, each with a Back button (§5).
+- **MAS-008** `[M]` Its own page, `asteroids.html`, built and deployed with the site, with nothing
+  leading back to the sandbox (as LND-060).
+
+**Arena**
+- **MAS-010** `[M]` The arena is the whole view, fixed. Its height is 160 m, and its width follows
+  the screen's shape, within 1.2–2.2 × the height.
+- **MAS-011** `[M]` The arena wraps in both directions at the view's edges, with no hidden margin.
+  An object over an edge shows on both sides at once, drawn the same on both.
+- **MAS-012** `[M]` Collisions, gravity, blasts and the AI's sight and aim work across the edges
+  (FLT-015, FLT-016).
+
+**Asteroids and gold**
+- **MAS-020** `[M]` Level N starts with N large rocks, placed away from the ship and each other,
+  drifting and turning, each with 2 or 3 gold pieces. The same level from the same seed is laid
+  out the same.
+- **MAS-021** `[M]` Rocks break along their welds and take damage from hits and collisions,
+  through the ordinary weld and damage rules.
+- **MAS-022** `[M]` Every rock piece pulls by its mass, about 1 m/s² at a large rock's surface.
+  Rocks pull each other and not themselves (AST-009).
+- **MAS-023** `[M]` Gold can't be damaged or destroyed (AST-010).
+- **MAS-024** `[M]` The ship touching a gold piece not hidden in an unrevealed larger fragment
+  collects it: it leaves the arena, its welds go with it, and it scores 500. The ledger records
+  what leaves under `boundary`.
+- **MAS-025** `[M]` When every gold piece of the level has been collected, the level is cleared:
+  bonus, then the level's rocks, debris and gunships beam out, the ship is swapped for a fresh one
+  in place, and the next level beams in.
+
+**Ship and lives**
+- **MAS-030** `[M]` The ship is the LAND ship, with Lander's materials and bending welds, and a
+  railgun on its nose (a light solid slug, about 0.7 m/s of kick a shot).
+- **MAS-031** `[M]` The ship is lost when its hull is gone or no working engine is still welded to
+  it. 3 lives a game.
+- **MAS-032** `[M]` A lost ship's wreck stays until the level ends. The next ship beams in about
+  2.5 s later, at rest, at a clear spot, and takes no damage for 2 s.
+- **MAS-033** `[M]` Every new ship has a full tank and magazine.
+- **MAS-034** `[S]` The ship flashes while protected.
+
+**Gunships**
+- **MAS-040** `[M]` From level 3, a Gunship 3 with a Hunting AI beams in at 20 s and every 60 s
+  after, at a clear spot away from the player, after a brief ring warning.
+- **MAS-041** `[M]` Its combat skill rises with the level. Its shells damage the LAND ship without
+  usually destroying it in one hit.
+- **MAS-042** `[M]` A gunship destroyed (hull gone or no engine) scores 1,000. Its wreck stays
+  until the level ends.
+
+**Scoring and HUD**
+- **MAS-050** `[M]` Scoring as in §3.
+- **MAS-051** `[M]` The HUD shows score, level, lives, gold left, fuel, slugs and damage.
+- **MAS-052** `[M]` Touch: two thrust buttons and a fire button, working together (multi-touch).
+  Keyboard as in §4.
+
+**Demo**
+- **MAS-060** `[M]` The title screen's game is played by an AI pilot flying the LAND ship through
+  its controls: it shoots the nearest rock, chases the nearest visible gold, and avoids what is
+  about to hit it (AIP-020). When it clears a level, the next one starts; when it loses its last
+  ship, the demo starts again.
+
+**Game logic**
+- **MAS-070** `[M]` The game lives in the world, like Lander's, so a run and a replay agree
+  (DET-001).
+
+## 8. Engine changes (in `docs/spec.md`)
+
+Agreed with Chloe on 10 November 2026, because they change physics the sandbox and Lander share:
+
+- **FLT-015** Collisions across the wrap edge. Contacts use the nearest copy of each body, only
+  in wrapped worlds. Lander's duplicated terrain past its edges (`seam`) is removed in the same
+  change, and Lander's tests re-run.
+- **FLT-016** Blasts (WPN) and the AI pilot (sight, aim, the gravity it predicts, avoiding things)
+  measure from the nearest copy in wrapped worlds. Gas and the tractor beam don't yet.
+- **AST-009** A generated asteroid may give every piece gravity in proportion to its mass
+  (`gravity: {G, core}`), felt by the other rocks.
+- **AST-010** A generated asteroid's gold may be indestructible (`goldIndestructible`): its
+  pieces carry no material, so nothing damages or removes them (DMG-002).
+- **AIP-020** A new AI pilot mode, **clearing**: shoot the nearest rock, chase the nearest visible
+  gold, avoid collisions. A first step toward the planned Mining mode.
+
+Everything else exists already: the welded generator with gold and larger fragments (AST-001…007),
+the weld and damage rules, the railgun (WPN-008), the Gunship 3 and its Hunting pilot, spawning
+ships mid-game (SCN-010), the duel's "out of the fight" rule (DUEL-001), wrapping (FLT-012) and
+gravity (FLT-011, FLT-014).
+
+Anything more found during the build that would change shared physics, such as solver shortcuts
+for speed, goes back to Chloe before it is made.
+
+## 9. Milestones
+
+1. **Engine:** collisions across the edge, wrap-aware blasts and AI, per-piece gravity,
+   indestructible gold. Lander unchanged in play.
+2. **Playable:** the game logic, the ship with its railgun, levels, gold, lives, scoring, the
+   page, the HUD and touch.
+3. **Gunships** from level 3.
+4. **Title and pages:** the AI demo, How to play, The physics, high scores.
+5. **Tuning after play.**
+
+## 10. Answered (10 November 2026)
+
+| Question | Answer |
+|---|---|
+| Collisions across the edge | Fix in the shared solver, only for wrapped worlds; remove Lander's seam copies. |
+| Gravity of rocks that break | Every piece pulls by its mass. |
+| Gravity in a wrapped world | From each rock's nearest copy, as now (the pull flips at half the arena, where it is ~0.02 m/s²). |
+| Indestructible gold | Gold has no material (a generator option). |
+| What else must respect the wrap | Blasts and the AI; gas and the tractor later. |
+| View | The whole arena on one fixed screen, shaped like the screen. |
+| Railgun | A light solid slug, a small kick. |
+| Life lost | Hull gone or no working engine. |
+| Fuel and ammo | Refilled with each new ship and each level. |
+| Collecting gold | Any visible gold, by touch. |
+| Rocks per level | N rocks, 2–3 gold each. |
+| After a loss | The wreck stays; a safe spawn with 2 s of protection. |
+| Gunship | Gunship 3, AI, more skilled each level; they pile up. |
+| Speed | Lander's pace; tune after play. |
+| Scoring | Gold, rock welds, gunships, a clear bonus; top-10 table. |
+| Name and style | Mammoth Asteroids; black-and-white buttons in this game only. |
+| Demo | A new AI mode that clears rocks. |
+| Repair | Fresh ship each level. |
+| Controls | Q/E + Space; two thrust buttons and a fire button. |
+| Gravity strength | About 1 m/s² at a large rock's surface. |
+| Rock toughness | The mining tuning. |
