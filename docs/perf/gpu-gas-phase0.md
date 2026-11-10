@@ -854,6 +854,15 @@ wrapping.
 Step times are within noise. What is left is spread thin (no function over ~6%); on Orbital part of
 it is V8 boxing numbers inside `computeTotals`, not objects the code makes.
 
+## 24. The Rust trial: the constraint solve in WebAssembly (10 November 2026)
+
+The weld and contact solve, ported line for line to Rust and compiled to WebAssembly, now the default
+(`?wasm=0` for the TypeScript one):
+the same hashes in 23 scenarios and the whole suite, the step 1.5–2× faster where welds and contacts
+are the work (1.2–1.6× in WebKit), and a third to three fifths less garbage there, but almost no change
+on Easy and Emergency, whose garbage is mostly elsewhere. Details and the iPad test it sets up:
+[`rust-trial.md`](rust-trial.md).
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
