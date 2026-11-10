@@ -12,6 +12,8 @@
 
 use std::ptr::addr_of_mut;
 
+mod gas;
+
 // ---------- Buffer layouts (strides in f64s; src/core/solverWasm.ts mirrors these) ----------
 
 /// Per body: velocity, angular velocity, position, angle, inverse mass and inertia, the step's
