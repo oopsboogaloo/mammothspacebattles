@@ -38,9 +38,9 @@ for (let s = 0; s < steps; s++) {
   const t0 = clock();
   stepInPlace(world, byStep.get(s) ?? [], profile, { clock, out });
   const ms = clock() - t0;
-  rows.push({ ms, gasMs: out.gas ?? 0, parcels: world.gas.parcels.length, substeps: world.gas.substeps, phases: { ...out } });
+  rows.push({ ms, gasMs: out.gas ?? 0, parcels: world.gas.count, substeps: world.gas.substeps, phases: { ...out } });
   if (s >= 60 && s % 20 === 0)
-    clusterSamples.push(gasClusters(world.gas.parcels, wallBodies(world.bodies), world.joints, profile.timestep).map((c) => c.parcels.length).sort((a, b) => b - a));
+    clusterSamples.push(gasClusters(world.gas, wallBodies(world.bodies), world.joints, profile.timestep).map((c) => c.parcels.length).sort((a, b) => b - a));
 }
 const ranks = Math.max(...clusterSamples.map((c) => c.length));
 const clusters = {

@@ -29,10 +29,11 @@
 // the pairing instability (Dehnen & Aly 2012, MNRAS 425:1068).
 
 import { assemblyRoots } from "./joints.ts";
-import { cross, rotate, sinCos, type Vec2 } from "./math.ts";
+import { rotate, sinCos, type Vec2 } from "./math.ts";
 import { nextFloat, type RngState } from "./prng.ts";
 import { boundingRadiusOf, localVertices, massProps, type Shape } from "./shapes.ts";
 import { bodyMass, type Store } from "./bodies.ts";
+import { registerCanonicalForm } from "./canonical.ts";
 import { gasCoreWasm, gasParcelBuffers } from "./gasWasm.ts";
 
 /** Universal gas constant, J/(mol·K) (CODATA 2018, exact). */
@@ -120,6 +121,11 @@ export function parcelChemical(p: { mass: number; composition: Record<string, nu
   return (p.mass * compositionHeat(p.composition)) / scale;
 }
 
+/** Chemical energy parcel i of the gas still holds, J. */
+export function chemicalAt(gas: GasState, i: number, scale = 1): number {
+  return (gas.mass[i] * compositionHeat(gas.composition[i])) / scale;
+}
+
 /**
  * Burns what a parcel can of each reaction, completely (fast chemistry). Mass and momentum are
  * unchanged; the released chemical energy becomes thermal energy, so total energy is unchanged.
@@ -146,10 +152,27 @@ export function burn(p: Parcel, scale = 1): number {
   return released;
 }
 
-/** Reactions that a parcel's composition can still run. */
-export function canBurn(p: Parcel): Reaction | null {
-  for (const r of REACTIONS) if ((p.composition[r.fuel] ?? 0) > 0 && (p.composition[r.oxidiser] ?? 0) > 0) return r;
+/** Reactions that a composition can still run. */
+function canBurnComposition(c: Record<string, number>): Reaction | null {
+  for (const r of REACTIONS) if ((c[r.fuel] ?? 0) > 0 && (c[r.oxidiser] ?? 0) > 0) return r;
   return null;
+}
+
+/** Reactions that a parcel's composition can still run. */
+export function canBurn(p: { composition: Record<string, number> }): Reaction | null {
+  return canBurnComposition(p.composition);
+}
+
+/** `burn` for parcel i of the gas. */
+const burning = { mass: 0, composition: {} as Record<string, number>, thermal: 0 };
+function burnAt(gas: GasState, i: number, scale: number): number {
+  burning.mass = gas.mass[i];
+  burning.composition = gas.composition[i];
+  burning.thermal = gas.thermal[i];
+  const released = burn(burning as Parcel, scale);
+  gas.composition[i] = burning.composition;
+  gas.thermal[i] = burning.thermal;
+  return released;
 }
 
 /**
@@ -158,41 +181,43 @@ export function canBurn(p: Parcel): Reaction | null {
  */
 export function igniteAndBurn(gas: GasState): number {
   const scale = gas.scale ?? 1;
-  const ps = gas.parcels;
-  const reactive = ps.filter((p) => canBurn(p));
+  const n = gas.count;
+  const { x, y, radius, composition } = gas;
+  const reactive: number[] = [];
+  for (let i = 0; i < n; i++) if (canBurnComposition(composition[i])) reactive.push(i);
   if (!reactive.length) return 0;
   let tmin = Infinity;
   for (const r of REACTIONS) tmin = Math.min(tmin, r.ignition);
   // Hot parcels, bucketed by cell for the neighbour test.
   let cell = 0;
-  for (const p of reactive) cell = Math.max(cell, SMOOTHING * p.radius);
-  const hot = new Map<string, Parcel[]>();
-  for (const p of ps) {
-    if (temperatureOf(p, scale) < tmin) continue;
-    const key = `${Math.floor(p.position.x / cell)},${Math.floor(p.position.y / cell)}`;
+  for (const i of reactive) cell = Math.max(cell, SMOOTHING * radius[i]);
+  const hot = new Map<string, number[]>();
+  for (let i = 0; i < n; i++) {
+    if (temperatureAt(gas, i, scale) < tmin) continue;
+    const key = `${Math.floor(x[i] / cell)},${Math.floor(y[i] / cell)}`;
     const list = hot.get(key);
-    if (list) list.push(p);
-    else hot.set(key, [p]);
+    if (list) list.push(i);
+    else hot.set(key, [i]);
   }
   let burned = 0;
-  for (const p of reactive) {
-    const r = canBurn(p)!;
-    let lit = temperatureOf(p, scale) >= r.ignition;
-    const cx = Math.floor(p.position.x / cell);
-    const cy = Math.floor(p.position.y / cell);
-    const h = SMOOTHING * p.radius;
+  for (const i of reactive) {
+    const r = canBurnComposition(composition[i])!;
+    let lit = temperatureAt(gas, i, scale) >= r.ignition;
+    const cx = Math.floor(x[i] / cell);
+    const cy = Math.floor(y[i] / cell);
+    const h = SMOOTHING * radius[i];
     for (let dx = -1; dx <= 1 && !lit; dx++)
       for (let dy = -1; dy <= 1 && !lit; dy++)
         for (const q of hot.get(`${cx + dx},${cy + dy}`) ?? []) {
-          if (q === p) continue;
-          const ddx = q.position.x - p.position.x;
-          const ddy = q.position.y - p.position.y;
-          if (ddx * ddx + ddy * ddy < h * h && temperatureOf(q, scale) >= r.ignition) {
+          if (q === i) continue;
+          const ddx = x[q] - x[i];
+          const ddy = y[q] - y[i];
+          if (ddx * ddx + ddy * ddy < h * h && temperatureAt(gas, q, scale) >= r.ignition) {
             lit = true;
             break;
           }
         }
-    if (lit && burn(p, scale) > 0) burned++;
+    if (lit && burnAt(gas, i, scale) > 0) burned++;
   }
   return burned;
 }
@@ -223,15 +248,33 @@ export interface RemovedGas {
   energy: number;
 }
 
+/**
+ * The world's gas, held as arrays, one per field: parcel i is x[i], y[i], … for i in [0, count), in
+ * the order the parcels were made. The arrays may be longer than `count` (they grow by doubling);
+ * what is past it means nothing. A parcel as an object (`Parcel`) is how gas is made, shown and
+ * written (`addParcel`, `parcelAt`, `parcelsOf`); the step works on the arrays, with no object or
+ * vector made per parcel (docs/perf/rust-trial.md).
+ */
 export interface GasState {
-  parcels: Parcel[];
+  count: number;
+  x: Float64Array; // m
+  y: Float64Array;
+  vx: Float64Array; // m/s
+  vy: Float64Array;
+  mass: Float64Array; // kg
+  /** Thermal (internal) energy, J. */
+  thermal: Float64Array;
+  /** Size of the parcel, m. Its smoothing length is SMOOTHING × radius. */
+  radius: Float64Array;
+  id: Float64Array;
+  /** Seconds since the parcel was made; kept only in worlds with `bounds.depth` (NaN: not kept). */
+  age: Float64Array;
+  /** Chance it is still in the plane, 0–1; kept only in worlds with `bounds.depth` (NaN: not kept, GAS-009). */
+  keep: Float64Array;
+  /** Mass fraction per species; sums to 1. Never changed once a parcel holds it (a change is a new object). */
+  composition: Record<string, number>[];
   /** Parcels that flew free in the last step (profile.gasFreeFlight); 0 or absent otherwise. */
   free?: number;
-  /**
-   * The largest smoothing length of all the gas, when part of it flies free and is not in this
-   * state: the far field must not depend on which part is stepped. Only on that temporary state.
-   */
-  farReach?: number;
   nextId: number;
   /** Totals carried out of the world boundary so far (GAS-007). */
   removed: RemovedGas;
@@ -248,6 +291,114 @@ export interface GasState {
   /** Most parcels a second one engine's chamber releases (profile.gasParcelRate); absent: no limit. */
   parcelRate?: number;
 }
+
+const FIELDS = ["x", "y", "vx", "vy", "mass", "thermal", "radius", "id", "age", "keep"] as const;
+
+/** Makes room for n parcels. */
+export function gasReserve(gas: GasState, n: number): void {
+  if (gas.x.length >= n) return;
+  const cap = Math.max(2 * n, 64);
+  for (const f of FIELDS) {
+    const a = new Float64Array(cap);
+    a.set(gas[f].subarray(0, gas.count));
+    gas[f] = a;
+  }
+}
+
+/** Adds a parcel at the end. Its composition is held, not copied. */
+export function addParcel(gas: GasState, p: Parcel): void {
+  const i = gas.count;
+  gasReserve(gas, i + 1);
+  gas.x[i] = p.position.x;
+  gas.y[i] = p.position.y;
+  gas.vx[i] = p.velocity.x;
+  gas.vy[i] = p.velocity.y;
+  gas.mass[i] = p.mass;
+  gas.thermal[i] = p.thermal;
+  gas.radius[i] = p.radius;
+  gas.id[i] = p.id;
+  gas.age[i] = p.age ?? NaN;
+  gas.keep[i] = p.keep ?? NaN;
+  gas.composition[i] = p.composition;
+  gas.count = i + 1;
+}
+
+/** Parcel i as an object: a copy, so changing it changes nothing in the gas. */
+export function parcelAt(gas: GasState, i: number): Parcel {
+  const p: Parcel = {
+    id: gas.id[i],
+    mass: gas.mass[i],
+    composition: gas.composition[i],
+    position: { x: gas.x[i], y: gas.y[i] },
+    velocity: { x: gas.vx[i], y: gas.vy[i] },
+    thermal: gas.thermal[i],
+    radius: gas.radius[i],
+  };
+  if (!Number.isNaN(gas.age[i])) p.age = gas.age[i];
+  if (!Number.isNaN(gas.keep[i])) p.keep = gas.keep[i];
+  return p;
+}
+
+/** Every parcel as an object, in order (copies). */
+export function parcelsOf(gas: GasState): Parcel[] {
+  const out: Parcel[] = [];
+  for (let i = 0; i < gas.count; i++) out.push(parcelAt(gas, i));
+  return out;
+}
+
+/** Replaces the gas's parcels with these. */
+export function setParcels(gas: GasState, parcels: readonly Parcel[]): void {
+  gas.count = 0;
+  gas.composition.length = 0;
+  for (const p of parcels) addParcel(gas, p);
+}
+
+/** A gas of these parcels (for tests and tools that have parcels as objects). */
+export function gasOf(parcels: readonly Parcel[], scale = 1): GasState {
+  const gas = emptyGas(scale);
+  setParcels(gas, parcels);
+  return gas;
+}
+
+/**
+ * A gas written as a list of parcels (as a hash or canonical JSON writes it) back as the gas it
+ * stands for.
+ */
+export function gasFromWritten(written: Omit<GasState, (typeof FIELDS)[number] | "count" | "composition"> & { parcels: Parcel[] }): GasState {
+  const { parcels, ...rest } = written;
+  const gas: GasState = { ...emptyGas(rest.scale), ...rest };
+  setParcels(gas, parcels);
+  return gas;
+}
+
+/** Drops the parcels marked in `gone` (non-zero), keeping the rest in order. */
+export function dropParcels(gas: GasState, gone: ArrayLike<number>): void {
+  const n = gas.count;
+  let k = 0;
+  for (let i = 0; i < n; i++) {
+    if (gone[i]) continue;
+    if (k !== i) {
+      for (const f of FIELDS) gas[f][k] = gas[f][i];
+      gas.composition[k] = gas.composition[i];
+    }
+    k++;
+  }
+  gas.count = k;
+  gas.composition.length = k;
+}
+
+// A hash of the world must not depend on how its gas is stored: the gas is written as the list of
+// parcels it stands for, as it was when the world held that list.
+registerCanonicalForm((value) => {
+  const g = value as Partial<GasState>;
+  if (typeof g.count !== "number" || !ArrayBuffer.isView(g.x) || !Array.isArray(g.composition) || !ArrayBuffer.isView(g.keep)) return undefined;
+  const gas = g as GasState;
+  const rest: Record<string, unknown> = { ...gas };
+  for (const f of FIELDS) delete rest[f];
+  delete rest.count;
+  delete rest.composition;
+  return { ...rest, parcels: parcelsOf(gas) };
+});
 
 export interface GasFill {
   /** Rectangle to fill, world coordinates, m. */
@@ -274,7 +425,18 @@ export const SMOOTHING = 6;
 export function emptyGas(scale = 1): GasState {
   return {
     scale,
-    parcels: [],
+    count: 0,
+    x: new Float64Array(0),
+    y: new Float64Array(0),
+    vx: new Float64Array(0),
+    vy: new Float64Array(0),
+    mass: new Float64Array(0),
+    thermal: new Float64Array(0),
+    radius: new Float64Array(0),
+    id: new Float64Array(0),
+    age: new Float64Array(0),
+    keep: new Float64Array(0),
+    composition: [],
     nextId: 1,
     removed: {
       count: 0,
@@ -356,6 +518,11 @@ export function temperatureOf(p: Parcel, scale = 1): number {
   return (p.thermal * scale) / (p.mass * mixture(p.composition).cv);
 }
 
+/** Temperature of parcel i of the gas, K. */
+export function temperatureAt(gas: GasState, i: number, scale = gas.scale ?? 1): number {
+  return (gas.thermal[i] * scale) / (gas.mass[i] * mixture(gas.composition[i]).cv);
+}
+
 export function soundSpeed(p: Parcel): number {
   const { gamma } = mixture(p.composition);
   return Math.sqrt(gamma * (gamma - 1) * Math.max(0, p.thermal / p.mass));
@@ -381,6 +548,8 @@ export interface GasTotals {
 }
 
 export function gasTotals(gas: GasState): GasTotals {
+  const n = gas.count;
+  const { x, y, vx, vy, mass, thermal } = gas;
   let m = 0;
   let px = 0;
   let py = 0;
@@ -390,22 +559,22 @@ export function gasTotals(gas: GasState): GasTotals {
   let ke = 0;
   let th = 0;
   let mT = 0;
-  for (const p of gas.parcels) {
-    m += p.mass;
-    px += p.mass * p.velocity.x;
-    py += p.mass * p.velocity.y;
-    cx += p.mass * p.position.x;
-    cy += p.mass * p.position.y;
-    L += p.mass * cross(p.position, p.velocity);
-    ke += 0.5 * p.mass * (p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y);
-    th += p.thermal;
-    mT += p.mass * temperatureOf(p, gas.scale ?? 1);
+  for (let i = 0; i < n; i++) {
+    m += mass[i];
+    px += mass[i] * vx[i];
+    py += mass[i] * vy[i];
+    cx += mass[i] * x[i];
+    cy += mass[i] * y[i];
+    L += mass[i] * (x[i] * vy[i] - y[i] * vx[i]);
+    ke += 0.5 * mass[i] * (vx[i] * vx[i] + vy[i] * vy[i]);
+    th += thermal[i];
+    mT += mass[i] * temperatureAt(gas, i, gas.scale ?? 1);
   }
   const c = m > 0 ? { x: cx / m, y: cy / m } : { x: 0, y: 0 };
   let s2 = 0;
-  for (const p of gas.parcels) s2 += p.mass * ((p.position.x - c.x) ** 2 + (p.position.y - c.y) ** 2);
+  for (let i = 0; i < n; i++) s2 += mass[i] * ((x[i] - c.x) ** 2 + (y[i] - c.y) ** 2);
   return {
-    count: gas.parcels.length,
+    count: n,
     mass: m,
     momentum: { x: px, y: py },
     velocity: m > 0 ? { x: px / m, y: py / m } : { x: 0, y: 0 },
@@ -958,39 +1127,60 @@ function farFieldCircles(walls: readonly Wall[], ff: number): { x: number; y: nu
  */
 const MIN_CLUSTER = 32;
 
+/** gasClusters' working arrays, kept between steps. */
+const scratch = { px: new Float64Array(0), py: new Float64Array(0), pvx: new Float64Array(0), pvy: new Float64Array(0), reach: new Float64Array(0), half: new Float64Array(0), push: new Float64Array(0) };
+
 export function gasClusters(
-  parcels: readonly Parcel[],
+  gas: GasState,
   bodies: readonly WallBody[],
   joints: readonly { a: string; b: string }[],
   dt: number,
+  /** The parcels to cluster, by their place in the gas, in order (all of them if absent). A cluster's `parcels` are places in this list. */
+  subset?: ArrayLike<number> | null,
 ): { parcels: number[]; bodies: number[] }[] {
-  const n = parcels.length;
+  const n = subset ? subset.length : gas.count;
   if (!n) return [];
+  // The subset's positions and velocities side by side (kept between steps, so nothing is made here).
+  if (scratch.px.length < n) {
+    const cap = Math.max(2 * n, 256);
+    scratch.px = new Float64Array(cap);
+    scratch.py = new Float64Array(cap);
+    scratch.pvx = new Float64Array(cap);
+    scratch.pvy = new Float64Array(cap);
+    scratch.reach = new Float64Array(cap);
+    scratch.half = new Float64Array(cap);
+    scratch.push = new Float64Array(cap);
+  }
+  const { px, py, pvx, pvy, reach, half, push } = scratch;
+  for (let i = 0; i < n; i++) {
+    const g = subset ? subset[i] : i;
+    px[i] = gas.x[g];
+    py[i] = gas.y[g];
+    pvx[i] = gas.vx[g];
+    pvy[i] = gas.vy[g];
+  }
   // How far each parcel can get from the gas's mean motion in the step (twice its speed relative to
   // the mean, for headroom), plus how far its own pressure could push it from rest, plus half its
   // smoothing length: two parcels can meet only if they are within their summed reach. Pairs are then
   // checked with their own relative speed.
   let mx = 0;
   let my = 0;
-  for (const p of parcels) {
-    mx += p.velocity.x;
-    my += p.velocity.y;
+  for (let i = 0; i < n; i++) {
+    mx += pvx[i];
+    my += pvy[i];
   }
   mx /= n;
   my /= n;
-  const reach = new Float64Array(n);
-  const half = new Float64Array(n);
-  const push = new Float64Array(n);
   let rmax = 0;
   for (let i = 0; i < n; i++) {
-    const p = parcels[i];
-    half[i] = 0.5 * SMOOTHING * p.radius;
+    const g = subset ? subset[i] : i;
+    half[i] = 0.5 * SMOOTHING * gas.radius[g];
     // Pressure accelerates gas by about c²/h, so from rest it covers about ½·c²·dt²/h in a step (taken
     // twice), and never more than gas expanding into vacuum, 2c/(γ − 1), covers.
-    const { gamma } = mixture(p.composition);
-    const c2 = gamma * (gamma - 1) * Math.max(0, p.thermal / p.mass);
+    const { gamma } = mixture(gas.composition[g]);
+    const c2 = gamma * (gamma - 1) * Math.max(0, gas.thermal[g] / gas.mass[g]);
     push[i] = Math.min((c2 * dt * dt) / (2 * half[i]), ((2 * Math.sqrt(c2)) / (gamma - 1)) * dt);
-    reach[i] = half[i] + push[i] + 2 * Math.sqrt((p.velocity.x - mx) ** 2 + (p.velocity.y - my) ** 2) * dt;
+    reach[i] = half[i] + push[i] + 2 * Math.sqrt((pvx[i] - mx) ** 2 + (pvy[i] - my) ** 2) * dt;
     rmax = Math.max(rmax, reach[i]);
   }
   // Union-find over parcels 0..n−1 and groups n..n+g−1 (a free assembly, or a fixed body).
@@ -1046,36 +1236,30 @@ export function gasClusters(
   const grid = new Map<number, number[]>();
   const keyOf = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
   for (let i = 0; i < n; i++) {
-    const key = keyOf(Math.floor(parcels[i].position.x / cell), Math.floor(parcels[i].position.y / cell));
+    const key = keyOf(Math.floor(px[i] / cell), Math.floor(py[i] / cell));
     const list = grid.get(key);
     if (list) list.push(i);
     else grid.set(key, [i]);
   }
   for (let i = 0; i < n; i++) {
-    const p = parcels[i].position;
-    const cx = Math.floor(p.x / cell);
-    const cy = Math.floor(p.y / cell);
+    const cx = Math.floor(px[i] / cell);
+    const cy = Math.floor(py[i] / cell);
     for (let dx = -1; dx <= 1; dx++)
       for (let dy = -1; dy <= 1; dy++) {
         const list = grid.get(keyOf(cx + dx, cy + dy));
         if (!list) continue;
         for (const j of list) {
           if (j <= i) continue;
-          const q = parcels[j].position;
-          const vi = parcels[i].velocity;
-          const vj = parcels[j].velocity;
-          const d = half[i] + half[j] + push[i] + push[j] + 2 * Math.sqrt((vi.x - vj.x) ** 2 + (vi.y - vj.y) ** 2) * dt;
-          if ((p.x - q.x) ** 2 + (p.y - q.y) ** 2 <= d * d) join(i, j);
+          const d = half[i] + half[j] + push[i] + push[j] + 2 * Math.sqrt((pvx[i] - pvx[j]) ** 2 + (pvy[i] - pvy[j]) ** 2) * dt;
+          if ((px[i] - px[j]) ** 2 + (py[i] - py[j]) ** 2 <= d * d) join(i, j);
         }
       }
   }
   // Which parcels each group can reach. A free assembly joins them into one cluster (its motion
   // is shared state); a fixed body never changes, so it doesn't, and goes with every cluster it reaches.
   const reaches = (g: (typeof groups)[number], i: number) => {
-    const p = parcels[i].position;
-    const v = parcels[i].velocity;
-    const d = g.r + 2 * half[i] + push[i] + 2 * Math.sqrt((v.x - g.vx) ** 2 + (v.y - g.vy) ** 2) * dt;
-    return (p.x - g.x) ** 2 + (p.y - g.y) ** 2 <= d * d;
+    const d = g.r + 2 * half[i] + push[i] + 2 * Math.sqrt((pvx[i] - g.vx) ** 2 + (pvy[i] - g.vy) ** 2) * dt;
+    return (px[i] - g.x) ** 2 + (py[i] - g.y) ** 2 <= d * d;
   };
   const fixedGroups: number[] = [];
   groups.forEach((g, k) => {
@@ -1122,156 +1306,6 @@ export function gasClusters(
   }
   big.sort((a, b) => a.parcels[0] - b.parcels[0]);
   return big;
-}
-
-/** One cluster's gas step as plain data, so it can run anywhere (here or in a helper thread). */
-export interface ClusterJob {
-  parcels: Parcel[];
-  bodies: { id: string; shape: Shape; fixed: boolean; mass: number; inertia: number; position: Vec2; angle: number; velocity: Vec2; angularVelocity: number }[];
-  joints: { a: string; b: string }[];
-  dt: number;
-  bounds: Bounds;
-  gravity: Vec2;
-  closed: readonly ClosedRegion[];
-  far: { x: number; y: number; r: number }[];
-  scale: number;
-  timed: boolean;
-}
-
-/** What a cluster's step produced. */
-export interface ClusterResult {
-  /** Each job parcel's state after the step, in job order; `gone` if it left the world. */
-  parcels: { position: Vec2; velocity: Vec2; thermal: number; age?: number; keep?: number; gone: boolean }[];
-  bodies: { position: Vec2; angle: number; velocity: Vec2; angularVelocity: number }[];
-  account: { externalImpulse: Vec2; angular: number; removed: RemovedGas; removedPotential: number; clamped: number; jointImpulse: [string, { x: number; y: number; angular: number }][]; involved: string[] };
-  substeps: number;
-  wallImpulse: number;
-  timings: Record<string, number>;
-}
-
-/** Steps one cluster (see `stepGasClustered`). Pure: reads the job, mutates only the job's own objects. */
-export function runClusterJob(job: ClusterJob, clock?: () => number): ClusterResult {
-  const sub: GasState = { parcels: job.parcels.slice(), nextId: 0, removed: { count: 0, mass: 0, momentum: { x: 0, y: 0 }, angularMomentum: 0, energy: 0 }, wallImpulse: 0, substeps: 0, scale: job.scale };
-  const out: Record<string, number> = {};
-  const acc = stepGas(sub, job.bodies, job.joints, job.dt, job.bounds, job.gravity, job.closed, job.timed && clock ? { clock, out } : undefined, job.far);
-  const left = new Set(job.parcels);
-  for (const p of sub.parcels) left.delete(p);
-  return {
-    parcels: job.parcels.map((p) => ({ position: p.position, velocity: p.velocity, thermal: p.thermal, age: p.age, keep: p.keep, gone: left.has(p) })),
-    bodies: job.bodies.map((b) => ({ position: b.position, angle: b.angle, velocity: b.velocity, angularVelocity: b.angularVelocity })),
-    account: { externalImpulse: acc.externalImpulse, angular: acc.angular, removed: acc.removed, removedPotential: acc.removedPotential, clamped: acc.clamped, jointImpulse: [...acc.jointImpulse], involved: [...acc.involved] },
-    substeps: sub.substeps,
-    wallImpulse: sub.wallImpulse,
-    timings: out,
-  };
-}
-
-/** The gas step split into cluster jobs, and how to take their results back in. */
-export interface ClusteredGas {
-  jobs: ClusterJob[];
-  /** Writes the results (in job order) into the gas and bodies, and returns the merged account. */
-  apply(results: ClusterResult[], timings?: { out: Record<string, number> }): GasAccount;
-}
-
-/** Prepares the gas step as cluster jobs (`gasClusters`), or null when there is no gas. */
-export function clusterGas(
-  gas: GasState,
-  bodies: WallBody[],
-  joints: { a: string; b: string }[],
-  dt: number,
-  bounds: Bounds,
-  gravity: Vec2,
-  closed: readonly ClosedRegion[],
-  timed: boolean,
-  copy: boolean,
-): ClusteredGas | null {
-  const ps = gas.parcels;
-  if (!ps.length) return null;
-  const clusters = gasClusters(ps, bodies, joints, dt);
-  let hmax = gas.farReach ?? 0;
-  if (gas.farReach === undefined) for (const p of ps) hmax = Math.max(hmax, SMOOTHING * p.radius);
-  const far = bounds.farField ? farFieldCirclesFor(bodies, bounds.farField, hmax) : [];
-  // A job's bodies are plain copies of the bodies' state (stepped apart from the world, then written back).
-  const plain = (b: WallBody) => ({ id: b.id, shape: b.shape, fixed: b.fixed, mass: b.mass, inertia: b.inertia, position: b.position, angle: b.angle, velocity: b.velocity, angularVelocity: b.angularVelocity });
-  const jobs: ClusterJob[] = clusters.map((c) => {
-    const ids = new Set(c.bodies.map((k) => bodies[k].id));
-    return {
-      parcels: c.parcels.map((i) => (copy ? structuredClone(ps[i]) : ps[i])),
-      bodies: c.bodies.map((k) => plain(bodies[k])),
-      joints: joints.filter((j) => ids.has(j.a) && ids.has(j.b)),
-      dt,
-      bounds,
-      gravity,
-      closed,
-      far,
-      scale: gas.scale ?? 1,
-      timed,
-    };
-  });
-  return {
-    jobs,
-    apply(results, timings) {
-      const total: GasAccount = {
-        externalImpulse: { x: 0, y: 0 },
-        angular: 0,
-        removed: { count: 0, mass: 0, momentum: { x: 0, y: 0 }, angularMomentum: 0, energy: 0 },
-        removedPotential: 0,
-        clamped: 0,
-        jointImpulse: new Map(),
-        involved: new Set(),
-      };
-      const gone = new Set<Parcel>();
-      let substeps = 0;
-      results.forEach((res, k) => {
-        const c = clusters[k];
-        res.parcels.forEach((r, j) => {
-          const p = ps[c.parcels[j]];
-          p.position = r.position;
-          p.velocity = r.velocity;
-          p.thermal = r.thermal;
-          if (r.age !== undefined) p.age = r.age;
-          if (r.keep !== undefined) p.keep = r.keep;
-          if (r.gone) gone.add(p);
-        });
-        res.bodies.forEach((r, j) => {
-          const b = bodies[c.bodies[j]];
-          if (b.fixed) return;
-          if (b.position !== r.position) b.position = r.position;
-          if (b.angle !== r.angle) b.angle = r.angle;
-          if (b.velocity !== r.velocity) b.velocity = r.velocity;
-          if (b.angularVelocity !== r.angularVelocity) b.angularVelocity = r.angularVelocity;
-        });
-        if (timings) for (const [key, v] of Object.entries(res.timings)) timings.out[key] = (timings.out[key] ?? 0) + v;
-        substeps = Math.max(substeps, res.substeps);
-        gas.wallImpulse += res.wallImpulse;
-        const a = res.account;
-        total.externalImpulse.x += a.externalImpulse.x;
-        total.externalImpulse.y += a.externalImpulse.y;
-        total.angular += a.angular;
-        total.removedPotential += a.removedPotential;
-        total.clamped += a.clamped;
-        const r = total.removed;
-        r.count += a.removed.count;
-        r.mass += a.removed.mass;
-        r.momentum.x += a.removed.momentum.x;
-        r.momentum.y += a.removed.momentum.y;
-        r.angularMomentum += a.removed.angularMomentum;
-        r.energy += a.removed.energy;
-        for (const [id, J] of a.jointImpulse) total.jointImpulse.set(id, J);
-        for (const id of a.involved) total.involved.add(id);
-      });
-      gas.parcels = ps.filter((p) => !gone.has(p));
-      gas.substeps = substeps;
-      const tot = gas.removed;
-      tot.count += total.removed.count;
-      tot.mass += total.removed.mass;
-      tot.momentum.x += total.removed.momentum.x;
-      tot.momentum.y += total.removed.momentum.y;
-      tot.angularMomentum += total.removed.angularMomentum;
-      tot.energy += total.removed.energy;
-      return total;
-    },
-  };
 }
 
 /**
@@ -1331,10 +1365,11 @@ function shapeRadius(b: WallBody): number {
 
 /**
  * Which parcels fly free this step: those that cannot come within `margin` smoothing lengths of any
- * body (its bounding circle) during the step, however both move.
+ * body (its bounding circle) during the step, however both move. One flag per parcel of the gas.
  */
-export function freeFlightMask(parcels: readonly Parcel[], bodies: readonly WallBody[], dt: number, margin: number): Uint8Array {
-  const n = parcels.length;
+export function freeFlightMask(gas: GasState, bodies: readonly WallBody[], dt: number, margin: number): Uint8Array {
+  const n = gas.count;
+  const { x, y, vx, vy, radius } = gas;
   const free = new Uint8Array(n);
   if (!n) return free;
   const nb = bodies.length;
@@ -1351,7 +1386,7 @@ export function freeFlightMask(parcels: readonly Parcel[], bodies: readonly Wall
   }
   // The furthest any parcel's test reaches beyond a body's own circle and motion.
   let extra = 0;
-  for (const p of parcels) extra = Math.max(extra, margin * SMOOTHING * p.radius + Math.sqrt(p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y) * dt);
+  for (let i = 0; i < n; i++) extra = Math.max(extra, margin * SMOOTHING * radius[i] + Math.sqrt(vx[i] * vx[i] + vy[i] * vy[i]) * dt);
   // Bodies filed in a coarse grid by the circle each can reach, so a parcel tests only those in its cell.
   const cell = 2;
   const grid = new Map<number, number[]>();
@@ -1366,16 +1401,15 @@ export function freeFlightMask(parcels: readonly Parcel[], bodies: readonly Wall
       }
   }
   for (let i = 0; i < n; i++) {
-    const p = parcels[i];
-    const reach = margin * SMOOTHING * p.radius;
-    const ps = Math.sqrt(p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y);
-    const list = grid.get(key(Math.floor(p.position.x / cell), Math.floor(p.position.y / cell)));
+    const reach = margin * SMOOTHING * radius[i];
+    const ps = Math.sqrt(vx[i] * vx[i] + vy[i] * vy[i]);
+    const list = grid.get(key(Math.floor(x[i] / cell), Math.floor(y[i] / cell)));
     let ok = true;
     if (list)
       for (const k of list) {
         const r = br[k] + reach + (ps + bs[k]) * dt;
-        const dx = p.position.x - bx[k];
-        const dy = p.position.y - by[k];
+        const dx = x[i] - bx[k];
+        const dy = y[i] - by[k];
         if (dx * dx + dy * dy < r * r) {
           ok = false;
           break;
@@ -1387,12 +1421,13 @@ export function freeFlightMask(parcels: readonly Parcel[], bodies: readonly Wall
 }
 
 /**
- * Moves free parcels one step (a drift: the field's kick came earlier in the step), then applies the gas step's boundary rules
- * (outside the bounds, the far field, out of the plane), recording what leaves in `acc`. Returns the
- * parcels that stay.
+ * Moves the parcels flagged in `free` one step (a drift: the field's kick came earlier in the step),
+ * then applies the gas step's boundary rules (outside the bounds, the far field, out of the plane),
+ * recording what leaves in `acc` and marking it in `gone`.
  */
 export function flyFree(
-  parcels: readonly Parcel[],
+  gas: GasState,
+  free: ArrayLike<number>,
   bodies: readonly WallBody[],
   dt: number,
   bounds: Bounds,
@@ -1402,7 +1437,8 @@ export function flyFree(
   acc: GasAccount,
   /** The largest smoothing length of all the gas (free and stepped), for the far field. */
   hmax: number,
-): Parcel[] {
+  gone: Uint8Array,
+): void {
   const ff = bounds.farField;
   const circles = ff ? farFieldCirclesFor(bodies, ff, hmax) : [];
   const far = (x: number, y: number) => {
@@ -1410,54 +1446,72 @@ export function flyFree(
     for (const c of circles) if ((x - c.x) ** 2 + (y - c.y) ** 2 < c.r * c.r) return false;
     return true;
   };
-  const leave = (p: Parcel) => {
+  const leave = (i: number) => {
     const r = acc.removed;
-    const m = p.mass;
-    const { x, y } = p.position;
-    const { x: vx, y: vy } = p.velocity;
+    const m = gas.mass[i];
+    const x = gas.x[i];
+    const y = gas.y[i];
+    const vx = gas.vx[i];
+    const vy = gas.vy[i];
     r.count += 1;
     r.mass += m;
     r.momentum.x += m * vx;
     r.momentum.y += m * vy;
     r.angularMomentum += m * (x * vy - y * vx);
     const pe = -m * (gravity.x * x + gravity.y * y);
-    r.energy += 0.5 * m * (vx * vx + vy * vy) + p.thermal + parcelChemical(p, scale) + pe;
+    r.energy += 0.5 * m * (vx * vx + vy * vy) + gas.thermal[i] + (m * compositionHeat(gas.composition[i])) / scale + pe;
     acc.removedPotential += pe;
+    gone[i] = 1;
   };
-  const kept: Parcel[] = [];
-  for (const p of parcels) {
+  const n = gas.count;
+  for (let i = 0; i < n; i++) {
+    if (!free[i]) continue;
     // A drift, as the gas step's own move: the field's kick to every parcel was given (and recorded)
     // earlier in the step.
-    p.position = { x: p.position.x + p.velocity.x * dt, y: p.position.y + p.velocity.y * dt };
-    const { x, y } = p.position;
+    gas.x[i] = gas.x[i] + gas.vx[i] * dt;
+    gas.y[i] = gas.y[i] + gas.vy[i] * dt;
+    const x = gas.x[i];
+    const y = gas.y[i];
     const outside = !bounds.wrap && (x < bounds.min.x || x > bounds.max.x || y < bounds.min.y || y > bounds.max.y);
     if (outside || far(x, y)) {
-      leave(p);
+      leave(i);
       continue;
     }
     if (bounds.depth) {
-      p.age = (p.age ?? 0) + dt;
-      if (p.age > DEPTH_DELAY && !inClosed(closed, x, y)) {
-        const mix = mixture(p.composition);
-        const c = Math.sqrt(mix.gamma * (mix.gamma - 1) * Math.max(0, p.thermal / p.mass));
-        p.keep = (p.keep ?? 1) / (1 + (c * dt) / bounds.depth);
-        if (p.keep < leaveThreshold(p.id)) {
-          leave(p);
-          continue;
-        }
+      gas.age[i] = (Number.isNaN(gas.age[i]) ? 0 : gas.age[i]) + dt;
+      if (gas.age[i] > DEPTH_DELAY && !inClosed(closed, x, y)) {
+        const mix = mixture(gas.composition[i]);
+        const c = Math.sqrt(mix.gamma * (mix.gamma - 1) * Math.max(0, gas.thermal[i] / gas.mass[i]));
+        gas.keep[i] = (Number.isNaN(gas.keep[i]) ? 1 : gas.keep[i]) / (1 + (c * dt) / bounds.depth);
+        if (gas.keep[i] < leaveThreshold(gas.id[i])) leave(i);
       }
     }
-    kept.push(p);
   }
-  return kept;
 }
+
+const emptyAccount = (): GasAccount => ({
+  externalImpulse: { x: 0, y: 0 },
+  angular: 0,
+  removed: { count: 0, mass: 0, momentum: { x: 0, y: 0 }, angularMomentum: 0, energy: 0 },
+  removedPotential: 0,
+  clamped: 0,
+  jointImpulse: new Map(),
+  involved: new Set(),
+});
+
+const PHASES = ["setup", "contacts", "neighbours", "density", "impulses", "move", "finish"];
 
 /**
  * Steps the gas cluster by cluster (`gasClusters`): each with only its own parcels and the bodies it
  * can reach, at its own substeps. Clusters can't meet within the step, so stepping them apart is the
- * same physics; it is cheaper (a calm cluster takes long substeps, and no cluster files every body),
- * and clusters can run in parallel (`clusterGas`, `runClusterJob`). Results are taken back in cluster
- * order, so they never depend on where or in what order clusters ran.
+ * same physics; it is cheaper (a calm cluster takes long substeps, and no cluster files every body).
+ * Clusters are stepped in their fixed order, each straight on the gas and on its own bodies (a free
+ * body is in one cluster only; a fixed one never changes).
+ *
+ * With `part`, what leaves is marked in `part.gone` for the caller to drop (it may want to know
+ * which parcels left). With `part.subset`, only those parcels are stepped (the rest fly free), and
+ * `part.farReach` is the largest smoothing length of all the gas, so the far field does not depend
+ * on which part is stepped.
  */
 export function stepGasClustered(
   gas: GasState,
@@ -1468,20 +1522,77 @@ export function stepGasClustered(
   gravity: Vec2 = { x: 0, y: 0 },
   closed: readonly ClosedRegion[] = [],
   timings?: { clock: () => number; out: Record<string, number> },
+  part?: { subset?: ArrayLike<number>; farReach?: number; gone: Uint8Array },
 ): GasAccount {
   const tc = timings?.clock();
-  const prepared = clusterGas(gas, bodies, joints, dt, bounds, gravity, closed, !!timings, false);
-  if (!prepared) return stepGas(gas, bodies, joints, dt, bounds, gravity, closed, timings);
-  if (timings) {
-    for (const k of ["setup", "contacts", "neighbours", "density", "impulses", "move", "finish"]) timings.out[`gas.${k}`] = 0;
-    timings.out["gas.clusters"] = timings.clock() - tc!;
+  const subset = part?.subset ?? null;
+  const n = subset ? subset.length : gas.count;
+  const total = emptyAccount();
+  if (timings) for (const k of PHASES) timings.out[`gas.${k}`] = 0;
+  if (!n) {
+    gas.substeps = 0;
+    return total;
   }
-  return prepared.apply(
-    prepared.jobs.map((j) => runClusterJob(j, timings?.clock)),
-    timings,
-  );
+  const clusters = gasClusters(gas, bodies, joints, dt, subset);
+  let hmax = part?.farReach ?? 0;
+  if (part?.farReach === undefined) for (let i = 0; i < n; i++) hmax = Math.max(hmax, SMOOTHING * gas.radius[subset ? subset[i] : i]);
+  const far = bounds.farField ? farFieldCirclesFor(bodies, bounds.farField, hmax) : [];
+  if (timings) timings.out["gas.clusters"] = timings.clock() - tc!;
+  const gone = part ? part.gone : new Uint8Array(gas.count);
+  let substeps = 0;
+  for (const c of clusters) {
+    const parcels = subset ? c.parcels.map((k) => subset[k]) : c.parcels;
+    const own = c.bodies.map((k) => bodies[k]);
+    const ids = new Set(own.map((b) => b.id));
+    const out: Record<string, number> = {};
+    const res = stepGasPart(
+      gas,
+      parcels,
+      own,
+      joints.filter((j) => ids.has(j.a) && ids.has(j.b)),
+      dt,
+      bounds,
+      gravity,
+      closed,
+      timings ? { clock: timings.clock, out } : undefined,
+      far,
+      gone,
+    );
+    if (timings) for (const [key, v] of Object.entries(out)) timings.out[key] = (timings.out[key] ?? 0) + v;
+    substeps = Math.max(substeps, res.substeps);
+    gas.wallImpulse += res.wallImpulse;
+    const a = res.acc;
+    total.externalImpulse.x += a.externalImpulse.x;
+    total.externalImpulse.y += a.externalImpulse.y;
+    total.angular += a.angular;
+    total.removedPotential += a.removedPotential;
+    total.clamped += a.clamped;
+    const r = total.removed;
+    r.count += a.removed.count;
+    r.mass += a.removed.mass;
+    r.momentum.x += a.removed.momentum.x;
+    r.momentum.y += a.removed.momentum.y;
+    r.angularMomentum += a.removed.angularMomentum;
+    r.energy += a.removed.energy;
+    for (const [id, J] of a.jointImpulse) total.jointImpulse.set(id, J);
+    for (const id of a.involved) total.involved.add(id);
+  }
+  if (!part) dropParcels(gas, gone);
+  gas.substeps = substeps;
+  const tot = gas.removed;
+  tot.count += total.removed.count;
+  tot.mass += total.removed.mass;
+  tot.momentum.x += total.removed.momentum.x;
+  tot.momentum.y += total.removed.momentum.y;
+  tot.angularMomentum += total.removed.angularMomentum;
+  tot.energy += total.removed.energy;
+  return total;
 }
 
+/**
+ * Advances all the gas by dt in CFL-limited substeps, as one cluster, exchanging impulses with
+ * bodies. Bodies are walls at their end-of-step pose; their velocities change.
+ */
 export function stepGas(
   gas: GasState,
   bodies: WallBody[],
@@ -1491,9 +1602,41 @@ export function stepGas(
   gravity: Vec2 = { x: 0, y: 0 },
   closed: readonly ClosedRegion[] = [],
   timings?: { clock: () => number; out: Record<string, number> },
-  /** Far-field circles to use instead of the bodies' own (when stepping part of the gas). */
-  farCircles?: readonly { x: number; y: number; r: number }[],
 ): GasAccount {
+  const gone = new Uint8Array(gas.count);
+  const res = stepGasPart(gas, null, bodies, joints, dt, bounds, gravity, closed, timings, undefined, gone);
+  dropParcels(gas, gone);
+  gas.substeps = res.substeps;
+  const tot = gas.removed;
+  tot.count += res.acc.removed.count;
+  tot.mass += res.acc.removed.mass;
+  tot.momentum.x += res.acc.removed.momentum.x;
+  tot.momentum.y += res.acc.removed.momentum.y;
+  tot.angularMomentum += res.acc.removed.angularMomentum;
+  tot.energy += res.acc.removed.energy;
+  gas.wallImpulse += res.wallImpulse;
+  return res.acc;
+}
+
+/**
+ * Advances some of the gas (the parcels at `subset`, in that order; all of it if null) by dt as one
+ * cluster. Writes the parcels' new state into the gas and marks those that left the world in `gone`;
+ * the caller drops them and adds what this returns to the gas's running totals.
+ */
+function stepGasPart(
+  gas: GasState,
+  subset: ArrayLike<number> | null,
+  bodies: WallBody[],
+  joints: { a: string; b: string }[],
+  dt: number,
+  bounds: Bounds,
+  gravity: Vec2,
+  closed: readonly ClosedRegion[],
+  timings: { clock: () => number; out: Record<string, number> } | undefined,
+  /** Far-field circles to use instead of the bodies' own (when stepping part of the gas). */
+  farCircles: readonly { x: number; y: number; r: number }[] | undefined,
+  gone: Uint8Array,
+): { acc: GasAccount; substeps: number; wallImpulse: number } {
   // Time per phase, summed over the substeps, into `timings.out` as gas.<phase> (LED-004). Reading the
   // clock changes nothing in the results.
   let tMark = timings ? timings.clock() : 0;
@@ -1503,26 +1646,10 @@ export function stepGas(
     timings.out[`gas.${name}`] = (timings.out[`gas.${name}`] ?? 0) + (t - tMark);
     tMark = t;
   };
-  if (timings) for (const k of ["setup", "contacts", "neighbours", "density", "impulses", "move", "finish"]) timings.out[`gas.${k}`] = 0;
-  const acc: GasAccount = {
-    externalImpulse: { x: 0, y: 0 },
-    angular: 0,
-    removed: {
-      count: 0,
-      mass: 0,
-      momentum: { x: 0, y: 0 },
-      angularMomentum: 0,
-      energy: 0,
-    },
-    removedPotential: 0,
-    clamped: 0,
-    jointImpulse: new Map(),
-    involved: new Set(),
-  };
-  const ps = gas.parcels;
-  const n = ps.length;
-  gas.substeps = 0;
-  if (n === 0) return acc;
+  if (timings) for (const k of PHASES) timings.out[`gas.${k}`] = 0;
+  const acc = emptyAccount();
+  const n = subset ? subset.length : gas.count;
+  if (n === 0) return { acc, substeps: 0, wallImpulse: 0 };
 
   // Pack straight into the WebAssembly module's memory (gasWasm.ts).
   const buf = gasParcelBuffers(n);
@@ -1531,18 +1658,18 @@ export function stepGas(
   let hmax = 0;
   let hmin = Infinity;
   for (let i = 0; i < n; i++) {
-    const p = ps[i];
-    x[i] = p.position.x;
-    y[i] = p.position.y;
-    vx[i] = p.velocity.x;
-    vy[i] = p.velocity.y;
-    m[i] = p.mass;
-    E[i] = p.thermal;
-    rad[i] = p.radius;
-    hh[i] = SMOOTHING * p.radius;
+    const g = subset ? subset[i] : i;
+    x[i] = gas.x[g];
+    y[i] = gas.y[g];
+    vx[i] = gas.vx[g];
+    vy[i] = gas.vy[g];
+    m[i] = gas.mass[g];
+    E[i] = gas.thermal[g];
+    rad[i] = gas.radius[g];
+    hh[i] = SMOOTHING * gas.radius[g];
     hmax = Math.max(hmax, hh[i]);
     hmin = Math.min(hmin, hh[i]);
-    const mix = mixture(p.composition);
+    const mix = mixture(gas.composition[g]);
     gam[i] = mix.gamma;
     g1[i] = mix.gamma - 1;
   }
@@ -1559,8 +1686,6 @@ export function stepGas(
   const wallImpulse = r.wallImpulse;
   const nsub = r.nsub;
   if (timings) tMark = timings.clock();
-
-  gas.substeps = nsub;
 
   // Far field: free bodies as bounding circles at their end-of-step pose. Fixed bodies (a ground) don't
   // count: gas far from everything that moves can't change what happens to it.
@@ -1587,45 +1712,38 @@ export function stepGas(
     acc.removedPotential += pe;
   };
   const depth = bounds.depth;
-  const kept: Parcel[] = [];
   for (let i = 0; i < n; i++) {
-    const p = ps[i];
-    p.position = { x: x[i], y: y[i] };
-    p.velocity = { x: vx[i], y: vy[i] };
-    p.thermal = E[i];
+    const g = subset ? subset[i] : i;
+    gas.x[g] = x[i];
+    gas.y[g] = y[i];
+    gas.vx[g] = vx[i];
+    gas.vy[g] = vy[i];
+    gas.thermal[g] = E[i];
     // A wrapped world keeps gas that crosses its bounds: it wraps round after the step (FLT-012).
     const outside = !bounds.wrap && (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y);
     if (outside || far(x[i], y[i]) || crushed[i]) {
       acc.removed.count += 1;
-      leave(i, 1, parcelChemical(p, scale));
+      leave(i, 1, (gas.mass[g] * compositionHeat(gas.composition[g])) / scale);
+      gone[g] = 1;
       continue;
     }
     if (depth) {
       // Out of the plane (GAS-009): the chance of staying shrinks by 1/(1 + x), x = c·dt/depth, and
       // the parcel leaves whole when it falls below the parcel's own threshold.
-      p.age = (p.age ?? 0) + dt;
-      if (p.age > DEPTH_DELAY && !inClosed(closed, x[i], y[i])) {
+      gas.age[g] = (Number.isNaN(gas.age[g]) ? 0 : gas.age[g]) + dt;
+      if (gas.age[g] > DEPTH_DELAY && !inClosed(closed, x[i], y[i])) {
         const c = Math.sqrt(gam[i] * g1[i] * Math.max(0, E[i] / m[i]));
-        p.keep = (p.keep ?? 1) / (1 + (c * dt) / depth);
-        if (p.keep < leaveThreshold(p.id)) {
+        gas.keep[g] = (Number.isNaN(gas.keep[g]) ? 1 : gas.keep[g]) / (1 + (c * dt) / depth);
+        if (gas.keep[g] < leaveThreshold(gas.id[g])) {
           acc.removed.count += 1;
-          leave(i, 1, parcelChemical(p, scale));
+          leave(i, 1, (gas.mass[g] * compositionHeat(gas.composition[g])) / scale);
+          gone[g] = 1;
           continue;
         }
       }
     }
-    kept.push(p);
   }
-  gas.parcels = kept;
   phase("finish");
-  const tot = gas.removed;
-  tot.count += acc.removed.count;
-  tot.mass += acc.removed.mass;
-  tot.momentum.x += acc.removed.momentum.x;
-  tot.momentum.y += acc.removed.momentum.y;
-  tot.angularMomentum += acc.removed.angularMomentum;
-  tot.energy += acc.removed.energy;
-  gas.wallImpulse += wallImpulse;
 
   // What the joints of each free assembly had to supply: each part's rigid share of the unit's
   // change, minus the gas's direct push on it.
@@ -1666,7 +1784,7 @@ export function stepGas(
       b.angularVelocity += u.w - u.w0;
     }
   }
-  return acc;
+  return { acc, substeps: nsub, wallImpulse };
 }
 
 type WallSource = { id: string; shape: Shape; fixed: boolean; mass: number; position: Vec2; angle: number; velocity: Vec2; angularVelocity: number; contents?: Store[] };

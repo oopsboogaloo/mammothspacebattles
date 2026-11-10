@@ -3,7 +3,7 @@
 // at 4,000 rad/s read as 200 km/s, and every parcel took the 2,000-substep floor (reference battle,
 // docs/perf/gpu-gas-phase0.md §1).
 import { describe, expect, it } from "vitest";
-import { computeTotals, createWorld, getProfile, stepInPlace } from "../../src/core/index.ts";
+import { computeTotals, createWorld, getProfile, stepInPlace, setParcels } from "../../src/core/index.ts";
 import { box } from "../helpers.ts";
 
 describe("gas substeps near a spinning body", () => {
@@ -11,7 +11,7 @@ describe("gas substeps near a spinning body", () => {
   const world = (spin: number) => {
     // A 7 cm fragment spinning in a little cool gas.
     const w = createWorld(1, [box("frag", 0.07, 0.07, { mass: 0.033, angularVelocity: spin })], { x: 0, y: 0 }, { bounds: { min: { x: -50, y: -50 }, max: { x: 50, y: 50 } } }, test);
-    w.gas.parcels = Array.from({ length: 16 }, (_, i) => ({ id: i + 1, mass: 0.001, composition: { air: 1 }, position: { x: 0.12 + 0.07 * (i % 4), y: -0.1 + 0.07 * Math.floor(i / 4) }, velocity: { x: 0, y: 0 }, thermal: 0.001 * 717 * 300, radius: 0.035 }));
+    setParcels(w.gas, Array.from({ length: 16 }, (_, i) => ({ id: i + 1, mass: 0.001, composition: { air: 1 }, position: { x: 0.12 + 0.07 * (i % 4), y: -0.1 + 0.07 * Math.floor(i / 4) }, velocity: { x: 0, y: 0 }, thermal: 0.001 * 717 * 300, radius: 0.035 })));
     w.gas.nextId = 17;
     w.ledger.totals = computeTotals(w);
     return w;

@@ -50,7 +50,7 @@ function run(name: string, n: number, margin: number | undefined, extra: Record<
       ms += t;
       gas += out.gas ?? 0;
       sub += world.gas.substeps;
-      parcels += world.gas.parcels.length;
+      parcels += world.gas.count;
       free += world.gas.free ?? 0;
       k++;
     }

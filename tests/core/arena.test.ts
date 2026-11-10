@@ -1,7 +1,7 @@
 // Flight-test arena (FLT-010…FLT-013): fuel economy, gravity from asteroids, a world that wraps round.
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assemblyOf, assemblyTotals, createWorld, getProfile, initialWorld, parseScenario, stepInPlace, type Command, type World } from "../../src/core/index.ts";
+import { assemblyOf, assemblyTotals, createWorld, getProfile, initialWorld, parseScenario, stepInPlace, type Command, type World, parcelsOf } from "../../src/core/index.ts";
 import { disc, readJson, ROOT } from "../helpers.ts";
 
 const sandbox = getProfile("sandbox");
@@ -92,7 +92,7 @@ describe("flight-test arena", () => {
     it("FLT-010 an economy engine fires on the last propellant a discounted parcel needs", () => {
       const w = engine(0.0001, 0); // a twentieth of a 1 g parcel is 0.05 g: enough for two
       stepInPlace(w, fire, sandbox);
-      expect(w.gas.parcels.length).toBeGreaterThan(0);
+      expect(w.gas.count).toBeGreaterThan(0);
     });
 
     it("FLT-010 the made mass arrives moving with the engine, so a fast engine's exhaust is as warm as a still one's", () => {
@@ -100,7 +100,7 @@ describe("flight-test arena", () => {
       const fast = engine(0.5, 100);
       stepInPlace(still, fire, sandbox);
       stepInPlace(fast, fire, sandbox);
-      const t = (w: World) => w.gas.parcels[0].thermal;
+      const t = (w: World) => parcelsOf(w.gas)[0].thermal;
       expect(t(fast) / t(still)).toBeCloseTo(1, 6); // equal up to rounding (the made mass carries 4.75 J at 100 m/s)
       expect(t(still)).toBeGreaterThan(0);
       expect(fast.ledger.violations).toBe(0);
@@ -119,10 +119,13 @@ describe("flight-test arena", () => {
     );
     w.bounds.min.x = -10; // a 20 m-wide arena, 60 m tall
     w.bounds.max.x = 10;
-    const [near, alone] = [...w.gas.parcels].sort((a, b) => b.position.y - a.position.y);
+    // The parcels as they are now (copies): the higher one is beside the ship, the lower one alone.
+    const sorted = () => [...parcelsOf(w.gas)].sort((a, b) => b.position.y - a.position.y);
+    let [near, alone] = sorted();
     const [gap, x0] = [near.position.x - w.bodies[0].position.x, alone.position.x];
     for (let i = 0; i < 60; i++) stepInPlace(w, [], test); // 0.25 s: 5 m to the right, across x = 10
-    expect(w.gas.parcels).toHaveLength(2);
+    expect(parcelsOf(w.gas)).toHaveLength(2);
+    [near, alone] = sorted();
     expect(w.gas.removed.count).toBe(0);
     expect(w.events.some((e) => e.type === "gas.left")).toBe(false);
     const ship = w.bodies[0].position;

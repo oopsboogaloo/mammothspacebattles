@@ -16,7 +16,7 @@
 // momentum and energy exact.
 
 import { bodyMass, bodiesById } from "./bodies.ts";
-import { burn, mixture, type Parcel, type WallBody } from "./gas.ts";
+import { burn, dropParcels, mixture, parcelAt, type Parcel, type WallBody } from "./gas.ts";
 import { assemblyRoots, topologyToken } from "./joints.ts";
 import { add, cross, dot, invRotate, length, powPos, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { localVertices, massProps, type Shape } from "./shapes.ts";
@@ -673,17 +673,17 @@ export function runVessel(world: World, b: Body, shape: VesselShape, drawn: { ma
   const f = frameOf(b)!;
   const q = f.q;
   const R = boxReach(shape.box);
-  let strays: Parcel[] | null = null;
-  for (const p of world.gas.parcels) {
-    const dx = p.position.x - b.position.x;
-    const dy = p.position.y - b.position.y;
+  const gas = world.gas;
+  let strays: Uint8Array | null = null;
+  for (let i = 0; i < gas.count; i++) {
+    const dx = gas.x[i] - b.position.x;
+    const dy = gas.y[i] - b.position.y;
     if (dx * dx + dy * dy > R * R) continue;
-    if (insideChamber(shape, b, invRotate(q, { x: dx, y: dy }))) (strays ??= []).push(p);
+    if (insideChamber(shape, b, invRotate(q, { x: dx, y: dy }))) (strays ??= new Uint8Array(gas.count))[i] = 1;
   }
   if (strays) {
-    for (const p of strays) absorb(b, p);
-    const gone = new Set(strays);
-    world.gas.parcels = world.gas.parcels.filter((p) => !gone.has(p));
+    for (let i = 0; i < gas.count; i++) if (strays[i]) absorb(b, parcelAt(gas, i));
+    dropParcels(gas, strays);
   }
   if (drawn && drawn.mass > 0) {
     const total = v.mass + drawn.mass;
@@ -715,7 +715,7 @@ export function runVessel(world: World, b: Body, shape: VesselShape, drawn: { ma
   }
   const GOLDEN = 0.6180339887498949;
   const pm = parcelMassOf(world, inj);
-  while (v.credit >= pm && v.mass > pm && world.gas.parcels.length + out.length < limit) {
+  while (v.credit >= pm && v.mass > pm && world.gas.count + out.length < limit) {
     const dm = pm;
     const u = Math.max(0, v.thermal / v.mass);
     const uStar = u * starT;

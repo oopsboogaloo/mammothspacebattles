@@ -9,7 +9,7 @@ import { bindings, camera, edit, openScenario, overlays, playing, sandbox, scree
 import { shown } from "./smooth.ts";
 import { diag, liveStats, summary } from "./diag.ts";
 import { sim, View } from "./View.tsx";
-import { ABANDON } from "../core/index.ts";
+import { ABANDON, canonicalStringify } from "../core/index.ts";
 import { levelPreview } from "./levelPreview.ts";
 
 /** The scenarios, in order; those without a file yet are shown as coming soon. */
@@ -656,8 +656,8 @@ function DiagBox() {
     const t = summary({
       scenario: landerKey.value,
       ship: w?.lander?.state.n ?? 0,
-      "bodies · parcels · wisps · dust · events": w ? `${w.bodies.length} · ${w.gas.parcels.length} · ${w.wisps?.length ?? 0} · ${w.dust?.length ?? 0} · ${w.events.length}` : "-",
-      "world size": w ? `${(JSON.stringify(w).length / 1024).toFixed(0)} kB` : "-",
+      "bodies · parcels · wisps · dust · events": w ? `${w.bodies.length} · ${w.gas.count} · ${w.wisps?.length ?? 0} · ${w.dust?.length ?? 0} · ${w.events.length}` : "-",
+      "world size": w ? `${(canonicalStringify(w).length / 1024).toFixed(0)} kB` : "-",
     });
     setText(t);
     navigator.clipboard?.writeText(t).catch(() => undefined);

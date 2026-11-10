@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fitBounds, toScreen, toWorld, worldBounds, zoomAt } from "../../src/app/camera.ts";
 import { fmt, plain } from "../../src/app/format.ts";
 import { assemblyCentres, flameColour, GLOW_FROM, renderFrame, wrapImages, type Ctx } from "../../src/app/render.ts";
-import { createWorld, getProfile, stepInPlace } from "../../src/core/index.ts";
+import { createWorld, getProfile, stepInPlace, setParcels } from "../../src/core/index.ts";
 import { box, disc } from "../helpers.ts";
 
 /** Records draw calls so render output can be checked without a browser. */
@@ -139,7 +139,7 @@ describe("gas plume", () => {
 
   it("TST-011 SBX-035 a context that can't draw the plume (a recorder) gets dots, so rendering stays testable", () => {
     const w = createWorld(1, []);
-    w.gas.parcels = [{ id: 1, mass: 0.001, composition: { h2o: 1 }, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, thermal: 3, radius: 0.05 }];
+    setParcels(w.gas, [{ id: 1, mass: 0.001, composition: { h2o: 1 }, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, thermal: 3, radius: 0.05 }]);
     const { ctx, calls } = recorder();
     renderFrame(ctx, w, { x: 0, y: 0, zoom: 100 }, { width: 200, height: 200 }, { overlays: new Set(), selection: new Set(), hover: null, gasStyle: "plume" });
     expect(calls.some((c) => c.startsWith("arc(100,100"))).toBe(true);

@@ -1,7 +1,7 @@
 // Weapons, first look (M6): the gas cannon test scenario (GUN).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assemblyTotals, bodyMass, computeTotals, createWorld, getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
+import { assemblyTotals, bodyMass, computeTotals, createWorld, getProfile, initialWorld, parseScenario, stepInPlace, type World, parcelsOf } from "../../src/core/index.ts";
 import { box, readJson, ROOT } from "../helpers.ts";
 
 const sandbox = getProfile("sandbox");
@@ -28,7 +28,7 @@ describe("cannon (GUN)", () => {
     const cannon = assemblyTotals(w, "breech")!;
     expect(shell.velocity.x).toBeGreaterThan(20);
     expect(cannon.velocity.x).toBeLessThan(0);
-    const gas = w.gas.parcels.reduce((s, p) => s + p.mass * p.velocity.x, 0) + gone;
+    const gas = parcelsOf(w.gas).reduce((s, p) => s + p.mass * p.velocity.x, 0) + gone;
     const pShell = shell.mass * shell.velocity.x;
     // Everything started at rest (ORC-009).
     expect(Math.abs(pShell + cannon.mass * cannon.velocity.x + gas)).toBeLessThan(1e-6);

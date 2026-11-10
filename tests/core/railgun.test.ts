@@ -1,7 +1,7 @@
 // Railgun (WPN-008): Gunship 3's gun, launching shells with no propellant gas.
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { computeTotals, getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
+import { computeTotals, getProfile, initialWorld, parseScenario, stepInPlace, type World, parcelsOf } from "../../src/core/index.ts";
 import { readJson, ROOT } from "../helpers.ts";
 
 const sandbox = getProfile("sandbox");
@@ -34,7 +34,7 @@ describe("railgun (WPN-008)", () => {
     expect(Math.hypot(p1.x - p0.x, p1.y - p0.y)).toBeLessThan(1e-9);
     expect(w.ledger.last!.sources.power.energy).toBeGreaterThan(4000); // ½ × 1 kg × 96² ≈ 4.6 kJ
     expect(w.ledger.violations).toBe(0);
-    expect(w.gas.parcels.filter((p) => p.composition.h2o).length).toBe(0); // no propellant gas
+    expect(parcelsOf(w.gas).filter((p) => p.composition.h2o).length).toBe(0); // no propellant gas
     // Held, it fires again each time it has reloaded (0.25 s).
     for (let i = 0; i < 240; i++) stepInPlace(w, [], sandbox);
     expect(w.events.filter((e) => e.type === "railgun.fired").length).toBeGreaterThanOrEqual(4);

@@ -1,7 +1,7 @@
 // Damage (DMG-001…DMG-003, DMG-005): integrity, the damage rule, failure, armour (RS-11).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assemblyOf, assemblyTotals, BREACH_WIDTH, createWorld, getProfile, injectorStatus, initialWorld, LEAK_PARCEL, LEAK_RATE, leakRate, MATERIALS, parseScenario, runScenario, stepInPlace, type Material, type World } from "../../src/core/index.ts";
+import { assemblyOf, assemblyTotals, BREACH_WIDTH, createWorld, getProfile, injectorStatus, initialWorld, LEAK_PARCEL, LEAK_RATE, leakRate, MATERIALS, parseScenario, runScenario, stepInPlace, type Material, type World, parcelsOf } from "../../src/core/index.ts";
 import { box, disc, readJson, ROOT } from "../helpers.ts";
 
 const test = getProfile("test");
@@ -99,7 +99,7 @@ describe("damage", () => {
     expect(w.joints).toHaveLength(0);
     expect(w.links).toHaveLength(0);
     expect(w.dust!.length).toBeGreaterThan(0);
-    expect(w.gas.parcels).toHaveLength(0);
+    expect(parcelsOf(w.gas)).toHaveLength(0);
     expect(w.ledger.violations).toBe(0);
   });
 
@@ -187,17 +187,17 @@ describe("damage", () => {
       const w = tank(0.5, 0, [{ resource: "fuel", mass: 1, capacity: 1 }]);
       run(w, 60);
       expect(w.bodies[0].contents![1].mass).toBe(1);
-      expect(w.gas.parcels).toHaveLength(0);
+      expect(parcelsOf(w.gas)).toHaveLength(0);
     });
 
     it("DMG-004 the leak is a jet: it pushes the body the other way, conserving momentum, and spreads across the breach", () => {
       const w = tank(0.2, 4);
       run(w, 120);
-      const gasP = w.gas.parcels.reduce((s, p) => s + p.mass * p.velocity.y, 0);
-      expect(w.gas.parcels.length).toBeGreaterThan(50);
+      const gasP = parcelsOf(w.gas).reduce((s, p) => s + p.mass * p.velocity.y, 0);
+      expect(w.gas.count).toBeGreaterThan(50);
       expect(gasP).toBeGreaterThan(0); // up, out of the top
       expect(w.bodies[0].velocity.y * 2 + w.bodies[0].contents![0].mass * w.bodies[0].velocity.y + gasP).toBeCloseTo(0, 9);
-      const xs = w.gas.parcels.map((p) => p.position.x);
+      const xs = parcelsOf(w.gas).map((p) => p.position.x);
       expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(0.5 * BREACH_WIDTH * 0.8 * 0.5);
       expect(w.ledger.violations).toBe(0);
     });
@@ -210,14 +210,14 @@ describe("damage", () => {
       const a = body(w, "tank-a");
       expect(a.breach!.normal.x).toBeLessThan(-0.9); // the rams came from the left
       expect(a.contents![0].mass).toBeLessThan(6);
-      expect(w.gas.parcels.length).toBeGreaterThan(0);
+      expect(w.gas.count).toBeGreaterThan(0);
       // Gas expanding into vacuum spreads every way, but on the whole it went out of the struck side, backwards.
-    const mean = w.gas.parcels.reduce((t, p) => t + p.velocity.x, 0) / w.gas.parcels.length;
+    const mean = parcelsOf(w.gas).reduce((t, p) => t + p.velocity.x, 0) / w.gas.count;
     expect(mean).toBeLessThan(a.velocity.x);
       // A damaged tank resting on its breach, on a floor: nothing comes out.
       const shut = createWorld(1, [box("t", 1, 1, { mass: 2, integrity: 0.5, angle: Math.PI, position: { x: 0, y: 0.5 }, contents: [{ resource: "o2", mass: 4, capacity: 4 }] }), box("floor", 4, 0.2, { fixed: true, position: { x: 0, y: -0.1 } })]);
       run(shut, 60);
-      expect(shut.gas.parcels).toHaveLength(0);
+      expect(parcelsOf(shut.gas)).toHaveLength(0);
     });
   });
 

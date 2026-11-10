@@ -20,7 +20,7 @@
 import { breakWreckage, damageBody } from "./damage.ts";
 import { bodyMass, bodiesById } from "./bodies.ts";
 import { collide } from "./collide.ts";
-import { storeChemical, storeThermal, type Parcel } from "./gas.ts";
+import { addParcel, storeChemical, storeThermal, type Parcel } from "./gas.ts";
 import { add, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { localVertices, massProps, polygonArea } from "./shapes.ts";
 import { compareIds, type Body, type World } from "./world.ts";
@@ -98,7 +98,7 @@ export function releaseBlasts(world: World, dt: number): number {
     for (const p of parcels) ke += 0.5 * p.mass * dot(p.velocity, p.velocity);
     const heat = b.energy + 0.5 * b.mass * dot(b.velocity, b.velocity) - ke;
     for (const p of parcels) p.thermal = heat / parcels.length;
-    world.gas.parcels.push(...parcels);
+    for (const p of parcels) addParcel(world.gas, p);
   }
   return blasts.length;
 }

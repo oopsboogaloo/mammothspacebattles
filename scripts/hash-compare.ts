@@ -55,7 +55,9 @@ function run(core: Core, file: string, hashes: boolean) {
     core.stepInPlace(world, commands, profile, time && !hashes ? { clock: () => performance.now(), out: parts } : undefined);
     ms += performance.now() - t0;
     gas += parts.gas ?? 0;
-    parcels = Math.max(parcels, world.gas.parcels.length);
+    // The other checkout may hold its gas as a list of parcels, this one as arrays: count either.
+    const held = world.gas as unknown as { count?: number; parcels?: unknown[] };
+    parcels = Math.max(parcels, held.count ?? held.parcels?.length ?? 0);
     wisps = Math.max(wisps, world.wisps?.length ?? 0);
     if (hashes) out.push(core.hashValue(world));
   }

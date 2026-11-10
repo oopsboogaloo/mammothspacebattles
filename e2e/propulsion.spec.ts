@@ -56,7 +56,7 @@ test("UXV-001 W3 SBX-020 build a ship (hull, tank, engine), link feed and contro
   const w = await world(page);
   const hull = await hullOf(page);
   expect(hull.velocity.y).toBeGreaterThan(1); // it climbed
-  expect((w as unknown as { gas: { parcels: unknown[] } }).gas.parcels.length).toBeGreaterThan(0);
+  expect((w as unknown as { gas: { count: number } }).gas.count).toBeGreaterThan(0);
   expect(w.ledger.violations).toBe(0);
   expect(w.events.some((e) => e.type === "ignition")).toBe(true);
 });

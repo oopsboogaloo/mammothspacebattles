@@ -1,7 +1,7 @@
 // The gas split into clusters that can't meet within a step, each stepped on its own (§10.1).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { computeTotals, createWorld, getProfile, gasClusters, hashValue, initialWorld, normalizeBody, parseScenario, stepGas, stepInPlace, wallBodies, type Command, type World } from "../../src/core/index.ts";
+import { computeTotals, createWorld, getProfile, gasClusters, hashValue, initialWorld, normalizeBody, parseScenario, stepGas, stepInPlace, wallBodies, type Command, type World, parcelsOf, setParcels, gasOf } from "../../src/core/index.ts";
 import { box, readJson, ROOT } from "../helpers.ts";
 
 const sandbox = getProfile("sandbox");
@@ -23,9 +23,9 @@ describe("gas clusters", () => {
     const w = fleet();
     // Early on the ships' plumes are close enough to meet within a step, so they are one cluster.
     for (let i = 0; i < 400; i++) stepInPlace(w, i === 0 ? [set("left", 1), set("right", 1)] : [], sandbox);
-    const cs = gasClusters(w.gas.parcels, wallBodies(w.bodies), w.joints, sandbox.timestep);
+    const cs = gasClusters(w.gas, wallBodies(w.bodies), w.joints, sandbox.timestep);
     expect(cs.length).toBeGreaterThanOrEqual(3);
-    expect(cs.reduce((n, c) => n + c.parcels.length, 0)).toBe(w.gas.parcels.length);
+    expect(cs.reduce((n, c) => n + c.parcels.length, 0)).toBe(w.gas.count);
     for (const c of cs) expect(c.bodies.length).toBeLessThan(w.bodies.length);
     // By now the ships have crashed into each other, which leaves small energy residuals logged in
     // §9.9 (they predate clusters); mass and momentum stay exact.
@@ -39,7 +39,7 @@ describe("gas clusters, review findings", () => {
   const parcel = (id: number, x: number, y: number, thermal: number, mass = 0.01, radius = 0.1) => ({ id, mass, composition: { o2: 1 }, position: { x, y }, velocity: { x: 0, y: 0 }, thermal, radius });
   const fresh = (parcels: ReturnType<typeof parcel>[], bodies: object[] = []) => {
     const w = createWorld(1, bodies as never, { x: 0, y: 0 }, {}, test);
-    w.gas.parcels = structuredClone(parcels);
+    setParcels(w.gas, structuredClone(parcels));
     w.gas.nextId = parcels.length + 1;
     w.ledger.totals = computeTotals(w);
     return w;
@@ -53,24 +53,24 @@ describe("gas clusters, review findings", () => {
       const j = k % 32;
       ps.push(parcel(k + 1, side * (0.4 + 0.1 * (j % 8)), 0.1 * Math.floor(j / 8), 1000));
     }
-    expect(gasClusters(ps as never, [], [], test.timestep)).toHaveLength(1);
+    expect(gasClusters(gasOf(ps), [], [], test.timestep)).toHaveLength(1);
     const a = fresh(ps);
     const b = fresh(ps);
     stepInPlace(a, [], test);
     stepGas(b.gas, [], [], test.timestep, b.bounds);
-    expect(hashValue(a.gas.parcels)).toBe(hashValue(b.gas.parcels));
+    expect(hashValue(parcelsOf(a.gas))).toBe(hashValue(parcelsOf(b.gas)));
   });
 
   it("NFR-004 pooled small clusters list a fixed body they share once, so its walls push once", () => {
     const ground = { ...box("ground", 10, 1, { position: { x: 0, y: -0.5 } }), fixed: true };
     const ps = [parcel(1, -4, 0.1, 1), parcel(2, 4, 0.1, 1)];
-    const cs = gasClusters(ps as never, wallBodies([normalizeBody(ground as never)]), [], test.timestep);
+    const cs = gasClusters(gasOf(ps), wallBodies([normalizeBody(ground as never)]), [], test.timestep);
     expect(cs).toHaveLength(1);
     expect(cs[0].bodies).toEqual([0]);
     const a = fresh(ps, [ground]);
     const b = fresh(ps, [ground]);
     stepInPlace(a, [], test);
     stepGas(b.gas, wallBodies(b.bodies), [], test.timestep, b.bounds);
-    expect(hashValue(a.gas.parcels)).toBe(hashValue(b.gas.parcels));
+    expect(hashValue(parcelsOf(a.gas))).toBe(hashValue(parcelsOf(b.gas)));
   });
 });

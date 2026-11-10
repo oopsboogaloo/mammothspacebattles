@@ -6,7 +6,7 @@
 // tolerance (relative, or absolute below 1e-9 for residuals). Times are reported, not compared.
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { assemblyTotals, getProfile, initialWorld, parseScenario, stepInPlace, timelineByStep, type Command, type World } from "../src/core/index.ts";
+import { assemblyTotals, getProfile, initialWorld, parseScenario, stepInPlace, timelineByStep, type Command, type World, parcelsOf } from "../src/core/index.ts";
 
 const args = process.argv.slice(2);
 const opt = (name: string) => {
@@ -28,12 +28,12 @@ const asm = (w: World, id: string) => assemblyTotals(w, id)!;
 const body = (w: World, id: string) => w.bodies.find((b) => b.id === id);
 
 const CASES: Case[] = [
-  { name: "SC-02 gas in a box", scenario: "sc02-gas-in-a-box", steps: 480, measure: (w) => ({ parcels: w.gas.parcels.length, thermal: w.gas.parcels.reduce((s, p) => s + p.thermal, 0) }) },
-  { name: "RS-07 gas burst", scenario: "rs07-gas-burst", steps: 480, measure: (w) => ({ parcels: w.gas.parcels.length, kinetic: w.gas.parcels.reduce((s, p) => s + 0.5 * p.mass * (p.velocity.x ** 2 + p.velocity.y ** 2), 0) }) },
+  { name: "SC-02 gas in a box", scenario: "sc02-gas-in-a-box", steps: 480, measure: (w) => ({ parcels: w.gas.count, thermal: parcelsOf(w.gas).reduce((s, p) => s + p.thermal, 0) }) },
+  { name: "RS-07 gas burst", scenario: "rs07-gas-burst", steps: 480, measure: (w) => ({ parcels: w.gas.count, kinetic: parcelsOf(w.gas).reduce((s, p) => s + 0.5 * p.mass * (p.velocity.x ** 2 + p.velocity.y ** 2), 0) }) },
   { name: "RS-08 chemical rocket, 2 s", scenario: "rs08-chemical-rocket", steps: 480, measure: (w) => ({ vy: asm(w, "hull").velocity.y }) },
   { name: "RS-16 twin engine", scenario: "rs16-twin-engine", steps: 600, measure: (w) => ({ vy: asm(w, "hull").velocity.y, spin: asm(w, "hull").angularVelocity }) },
   { name: "LAND both engines 1 s", scenario: "land-twin-engine", steps: 240, commands: { 0: [set("left", 1), set("right", 1)] }, measure: (w) => ({ vy: asm(w, "hull").velocity.y }) },
-  { name: "GS2 both engines 3 s", scenario: "gunship-2", steps: 720, commands: { 0: [set("left", 1), set("right", 1)] }, measure: (w) => ({ vy: asm(w, "hull").velocity.y, parcels: w.gas.parcels.length }) },
+  { name: "GS2 both engines 3 s", scenario: "gunship-2", steps: 720, commands: { 0: [set("left", 1), set("right", 1)] }, measure: (w) => ({ vy: asm(w, "hull").velocity.y, parcels: w.gas.count }) },
   { name: "GS2 left engine 0.5 s", scenario: "gunship-2", steps: 120, commands: { 0: [set("left", 1)] }, measure: (w) => ({ spin: asm(w, "hull").angularVelocity }) },
   { name: "GUN muzzle speed", scenario: "cannon-test", steps: 180, measure: (w) => ({ shell: body(w, "shell")!.velocity.x, recoil: asm(w, "breech").velocity.x }) },
 ];

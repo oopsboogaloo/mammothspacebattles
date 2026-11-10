@@ -4,7 +4,7 @@
 import fc from "fast-check";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assemblyTotals, gasTotals, getProfile, initialWorld, invRotate, parseScenario, runScenario, sinCos, stepInPlace } from "../src/core/index.ts";
+import { assemblyTotals, gasTotals, getProfile, initialWorld, invRotate, parseScenario, runScenario, sinCos, stepInPlace, parcelsOf } from "../src/core/index.ts";
 import { readJson, ROOT } from "./helpers.ts";
 
 const load = (name: string) => readJson(join(ROOT, "scenarios", `${name}.json`));
@@ -117,7 +117,7 @@ describe("SC-03 simplest rocket: a box of hot gas with a hole", () => {
     const profile = getProfile(scn.profile);
     const w = initialWorld(scn);
     const m0 = assemblyTotals(w, "top")!.mass + gasTotals(w.gas).mass;
-    const inside = new Set(w.gas.parcels.map((p) => p.id));
+    const inside = new Set(parcelsOf(w.gas).map((p) => p.id));
     let mOut = 0;
     let exhaust = 0; // Σ m·(exhaust speed relative to the box, along −x of the box)
     let exhaustMomentum = { x: 0, y: 0 }; // in the world frame, at the moment of leaving
@@ -125,8 +125,8 @@ describe("SC-03 simplest rocket: a box of hot gas with a hole", () => {
       stepInPlace(w, [], profile);
       const b = assemblyTotals(w, "top")!;
       const q = sinCos(w.bodies.find((x) => x.id === "top")!.angle);
-      const alive = new Set(w.gas.parcels.map((p) => p.id));
-      for (const p of w.gas.parcels) {
+      const alive = new Set(parcelsOf(w.gas).map((p) => p.id));
+      for (const p of parcelsOf(w.gas)) {
         if (!inside.has(p.id)) continue;
         const local = invRotate(q, { x: p.position.x - b.centre.x, y: p.position.y - b.centre.y });
         if (Math.abs(local.x) <= 1.1 && Math.abs(local.y) <= 1.1) continue;
@@ -139,7 +139,7 @@ describe("SC-03 simplest rocket: a box of hot gas with a hole", () => {
       for (const id of [...inside]) if (!alive.has(id)) inside.delete(id);
     }
     const b = assemblyTotals(w, "top")!;
-    const mIn = w.gas.parcels.filter((p) => inside.has(p.id)).reduce((a, p) => a + p.mass, 0);
+    const mIn = parcelsOf(w.gas).filter((p) => inside.has(p.id)).reduce((a, p) => a + p.mass, 0);
     return { w, b, m0, m1: b.mass + mIn, ve: exhaust / mOut, mOut, profile, exhaustMomentum };
   }
 

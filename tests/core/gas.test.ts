@@ -17,8 +17,7 @@ import {
   temperatureOf,
   type BodyInput,
   type GasFill,
-  type World,
-} from "../../src/core/index.ts";
+  type World, parcelsOf, } from "../../src/core/index.ts";
 import { box, disc, readJson, ROOT } from "../helpers.ts";
 
 const test = getProfile("test");
@@ -53,8 +52,8 @@ const fill = (over: Partial<GasFill> = {}): GasFill => ({ min: { x: -1, y: -1 },
 describe("gas parcels", () => {
   it("GAS-001 a parcel has mass, composition, position, velocity, thermal energy and radius", () => {
     const w = createWorld(1, [], { x: 0, y: 0 }, { gas: [fill({ count: 16, mass: 0.16, temperature: 400, velocity: { x: 2, y: -1 } })] }, test);
-    expect(w.gas.parcels).toHaveLength(16);
-    for (const p of w.gas.parcels) {
+    expect(parcelsOf(w.gas)).toHaveLength(16);
+    for (const p of parcelsOf(w.gas)) {
       expect(p.mass).toBeCloseTo(0.01, 12);
       expect(p.composition).toEqual({ air: 1 });
       expect(p.velocity).toEqual({ x: 2, y: -1 });
@@ -171,7 +170,7 @@ describe("gas parcels", () => {
       boundary = { mass: boundary.mass + b.mass, momentumX: boundary.momentumX + b.momentumX, energy: boundary.energy + b.energy };
     }
     expect(w.gas.removed.count).toBeGreaterThan(0);
-    expect(w.gas.parcels.length + w.gas.removed.count).toBe(36);
+    expect(w.gas.count + w.gas.removed.count).toBe(36);
     expect(boundary.mass).toBeCloseTo(-w.gas.removed.mass, 12);
     expect(boundary.momentumX).toBeCloseTo(-w.gas.removed.momentum.x, 9);
     expect(boundary.energy).toBeCloseTo(-w.gas.removed.energy, 6);
@@ -184,7 +183,7 @@ describe("gas parcels", () => {
     const w = createWorld(1, [], { x: 0, y: 0 }, {}, test);
     const t0 = performance.now();
     applyCommands(w, [{ type: "gas.fill", fill: fill({ count: 4_000_000, min: { x: -100, y: -100 }, max: { x: 100, y: 100 } }) }], test);
-    expect(w.gas.parcels.length).toBe(0);
+    expect(w.gas.count).toBe(0);
     expect(w.events.at(-1)!.type).toBe("limit.refused");
     expect(performance.now() - t0).toBeLessThan(500); // stops at the limit instead of making 4 million parcels
   });
@@ -198,7 +197,7 @@ describe("gas parcels", () => {
       const w = createWorld(1, bodies, { x: 0, y: 0 }, { joints: joints as never, gas: [fill({ count: 100, velocity: { x: v, y: 0 } })] }, test);
       run(w, 30);
       const b = assemblyTotals(w, "top")!;
-      for (const p of w.gas.parcels) expect(Math.hypot(p.position.x - b.centre.x, p.position.y - b.centre.y)).toBeLessThan(1.42);
+      for (const p of parcelsOf(w.gas)) expect(Math.hypot(p.position.x - b.centre.x, p.position.y - b.centre.y)).toBeLessThan(1.42);
       if (v) expect(b.velocity.x).toBeCloseTo(v, 2);
       expect(w.ledger.violations).toBe(0);
     }
@@ -207,10 +206,10 @@ describe("gas parcels", () => {
   it("PRF-003 a fill that would exceed limit.gasParcels is refused and recorded", () => {
     const w = createWorld(1, [], { x: 0, y: 0 }, {}, test);
     applyCommands(w, [{ type: "gas.fill", fill: fill({ count: 3969 }) }], test); // a 63 × 63 lattice
-    expect(w.gas.parcels.length).toBe(3969);
+    expect(w.gas.count).toBe(3969);
     const rng = structuredClone(w.rng);
     applyCommands(w, [{ type: "gas.fill", fill: fill({ count: 2025, min: { x: 2, y: 2 }, max: { x: 3, y: 3 } }) }], test);
-    expect(w.gas.parcels.length).toBe(3969);
+    expect(w.gas.count).toBe(3969);
     expect(w.rng).toEqual(rng); // a refused fill draws no random numbers
     const e = w.events.find((x) => x.type === "limit.refused")!;
     expect(e.data).toEqual({ entity: "gasParcels", requested: 2025, existing: 3969, limit: test.limit.gasParcels });
@@ -220,7 +219,7 @@ describe("gas parcels", () => {
   it("gas.remove takes out the parcels in a rectangle, as a user edit", () => {
     const w = createWorld(1, [], { x: 0, y: 0 }, { gas: [fill({ count: 100 })] }, test);
     applyCommands(w, [{ type: "gas.remove", min: { x: -1, y: -1 }, max: { x: 0, y: 1 } }], test);
-    expect(w.gas.parcels.length).toBe(50);
+    expect(w.gas.count).toBe(50);
     stepInPlace(w, [], test);
     expect(w.ledger.last!.sources.user.mass).toBeCloseTo(-0.25, 12);
     expect(w.ledger.violations).toBe(0);
@@ -228,8 +227,8 @@ describe("gas parcels", () => {
 
   it("parcels are not placed inside bodies", () => {
     const w = createWorld(1, [disc("rock", { shape: { kind: "disc", radius: 0.5 } })], { x: 0, y: 0 }, { gas: [fill({ count: 100 })] }, test);
-    expect(w.gas.parcels.length).toBeLessThan(100);
-    for (const p of w.gas.parcels) expect(Math.hypot(p.position.x, p.position.y)).toBeGreaterThan(0.5);
+    expect(w.gas.count).toBeLessThan(100);
+    for (const p of parcelsOf(w.gas)) expect(Math.hypot(p.position.x, p.position.y)).toBeGreaterThan(0.5);
     expect(computeTotals(w).mass).toBeCloseTo(1.5, 12); // the fill's mass is spread over the parcels made
   });
 });
@@ -253,7 +252,7 @@ describe("sealed box oracle", () => {
           expect(w.ledger.maxResidual.energy).toBeLessThan(test.tol.energy);
           // Nothing escaped the box (inner corners are √2 m from its centre).
           const c = assemblyTotals(w, "top")!.centre;
-          for (const p of w.gas.parcels) expect(Math.hypot(p.position.x - c.x, p.position.y - c.y)).toBeLessThan(1.42);
+          for (const p of parcelsOf(w.gas)) expect(Math.hypot(p.position.x - c.x, p.position.y - c.y)).toBeLessThan(1.42);
         },
       ),
       { numRuns: 6 },
@@ -272,7 +271,7 @@ describe("sealed box oracle", () => {
     const sandbox = getProfile("sandbox");
     const cloud = (depth: number | undefined, bodies: Parameters<typeof createWorld>[1] = []) =>
       createWorld(1, bodies, { x: 0, y: 0 }, { bounds: { min: { x: -50, y: -50 }, max: { x: 50, y: 50 }, ...(depth ? { depth } : {}) }, gas: [fill({ count: 100, mass: 0.1, temperature: 300 })] }, sandbox);
-    const mass = (w: ReturnType<typeof cloud>) => w.gas.parcels.reduce((m, p) => m + p.mass, 0);
+    const mass = (w: ReturnType<typeof cloud>) => parcelsOf(w.gas).reduce((m, p) => m + p.mass, 0);
 
     it("GAS-009 with a depth, gas older than DEPTH_DELAY spreads out at its sound speed as whole parcels, and the ledger records what leaves", () => {
       const w = cloud(2);
@@ -287,7 +286,7 @@ describe("sealed box oracle", () => {
       expect(mass(w)).toBeLessThan(0.9 * m0);
       // Whole parcels leave; none gets lighter (a light parcel among heavy ones is flung fast and
       // runs out of thermal energy, which slowed every substep and created energy when clamped).
-      expect(w.gas.parcels.every((p) => p.mass === 0.1 / 100)).toBe(true);
+      expect(parcelsOf(w.gas).every((p) => p.mass === 0.1 / 100)).toBe(true);
       expect(mass(w) + w.gas.removed.mass).toBeCloseTo(m0, 12);
       expect(boundary).toBeCloseTo(-w.gas.removed.mass, 12);
       expect(w.ledger.violations).toBe(0);
@@ -299,7 +298,7 @@ describe("sealed box oracle", () => {
       for (let s = 0; s < 72; s++) stepInPlace(w, [], sandbox);
       expect(mass(w) + w.gas.removed.mass).toBeCloseTo(m0, 12);
       expect(w.gas.removed.mass).toBe(0);
-      expect(w.gas.parcels.every((p) => p.age === undefined)).toBe(true);
+      expect(parcelsOf(w.gas).every((p) => p.age === undefined)).toBe(true);
     });
 
     it("GAS-009 gas inside an engine's declared interior stays in the plane", () => {

@@ -17,7 +17,7 @@
 // the rest, at 1× and 4× detail (4× the parcels, half the smoothing length: 2× the substeps).
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { gasClusters, getProfile, initialWorld, mixture, parseScenario, SMOOTHING, stepInPlace, timelineByStep, wallBodies, type Body } from "../src/core/index.ts";
+import { gasClusters, getProfile, initialWorld, mixture, parseScenario, SMOOTHING, stepInPlace, timelineByStep, wallBodies, type Body, parcelsOf } from "../src/core/index.ts";
 
 const args = process.argv.slice(2);
 const steps = Number(args[args.indexOf("--steps") + 1] ?? 480) || 480;
@@ -41,7 +41,7 @@ function bodyRadius(b: Body): number {
 
 /** Substeps a step for one cluster under every rule. */
 function clusterSubsteps(pIdx: number[], bIdx: number[], walls: ReturnType<typeof wallBodies>): Record<Rule, number> {
-  const ps = pIdx.map((i) => world.gas.parcels[i]);
+  const ps = pIdx.map((i) => parcelsOf(world.gas)[i]);
   const bs = bIdx.map((k) => world.bodies.find((b) => b.id === walls[k].id)!).filter((b) => b && !b.fixed);
   let hmin = Infinity;
   let hmax = 0;
@@ -116,7 +116,7 @@ for (let s = 0; s < steps; s++) {
   stepInPlace(world, byStep.get(s) ?? [], profile);
   if (s < 60 || s % 10 !== 0) continue;
   const walls = wallBodies(world.bodies);
-  const cs = gasClusters(world.gas.parcels, walls, world.joints, dt);
+  const cs = gasClusters(world.gas, walls, world.joints, dt);
   const per = cs.map((cl) => ({ n: cl.parcels.length, sub: clusterSubsteps(cl.parcels, cl.bodies, walls) }));
   // Skip the steps where a fast-spinning fragment drives today's rule to its floor (the known bug).
   if (Math.max(...per.map((p) => p.sub.today)) > 200) continue;
