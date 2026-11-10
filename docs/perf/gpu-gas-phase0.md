@@ -871,7 +871,7 @@ gas part: collection is the likely cause. The gas step's substep loop then moved
 the same hashes in all 46 scenarios and with engines pulsing, the loop 1.6–5× faster, about 45 kB
 fewer typed arrays a step, the whole step 1.0–1.1× faster on the lander levels and 1.2–1.3× with
 more gas. The wisps are now the largest cost on the lander levels (25–33% of the step). On the iPad
-after it: no frozen step in 12.5 minutes of Orbital (5 in 4 minutes with `wasm=0`). Details:
+after it: no frozen step in 11.3 minutes of Orbital (5 in 4 minutes with `wasm=0`). Details:
 [`rust-trial.md`](rust-trial.md).
 
 ## How to send numbers
