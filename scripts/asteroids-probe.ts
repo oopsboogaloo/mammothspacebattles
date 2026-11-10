@@ -2,7 +2,7 @@
 // time of levels 1–6 before the game exists. Each level is that many rocks (12 m, 20 pieces, every
 // piece pulling: AST-009) drifting in a wrapped 284 × 160 m arena, with the LAND ship (the flight
 // test's, economy 20) in the middle firing both engines throughout. The budget is 6 ms a step.
-//   node scripts/asteroids-probe.ts [--steps N] [--no-gravity]
+//   node scripts/asteroids-probe.ts [--steps N] [--no-gravity] [--levels 8,10]
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRng, getProfile, initialWorld, nextFloat, parseScenario, stepInPlace, type Command } from "../src/core/index.ts";
@@ -11,6 +11,7 @@ const root = new URL("..", import.meta.url).pathname;
 const args = process.argv.slice(2);
 const steps = args.includes("--steps") ? Number(args[args.indexOf("--steps") + 1]) : 1200;
 const pull = !args.includes("--no-gravity");
+const levels = args.includes("--levels") ? args[args.indexOf("--levels") + 1].split(",").map(Number) : [1, 2, 3, 4, 5, 6];
 const W = 284;
 const H = 160;
 const R = 12;
@@ -59,7 +60,7 @@ const both: Command[] = [
 ];
 console.log(`${steps} steps after 240 to warm up, engines firing${pull ? "" : ", no rock gravity"}`);
 console.log("level  bodies  sources  parcels  mean ms  worst ms  violations");
-for (let n = 1; n <= 6; n++) {
+for (const n of levels) {
   const scn = level(n);
   const profile = getProfile(scn.profile);
   const w = initialWorld(scn);

@@ -362,7 +362,8 @@ describe("AI pilot combat (phase 3)", () => {
     for (let i = 0; i < 2400 && !hit; i++) {
       stepInPlace(w, [], sandbox);
       const own = player();
-      hit = w.events.some((e) => e.tick === w.tick - 1 && (e.type === "detonation" || e.type === "collision") && /^e1-breech-shell-/.test(String(e.data.id ?? e.data.a) + String(e.data.b ?? "")) && (own.has(String(e.data.a)) || own.has(String(e.data.b)) || e.type === "detonation"));
+      // The shell striking one of the player's own parts: a burst somewhere else doesn't count.
+      hit = w.events.some((e) => e.tick === w.tick - 1 && e.type === "collision" && /^e1-breech-shell-/.test(String(e.data.a) + String(e.data.b)) && (own.has(String(e.data.a)) || own.has(String(e.data.b))));
       const at = (id: string) => w.bodies.find((x) => x.id === id)?.position.y;
       seam &&= (at("e1-hull") ?? 1) > 0 && (at("hull") ?? -1) < 0;
     }

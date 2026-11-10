@@ -569,7 +569,13 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
   | 5 | 119 | 100 | 2.37 | 5.3 | 1.86 |
   | 6 | 139 | 120 | 2.96 | 7.4 | 2.15 |
 
-  The mean is within the budget at every level; rock gravity is about 0.8 ms of level 6's step. Single steps reach 7.4 ms. The gravity loop was rewritten for this on plain numbers with no objects made (the same arithmetic: every scenario's hash is unchanged); before that level 6 took 3.4 ms. The probe has no slugs, gunship or game logic yet, and an iPad is slower than this machine, so it is repeated when the game runs.
+  | 8 | 179 | 160 | 3.74 | 6.8 | 2.37 |
+  | 10 | 216 | 197 | 4.69 | 11.1 | 3.54 |
+  | 12 | 259 | 240 | 5.67 | 13.8 | 3.55 |
+
+  (Levels 8–12 over 600 steps.) Level N has N rocks with no upper limit (MAS-020), and gravity's cost grows with sources × bodies, so the mean passes the budget a little after level 12 on this machine, sooner on a slower one. **Open, for Chloe:** cap the rocks a level (the later levels getting harder some other way), or make far rocks pull as one source each.
+
+  The mean is within the budget up to level 12; rock gravity is about 0.8 ms of level 6's step. Single steps reach 7.4 ms. The gravity loop was rewritten for this on plain numbers with no objects made (the same arithmetic: every scenario's hash is unchanged); before that level 6 took 3.4 ms. The probe has no slugs, gunship or game logic yet, and an iPad is slower than this machine, so it is repeated when the game runs.
 - **In the scenarios.** GS-R, GS-X and TRC give every asteroid one gold piece, and one or two larger fragments (two in the first and third asteroid, one in the others). TRC's asteroids are light (6 kg/m²), so that the pieces they break into can be towed: rock pieces are 5–97 kg, gold 17–121 kg, and larger fragments 25–158 kg, against the tether's limit of about 96 kg (1.2 × the ship). Whole asteroids are too heavy, and so are the heaviest pieces of the 6 m boulder. Measured with GS-X's first explosive shell: the struck larger fragment shows its seams at once, and the ledger is clean. GS-R's solid shells reveal one after 14 hits.
 - **Not yet.** Spin shedding (AST-004) needs loads for welds in loops. Dust (AST-005) needs pressureless particles.
 
