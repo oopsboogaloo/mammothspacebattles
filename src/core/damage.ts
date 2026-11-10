@@ -112,12 +112,12 @@ const anchorAt = (b: Body, local: Vec2): Vec2 => add(b.position, rotate(sinCos(b
  */
 export function applyDamage(world: World): void {
   // Energy and an impulse-weighted point per pair, in contact order (deterministic).
-  const pairs = new Map<string, { a: string; b: string; energy: number; x: number; y: number; w: number }>();
+  const pairs = new Map<string, { a: string; b: string; energy: number; x: number; y: number; w: number; shift?: Vec2 }>();
   for (const c of world.contacts) {
     if (!(c.energyLost > 0)) continue;
     const k = `${c.a}\u0000${c.b}`;
     let p = pairs.get(k);
-    if (!p) pairs.set(k, (p = { a: c.a, b: c.b, energy: 0, x: 0, y: 0, w: 0 }));
+    if (!p) pairs.set(k, (p = { a: c.a, b: c.b, energy: 0, x: 0, y: 0, w: 0, shift: c.shift }));
     p.energy += c.energyLost;
     const w = Math.max(c.normalImpulse, 1e-12);
     p.x += w * c.point.x;
@@ -129,7 +129,9 @@ export function applyDamage(world: World): void {
     const at = { x: p.x / p.w, y: p.y / p.w };
     for (const id of [p.a, p.b]) {
       const body = byId.get(id);
-      if (body) damageBody(world, body, p.energy / 2, at);
+      // A pair that met across a wrapped world's edge (FLT-015): the point is on a's side, and b's
+      // own hit point is one world width (or height) away.
+      if (body) damageBody(world, body, p.energy / 2, p.shift && id === p.b ? sub(at, p.shift) : at);
     }
   }
   breakWreckage(world);

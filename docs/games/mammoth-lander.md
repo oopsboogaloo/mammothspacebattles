@@ -324,8 +324,10 @@ Priority: **M** must, **S** should.
   Its jet pushes with about a tenth of one engine's thrust.
 - **LND-041** `[M]` Terrain is authored as a line of points per scenario. The game builds the
   ground's polygons from it.
-- **LND-042** `[M]` Terrain collides across the wrap seam. Today nothing collides across a seam
-  (FLT-012's known limit), and a ship there would fall through the ground.
+- **LND-042** `[M]` Terrain collides across the wrap seam. The ground runs from edge to edge, and a
+  ship at an edge stands on the ground across it (FLT-015: bodies collide across the edges). Until
+  10 November 2026 the levels carried copies of their first and last 30 m past the opposite edges
+  instead.
 
 **Effects**
 - **LND-050** `[S]` The EMERGENCY banner flashes red.
