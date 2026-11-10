@@ -71,7 +71,7 @@ export interface Duel {
 }
 
 /** A ship's parts welded to its hull, and whether it can still fly (a working engine among them). */
-function shipState(world: World, id: string): { parts: number; flies: boolean; centre?: Vec2 } {
+export function shipState(world: World, id: string): { parts: number; flies: boolean; centre?: Vec2 } {
   if (!world.bodies.some((b) => b.id === id)) return { parts: 0, flies: false };
   const ids = new Set(assemblyOf(world, id));
   // A magazine's stop comes and goes as shells load: not a part.

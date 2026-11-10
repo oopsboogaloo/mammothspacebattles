@@ -29,4 +29,5 @@ export { spawnWisps, stepWisps, wispFade, wispMass, wispRadius, WISP_GROW, WISP_
 export { burst, removeDestroyed, stepDust, DUST_LIMIT, type Dust, type DustKind } from "./dust.ts";
 export { runDuel, startDuel, type Duel, type DuelGoal, type DuelPhase, type DuelStatus } from "./duel.ts";
 export * from "./lander.ts";
+export * from "./arcade.ts";
 export { wasmSinCos } from "./solverWasm.ts";

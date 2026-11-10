@@ -22,7 +22,7 @@ requirement IDs (MAS-…) are this game's own. The engine changes the game needs
 | Gold | Can't be destroyed. Collected by touching it with the ship, once it can be seen: any gold not hidden inside an unrevealed larger fragment, whether or not it is still in a rock. |
 | Gravity | Every rock piece pulls by its own mass. Each rock's pull is about 1 m/s² at its surface (a quarter of the ship's thrust). Rocks pull each other; the ship pulls nothing. In the wrapped arena each rock pulls from its nearest copy (as now). |
 | Rocks | The mining tuning (tough pieces, weaker bonds), retuned for the light slug. Rocks chip and crack each other when they collide. |
-| Railgun | A light solid slug (about 0.1 kg at 200 m/s, about 4 shots a second). Each shot kicks the ship back about 0.7 m/s. |
+| Railgun | A light solid slug (about 0.1 kg at 200 m/s, about 4 shots a second). Each shot kicks the ship back about 0.6 m/s. A slug flies 140 m and is gone: less than the arena's height, so it can't come round and hit you. |
 | Life lost | The hull destroyed, or no working engine still welded to it (the duel's rule). Damage short of that is flown with. |
 | Lives | 3. The wreck stays as debris for the rest of the level. The next ship beams in at a safe spot after about 2.5 s, protected from damage for 2 s. |
 | Supplies | A full tank and magazine with every new ship and at every new level. |

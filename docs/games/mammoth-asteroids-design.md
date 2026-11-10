@@ -109,6 +109,26 @@ It flies only through the ship's channels, like every pilot (AIP-001).
 
 ## 2. The game in the world (MAS-070), `src/core/arcade.ts`
 
+*Built (step 4 of the plan), without the gunships (step 6).* What the build changed from the text
+below:
+
+- **A slug lasts 0.7 game s, not 1.5.** At 200 m/s a slug crosses the 160 m arena in 0.8 s, so at
+  1.5 s one fired straight up came round and hit the ship that fired it: three of them wrecked the
+  tank in the first trial. At 0.7 s it flies 140 m, less than the arena's height.
+- **The clearest spot prefers the centre.** Clearances past 40 m count the same, so the new ship
+  comes back at the centre whenever the centre is safe, and moves off only when something is
+  coming.
+- **A ship lost during the pause after a clear** comes back with the next level at the centre of
+  the (then empty) arena, protected. If it was the last ship, the level's bonus is still paid, and
+  then the game is over.
+- **The gunship's settings** (`gunship`, and step 5 and 9 of the hook) are not in the spec type
+  yet; they come with step 6.
+- **Rock tuning is provisional** (`bond` 20,000 N/m, material threshold 100 J, toughness 20,000 J):
+  in a trial of 60 slugs into a still rock, each slug took about 4% off the piece it hit, a piece
+  was destroyed after about 30, and the first welds broke then. Retuned in step 8.
+- **Holding fire pushes the ship back hard**: each shot kicks it 0.59 m/s (20 N·s against 34 kg),
+  so a full second of fire is 4.7 m/s. For the tuning after play.
+
 Like Lander, the game lives in the world (`world.arcade`), so a run and a replay agree. Ids: the
 player's ship `p{n}-…`, gunships `g{n}-…`, and rocks `a{level}-{k}` (pieces `a{level}-{k}-{i}`).
 
@@ -127,7 +147,7 @@ interface ArcadeSpec {
               // Past the level where the rocks stop growing (MAS-043), per level, in game s:
               late: { first: -1; firstMin: 5; every: -2.5; everyMin: 10; skill: 0.05; skillMax: 1 } };
   respawn?: 1.25; grace?: 1; clearPause?: 1.5;  // game s
-  shellLife?: 1.5;                   // game s, any railgun shell
+  shellLife?: 0.7;                   // game s, any railgun shell (140 m: less than the arena's height)
   pace: 0.5;                         // to turn game time into the player's seconds for the bonus
   demo?: boolean;                    // the title screen's game: the ship flies itself
   seed: number;
