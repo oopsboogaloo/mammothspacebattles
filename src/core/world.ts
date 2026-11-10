@@ -1224,6 +1224,9 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   // potential energy, when the stores are at different heights: that is the feed pumping propellant
   // up or down, and so may spin energy, as the mass carries its share of a spinning body's spin to
   // another (both recorded as a transfer, like angular momentum).
+  // `before` holds the totals of the world as it is now, all the way to the field's kick: each
+  // block below that changes the world ends by setting it, so none needs to work them out again
+  // before it starts (the totals walk every body and parcel, and nothing changes in between).
   let before = computeTotals(world);
   if (world.links.length) {
     const { touchedFixed, spinShift } = runFeeds(world, dt);
@@ -1235,7 +1238,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
     before = after;
   }
   if (world.bodies.some((b) => b.magazine)) {
-    const t0 = computeTotals(world);
+    const t0 = before;
     retractStops(world);
     runMagazines(world, dt);
     const t1 = computeTotals(world);
@@ -1245,7 +1248,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   }
   // Railguns (WPN-008): the launch is an equal and opposite push, powered by the ship.
   if (world.bodies.some((b) => b.magazine?.railgun)) {
-    const t0 = computeTotals(world);
+    const t0 = before;
     fireRailguns(world, dt, addBody as never, normalizeBody as never);
     const t1 = computeTotals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
@@ -1257,7 +1260,7 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
   // store at the body's centre to the outlet (recorded, not checked, as for feeds), and so may
   // gravitational potential energy, by the height of the outlet above the centre.
   if (world.bodies.some((b) => b.injector || b.breach || (b.integrity < 1 && b.contents?.length)) || world.gas.parcels.length) {
-    const t0 = computeTotals(world);
+    const t0 = before;
     runInjectors(world, dt, profile);
     runLeaks(world, dt, profile);
     igniteAndBurn(world.gas);
@@ -1294,8 +1297,11 @@ function* stepPhases(world: World, commands: readonly Command[], profile: Profil
 
   // User drag springs.
   before = after;
-  applyDrags(world, rbs, dt);
-  after = computeTotals(world);
+  if (world.drags.length) {
+    applyDrags(world, rbs, dt);
+    after = computeTotals(world);
+  }
+  // With no drags nothing changed: the same totals, so the same (zero) difference.
   addDelta(sources.user, diff(before, after));
 
   // Tractor beams and tethers (TRC): equal and opposite pulls, so only energy changes, which the ship
