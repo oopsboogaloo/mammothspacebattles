@@ -1,12 +1,50 @@
 // The plume's tail (GAS-011): gas gone from the gas model fades out as wisps that still bounce.
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createWorld, getProfile, parseScenario, initialWorld, spawnWisps, stepInPlace, stepWisps, wispMass, wispRadius, WISP_GROW, WISP_LIFE, type Parcel } from "../../src/core/index.ts";
+import { boundingRadiusOf, createWorld, getProfile, hashValue, parseScenario, initialWorld, spawnWisps, stepInPlace, stepWisps, wispMass, wispRadius, WISP_GROW, WISP_LIFE, type Parcel } from "../../src/core/index.ts";
 import { box, readJson, ROOT } from "../helpers.ts";
 
 const parcel = (x: number, vx: number): Parcel => ({ id: 1, mass: 0.004, composition: { h2o: 1 }, position: { x, y: 0 }, velocity: { x: vx, y: 0 }, thermal: 1, radius: 0.035 }) as Parcel;
 
 describe("plume tail (GAS-011)", () => {
+  // The big bodies' grid (a lander's rock is a hundred big parts) must change nothing: every wisp
+  // still meets the bodies it could touch, in the world's order.
+  for (const name of ["lander-orbital.json", "lander-emergency.json"]) {
+    it(`GAS-011 ${name}: wisps bounce the same with the big bodies on a grid as tested one by one`, () => {
+      const w = initialWorld(parseScenario(readJson(join(ROOT, "scenarios", name)) as never));
+      const profile = getProfile("sandbox");
+      const dt = profile.timestep;
+      stepInPlace(w, [], profile); // the ship arrives
+      const channels = [...new Set(w.links.flatMap((l) => (l.kind === "control" ? [l.channel] : [])))];
+      stepInPlace(w, channels.map((channel) => ({ type: "control.set" as const, channel, value: 1 })), profile);
+      const big = w.bodies.filter((b) => boundingRadiusOf(b.shape) > 16);
+      expect(big.length).toBeGreaterThanOrEqual(8);
+      let bounces = 0;
+      let seed = 7;
+      const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+      for (let s = 0; s < 150; s++) {
+        stepInPlace(w, [], profile);
+        if (s < 60 || s % 3) continue;
+        // Some wisps thrown at and into the big bodies, so they bounce and are pushed out across cells.
+        const a = structuredClone(w);
+        for (const wp of a.wisps ?? []) {
+          if (rnd() < 0.5) continue;
+          const b = big[Math.floor(rnd() * big.length)];
+          const r = boundingRadiusOf(b.shape) * (0.2 + rnd());
+          const th = rnd() * 2 * Math.PI;
+          wp.position = { x: b.position.x + r * Math.cos(th), y: b.position.y + r * Math.sin(th) };
+          wp.velocity = { x: -60 * Math.cos(th), y: -60 * Math.sin(th) };
+        }
+        const b = structuredClone(a);
+        expect((a.wisps ?? []).length).toBeGreaterThan(20);
+        bounces += stepWisps(a, dt, false);
+        stepWisps(b, dt);
+        expect(hashValue(b)).toBe(hashValue(a));
+      }
+      expect(bounces).toBeGreaterThan(100);
+    });
+  }
+
   it("GAS-011 a wisp moves on, grows and fades out over its life, its mass fading with it", () => {
     const w = createWorld(1, []);
     spawnWisps(w, [parcel(0, 10)], () => 1500);

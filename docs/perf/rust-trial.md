@@ -242,7 +242,8 @@ Not yet checked on the iPad: Emergency, which froze most, and the other levels.
 ## Next
 
 1. **Emergency on the iPad** (`?game=lander&diag=1`), 5 minutes: the same check where it froze most.
-2. **The wisps** (`stepWisps`), by what a profile says: the largest cost left on the lander levels.
+2. ~~The wisps~~ Done the same day, in TypeScript, with no port needed: big bodies on a grid, the
+   step 1.4–1.6× faster on Orbital, Heavy Orbital and Emergency (perf notes §26).
 3. **Clustering and `buildWalls`** into the module, which would also end the gas part's last typed
    arrays.
 

@@ -83,8 +83,17 @@ interface FixedGrid {
 }
 const fixedGrids = new WeakMap<World, FixedGrid>();
 
+/**
+ * Big bodies get a coarser grid of their own once there are this many: a lander's rock is a hundred
+ * big parts, and testing every wisp against every one was a quarter of the whole step.
+ */
+const BIG_CELL = 16;
+const BIG_GRID_FROM = 8;
+/** Added to a big body's reach when it is filed, m: far more than rounding in the distance test can be. */
+const BIG_PAD = 1e-3;
+
 /** Files a body's bounding circle into `cells` by its index. */
-function file(cells: Map<number, number[]>, b: Body, i: number, r: number): void {
+function file(cells: Map<number, number[]>, b: Body, i: number, r: number, CELL = 4): void {
   const x0 = Math.floor((b.position.x - r) / CELL);
   const x1 = Math.floor((b.position.x + r) / CELL);
   const y0 = Math.floor((b.position.y - r) / CELL);
@@ -133,9 +142,11 @@ function fixedGrid(world: World): FixedGrid {
 
 /**
  * Moves every wisp for one step, bounces it off the bodies it meets (changing only their
- * velocities), and drops those that have faded out. Returns how many bounced.
+ * velocities), and drops those that have faded out. Returns how many bounced. `bigGrid` false tests
+ * every wisp against every big body, as before the big bodies had a grid: the same results, slower
+ * (for the test that they are the same).
  */
-export function stepWisps(world: World, dt: number): number {
+export function stepWisps(world: World, dt: number, bigGrid = true): number {
   const list = world.wisps;
   if (!list?.length) return 0;
   const g = world.gravity;
@@ -156,6 +167,18 @@ export function stepWisps(world: World, dt: number): number {
     else file(moving, b, i, r);
   }
   const big = merge(fixed.big, bigMoving);
+  // Many big bodies: filed by the cells their reach, plus the largest wisp's radius, covers, in
+  // order. A wisp then meets only the big bodies of its cell, which are all it could touch: the same
+  // bodies in the same order as testing every one.
+  let bigCells: Map<number, number[]> | null = null;
+  if (bigGrid && big.length >= BIG_GRID_FROM) {
+    let rmax = 0;
+    for (const w of list) rmax = Math.max(rmax, w.radius);
+    rmax *= WISP_GROW;
+    bigCells = new Map();
+    for (const i of big) file(bigCells, bodies[i], i, reach[i] + rmax + BIG_PAD, BIG_CELL);
+  }
+  const bigKey = (p: Vec2) => cellKey(Math.floor(p.x / BIG_CELL), Math.floor(p.y / BIG_CELL));
   let bounces = 0;
   /** Bounces wisp w (mass m, radius r) off body b if it has run into it. */
   // Each body as placed this step, and its outline in world coordinates, worked out once when a wisp
@@ -216,7 +239,22 @@ export function stepWisps(world: World, dt: number): number {
       while (p < a.length || q < c.length) touch(w, m, r, q >= c.length || (p < a.length && a[p] < c[q]) ? a[p++] : c[q++]);
     } else if (a) for (const i of a) touch(w, m, r, i);
     else if (c) for (const i of c) touch(w, m, r, i);
-    for (const i of big) touch(w, m, r, i);
+    if (!bigCells) for (const i of big) touch(w, m, r, i);
+    else {
+      let near = bigCells.get(bigKey(w.position));
+      let at = 0;
+      while (near && at < near.length) {
+        const i = near[at++];
+        const before = w.position;
+        touch(w, m, r, i);
+        if (w.position !== before) {
+          // Pushed out of a body: carry on with the big bodies of the cell it is in now, after i.
+          near = bigCells.get(bigKey(w.position));
+          at = 0;
+          if (near) while (at < near.length && near[at] <= i) at++;
+        }
+      }
+    }
     kept.push(w);
   }
   world.wisps = kept;

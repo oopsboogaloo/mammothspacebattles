@@ -874,6 +874,32 @@ more gas. The wisps are now the largest cost on the lander levels (25–33% of t
 after it: no frozen step in 11.3 minutes of Orbital (5 in 4 minutes with `wasm=0`). Details:
 [`rust-trial.md`](rust-trial.md).
 
+## 26. The wisps' big bodies on a grid (10 November 2026)
+
+After §25 the wisps were the largest cost on the lander levels. A count showed why: bodies whose
+bounding circle is over 16 m ("big") were tested against every wisp, and a lander's rock is 97 such
+parts, Emergency's ground 52. That was 38,000 tests a step on Orbital and 26,000 on Emergency, of
+which a few hundred were near anything.
+
+- **Fix** (`stepWisps`, TypeScript): with eight or more big bodies, they are filed on a 16 m grid by
+  the cells their reach plus the largest wisp's radius covers, and a wisp meets only those of its
+  cell, in the world's order. A wisp pushed out of a body carries on with the bodies of the cell it
+  is in then.
+- **Identical results:** every wisp still meets every body it could touch, in the same order. The
+  same world hash every step in all 46 scenarios with engines pulsing (600 steps; the lander levels
+  for 1,440), and a test steps the wisps both ways on Orbital and Emergency, with wisps thrown into
+  the big bodies (`tests/core/wisps.test.ts`).
+
+| ms a step (Node, engines pulsing) | Before | Now | |
+|---|---|---|---|
+| Easy (no big bodies) | 0.87 | 0.83 | 1.0× |
+| Emergency | 2.24 | 1.42 | 1.58× |
+| Orbital | 2.00 | 1.36 | 1.47× |
+| Heavy Orbital | 2.39 | 1.66 | 1.44× |
+
+The wisps are now 7–11% of the step there (25–33% before), filing the big bodies included. What is
+left is spread out again: the step's own bookkeeping, the ledger's totals, the gas module, contacts.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
