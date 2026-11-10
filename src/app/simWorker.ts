@@ -2,7 +2,7 @@
 // smooth while the physics runs. It keeps its own copy of the world between runs; the page sends a new
 // one only when its own has changed (an edit, undo, scrub). Same code as the page, so same results.
 /// <reference lib="webworker" />
-import { applyCommands, getProfile, setWasmSolver, runClusterJob, runGasJob, stepGasClustered, type ClusterJob, type ClusterResult, type Command, type GasJob, type World } from "../core/index.ts";
+import { applyCommands, getProfile, runClusterJob, runGasJob, stepGasClustered, type ClusterJob, type ClusterResult, type Command, type GasJob, type World } from "../core/index.ts";
 import { runStepsAsync, type Edit, type Series, type StepRun } from "./controller.ts";
 import { eventDelta, type EventDelta } from "./eventDelta.ts";
 
@@ -22,8 +22,6 @@ export interface RunRequest {
   stopOnVerdict: boolean;
   /** Gas helper threads to use (the page's `?helpers=N`); default none. */
   helpers?: number;
-  /** The WebAssembly constraint solver; false for the TypeScript one (the page's `?wasm=0`). */
-  wasm?: boolean;
   /** Live input to apply to this copy first (the page has: its version is one past this copy's). */
   inputs?: Command[];
 }
@@ -114,7 +112,6 @@ self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
   if (e.data.type === "gpuSpike") return gpuSpike(e.data);
   const req = e.data;
   HELPERS = Math.min(MAX_HELPERS, req.helpers ?? 0);
-  setWasmSolver(req.wasm ?? true);
   if (req.world) world = req.world;
   else if (version !== (req.inputs ? req.version - 1 : req.version) || !world) return; // a stale request: the page will resend
   if (req.inputs && !req.world) applyCommands(world, req.inputs, getProfile(req.profile));

@@ -3,7 +3,7 @@
 // worker (tests, old browsers) or the run in flight has gone stale.
 import type { Sandbox } from "./controller.ts";
 import type { RunRequest, RunResult } from "./simWorker.ts";
-import { setWasmSolver, type Command } from "../core/index.ts";
+import type { Command } from "../core/index.ts";
 import { diag } from "./diag.ts";
 import { applyEventDelta } from "./eventDelta.ts";
 
@@ -15,8 +15,6 @@ export class SimClient {
   inFlight: { sb: Sandbox; version: number; cancelled: boolean } | null = null;
   /** Gas helper threads to use (`?helpers=N` on the page); none by default. */
   private helpers: number | undefined;
-  /** The WebAssembly constraint solver, on the page and in the worker; `?wasm=0` uses the TypeScript one. */
-  private wasm = true;
   /** Runs taken in so far, and gas cluster jobs helper threads ran in them (for tests and diagnostics). */
   runs = 0;
   helperJobs = 0;
@@ -27,10 +25,6 @@ export class SimClient {
 
   constructor() {
     const q = typeof location !== "undefined" ? new URLSearchParams(location.search) : null;
-    if (q?.get("wasm") === "0") {
-      setWasmSolver(false);
-      this.wasm = false;
-    }
     if (typeof Worker === "undefined") return;
     // `?worker=0` steps on the page instead (for comparison and debugging).
     if (q?.get("worker") === "0") return;
@@ -110,7 +104,6 @@ export class SimClient {
       budgetMs,
       stopOnVerdict: true,
       helpers: this.helpers,
-      wasm: this.wasm,
       inputs,
     };
     this.inFlight = { sb, version: sb.version, cancelled: false };

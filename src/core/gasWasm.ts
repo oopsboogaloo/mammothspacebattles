@@ -1,6 +1,5 @@
-// The gas step's substep loop in WebAssembly (wasm/solver/src/gas.rs; docs/perf/rust-trial.md): the
-// same results bit for bit as `gasCoreTs` in gas.ts, which is kept as the reference (`?wasm=0`) and
-// as the fallback where WebAssembly can't load.
+// The gas step's substep loop, in the WebAssembly module (wasm/solver/src/gas.rs;
+// docs/perf/rust-trial.md).
 //
 // The parcels are packed straight into the module's memory (`gasParcelBuffers`), the walls and
 // rigid units `buildWalls` made are written in, the module steps, and stepGas finishes from the
@@ -103,10 +102,9 @@ function current(e: WasmExports): GasBuffers {
   return views;
 }
 
-/** Buffers for n parcels to be packed into, or null when steps use the TypeScript loop. */
-export function gasParcelBuffers(n: number): GasBuffers | null {
+/** Buffers for n parcels to be packed into. */
+export function gasParcelBuffers(n: number): GasBuffers {
   const e = wasmModule();
-  if (!e) return null;
   if (n > cap.n) {
     cap.n = Math.max(2 * n, 256);
     e.gas_reserve_parcels(cap.n);
@@ -117,7 +115,7 @@ export function gasParcelBuffers(n: number): GasBuffers | null {
 
 /**
  * The substep loop over the n parcels packed into the buffers: moves them and the units, and
- * records in `acc` what gasCoreTs does. Returns the buffers as they are after (the memory may have
+ * records in `acc` the impulse fixed bodies gave, the energy clamped and the bodies touched. Returns the buffers as they are after (the memory may have
  * grown: views held from before are dead), the impulse on walls and the substeps taken.
  */
 export function gasCoreWasm(
@@ -129,7 +127,7 @@ export function gasCoreWasm(
   acc: { externalImpulse: { x: number; y: number }; angular: number; clamped: number; involved: Set<string> },
   timings?: { clock: () => number; out: Record<string, number> },
 ): { buffers: GasBuffers; wallImpulse: number; nsub: number } {
-  const e = wasmModule()!;
+  const e = wasmModule();
   const nw = walls.length;
   const nu = units.length;
   let nv = 0;

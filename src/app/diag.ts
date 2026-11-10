@@ -1,6 +1,5 @@
 // Performance diagnostics (`?diag=1`): what each frame and each worker result cost on this device, kept
 // in memory so a player can copy a summary and paste it back (iPad stutters can't be seen from here).
-import { wasmSolverOn } from "../core/index.ts";
 
 export interface RunLog {
   /** When it arrived, ms (performance.now). */
@@ -97,7 +96,6 @@ export function summary(extra: Record<string, string | number>): string {
     `MSB diag ${new Date().toISOString()}`,
     `device: ${navigator.userAgent}`,
     `cores ${navigator.hardwareConcurrency ?? "?"}, dpr ${devicePixelRatio}, view ${innerWidth}x${innerHeight}`,
-    `solver: ${wasmSolverOn() ? "WebAssembly" : "TypeScript"}`,
     ...Object.entries(extra).map(([k, v]) => `${k}: ${v}`),
     `played ${f1(secs)} s`,
     `frames: ${fr.length} (${f1(fr.length / Math.max(1e-9, frameSecs))}/s); gap p50 ${f1(q(fr, 0.5))} p95 ${f1(q(fr, 0.95))} max ${f1(Math.max(0, ...fr))} ms; over 33 ms ${fr.filter((x) => x > 33).length}, over 50 ${fr.filter((x) => x > 50).length}, over 100 ${fr.filter((x) => x > 100).length}`,

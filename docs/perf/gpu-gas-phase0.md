@@ -900,6 +900,13 @@ which a few hundred were near anything.
 The wisps are now 7–11% of the step there (25–33% before), filing the big bodies included. What is
 left is spread out again: the step's own bookkeeping, the ledger's totals, the gas module, contacts.
 
+## 27. One copy of the solver and the gas loop (10 November 2026)
+
+The TypeScript solver and gas loop, kept as the reference while the Rust was proved, are deleted:
+about 1,300 lines, with `?wasm=0` and the log's `solver:` line. The same hashes as before in all 46
+scenarios. A change is now checked against the commit before it (`scripts/hash-compare.ts`).
+Details and the line between the two languages: [`rust-trial.md`](rust-trial.md).
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

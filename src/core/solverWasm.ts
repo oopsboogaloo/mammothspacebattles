@@ -1,7 +1,5 @@
-// The constraint solve (welds and contacts) compiled from Rust (wasm/solver) to WebAssembly
-// (docs/perf/rust-trial.md). On by default: the same results bit for bit as the TypeScript in
-// physics.ts and joints.ts, which is kept as the reference (`?wasm=0`) and as the fallback where
-// WebAssembly can't load. The same module holds the gas step's substep loop (gasWasm.ts).
+// The constraint solve (welds and contacts), in Rust (wasm/solver) compiled to WebAssembly
+// (docs/perf/rust-trial.md). The same module holds the gas step's substep loop (gasWasm.ts).
 //
 // The world stays in JavaScript objects. Each step the solve's inputs are written into the
 // module's memory through typed-array views kept between steps, the module solves, and the results
@@ -36,7 +34,6 @@ const CS = 8;
 const PS = 16;
 
 let ex: Exports | null = null;
-let on = true;
 /** The clock the module reads when a gas step is timed (gasWasm.ts sets it for the call). */
 let clock: () => number = () => 0;
 export function setWasmClock(c: () => number): void {
@@ -51,26 +48,9 @@ function load(): Exports {
   return new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { now: () => clock() } }).exports as unknown as Exports;
 }
 
-/** Turns the WebAssembly solver on or off for every world stepped after (`?wasm=0` in the app turns it off). */
-export function setWasmSolver(enable: boolean): void {
-  on = enable;
-}
-
-/** Whether steps use the WebAssembly solver: loaded on first use; if it can't load, the TypeScript one. */
-export function wasmSolverOn(): boolean {
-  if (on && !ex) {
-    try {
-      ex = load();
-    } catch {
-      on = false;
-    }
-  }
-  return on;
-}
-
-/** The module, when steps use it (the gas step shares it: gasWasm.ts). */
-export function wasmModule(): WasmExports | null {
-  return wasmSolverOn() ? ex : null;
+/** The module, loaded on first use. The core cannot step without it. */
+export function wasmModule(): WasmExports {
+  return (ex ??= load());
 }
 
 // Capacities (grown by doubling) and views over the module's memory, made again only when it grows.
@@ -78,7 +58,7 @@ const cap = { nb: 0, nj: 0, nc: 0, np: 0 };
 let views: { buffer: ArrayBuffer; B: Float64Array; J: Float64Array; C: Float64Array; P: Float64Array; A: Float64Array } | null = null;
 
 function buffers(nb: number, nj: number, nc: number, np: number) {
-  const e = ex!;
+  const e = wasmModule();
   if (nb > cap.nb || nj > cap.nj || nc > cap.nc || np > cap.np) {
     cap.nb = Math.max(cap.nb, nb, 64) * (nb > cap.nb ? 2 : 1);
     cap.nj = Math.max(cap.nj, nj, 64) * (nj > cap.nj ? 2 : 1);
@@ -219,7 +199,7 @@ export function solveVelocitiesWasm(
   fillWelds(J, byId);
   fillContacts(C, P, contacts);
 
-  ex!.solve_velocities(rbs.length, welds.length, contacts.length, iterations, dt, tolEnergy);
+  wasmModule().solve_velocities(rbs.length, welds.length, contacts.length, iterations, dt, tolEnergy);
 
   for (let i = 0; i < rbs.length; i++) {
     const body = rbs[i].body;
@@ -281,7 +261,7 @@ export function correctPositionsWasm(world: World, rbs: readonly RB[], contacts:
   fillWelds(J, byId);
   fillContacts(C, P, contacts);
 
-  ex!.correct_positions(rbs.length, welds.length, contacts.length, slop);
+  wasmModule().correct_positions(rbs.length, welds.length, contacts.length, slop);
 
   for (let i = 0; i < rbs.length; i++) {
     const body = rbs[i].body;
@@ -295,8 +275,7 @@ export function correctPositionsWasm(world: World, rbs: readonly RB[], contacts:
 
 /** sinCos from the module, for the test that it matches math.ts bit for bit. */
 export function wasmSinCos(x: number): { s: number; c: number } {
-  ex ??= load();
   const { A } = buffers(0, 0, 0, 0);
-  ex.sin_cos_into_acc(x);
+  wasmModule().sin_cos_into_acc(x);
   return { s: A[0], c: A[1] };
 }
