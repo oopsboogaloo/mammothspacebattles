@@ -33,6 +33,8 @@ import { cross, rotate, sinCos, type Vec2 } from "./math.ts";
 import { nextFloat, type RngState } from "./prng.ts";
 import { boundingRadiusOf, localVertices, massProps, type Shape } from "./shapes.ts";
 import { bodyMass, type Store } from "./bodies.ts";
+import { gasCoreWasm, gasParcelBuffers } from "./gasWasm.ts";
+import { wasmSolverOn } from "./solverWasm.ts";
 
 /** Universal gas constant, J/(mol·K) (CODATA 2018, exact). */
 export const R_GAS = 8.314462618;
@@ -1160,6 +1162,8 @@ export interface ClusterJob {
   far: { x: number; y: number; r: number }[];
   scale: number;
   timed: boolean;
+  /** Whether the substep loop runs in WebAssembly (as where the job was made; absent: as here). */
+  wasm?: boolean;
 }
 
 /** What a cluster's step produced. */
@@ -1177,7 +1181,7 @@ export interface ClusterResult {
 export function runClusterJob(job: ClusterJob, clock?: () => number): ClusterResult {
   const sub: GasState = { parcels: job.parcels.slice(), nextId: 0, removed: { count: 0, mass: 0, momentum: { x: 0, y: 0 }, angularMomentum: 0, energy: 0 }, wallImpulse: 0, substeps: 0, scale: job.scale };
   const out: Record<string, number> = {};
-  const acc = stepGas(sub, job.bodies, job.joints, job.dt, job.bounds, job.gravity, job.closed, job.timed && clock ? { clock, out } : undefined, job.far);
+  const acc = stepGas(sub, job.bodies, job.joints, job.dt, job.bounds, job.gravity, job.closed, job.timed && clock ? { clock, out } : undefined, job.far, job.wasm);
   const left = new Set(job.parcels);
   for (const p of sub.parcels) left.delete(p);
   return {
@@ -1230,6 +1234,7 @@ export function clusterGas(
       far,
       scale: gas.scale ?? 1,
       timed,
+      wasm: wasmSolverOn(),
     };
   });
   return {
@@ -1517,6 +1522,8 @@ export function stepGas(
   timings?: { clock: () => number; out: Record<string, number> },
   /** Far-field circles to use instead of the bodies' own (when stepping part of the gas). */
   farCircles?: readonly { x: number; y: number; r: number }[],
+  /** The substep loop in WebAssembly (the same results; see gasWasm.ts). */
+  wasm = wasmSolverOn(),
 ): GasAccount {
   // Time per phase, summed over the substeps, into `timings.out` as gas.<phase> (LED-004). Reading the
   // clock changes nothing in the results.
@@ -1548,17 +1555,18 @@ export function stepGas(
   gas.substeps = 0;
   if (n === 0) return acc;
 
-  // Pack into typed arrays.
-  const x = new Float64Array(n);
-  const y = new Float64Array(n);
-  const vx = new Float64Array(n);
-  const vy = new Float64Array(n);
-  const m = new Float64Array(n);
-  const E = new Float64Array(n);
-  const hh = new Float64Array(n);
-  const g1 = new Float64Array(n); // γ − 1
-  const gam = new Float64Array(n);
-  const rad = new Float64Array(n);
+  // Pack into typed arrays: the WebAssembly module's own, or new ones for the TypeScript loop.
+  const buf = wasm ? gasParcelBuffers(n) : null;
+  let x = buf ? buf.x : new Float64Array(n);
+  let y = buf ? buf.y : new Float64Array(n);
+  let vx = buf ? buf.vx : new Float64Array(n);
+  let vy = buf ? buf.vy : new Float64Array(n);
+  let m = buf ? buf.m : new Float64Array(n);
+  let E = buf ? buf.E : new Float64Array(n);
+  const hh = buf ? buf.hh : new Float64Array(n);
+  let g1 = buf ? buf.g1 : new Float64Array(n); // γ − 1
+  let gam = buf ? buf.gam : new Float64Array(n);
+  const rad = buf ? buf.rad : new Float64Array(n);
   let hmax = 0;
   let hmin = Infinity;
   for (let i = 0; i < n; i++) {
@@ -1580,6 +1588,158 @@ export function stepGas(
 
   const { walls, units } = buildWalls(bodies, joints, hmax);
 
+  // The substep loop: in WebAssembly (the default), or the TypeScript it was ported from.
+  let partJ: Float64Array;
+  let crushed: Uint8Array;
+  let wallImpulse: number;
+  let nsub: number;
+  if (buf) {
+    phase("setup");
+    const r = gasCoreWasm(n, walls, units, bodies, dt, acc, timings);
+    // The module's memory may have grown: take the views again.
+    ({ x, y, vx, vy, m, E, g1, gam, partJ, crushed } = r.buffers);
+    wallImpulse = r.wallImpulse;
+    nsub = r.nsub;
+    if (timings) tMark = timings.clock();
+  } else ({ partJ, crushed, wallImpulse, nsub } = gasCoreTs({ n, x, y, vx, vy, m, E, hh, g1, gam, rad, hmax, hmin, walls, units, bodies, dt, acc, phase }));
+
+  gas.substeps = nsub;
+
+  // Far field: free bodies as bounding circles at their end-of-step pose. Fixed bodies (a ground) don't
+  // count: gas far from everything that moves can't change what happens to it.
+  const ff = bounds.farField;
+  const circles = farCircles ?? (ff ? farFieldCircles(walls, ff) : []);
+  const far = (px: number, py: number): boolean => {
+    if (!ff || !circles.length) return false; // with no bodies there is nothing to be far from
+    for (const c of circles) if ((px - c.x) ** 2 + (py - c.y) ** 2 < c.r * c.r) return false;
+    return true;
+  };
+
+  // Write back parcels, removing those outside the world boundary.
+  const scale = gas.scale ?? 1;
+  /** Records the share `f` of parcel i (and of its chemical energy `chem`) as gone through the boundary. */
+  const leave = (i: number, f: number, chem: number) => {
+    const r = acc.removed;
+    const dm = f * m[i];
+    r.mass += dm;
+    r.momentum.x += dm * vx[i];
+    r.momentum.y += dm * vy[i];
+    r.angularMomentum += dm * (x[i] * vy[i] - y[i] * vx[i]);
+    const pe = -dm * (gravity.x * x[i] + gravity.y * y[i]);
+    r.energy += 0.5 * dm * (vx[i] * vx[i] + vy[i] * vy[i]) + f * E[i] + f * chem + pe;
+    acc.removedPotential += pe;
+  };
+  const depth = bounds.depth;
+  const kept: Parcel[] = [];
+  for (let i = 0; i < n; i++) {
+    const p = ps[i];
+    p.position = { x: x[i], y: y[i] };
+    p.velocity = { x: vx[i], y: vy[i] };
+    p.thermal = E[i];
+    // A wrapped world keeps gas that crosses its bounds: it wraps round after the step (FLT-012).
+    const outside = !bounds.wrap && (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y);
+    if (outside || far(x[i], y[i]) || crushed[i]) {
+      acc.removed.count += 1;
+      leave(i, 1, parcelChemical(p, scale));
+      continue;
+    }
+    if (depth) {
+      // Out of the plane (GAS-009): the chance of staying shrinks by 1/(1 + x), x = c·dt/depth, and
+      // the parcel leaves whole when it falls below the parcel's own threshold.
+      p.age = (p.age ?? 0) + dt;
+      if (p.age > DEPTH_DELAY && !inClosed(closed, x[i], y[i])) {
+        const c = Math.sqrt(gam[i] * g1[i] * Math.max(0, E[i] / m[i]));
+        p.keep = (p.keep ?? 1) / (1 + (c * dt) / depth);
+        if (p.keep < leaveThreshold(p.id)) {
+          acc.removed.count += 1;
+          leave(i, 1, parcelChemical(p, scale));
+          continue;
+        }
+      }
+    }
+    kept.push(p);
+  }
+  gas.parcels = kept;
+  phase("finish");
+  const tot = gas.removed;
+  tot.count += acc.removed.count;
+  tot.mass += acc.removed.mass;
+  tot.momentum.x += acc.removed.momentum.x;
+  tot.momentum.y += acc.removed.momentum.y;
+  tot.angularMomentum += acc.removed.angularMomentum;
+  tot.energy += acc.removed.energy;
+  gas.wallImpulse += wallImpulse;
+
+  // What the joints of each free assembly had to supply: each part's rigid share of the unit's
+  // change, minus the gas's direct push on it.
+  bodies.forEach((b, k) => {
+    const w = walls[k];
+    if (w.unit < 0) return;
+    const u = units[w.unit];
+    if (u.ids.length < 2) return;
+    const dvx = u.vx - u.vx0;
+    const dvy = u.vy - u.vy0;
+    const dw = u.w - u.w0;
+    const rx = b.position.x - u.ex;
+    const ry = b.position.y - u.ey;
+    const sx = b.mass * (dvx - dw * ry) - partJ[3 * k];
+    const sy = b.mass * (dvy + dw * rx) - partJ[3 * k + 1];
+    const sa = b.inertia * dw - partJ[3 * k + 2];
+    if (sx !== 0 || sy !== 0 || sa !== 0) acc.jointImpulse.set(b.id, { x: sx, y: sy, angular: sa });
+  });
+
+  // Write back each unit's pose and velocity to its parts. A part keeps its offset from the
+  // unit's rigid motion (rotated with it), so momentum, angular momentum and energy carry over exactly.
+  const byId = new Map(bodies.map((b) => [b.id, b]));
+  for (const u of units) {
+    const moved = u.cx !== u.ex || u.cy !== u.ey || u.th !== 0;
+    if (!moved && u.vx === u.vx0 && u.vy === u.vy0 && u.w === u.w0) continue;
+    for (const id of u.ids) {
+      const b = byId.get(id)!;
+      const rx = b.position.x - u.ex;
+      const ry = b.position.y - u.ey;
+      // Offset from rigid motion at the end-of-step pose.
+      const ox = b.velocity.x - (u.vx0 - u.w0 * ry);
+      const oy = b.velocity.y - (u.vy0 + u.w0 * rx);
+      const nrx = u.qc * rx - u.qs * ry;
+      const nry = u.qs * rx + u.qc * ry;
+      b.position = { x: u.cx + nrx, y: u.cy + nry };
+      b.angle += u.th;
+      b.velocity = { x: u.vx - u.w * nry + (u.qc * ox - u.qs * oy), y: u.vy + u.w * nrx + (u.qs * ox + u.qc * oy) };
+      b.angularVelocity += u.w - u.w0;
+    }
+  }
+  return acc;
+}
+
+/**
+ * The gas step's substep loop, in TypeScript: the reference the WebAssembly loop (gasWasm.ts,
+ * wasm/solver/src/gas.rs) was ported from line for line and is compared against, and the fallback
+ * where WebAssembly can't load. Moves the parcels (in the arrays) and the units through the step;
+ * returns the gas's impulses on each body, the parcels crushed, the wall impulse and the substeps.
+ */
+function gasCoreTs(c: {
+  n: number;
+  x: Float64Array;
+  y: Float64Array;
+  vx: Float64Array;
+  vy: Float64Array;
+  m: Float64Array;
+  E: Float64Array;
+  hh: Float64Array;
+  g1: Float64Array;
+  gam: Float64Array;
+  rad: Float64Array;
+  hmax: number;
+  hmin: number;
+  walls: Wall[];
+  units: Unit[];
+  bodies: WallBody[];
+  dt: number;
+  acc: GasAccount;
+  phase: (name: string) => void;
+}): { partJ: Float64Array; crushed: Uint8Array; wallImpulse: number; nsub: number } {
+  const { n, x, y, vx, vy, m, E, hh, g1, gam, rad, hmax, hmin, walls, units, bodies, dt, acc, phase } = c;
   // Substeps follow the CFL condition, re-evaluated every substep (velocities can grow fast).
   const signalSpeed = (): number => {
     let vmax = 0;
@@ -2477,113 +2637,7 @@ export function stepGas(
     return sc;
   }
 
-  gas.substeps = nsub;
-
-  // Far field: free bodies as bounding circles at their end-of-step pose. Fixed bodies (a ground) don't
-  // count: gas far from everything that moves can't change what happens to it.
-  const ff = bounds.farField;
-  const circles = farCircles ?? (ff ? farFieldCircles(walls, ff) : []);
-  const far = (px: number, py: number): boolean => {
-    if (!ff || !circles.length) return false; // with no bodies there is nothing to be far from
-    for (const c of circles) if ((px - c.x) ** 2 + (py - c.y) ** 2 < c.r * c.r) return false;
-    return true;
-  };
-
-  // Write back parcels, removing those outside the world boundary.
-  const scale = gas.scale ?? 1;
-  /** Records the share `f` of parcel i (and of its chemical energy `chem`) as gone through the boundary. */
-  const leave = (i: number, f: number, chem: number) => {
-    const r = acc.removed;
-    const dm = f * m[i];
-    r.mass += dm;
-    r.momentum.x += dm * vx[i];
-    r.momentum.y += dm * vy[i];
-    r.angularMomentum += dm * (x[i] * vy[i] - y[i] * vx[i]);
-    const pe = -dm * (gravity.x * x[i] + gravity.y * y[i]);
-    r.energy += 0.5 * dm * (vx[i] * vx[i] + vy[i] * vy[i]) + f * E[i] + f * chem + pe;
-    acc.removedPotential += pe;
-  };
-  const depth = bounds.depth;
-  const kept: Parcel[] = [];
-  for (let i = 0; i < n; i++) {
-    const p = ps[i];
-    p.position = { x: x[i], y: y[i] };
-    p.velocity = { x: vx[i], y: vy[i] };
-    p.thermal = E[i];
-    // A wrapped world keeps gas that crosses its bounds: it wraps round after the step (FLT-012).
-    const outside = !bounds.wrap && (x[i] < bounds.min.x || x[i] > bounds.max.x || y[i] < bounds.min.y || y[i] > bounds.max.y);
-    if (outside || far(x[i], y[i]) || crushed[i]) {
-      acc.removed.count += 1;
-      leave(i, 1, parcelChemical(p, scale));
-      continue;
-    }
-    if (depth) {
-      // Out of the plane (GAS-009): the chance of staying shrinks by 1/(1 + x), x = c·dt/depth, and
-      // the parcel leaves whole when it falls below the parcel's own threshold.
-      p.age = (p.age ?? 0) + dt;
-      if (p.age > DEPTH_DELAY && !inClosed(closed, x[i], y[i])) {
-        const c = Math.sqrt(gam[i] * g1[i] * Math.max(0, E[i] / m[i]));
-        p.keep = (p.keep ?? 1) / (1 + (c * dt) / depth);
-        if (p.keep < leaveThreshold(p.id)) {
-          acc.removed.count += 1;
-          leave(i, 1, parcelChemical(p, scale));
-          continue;
-        }
-      }
-    }
-    kept.push(p);
-  }
-  gas.parcels = kept;
-  phase("finish");
-  const tot = gas.removed;
-  tot.count += acc.removed.count;
-  tot.mass += acc.removed.mass;
-  tot.momentum.x += acc.removed.momentum.x;
-  tot.momentum.y += acc.removed.momentum.y;
-  tot.angularMomentum += acc.removed.angularMomentum;
-  tot.energy += acc.removed.energy;
-  gas.wallImpulse += wallImpulse;
-
-  // What the joints of each free assembly had to supply: each part's rigid share of the unit's
-  // change, minus the gas's direct push on it.
-  bodies.forEach((b, k) => {
-    const w = walls[k];
-    if (w.unit < 0) return;
-    const u = units[w.unit];
-    if (u.ids.length < 2) return;
-    const dvx = u.vx - u.vx0;
-    const dvy = u.vy - u.vy0;
-    const dw = u.w - u.w0;
-    const rx = b.position.x - u.ex;
-    const ry = b.position.y - u.ey;
-    const sx = b.mass * (dvx - dw * ry) - partJ[3 * k];
-    const sy = b.mass * (dvy + dw * rx) - partJ[3 * k + 1];
-    const sa = b.inertia * dw - partJ[3 * k + 2];
-    if (sx !== 0 || sy !== 0 || sa !== 0) acc.jointImpulse.set(b.id, { x: sx, y: sy, angular: sa });
-  });
-
-  // Write back each unit's pose and velocity to its parts. A part keeps its offset from the
-  // unit's rigid motion (rotated with it), so momentum, angular momentum and energy carry over exactly.
-  const byId = new Map(bodies.map((b) => [b.id, b]));
-  for (const u of units) {
-    const moved = u.cx !== u.ex || u.cy !== u.ey || u.th !== 0;
-    if (!moved && u.vx === u.vx0 && u.vy === u.vy0 && u.w === u.w0) continue;
-    for (const id of u.ids) {
-      const b = byId.get(id)!;
-      const rx = b.position.x - u.ex;
-      const ry = b.position.y - u.ey;
-      // Offset from rigid motion at the end-of-step pose.
-      const ox = b.velocity.x - (u.vx0 - u.w0 * ry);
-      const oy = b.velocity.y - (u.vy0 + u.w0 * rx);
-      const nrx = u.qc * rx - u.qs * ry;
-      const nry = u.qs * rx + u.qc * ry;
-      b.position = { x: u.cx + nrx, y: u.cy + nry };
-      b.angle += u.th;
-      b.velocity = { x: u.vx - u.w * nry + (u.qc * ox - u.qs * oy), y: u.vy + u.w * nrx + (u.qs * ox + u.qc * oy) };
-      b.angularVelocity += u.w - u.w0;
-    }
-  }
-  return acc;
+  return { partJ, crushed, wallImpulse, nsub };
 }
 
 type WallSource = { id: string; shape: Shape; fixed: boolean; mass: number; position: Vec2; angle: number; velocity: Vec2; angularVelocity: number; contents?: Store[] };

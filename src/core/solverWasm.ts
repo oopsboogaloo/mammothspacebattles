@@ -1,7 +1,7 @@
 // The constraint solve (welds and contacts) compiled from Rust (wasm/solver) to WebAssembly
 // (docs/perf/rust-trial.md). On by default: the same results bit for bit as the TypeScript in
 // physics.ts and joints.ts, which is kept as the reference (`?wasm=0`) and as the fallback where
-// WebAssembly can't load.
+// WebAssembly can't load. The same module holds the gas step's substep loop (gasWasm.ts).
 //
 // The world stays in JavaScript objects. Each step the solve's inputs are written into the
 // module's memory through typed-array views kept between steps, the module solves, and the results
@@ -22,7 +22,12 @@ interface Exports {
   sin_cos_into_acc(x: number): void;
   solve_velocities(nb: number, nj: number, nc: number, iterations: number, dt: number, tolEnergy: number): void;
   correct_positions(nb: number, nj: number, nc: number, slop: number): void;
+  gas_reserve_parcels(n: number): void;
+  gas_reserve_walls(nw: number, nv: number, nu: number): void;
+  gas_ptr(which: number): number;
+  gas_step(n: number, nw: number, nu: number, dt: number, timed: number): void;
 }
+export type WasmExports = Exports;
 
 // Strides and offsets: the same as wasm/solver/src/lib.rs.
 const BS = 12;
@@ -32,13 +37,18 @@ const PS = 16;
 
 let ex: Exports | null = null;
 let on = true;
+/** The clock the module reads when a gas step is timed (gasWasm.ts sets it for the call). */
+let clock: () => number = () => 0;
+export function setWasmClock(c: () => number): void {
+  clock = c;
+}
 
 function load(): Exports {
   const bin = atob(SOLVER_WASM_BASE64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   // Synchronous: the module is small (browsers allow this on the main thread up to 8 MB).
-  return new WebAssembly.Instance(new WebAssembly.Module(bytes), {}).exports as unknown as Exports;
+  return new WebAssembly.Instance(new WebAssembly.Module(bytes), { env: { now: () => clock() } }).exports as unknown as Exports;
 }
 
 /** Turns the WebAssembly solver on or off for every world stepped after (`?wasm=0` in the app turns it off). */
@@ -56,6 +66,11 @@ export function wasmSolverOn(): boolean {
     }
   }
   return on;
+}
+
+/** The module, when steps use it (the gas step shares it: gasWasm.ts). */
+export function wasmModule(): WasmExports | null {
+  return wasmSolverOn() ? ex : null;
 }
 
 // Capacities (grown by doubling) and views over the module's memory, made again only when it grows.

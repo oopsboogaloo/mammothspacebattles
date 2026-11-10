@@ -1,4 +1,4 @@
-# The Rust trial: the constraint solve in WebAssembly (10 November 2026)
+# The Rust trial: the constraint solve, then the gas loop, in WebAssembly (10 November 2026)
 
 **Question:** would moving the simulation core from TypeScript to Rust compiled to WebAssembly pay?
 The earlier test (spec §10, "What was tried") ported only the gas neighbour search to C and found
@@ -33,8 +33,9 @@ contacts, building them, breaking welds and everything else stay in TypeScript.
   the reference the tests compare against and as the fallback where WebAssembly can't load. The
   diagnostics log names the solver.
 - **No Rust needed to build the app.** `node scripts/build-wasm.ts` compiles the crate and embeds the
-  38 kB module as base64 in `src/core/wasm/solver.wasm.ts`, which is committed. Rebuild it after any
-  change to the Rust. Needs Rust with the `wasm32-unknown-unknown` target.
+  module (38 kB; 82 kB with the gas loop) as base64 in `src/core/wasm/solver.wasm.ts`, which is
+  committed. Rebuild it after any change to the Rust. Needs Rust with the `wasm32-unknown-unknown`
+  target.
 
 ## Results
 
@@ -89,7 +90,7 @@ garbage mostly outside the solver.
 4. **Two copies of the same code are a cost.** If a module moves to Rust for good, its TypeScript
    copy should go, and the Node tests would then run the WebAssembly.
 
-## Next: the iPad test
+## The iPad test (as planned; its results are below)
 
 The trial doubles as the test of whether garbage drives the freezes, since Orbital's garbage drops by
 a third with the switch:
@@ -103,9 +104,128 @@ If freezes fall roughly with the garbage, collection is the cause and the rest o
 garbage is the target: the gas (the largest part on Emergency) first, in Rust or as typed arrays.
 If they don't, the freezes come from elsewhere and moving more code to WebAssembly won't help them.
 
+## The iPad test: results (10 November 2026)
+
+Orbital, ship 3, on the iPad (iPadOS 26.6, Chrome), played with thrust:
+
+| | TypeScript solver (177 s) | WebAssembly solver (143.5 s) | Change |
+|---|---|---|---|
+| Worker steps over 100 ms | 15 (5.1 a minute) | 9 (3.8 a minute) | −26% |
+| Frame gaps over 100 ms | 12 (4.1 a minute) | 9 (3.8 a minute) | −8% |
+| Moments with a freeze | 17 (5.8 a minute) | 12 (5.0 a minute) | −13% |
+| Mean frozen step | 515 ms | 560 ms | no shorter |
+| Play time lost to frozen steps | 4.4% | 3.5% | |
+| Frozen steps by part | gas 8, contacts 4, forces 2, integrate 1 | gas 9 | |
+
+- **The rate** fell about as the garbage did (−26% against −32%), but with 15 and 9 events a gap
+  this size turns up by chance about one time in three.
+- **Where they land** is the stronger sign. With the solve in WebAssembly no freeze landed in
+  `contacts` (4 of 15 before) and all 9 landed in the gas part, which is about 57% of a step: under
+  1% by chance. A collection starts where memory is asked for, and WebAssembly asks for none.
+- **Not explained:** the page's frames freeze at the same moment as the worker (6 of 9, and 10 of
+  12 before), though the page has its own heap; and 400–700 ms is long for a 736 kB world.
+- **The log's "gas" part is more than the gas loop.** It is everything between the position
+  integrator and the ledger: the gas step, and also the wisps and the bookkeeping round them (see
+  "What is left" below).
+
+So garbage collection is the likely cause, not proven. The frozen steps cost exactly the worker's
+shortfall (114.7 steps a second against the 120 needed).
+
+## The gas loop in WebAssembly (10 November 2026)
+
+**What was ported:** the gas step's substep loop, all of it: wall contacts, mirror ghosts, the
+neighbour search, density, impulses and energy with their retries, the elastic bounce and the drift
+(`gasCoreTs` in gas.ts, about 900 lines; about 1,300 of Rust in
+[`wasm/solver/src/gas.rs`](../../wasm/solver/src/gas.rs), in the same module as the solver).
+Clustering, building the walls, the step's finish (gas leaving the world, write-back, joint loads),
+free flight, ignition and the wisps stay in TypeScript.
+
+**How it works**
+
+- `stepGas` packs the parcels straight into the module's memory, writes in the walls and rigid
+  units `buildWalls` made, calls the module, and finishes from the same memory
+  ([`gasWasm.ts`](../../src/core/gasWasm.ts)). The working arrays live in the module and are kept
+  between steps, so the loop makes no typed arrays: it made about 65 a cluster, every step.
+- One switch for both: `?wasm=0` (or `setWasmSolver(false)`) uses the TypeScript solver and the
+  TypeScript gas loop. A cluster job carries the choice to helper threads.
+- A timed step still reports the loop's parts (`gas.contacts`, `gas.neighbours`, …): the module
+  reads the caller's clock.
+- Bounds checks are kept. Dropping them gained 5–10% on dense gas; with them a mistake stops the
+  step instead of corrupting it.
+
+**Identical results**
+
+- All 46 scenarios give the same world hash every step for 600 steps, TypeScript against WebAssembly
+  (`node scripts/wasm-compare.ts scenarios/*.json`); 14 of them have gas, up to 1,024 parcels.
+- With engines pulsing (`--thrust`: every control channel on, one off, all off, a third of a second
+  each), the nine lander levels, both twin-engine ships, the five gunships, the mammoth and the base
+  give the same hash every step for 1,440 steps.
+- Six of them, and one cluster job stepped both ways, are in the test suite
+  (`tests/core/solverWasm.test.ts`).
+- As a check that the comparison can fail: one constant changed in its eighth digit made the rocket
+  differ at step 0 and Orbital within two steps of its engines firing.
+
+**Speed, ms a step** (best of 3, 1,200 steps after 240, engines pulsing; Node on this Linux
+machine; "before" is the WebAssembly solver with the TypeScript gas loop):
+
+| Scenario | Step before | Step now | | Gas part before | Gas part now | |
+|---|---|---|---|---|---|---|
+| Easy | 0.93 | 0.89 | 1.04× | 0.54 | 0.41 | 1.32× |
+| Emergency | 2.30 | 2.32 | 1.0× | 1.74 | 1.58 | 1.10× |
+| Orbital | 2.08 | 1.89 | 1.10× | 1.27 | 1.19 | 1.07× |
+| Heavy Orbital | 2.63 | 2.37 | 1.11× | 1.59 | 1.37 | 1.16× |
+| Gunship 2 | 2.30 | 1.81 | 1.27× | 1.56 | 1.13 | 1.38× |
+| Reference battle | 7.81 | 6.33 | 1.23× | 5.79 | 4.25 | 1.36× |
+
+The loop itself, TypeScript against WebAssembly (ms a step, summed over its parts):
+
+| Scenario | TypeScript | WebAssembly | |
+|---|---|---|---|
+| Orbital (51 parcels) | 0.35 | 0.07 | 5× |
+| Reference battle (619 parcels) | 4.8 | 2.5 | 1.9× |
+| Gas in a box (484 parcels, dense) | 23.0 | 14.0 | 1.6× |
+
+**Garbage** (the same runs; typed arrays counted as they are made, the heap from V8's GC trace):
+
+| Scenario | Typed arrays a step | kB of them a step | Heap, MB a game second |
+|---|---|---|---|
+| Easy | 153 → 87 | 51.7 → 7.1 | 85 → 72 |
+| Emergency | 176 → 102 | 71.1 → 11.7 | 119 → 107 |
+| Orbital | 153 → 87 | 51.0 → 6.4 | 132 → 114 |
+| Gunship 2 | 230 → 144 | 92.4 → 9.7 | 207 → 149 |
+| Reference battle | 585 → 412 | 249.5 → 25.5 | 511 → 411 |
+
+Typed arrays' storage is outside the heap V8's `allocated=` counts, which is why pooling them
+showed no gain in the perf notes' §23: that measure could not see them.
+
+**What is left** (CPU profile, engines pulsing, after the port):
+
+- **The wisps are now the largest single cost on the lander levels:** `stepWisps` and its `touch`
+  are 25% of the whole step on Orbital and 33% on Emergency. The log's "gas" part includes them.
+- The module's gas loop is 4% of the step on Orbital and 7% on Emergency.
+- The rest of the gas part is clustering (`gasClusters`, about 30% of the gas part in the dense box),
+  `buildWalls`, free flight and the ledger's totals either side.
+
+So on the lander levels the port removes most of the gas loop's time and nearly all of its typed
+arrays, but the step is only 4–11% faster, because the loop was a third of the gas part there. With
+more gas (gunships, battles) the step is 1.2–1.3× faster.
+
+## Next
+
+1. **The iPad pair again**, now that the default has the gas loop in WebAssembly: Orbital with
+   `?game=lander&diag=1&wasm=0` and with `?game=lander&diag=1`, 3 minutes or more each. If typed
+   arrays drove the collections, the freezes in the gas part should fall sharply.
+2. **The wisps** (`stepWisps`), by what a profile says: the largest cost left on the lander levels.
+3. **Clustering and `buildWalls`** into the module, which would also end the gas part's last typed
+   arrays.
+
 ## Decision (10 November 2026)
 
 Adopted: 2× on the busiest weld and contact scenes is worth it. The WebAssembly solver is the default.
 Next candidates, by what they would gain: the gas step (the largest share of time and of Emergency's
 garbage), then the rest of the step's per-body work. The TypeScript solver goes once the iPad test is
 done and nothing needs comparing against it.
+
+After the iPad test the same day: the gas loop moved too (above), for speed as much as for the
+freezes: every part that runs 1.5–2× faster leaves room to put more into the game. The TypeScript
+solver and gas loop stay for now as the reference for the next ports.

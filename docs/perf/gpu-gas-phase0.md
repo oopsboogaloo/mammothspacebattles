@@ -863,6 +863,16 @@ are the work (1.2–1.6× in WebKit), and a third to three fifths less garbage t
 on Easy and Emergency, whose garbage is mostly elsewhere. Details and the iPad test it sets up:
 [`rust-trial.md`](rust-trial.md).
 
+## 25. The iPad test, and the gas loop in WebAssembly (10 November 2026)
+
+The iPad pair on Orbital: freezes over 100 ms fell from 5.1 to 3.8 a minute with the WebAssembly
+solver (too few to be sure), none landed in the contact solve any more, and all nine landed in the
+gas part: collection is the likely cause. The gas step's substep loop then moved to the same module:
+the same hashes in all 46 scenarios and with engines pulsing, the loop 1.6–5× faster, about 45 kB
+fewer typed arrays a step, the whole step 1.0–1.1× faster on the lander levels and 1.2–1.3× with
+more gas. The wisps are now the largest cost on the lander levels (25–33% of the step). Details:
+[`rust-trial.md`](rust-trial.md).
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome
