@@ -228,7 +228,11 @@ function Thrust({ channel, label, side }: { channel: string; label: string; side
   );
 }
 
+/** Seconds of game time a ship must stay at rest before it can be abandoned. */
+const ABANDON_AFTER = 4;
+
 function Play() {
+  const restSince = useRef<number | null>(null);
   void version.value;
   const sb = sandbox.value!;
   const game = sb.world.lander;
@@ -273,8 +277,13 @@ function Play() {
   const damage = status?.damage ?? 0;
   // A crash plays out a while before its verdict shows (the world's own pause, `watch`).
   const watched = !status || status.phase !== "crashed" || status.at === undefined || (sb.world.tick - status.at) * sb.profile.timestep >= (game?.spec.watch ?? 1.25) - 1e-9;
-  // At rest, the player may give the ship up (it is then stranded).
-  const resting = game?.state.phase === "flying" && status?.phase === "flying" && Math.hypot(status.vx, status.vy) < 0.3;
+  // At rest, the player may give the ship up (it is then stranded): once it has stayed at rest for
+  // ABANDON_AFTER s of game time, so the button doesn't flick up at the top of a hop or as the ship
+  // settles after touching down.
+  const still = game?.state.phase === "flying" && status?.phase === "flying" && Math.hypot(status.vx, status.vy) < 0.3;
+  if (!still) restSince.current = null;
+  else if (restSince.current === null) restSince.current = sb.world.time;
+  const resting = still && restSince.current !== null && sb.world.time - restSince.current >= ABANDON_AFTER;
   const tiltBad = status && goal ? Math.abs(status.tilt) > goal.maxTilt : false;
   const last = game?.state.landings.at(-1);
   return (

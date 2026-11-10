@@ -61,7 +61,8 @@ No speed limit and no crash for touching ground: the damage model decides what a
 - **Crash:** the ship broken. A weld snapping or a part destroyed breaks it.
 - **Rest anywhere else:** touching the ground, a used pad or wreckage is allowed. You can take off
   again. The ship is **stranded** when it comes to rest there with no fuel left, or when you tap
-  **Abandon ship**; the next ship then comes (LND-015).
+  **Abandon ship**; the next ship then comes (LND-015). The button shows only once the ship has
+  stayed at rest for 4 s (it flicked up too early, at the top of a hop or while settling).
 - **The welds bend before they break** (DMG-008). Dropped upright onto a pad (the ship's tests):
 
 | Touchdown | What happens |
