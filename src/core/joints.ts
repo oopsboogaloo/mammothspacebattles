@@ -32,7 +32,7 @@ export interface ConstraintAccount {
 
 export const emptyAccount = (): ConstraintAccount => ({ externalImpulse: { x: 0, y: 0 }, angular: 0, predictedKE: 0, involved: new Set() });
 
-type JointImpulse = { x: number; y: number; angular: number };
+export type JointImpulse = { x: number; y: number; angular: number };
 
 interface JointSolver {
   j: Joint;
