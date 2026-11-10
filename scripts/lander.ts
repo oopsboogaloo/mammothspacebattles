@@ -256,7 +256,7 @@ write(
     description: "Lunar peaks and spikes. Pads in the valleys and on shelves in the mountain sides. Fuel matters. The ground wraps round.",
     bodies: terrain(MEDIUM.pts, MEDIUM.pads, { width: MEDIUM.W, seam: 30 }),
     bounds: { min: { x: -MEDIUM.W / 2, y: -2000 }, max: { x: MEDIUM.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
-    economy: 4,
+    economy: 2, // halved 10 November 2026 after play
     start: { position: { x: -380, y: 170 }, velocity: { x: 10, y: 0 } },
     pads: MEDIUM.pads,
     maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
@@ -302,7 +302,7 @@ const hard = (o: { name: string; title: string; description: string; leak?: Leak
   });
 write(
   "lander-hard",
-  hard({ name: "lander-hard", title: "Mammoth Lander: Hard", description: "Sheer mountains, narrow ledges and pits. Tight limits and tight fuel. The ground wraps round.", economy: 3.5 }),
+  hard({ name: "lander-hard", title: "Mammoth Lander: Hard", description: "Sheer mountains, narrow ledges and pits. Tight limits and tight fuel. The ground wraps round.", economy: 1.75 /* halved 10 November 2026 after play */ }),
 );
 
 // Emergency: its own mountains in Hard's style (sheer peaks, a deep pit, ledges between twin
@@ -426,7 +426,7 @@ write(
       description: "A cave running down from its mouth, round stalactites and stalagmites. Deeper pads score more, up to ×6. Tight fuel.",
       bodies,
       bounds: { min: { x: -80, y: -200 }, max: { x: 560, y: 320 }, wrap: false, farField: 10, depth: 2 },
-      economy: 4,
+      economy: 2, // halved 10 November 2026 after play
       start: { position: { x: 10, y: 3.4 + 0.2 + 8 }, velocity: { x: 0, y: 0 } },
       pads,
       maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
@@ -539,7 +539,7 @@ write(
       description: "A long, winding cave that curls round at its end. Pads score by their number, up to ×6 on the ledge inside the curl.",
       bodies,
       bounds: { min: { x: LEFT, y: -120 }, max: { x: maxX + 20, y: TOP + 20 }, wrap: false, farField: 10, depth: 2 },
-      economy: 4.5,
+      economy: 2.25, // halved 10 November 2026 after play
       start: { position: { x: -75, y: 55 }, velocity: { x: 0, y: 0 } },
       pads,
       maxSpeed: 2, // a guide: damage starts above about 2 m/s (WELD)
@@ -740,19 +740,19 @@ function rockLevel(o: { name: string; title: string; description: string; bodies
     description: "A big asteroid, slowly spinning, with its own gravity. Come down from orbit onto pads that ride on it. Down is towards the rock.",
     ...rock,
     pads,
-    economy: 8,
+    economy: 4, // halved 10 November 2026 after play
     r0: R + 60,
     mu,
     soft: 20,
   });
 }
 
-// Heavy Orbital: a bigger, denser rock, 180 m across, with stronger gravity (about 1.5 m/s² at the
-// surface, against the ship's 4 m/s² of thrust) and turning faster, once in 3 minutes, so its
-// surface moves at about 3 m/s. More fuel, for fighting the stronger pull.
+// Heavy Orbital: a bigger, denser rock, 180 m across, with strong gravity (about 3 m/s² at the
+// surface, against the ship's 4 m/s² of thrust: little margin) and turning faster, once in 3
+// minutes, so its surface moves at about 3 m/s.
 {
   const R = 90;
-  const mu = 12150;
+  const mu = 24300; // about 3 m/s² at the surface (doubled 10 November 2026 after play)
   const pads: RockPad[] = [
     { at: 0.3, r: R + 6, x: 0, width: 9, multiplier: 2 }, // a plateau
     { at: 1.3, r: R - 10, x: 0, width: 6, multiplier: 5 }, // a deep crater
@@ -777,7 +777,7 @@ function rockLevel(o: { name: string; title: string; description: string; bodies
     description: "A bigger, heavier asteroid, spinning faster, with stronger gravity. Its pads sweep past at 3 m/s.",
     ...rock,
     pads,
-    economy: 10,
+    economy: 5, // halved 10 November 2026 after play
     r0: R + 70,
     mu,
     soft: 20,
@@ -789,7 +789,7 @@ function rockLevel(o: { name: string; title: string; description: string; bodies
 // their centre of mass stays put; they start on a circular orbit about it. The ship starts in orbit
 // over one of them.
 {
-  const G = 1500 / (Math.PI * 50 * 50 * 50); // mu = G × mass: about 1500 for a rock 100 m across at 50 kg/m² (0.6 m/s² at its surface)
+  const G = 3000 / (Math.PI * 50 * 50 * 50); // mu = G × mass: about 3000 for a rock 100 m across at 50 kg/m² (1.2 m/s² at its surface; doubled 10 November 2026 after play)
   const D = 220;
   const SOFT = 20;
   const A: RockPad[] = [
@@ -855,7 +855,7 @@ function rockLevel(o: { name: string; title: string; description: string; bodies
     bodies: [...rockA.bodies, ...rockB.bodies],
     joints: [...rockA.joints, ...rockB.joints],
     pads,
-    economy: 8,
+    economy: 4, // halved 10 November 2026 after play
     // In orbit 55 m over rock A, moving with it; rock B swings round into view.
     r0: 50 + 55,
     mu: G * mA,

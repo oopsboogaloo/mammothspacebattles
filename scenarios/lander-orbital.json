@@ -4855,7 +4855,7 @@
                 "width": 1,
                 "length": 1.45
               },
-              "economy": 8
+              "economy": 4
             },
             "material": {
               "name": "hull",
@@ -4919,7 +4919,7 @@
                 "width": 1,
                 "length": 1.45
               },
-              "economy": 8
+              "economy": 4
             },
             "material": {
               "name": "hull",
