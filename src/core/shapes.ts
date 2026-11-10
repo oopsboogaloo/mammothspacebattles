@@ -58,16 +58,23 @@ export function normalizePolygon(vs: readonly Vec2[]): { vertices: Vec2[]; centr
   return { vertices: ccw.map((v) => ({ x: v.x - centroid.x, y: v.y - centroid.y })), centroid };
 }
 
+/** A box's corners, made once per box: shapes are never changed in place, and callers must not change the result (as with a polygon's). */
+const boxCorners = new WeakMap<Shape, Vec2[]>();
+
 export function localVertices(shape: Shape): Vec2[] {
   if (shape.kind === "box") {
+    let vs = boxCorners.get(shape);
+    if (vs) return vs;
     const hx = shape.width / 2;
     const hy = shape.height / 2;
-    return [
+    vs = [
       { x: -hx, y: -hy },
       { x: hx, y: -hy },
       { x: hx, y: hy },
       { x: -hx, y: hy },
     ];
+    boxCorners.set(shape, vs);
+    return vs;
   }
   if (shape.kind === "polygon") return shape.vertices;
   throw new Error("A disc has no vertices");
@@ -102,6 +109,17 @@ export function massProps(shape: Shape, mass: number): MassProps {
 }
 
 const polygonMoments = new WeakMap<Shape, { area: number; j: number; boundingRadius: number }>();
+
+/** massProps(shape, any mass).boundingRadius without making an object: asked for every body, several times a step. */
+export function boundingRadiusOf(shape: Shape): number {
+  if (shape.kind === "disc") return shape.radius;
+  let g = polygonMoments.get(shape);
+  if (!g) {
+    massProps(shape, 1);
+    g = polygonMoments.get(shape)!;
+  }
+  return g.boundingRadius;
+}
 
 /** massProps(shape, mass).inertia without making an object: the ledger asks for it many times a step. */
 export function inertiaOf(shape: Shape, mass: number): number {

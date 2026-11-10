@@ -6,7 +6,7 @@
 // The solver follows Box2D's weld joint (Erin Catto) without softness.
 
 import { bodiesById } from "./bodies.ts";
-import { add, cross, dot, rotate, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
+import { add, cross, dot, rotate, sinCos, sinCosInto, sub, type Rot, type Vec2 } from "./math.ts";
 import type { Body, Joint, World } from "./world.ts";
 
 /** What the rigid-body view of a body needs; matches physics.ts's RB. */
@@ -486,6 +486,10 @@ function sideOf(adj: Adjacency, start: string, skip: string, stop: string): Set<
   return seen;
 }
 
+/** Reused by the weld loops: read at once, never kept. */
+const ROT_A: Rot = { s: 0, c: 0 };
+const ROT_B: Rot = { s: 0, c: 0 };
+
 /**
  * Works out each joint's load from this step's impulses and breaks joints past a limit
  * (ASM-003, ASM-004). The load is the solver's impulse plus, for free assemblies, the
@@ -533,7 +537,7 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     // b's side of a weld not in a loop: b's subtree if b hangs below a, else the assembly less a's
     // subtree. Its rigid impulses' torque about the anchor is Σ(r × J) − p_B × ΣJ.
     if (tree && sumJ && rigidImpulse.has(j.b) && tree.bridge.has(j.id)) {
-      const qB = sinCos(B.angle);
+      const qB = sinCosInto(B.angle, ROT_B);
       const pBx = B.position.x + (qB.c * j.anchorB.x - qB.s * j.anchorB.y);
       const pBy = B.position.y + (qB.s * j.anchorB.x + qB.c * j.anchorB.y);
       let sx: number;
@@ -565,7 +569,7 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
     const perDt = 1 / dt;
     const Fx = px * perDt; // force on b
     const Fy = py * perDt;
-    const qA = sinCos(A.angle);
+    const qA = sinCosInto(A.angle, ROT_A);
     const axx = qA.c * j.axis.x - qA.s * j.axis.y;
     const axy = qA.s * j.axis.x + qA.c * j.axis.y;
     const axial = Fx * axx + Fy * axy;
@@ -593,17 +597,29 @@ export function evaluateJoints(world: World, dt: number, rigidImpulse: Map<strin
       }
     }
     const k = j.integrity;
-    const parts = {
-      tension: tension / (j.limits.tension * k),
-      compression: compression / (j.limits.compression * k),
-      shear: shear / (j.limits.shear * k),
-      torque: torque / (j.limits.torque * k),
-    };
-    const worst = (Object.keys(parts) as (keyof typeof parts)[]).reduce((w, k) => (parts[k] > parts[w] ? k : w), "tension");
-    j.load = { tension, compression, shear, torque, fraction: parts[worst] };
-    if (parts[worst] > 1 || capped.has(j.id)) {
+    // The worst of the four shares: tension, then compression, shear, torque, a later one only if
+    // strictly larger (as a reduce over the keys did, without its object, array and closure per weld).
+    let worst: keyof Joint["limits"] = "tension";
+    let fraction = tension / (j.limits.tension * k);
+    const fc = compression / (j.limits.compression * k);
+    if (fc > fraction) {
+      worst = "compression";
+      fraction = fc;
+    }
+    const fs = shear / (j.limits.shear * k);
+    if (fs > fraction) {
+      worst = "shear";
+      fraction = fs;
+    }
+    const ft = torque / (j.limits.torque * k);
+    if (ft > fraction) {
+      worst = "torque";
+      fraction = ft;
+    }
+    j.load = { tension, compression, shear, torque, fraction };
+    if (fraction > 1 || capped.has(j.id)) {
       broken.add(j.id);
-      world.events.push({ tick: world.tick, type: "joint.break", data: { id: j.id, a: j.a, b: j.b, quantity: worst, load: parts[worst] * j.limits[worst] * k, limit: j.limits[worst] * k } });
+      world.events.push({ tick: world.tick, type: "joint.break", data: { id: j.id, a: j.a, b: j.b, quantity: worst, load: fraction * j.limits[worst] * k, limit: j.limits[worst] * k } });
     }
   }
   if (broken.size) world.joints = world.joints.filter((j) => !broken.has(j.id));
@@ -660,8 +676,8 @@ export function correctJoints(world: World, byId: Map<string, JointBody>): void 
     }
     // In plain numbers, the same operations in the same order as the vector helpers (rotate, add,
     // sub, scale, cross): every weld, every step, so no objects but the two new positions.
-    const qA = sinCos(A.angle);
-    const qB = sinCos(B.angle);
+    const qA = sinCosInto(A.angle, ROT_A);
+    const qB = sinCosInto(B.angle, ROT_B);
     const rAx = qA.c * j.anchorA.x - qA.s * j.anchorA.y;
     const rAy = qA.s * j.anchorA.x + qA.c * j.anchorA.y;
     const rBx = qB.c * j.anchorB.x - qB.s * j.anchorB.y;

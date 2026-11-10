@@ -97,8 +97,10 @@ function reach(shape: Shape, position: Vec2, angle: number, u: Vec2, sign: 1 | -
   const q = sinCos(angle);
   let y = sign * -Infinity;
   for (const v of localVertices(shape)) {
-    const r = rotate(q, v);
-    const d = at + r.x * u.x + r.y * u.y;
+    // rotate(q, v) in plain numbers: no vector per vertex.
+    const rx = q.c * v.x - q.s * v.y;
+    const ry = q.s * v.x + q.c * v.y;
+    const d = at + rx * u.x + ry * u.y;
     y = sign > 0 ? Math.max(y, d) : Math.min(y, d);
   }
   return y;

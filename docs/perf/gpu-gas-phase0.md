@@ -820,6 +820,40 @@ Easy, Emergency, Cave, Orbital and the reference battle after 12 s of pulsed thr
 
 Step times are within noise. Left: the gas step and contact solve, a few percent each.
 
+## 23. Plain-number hot loops, part 2 (10 November 2026)
+
+After part 1 the iPad froze 2.6 times a minute on Emergency (was about 6). This part cut what was
+left of the per-step garbage, each change kept only if it measured a gain, and all checked bit for
+bit (the same hashes for Easy, Emergency, Cave, Orbital and the reference battle).
+
+Measured with V8's exact per-collection `allocated=` count (`--trace-gc-nvp`, about ±2% run to run),
+plus the inspector's sampling heap profiler to find the allocators. Kept:
+
+- **Mixtures by composition object** (`mixture`): compositions are never changed once held, so the
+  sorted string key is built once per object, not on every temperature lookup. Emergency −6%.
+- **Assembly groups cached per topology** (`integratePositions`, contact groups): two maps and
+  hundreds of arrays a step, now made only when a weld or body changes. −8%.
+- **Broad phase on reused typed arrays:** no box object per body (ground included) and pairs as
+  sorted numbers i·n + j (the same order). −6%.
+- **Box corners made once per shape** (`localVertices`) and the far-field circles in plain numbers. −3%.
+- **`boundingRadiusOf(shape)`** instead of a `massProps` object per body, and landing's reach in plain numbers. −3%.
+- **Welds:** `sinCosInto` into reused objects in `correctJoints` and `evaluateJoints`, and the worst
+  load picked by comparisons, not an object, key array and closure per weld. Orbital −10%.
+
+Tried and dropped (no measurable gain): pooling the gas step's typed arrays (its share was CPU, not
+garbage), numeric cell keys in ignition, pooled stamp arrays in the body index, cached groups in
+wrapping.
+
+| MB a game second | allocated, main | allocated, now | GC trace (§22 measure), now |
+|---|---|---|---|
+| Easy, coasting | 209 | 184 (−12%) | 75 (was 90) |
+| Emergency, engines pulsing | 359 | 273 (−24%) | 259 (was 324) |
+| Orbital | 434 | 366 (−16%) | 186 (was 235) |
+| Reference battle | 1302 | 1065 (−18%) | 599 (was 699) |
+
+Step times are within noise. What is left is spread thin (no function over ~6%); on Orbital part of
+it is V8 boxing numbers inside `computeTotals`, not objects the code makes.
+
 ## How to send numbers
 
 On each device, open https://oopsboogaloo.github.io/mammothspacebattles/gpu-spike.html in Chrome

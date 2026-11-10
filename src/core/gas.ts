@@ -31,7 +31,7 @@
 import { assemblyRoots } from "./joints.ts";
 import { cross, rotate, sinCos, type Vec2 } from "./math.ts";
 import { nextFloat, type RngState } from "./prng.ts";
-import { localVertices, massProps, type Shape } from "./shapes.ts";
+import { boundingRadiusOf, localVertices, massProps, type Shape } from "./shapes.ts";
 import { bodyMass, type Store } from "./bodies.ts";
 
 /** Universal gas constant, J/(mol·K) (CODATA 2018, exact). */
@@ -318,14 +318,24 @@ function compositionKey(c: Record<string, number>): string {
     .join(",");
 }
 
+/**
+ * The same, by object: a composition is never changed once it is a parcel's or a vessel's (each
+ * change makes a new object), so its mixture is looked up once, not keyed by a sorted string on every
+ * call (thousands of strings and arrays a step).
+ */
+const mixtureOf = new WeakMap<Record<string, number>, Mixture>();
+
 /** Mass-weighted mixture properties. Unknown species are rejected by validation. */
 export function mixture(composition: Record<string, number>): Mixture {
+  let mx = mixtureOf.get(composition);
+  if (mx) return mx;
   const key = compositionKey(composition);
-  let mx = mixtures.get(key);
+  mx = mixtures.get(key);
   if (!mx) {
     mx = computeMixture(composition);
     if (mixtures.size < 1000) mixtures.set(key, mx);
   }
+  mixtureOf.set(composition, mx);
   return mx;
 }
 
@@ -1030,7 +1040,7 @@ export function gasClusters(
     let spread = 0;
     for (const k of g.members) {
       const b = bodies[k];
-      const r = massProps(b.shape, 1).boundingRadius;
+      const r = boundingRadiusOf(b.shape);
       lo = { x: Math.min(lo.x, b.position.x - r), y: Math.min(lo.y, b.position.y - r) };
       hi = { x: Math.max(hi.x, b.position.x + r), y: Math.max(hi.y, b.position.y + r) };
       if (!b.fixed) spread = Math.max(spread, Math.sqrt((b.velocity.x - v0.x) ** 2 + (b.velocity.y - v0.y) ** 2) + Math.abs(b.angularVelocity) * r);
@@ -1299,21 +1309,29 @@ export function farFieldCirclesFor(bodies: readonly WallBody[], ff: number, hmax
     let minX: number, minY: number, maxX: number, maxY: number;
     if (b.shape.kind === "disc") {
       const r = b.shape.radius;
-      [minX, minY, maxX, maxY] = [b.position.x - r, b.position.y - r, b.position.x + r, b.position.y + r];
+      minX = b.position.x - r;
+      minY = b.position.y - r;
+      maxX = b.position.x + r;
+      maxY = b.position.y + r;
     } else {
+      // In plain numbers: the same operations as rotate(q, v), with no vector per vertex.
       const q = sinCos(b.angle);
       minX = minY = Infinity;
       maxX = maxY = -Infinity;
       for (const v of localVertices(b.shape)) {
-        const w = rotate(q, v);
-        minX = Math.min(minX, b.position.x + w.x);
-        minY = Math.min(minY, b.position.y + w.y);
-        maxX = Math.max(maxX, b.position.x + w.x);
-        maxY = Math.max(maxY, b.position.y + w.y);
+        const wx = q.c * v.x - q.s * v.y;
+        const wy = q.s * v.x + q.c * v.y;
+        minX = Math.min(minX, b.position.x + wx);
+        minY = Math.min(minY, b.position.y + wy);
+        maxX = Math.max(maxX, b.position.x + wx);
+        maxY = Math.max(maxY, b.position.y + wy);
       }
     }
-    const w = { minX: minX - hmax, minY: minY - hmax, maxX: maxX + hmax, maxY: maxY + hmax };
-    far.push({ x: 0.5 * (w.minX + w.maxX), y: 0.5 * (w.minY + w.maxY), r: 0.5 * Math.sqrt((w.maxX - w.minX) ** 2 + (w.maxY - w.minY) ** 2) + ff });
+    const x0 = minX - hmax;
+    const y0 = minY - hmax;
+    const x1 = maxX + hmax;
+    const y1 = maxY + hmax;
+    far.push({ x: 0.5 * (x0 + x1), y: 0.5 * (y0 + y1), r: 0.5 * Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2) + ff });
   }
   return far;
 }
