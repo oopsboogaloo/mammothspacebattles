@@ -104,7 +104,7 @@
           ]
         },
         "gravity": {
-          "mu": 12150,
+          "mu": 24300,
           "core": 20
         },
         "velocity": {
@@ -6167,7 +6167,7 @@
                 "width": 1,
                 "length": 1.45
               },
-              "economy": 10
+              "economy": 5
             },
             "material": {
               "name": "hull",
@@ -6231,7 +6231,7 @@
                 "width": 1,
                 "length": 1.45
               },
-              "economy": 10
+              "economy": 5
             },
             "material": {
               "name": "hull",
@@ -7110,7 +7110,7 @@
           "y": 160
         },
         "velocity": {
-          "x": -8.61346930981974,
+          "x": -12.181285117031498,
           "y": 0
         }
       },

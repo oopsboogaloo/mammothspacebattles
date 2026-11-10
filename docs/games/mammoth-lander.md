@@ -141,7 +141,7 @@ Limits are starting values to tune in play.
 |---|---|---|---|---|---|---|
 | Gravity | 1.6 m/s² down | 1.6 | 1.6 | 1.6 | asteroid's, about 1 m/s² at the surface | 1.6 |
 | World | wraps, about 600 m wide | wraps, about 800 m | wraps, about 800 m | bounded | open space round the asteroid | wraps, about 800 m |
-| Fuel | economy 5 (cut from 20 after play) | tight (economy 4) | tight (economy 3.5) | tight (economy 4) | moderate (economy 8) | Hard's, draining through a leak |
+| Fuel | economy 5 (cut from 20 after play) | tight (economy 2) | tight (economy 1.75) | tight (economy 2) | economy 4 | economy 4.5, draining through a leak |
 | Start | 120 m up, 15 m/s sideways | 170 m up, 10 m/s sideways | 200 m up, 10 m/s sideways | cave mouth, still | in orbit at about 60 m | as Hard, leak open |
 | Touchdown limit | 2.0 m/s, 15° | 1.5 m/s, 12° | 1.2 m/s, 10° | 1.5 m/s, 12° | 1.5 m/s relative to the pad, 12° | 1.2 m/s, 10° |
 | Pads | 5: wide ×2 to narrow ×5 | 6: valleys and mountain shelves | 6: narrow ledges and pits | 5: ×2 to ×6, deeper is more | 6: plateaus and crater floors | 6: ledges, a pit, between twin peaks |
@@ -179,7 +179,7 @@ the same weight and thrust.
 - **Pads:** five, ×2 near the mouth to ×6 in the end chamber, each deeper than the last.
 - **World:** bounded, no wrap. The rock over the cave is solid; the end wall closes it.
 - **Drawing:** the floor and the roof are two lines (`lander.lines`), drawn as given.
-- **Fuel:** a concern (economy 4). Getting deep and back down safely is the challenge.
+- **Fuel:** a concern (economy 2, halved after play: the end pads are just reachable). Getting deep and back down safely is the challenge.
 
 ### Cave 2
 
@@ -193,7 +193,7 @@ the same weight and thrust.
   outline on its rock side, thinned where the rock is thinner (a spike's crust never reaches through
   into the air), and the view fills everything outside the outline (`solid: "outside"`). Narrowest
   passages on the route are about 20 m.
-- **Fuel:** economy 4.5. Touchdown as Cave.
+- **Fuel:** economy 2.25 (halved after play: the end pads are just reachable). Touchdown as Cave.
 
 ### Orbital
 
@@ -210,7 +210,7 @@ the same weight and thrust.
   a mountain top and the plain (×2 to ×5). Height, speed and tilt are measured in the nearest
   pad's own frame and relative to its motion (LND-011); for a level, still pad that is the world's.
 - **Start:** a circular orbit 60 m up, moving the way the rock turns. You must burn to come down.
-- **Fuel:** moderate (economy 8). Touchdown 1.5 m/s relative to the pad, 12°.
+- **Fuel:** economy 4 (halved after play). Touchdown 1.5 m/s relative to the pad, 12°.
 
 ### Emergency
 
@@ -233,22 +233,25 @@ the same weight and thrust.
 ### Binary (10 November 2026)
 
 - **The rocks:** two, 100 and 92 m across, 220 m apart, orbiting their common centre of mass about
-  once in 6 minutes. Each turns gently, one each way (6 and 7 minutes a turn).
+  about once in 4½ minutes (6 before gravity was doubled). Each turns gently, one each way (6 and 7
+  minutes a turn).
 - **Gravity:** each core pulls with mu = G × its rock's mass (the same G for both, so the pulls are
-  equal and opposite and the pair's centre of mass stays nearly still), about 0.6 m/s² at a surface.
+  equal and opposite and the pair's centre of mass stays nearly still), about 1.2 m/s² at a surface
+  (doubled after play).
   The rocks pull each other (FLT-014) and the ship; the ship pulls neither.
 - **Pads:** three on each rock (×2 to ×5), riding with it.
 - **Start:** in orbit 55 m over the larger rock, moving with it (a start 270 m out round the pair
   showed only empty space: the view can't zoom out that far). The other rock swings round into view.
-- **Fuel:** economy 8.
+- **Fuel:** economy 4 (halved after play).
 
 ### Heavy Orbital (10 November 2026)
 
 - **The asteroid:** 180 m across and denser (about 2,000 t), with taller mountains, turning once in
   3 minutes (Orbital: 7), so its surface moves at about 3 m/s.
-- **Gravity:** about 1.5 m/s² at the surface (Orbital: 0.9), against the ship's 4 m/s² of thrust.
+- **Gravity:** about 3 m/s² at the surface (doubled after play; Orbital: 0.9), against the ship's
+  4 m/s² of thrust: little margin.
 - **Pads:** six (×2 to ×5): plateaus, craters, a mountain top and a shelf.
-- **Start:** a circular orbit 70 m up. **Fuel:** economy 10.
+- **Start:** a circular orbit 70 m up. **Fuel:** economy 5 (halved after play).
 
 ## 6. Look and sound
 
