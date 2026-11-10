@@ -5,7 +5,7 @@
 
 import { cross, dot, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
-import { parcelChemical, storeChemical, storeThermal } from "./gas.ts";
+import { chemicalAt, parcelChemical, storeChemical, storeThermal } from "./gas.ts";
 import { explosiveEnergy, type Explosive } from "./explosive.ts";
 import { inertiaOf } from "./shapes.ts";
 import type { World } from "./world.ts";
@@ -130,16 +130,23 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
     thermal += bl.energy;
   }
   // Gas parcels are point masses with thermal energy.
-  for (const p of world.gas.parcels) {
-    const v = p.velocity;
-    mass += p.mass;
-    px += p.mass * v.x;
-    py += p.mass * v.y;
-    L += p.mass * cross(p.position, v);
-    ke += 0.5 * p.mass * dot(v, v);
-    pe -= p.mass * dot(g, p.position);
-    thermal += p.thermal;
-    chemical += parcelChemical(p, world.gas.scale ?? 1);
+  const gas = world.gas;
+  const n = gas.count;
+  const gs = gas.scale ?? 1;
+  for (let i = 0; i < n; i++) {
+    const m = gas.mass[i];
+    const x = gas.x[i];
+    const y = gas.y[i];
+    const vx = gas.vx[i];
+    const vy = gas.vy[i];
+    mass += m;
+    px += m * vx;
+    py += m * vy;
+    L += m * (x * vy - y * vx);
+    ke += 0.5 * m * (vx * vx + vy * vy);
+    pe -= m * (g.x * x + g.y * y);
+    thermal += gas.thermal[i];
+    chemical += chemicalAt(gas, i, gs);
   }
   return {
     mass,

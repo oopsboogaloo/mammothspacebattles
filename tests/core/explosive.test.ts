@@ -1,7 +1,7 @@
 // Explosive shells (WPN): detonation on impact, shrapnel, blast gas and blast damage.
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { computeTotals, createWorld, explosiveEnergy, getProfile, initialWorld, parseScenario, ScenarioError, stepInPlace, timelineByStep, type World } from "../../src/core/index.ts";
+import { computeTotals, createWorld, explosiveEnergy, getProfile, initialWorld, parseScenario, ScenarioError, stepInPlace, timelineByStep, type World, parcelsOf } from "../../src/core/index.ts";
 import { box, disc, readJson, ROOT } from "../helpers.ts";
 
 const sandbox = getProfile("sandbox");
@@ -54,12 +54,12 @@ describe("explosive shells", () => {
     }
     // The step it went off: no blast gas yet, but it is held, with its mass.
     expect(w.blasts).toHaveLength(1);
-    expect(w.gas.parcels.some((p) => p.composition.co2)).toBe(false);
+    expect(parcelsOf(w.gas).some((p) => p.composition.co2)).toBe(false);
     // The charge's energy has left the chemical store (the propellant burnt long before).
     expect(computeTotals(w).energy.chemical).toBeLessThan(chem0 - E + 1e-6);
     stepInPlace(w, by.get(tick) ?? [], sandbox);
     expect(w.blasts).toHaveLength(0);
-    expect(w.gas.parcels.filter((p) => p.composition.co2).length).toBeGreaterThan(0);
+    expect(parcelsOf(w.gas).filter((p) => p.composition.co2).length).toBeGreaterThan(0);
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 

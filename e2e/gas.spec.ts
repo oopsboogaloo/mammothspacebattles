@@ -2,7 +2,7 @@
 import { expect, test } from "@playwright/test";
 import { dragWorld, openStarter, shot, waitForTick, world } from "./helpers.ts";
 
-type GasWorld = Awaited<ReturnType<typeof world>> & { gas: { parcels: { thermal: number }[]; removed: { count: number } } };
+type GasWorld = Awaited<ReturnType<typeof world>> & { gas: { count: number; thermal: number[]; removed: { count: number } } };
 const gasWorld = (page: Parameters<typeof world>[0]) => world(page) as Promise<GasWorld>;
 
 test("SBX-035 parcels are coloured by temperature with a scale shown; the switch shows composition (SC-02)", async ({ page }, info) => {
@@ -37,15 +37,15 @@ test("GAS-001 the Gas tool fills a dragged rectangle and clears it again", async
   await dragWorld(page, [-1, -1], [1, 1]);
   await expect(page.getByTestId("toast")).toContainText("Added 400 parcels");
   let w = await gasWorld(page);
-  expect(w.gas.parcels).toHaveLength(400);
+  expect(w.gas.count).toBe(400);
   await page.getByTestId("gas-mode-clear").click();
   await dragWorld(page, [2, -2], [0, 2]); // the right half (the panel covers the left of the view)
   w = await gasWorld(page);
-  expect(w.gas.parcels).toHaveLength(200);
+  expect(w.gas.count).toBe(200);
   // Undo brings the cleared half back.
   await page.keyboard.press("Control+z");
   w = await gasWorld(page);
-  expect(w.gas.parcels).toHaveLength(400);
+  expect(w.gas.count).toBe(400);
 });
 
 test("RS-07b the simplest rocket accelerates right as its gas jets out of the hole (SC-03)", async ({ page }, info) => {

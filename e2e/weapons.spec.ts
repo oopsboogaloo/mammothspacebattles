@@ -68,8 +68,8 @@ test("WPN-005 WPN-006 the explosive cannon test: the shell bursts on the ship in
   for (let i = 0; i < 31; i++) await page.getByTestId("step10").click();
   await waitForTick(page, 310);
   const w = await page.evaluate(() => {
-    const s = (window as unknown as { __msb: { sandbox: () => { world: { events: { type: string; data: Record<string, unknown> }[]; bodies: { id: string }[]; gas: { parcels: { composition: Record<string, number> }[] }; ledger: { violations: number } } } } }).__msb.sandbox().world;
-    return { det: s.events.filter((e) => e.type === "detonation").length, destroyed: s.events.filter((e) => e.type === "destroyed").length, fragments: s.bodies.filter((b) => /^shell-f\d+$/.test(b.id)).length, blast: s.gas.parcels.filter((p) => p.composition.co2).length, violations: s.ledger.violations };
+    const s = (window as unknown as { __msb: { sandbox: () => { world: { events: { type: string; data: Record<string, unknown> }[]; bodies: { id: string }[]; gas: { count: number; composition: Record<string, number>[] }; ledger: { violations: number } } } } }).__msb.sandbox().world;
+    return { det: s.events.filter((e) => e.type === "detonation").length, destroyed: s.events.filter((e) => e.type === "destroyed").length, fragments: s.bodies.filter((b) => /^shell-f\d+$/.test(b.id)).length, blast: s.gas.composition.slice(0, s.gas.count).filter((c) => c.co2).length, violations: s.ledger.violations };
   });
   expect(w.det).toBe(1);
   expect(w.fragments).toBe(6);

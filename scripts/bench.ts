@@ -46,7 +46,7 @@ for (const file of files) {
   rows.push({
     scenario: scn.name,
     bodies: world.bodies.length,
-    parcels: world.gas.parcels.length,
+    parcels: world.gas.count,
     substeps: world.gas.substeps,
     steps,
     ms: Math.round(ms * 10) / 10,

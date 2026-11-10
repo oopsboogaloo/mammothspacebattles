@@ -1,7 +1,7 @@
 // Engine chambers held as one volume of gas (PRP-011, §10.1).
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assemblyTotals, computeTotals, getProfile, initialWorld, parseScenario, stepInPlace, type Command, type World } from "../../src/core/index.ts";
+import { assemblyTotals, computeTotals, getProfile, initialWorld, parseScenario, stepInPlace, type Command, type World, parcelsOf } from "../../src/core/index.ts";
 import { mixture } from "../../src/core/gas.ts";
 import { expD, lnPos, powPos } from "../../src/core/math.ts";
 import { vesselPressure, vesselShape } from "../../src/core/vessel.ts";
@@ -34,7 +34,7 @@ describe("chambers held as one volume", () => {
     const b = engine(w);
     const c = Math.cos(-b.angle);
     const s = Math.sin(-b.angle);
-    const above = w.gas.parcels.filter((p) => {
+    const above = parcelsOf(w.gas).filter((p) => {
       const dx = p.position.x - b.position.x;
       const dy = p.position.y - b.position.y;
       const lx = c * dx - s * dy;
@@ -42,7 +42,7 @@ describe("chambers held as one volume", () => {
       return Math.abs(lx) < 0.4 && ly > b.injector!.outlet.y - shape.throat + 0.01 && ly < b.injector!.outlet.y;
     });
     expect(above).toHaveLength(0);
-    expect(w.gas.parcels.length).toBeGreaterThan(50); // the exhaust
+    expect(w.gas.count).toBeGreaterThan(50); // the exhaust
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
 
@@ -88,7 +88,7 @@ describe("chambers held as one volume", () => {
     const v = engine(w).injector!.vessel!;
     expect(v.mass).toBeGreaterThan(0.05);
     expect(vesselPressure(v, shape.area)).toBeGreaterThan(1000);
-    expect(w.gas.parcels).toHaveLength(0);
+    expect(parcelsOf(w.gas)).toHaveLength(0);
     expect(Math.abs(assemblyTotals(w, "hull")!.momentum.y)).toBeLessThan(1e-9);
     expect(w.ledger.violations).toBe(0);
   }, 300_000);
@@ -108,7 +108,7 @@ describe("chambers held as one volume", () => {
     expect(engine(w).injector!.vessel).toBeUndefined();
     // The spilled gas is where the chamber was: within a metre of the engine.
     const b = engine(w);
-    const near = w.gas.parcels.filter((p) => Math.hypot(p.position.x - b.position.x, p.position.y - b.position.y) < 1.2);
+    const near = parcelsOf(w.gas).filter((p) => Math.hypot(p.position.x - b.position.x, p.position.y - b.position.y) < 1.2);
     expect(near.reduce((m, p) => m + p.mass, 0)).toBeGreaterThan(0.5 * held);
     expect(computeTotals(w).mass - left).toBeCloseTo(before.mass, 9);
     expect(w.ledger.violations).toBe(0);

@@ -306,19 +306,60 @@ Chloe: do it, in stages, and drop the gas helper threads, whose jobs passed parc
 
 1. **Helper threads removed** (done): `?helpers=N`, `gasHelper.ts`, `runGasJob`, `stepInPlaceAsync`;
    the step is a plain function again. Measured earlier at no gain (spec §10.1).
-2. **Gas as arrays in the world.** `world.gas` holds the arrays; everything that reads parcels (the
-   step, ledger, vessels, explosives, drawing, panels, tests) reads them. No change to the physics.
+2. **Gas as arrays in the world** (done; results below). `world.gas` holds the arrays; everything
+   that reads parcels (the step, ledger, vessels, explosives, drawing, panels, tests) reads them. No
+   change to the physics.
 3. **Whole-array copies into the module**, replacing the per-parcel packing in `stepGas`.
 4. **Clustering, walls, free flight and the finish into the module**, by what a profile says after 3.
 5. **The same for wisps**, if a profile then says so.
 
-**Expected:** about 1.2–1.4× on gas-heavy scenes and 1.1–1.2× on the lander levels, and far less
-garbage (no new vector per parcel per step). An estimate from §28's table, to be measured at 2 and 3.
+**Expected** (before stage 2 was measured): about 1.2–1.4× on gas-heavy scenes and 1.1–1.2× on the
+lander levels, and far less garbage. **That estimate was wrong**; see the results.
+
+### Stage 2 results: the gas as arrays (10 November 2026)
+
+**What changed**
+
+- `GasState` holds `count` and one array per field (`x`, `y`, `vx`, `vy`, `mass`, `thermal`,
+  `radius`, `id`, `age`, `keep`) and a list of compositions. A `Parcel` object is how gas is made,
+  shown and written: `addParcel`, `parcelAt`, `parcelsOf`, `setParcels`, `dropParcels`.
+- The step works on the arrays: the field's kick, ignition, clustering, free flight, the loop's
+  packing and finish, wrapping, vessels taking in strays, the ledger's totals, drawing. No vector is
+  made per parcel per step.
+- Clusters are stepped straight on the gas and on their own bodies, in order. The cluster jobs
+  (copies, made for the helper threads) are gone.
+- **The hash is unchanged.** A world's canonical JSON writes its gas as the list of parcels it
+  stands for, as before (`registerCanonicalForm`), so the hash does not depend on how the gas is
+  stored and `hash-compare.ts` compares straight across this change. `gasFromWritten` reads it back.
+
+**Identical results:** the same world hash every step as before in all 46 scenarios with engines
+pulsing (600 steps).
+
+**Speed and garbage** (Node, engines pulsing, against the commit before):
+
+| | Step, ms | | Heap garbage, MB a game second |
+|---|---|---|---|
+| Reference battle | 5.95 → 5.85 | 1.02× | 403 → 371 (−8%) |
+| Gunship 2 | 2.11 → 2.02 | 1.04× | 144 → 139 (−3%) |
+| AI duel | 2.38 → 2.32 | 1.03× | not measured |
+| Orbital | 1.72 → 1.85 | within noise | 119 → 118 |
+| Emergency | 1.69 → 1.71 | 1.0× | 106 → 100 (−6%) |
+
+**What that shows:** walking parcels as objects was not where the time or the garbage went. A profile
+after the change looks as it did before: the Rust gas loop 29% of a battle step, then a long tail
+with nothing over 6% (the step's own bookkeeping 8%, the ledger's totals 5%, wisps 6%, clustering
+3%, garbage collection 4%), most of it about bodies, welds and wisps, not parcels. The gas functions
+left in TypeScript that stages 3 and 4 would move (clustering, far-field circles, the step's packing
+and finish, walls, free flight) add up to about 13% of a battle step and 3–5% on a lander level.
+
+**So the estimate for the whole change falls** from 1.2–1.4× to about 1.1× on gas-heavy scenes and a
+few percent on the lander levels. Whether stages 3 and 4 are worth doing for that is open.
 
 ## Next
 
 1. **Emergency on the iPad** (`?game=lander&diag=1`), 5 minutes: the same check where it froze most.
-2. **Stage 2 above:** the gas as arrays in the world.
+2. **Decide on stages 3 and 4** of the gas change, now that stage 2's measurement has cut what they
+   can be expected to give.
 
 ## Decision (10 November 2026)
 

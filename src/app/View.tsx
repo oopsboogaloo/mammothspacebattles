@@ -17,6 +17,7 @@ import {
   temperatureOf,
   type Body,
   type Parcel,
+  parcelAt,
   type BodyInput,
   type Vec2,
   type World,
@@ -362,18 +363,19 @@ export function View() {
   const worldAt = (s: Vec2) => toWorld(camera.value, viewport.value, s);
 
   /** The parcel under the pointer, if any (for the hover readout, SBX-036). */
-  const parcelAt = (p: Vec2): Parcel | null => {
+  const parcelUnder = (p: Vec2): Parcel | null => {
     const sb = sandbox.value;
     if (!sb) return null;
     const minR = 4 / camera.value.zoom;
-    let best: Parcel | null = null;
+    let best = -1;
     let bestD = Infinity;
     // Tested where it is drawn; the world's own parcel is returned.
-    shownOf(sb.world).gas.parcels.forEach((q, i) => {
-      const d = Math.hypot(q.position.x - p.x, q.position.y - p.y);
-      if (d < Math.max(q.radius, minR) && d < bestD) [best, bestD] = [sb.world.gas.parcels[i], d];
-    });
-    return best;
+    const gas = shownOf(sb.world).gas;
+    for (let i = 0; i < gas.count; i++) {
+      const d = Math.hypot(gas.x[i] - p.x, gas.y[i] - p.y);
+      if (d < Math.max(gas.radius[i], minR) && d < bestD) [best, bestD] = [i, d];
+    }
+    return best < 0 ? null : parcelAt(sb.world.gas, best);
   };
 
   const hit = (p: Vec2): Body | null => {
@@ -604,7 +606,7 @@ export function View() {
     if (!g) {
       const b = hit(p);
       if ((b?.id ?? null) !== hover.value) hover.value = b?.id ?? null;
-      const parcel = b ? null : parcelAt(p);
+      const parcel = b ? null : parcelUnder(p);
       setHoverParcel(parcel);
       setHoverPos(b || parcel ? s : null);
       if (tool.value === "attach") showAttach(p, ghostPart());
@@ -773,9 +775,9 @@ export function View() {
         if (f.area < 1e-4) return;
         const o = gasOptions.value;
         if (o.mode === "clear") {
-          const before = sb.world.gas.parcels.length;
+          const before = sb.world.gas.count;
           edit([{ type: "gas.remove", min: f.min, max: f.max }], "Clear gas");
-          showToast(`Removed ${before - sb.world.gas.parcels.length} parcels`);
+          showToast(`Removed ${before - sb.world.gas.count} parcels`);
           return;
         }
         const events = sb.world.events.length;
@@ -922,7 +924,7 @@ export function View() {
           ))}
         </div>
       )}
-      {sb && (sb.world.gas.parcels.length > 0 || tool.value === "gas") && <GasScale />}
+      {sb && (sb.world.gas.count > 0 || tool.value === "gas") && <GasScale />}
       <div class="overlay-bar" role="group" aria-label="Overlays" onPointerDown={(e) => e.stopPropagation()}>
         {OVERLAYS.map((o) => (
           <button key={o.id} class={`btn small ${overlays.value.has(o.id) ? "on" : ""}`} aria-pressed={overlays.value.has(o.id)} data-testid={`overlay-${o.id}`} onClick={() => toggleOverlay(o.id)}>

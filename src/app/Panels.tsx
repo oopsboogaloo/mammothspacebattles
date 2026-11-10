@@ -758,7 +758,7 @@ function ScenarioPanel() {
         <NumberField id="gy" label="Gravity y" unit="m/s²" value={sb.world.gravity.y} onCommit={(v) => edit([{ type: "world.set", patch: { gravity: { x: sb.world.gravity.x, y: v } } }], "Set gravity")} />
         <Row k="Bodies" v={String(sb.world.bodies.length)} />
       </Section>
-      {(sb.world.gas.parcels.length > 0 || sb.world.gas.removed.count > 0) && <GasSection />}
+      {(sb.world.gas.count > 0 || sb.world.gas.removed.count > 0) && <GasSection />}
       <Section id="ledger" title="Ledger">
         <Row k="Mass" v={fmt(t.mass, "kg")} />
         <Row k="Momentum" v={`${fmt(t.momentum.x, "kg·m/s")}, ${fmt(t.momentum.y, "")}`} />
@@ -843,7 +843,7 @@ function PerformanceSection() {
           Press play to measure.
         </span>
       )}
-      <Row k="Bodies · welds · gas parcels" v={`${sb.world.bodies.length} · ${sb.world.joints.length} · ${sb.world.gas.parcels.length}`} />
+      <Row k="Bodies · welds · gas parcels" v={`${sb.world.bodies.length} · ${sb.world.joints.length} · ${sb.world.gas.count}`} />
     </Section>
   );
 }

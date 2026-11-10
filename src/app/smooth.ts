@@ -23,6 +23,18 @@ export function nextShownTime(shown: number, latest: number, realDt: number, rat
   return Math.max(Math.min(shown, latest + MAX_LEAD_S), Math.min(latest + MAX_LEAD_S, Math.max(latest - MAX_LEAD_S, t)));
 }
 
+/** The gas moved on: new position arrays, everything else shared. */
+function gasOn(gas: World["gas"], dt: number): World["gas"] {
+  const n = gas.count;
+  const x = new Float64Array(n);
+  const y = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    x[i] = gas.x[i] + gas.vx[i] * dt;
+    y[i] = gas.y[i] + gas.vy[i] * dt;
+  }
+  return { ...gas, x, y };
+}
+
 const sources = new WeakMap<World, World>();
 /** The world a moved-on copy was made from (itself if none): what per-step caches know. */
 export const sourceOf = (w: World): World => sources.get(w) ?? w;
@@ -37,7 +49,7 @@ export function extrapolate(world: World, dt: number): World {
   const shown: World = {
     ...world,
     bodies: world.bodies.map((b) => (b.fixed ? b : { ...on(b), angle: b.angle + b.angularVelocity * dt })),
-    gas: { ...world.gas, parcels: world.gas.parcels.map(on) },
+    gas: gasOn(world.gas, dt),
     wisps: world.wisps?.map(on),
     dust: world.dust?.map(on),
   };

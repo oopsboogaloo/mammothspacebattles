@@ -4,6 +4,16 @@
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
+/**
+ * Values that are held in one shape and written in another: each is asked for the form to write
+ * (undefined: as it is). The world's gas is held as arrays, one per field, and written as the list
+ * of parcels it stands for, so a hash does not depend on how the gas is stored.
+ */
+const forms: ((value: object) => unknown)[] = [];
+export function registerCanonicalForm(form: (value: object) => unknown): void {
+  forms.push(form);
+}
+
 export function canonicalStringify(value: unknown, path = "$"): string {
   if (value === null) return "null";
   switch (typeof value) {
@@ -16,6 +26,11 @@ export function canonicalStringify(value: unknown, path = "$"): string {
     case "string":
       return JSON.stringify(value);
     case "object": {
+      for (const form of forms) {
+        const written = form(value as object);
+        if (written !== undefined) return canonicalStringify(written, path);
+      }
+      if (ArrayBuffer.isView(value)) return "[" + Array.from(value as unknown as ArrayLike<number>, (v, i) => canonicalStringify(v, `${path}[${i}]`)).join(",") + "]";
       if (Array.isArray(value)) {
         return "[" + value.map((v, i) => canonicalStringify(v, `${path}[${i}]`)).join(",") + "]";
       }

@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { canonicalParse, canonicalStringify, createWorld, hashString, hashValue, stepInPlace, getProfile, type Body } from "../../src/core/index.ts";
+import { canonicalParse, canonicalStringify, createWorld, gasFromWritten, hashString, hashValue, stepInPlace, getProfile, type Body, type World } from "../../src/core/index.ts";
 import { disc } from "../helpers.ts";
 
 const finite = fc.double({ min: -1e6, max: 1e6, noNaN: true });
@@ -25,7 +25,12 @@ describe("canonical serialisation", () => {
         const once = canonicalStringify(world);
         const twice = canonicalStringify(canonicalParse(once));
         expect(twice).toBe(once);
-        expect(canonicalParse(once)).toEqual(world);
+        // The gas is written as its parcels; read back, it is the same world.
+        const read = canonicalParse(once) as unknown as World & { gas: Parameters<typeof gasFromWritten>[0] };
+        const back: World = { ...read, gas: gasFromWritten(read.gas) };
+        expect(back.gas.count).toBe(world.gas.count);
+        expect({ ...back, gas: null }).toEqual({ ...world, gas: null });
+        expect(canonicalStringify(back)).toBe(once);
       }),
     );
   });

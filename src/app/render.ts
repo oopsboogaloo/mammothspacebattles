@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
@@ -96,7 +96,7 @@ export function temperatureColour(T: number): string {
 }
 
 /** The species with the largest mass fraction gives a parcel's colour in composition view. */
-export function compositionColour(p: Parcel): string {
+export function compositionColour(p: { composition: Record<string, number> }): string {
   let best = "";
   let y = -1;
   for (const [k, v] of Object.entries(p.composition)) if (v > y) [best, y] = [k, v];
@@ -199,9 +199,10 @@ function canPlume(ctx: Ctx): ctx is Ctx & CanvasRenderingContext2D {
  * resolution, smoke laid down first and hot gas added as light, then blurred up over the scene.
  */
 function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: Viewport): void {
-  const parcels = world.gas.parcels;
+  const gas = world.gas;
+  const np = gas.count;
   const wisps = world.wisps ?? [];
-  if (!parcels.length && !wisps.length) return;
+  if (!np && !wisps.length) return;
   const w = Math.max(1, Math.ceil(vp.width / PLUME_DOWN));
   const h = Math.max(1, Math.ceil(vp.height / PLUME_DOWN));
   buffer ??= document.createElement("canvas");
@@ -216,37 +217,42 @@ function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: V
   b.clearRect(0, 0, w, h);
   const sp = plumeSprites();
   const scale = world.gas.scale ?? 1;
-  const buckets = parcels.map((p) => bucketOf(temperatureOf(p, scale)));
+  const buckets: number[] = [];
+  for (let i = 0; i < np; i++) buckets.push(bucketOf(temperatureAt(gas, i, scale)));
   // Each blob covers the space its parcel has: the area per parcel around it, from a count on a coarse
   // grid (its cell and the 8 around it). Gas that has spread out gets bigger, fainter blobs.
   const cell = 0.4;
   const count = new Map<number, number>();
   const key = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
-  const cells = parcels.map((p) => [Math.floor(p.position.x / cell), Math.floor(p.position.y / cell)] as const);
+  const cells: (readonly [number, number])[] = [];
+  for (let i = 0; i < np; i++) cells.push([Math.floor(gas.x[i] / cell), Math.floor(gas.y[i] / cell)] as const);
   for (const [cx, cy] of cells) count.set(key(cx, cy), (count.get(key(cx, cy)) ?? 0) + 1);
   const size = cells.map(([cx, cy], i) => {
     let n = 0;
     for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) n += count.get(key(cx + dx, cy + dy)) ?? 0;
     const spacing = Math.sqrt((9 * cell * cell) / n);
-    return Math.min(1.6, Math.max(3 * parcels[i].radius, 1.05 * spacing));
+    return Math.min(1.6, Math.max(3 * gas.radius[i], 1.05 * spacing));
   });
   for (const glow of [false, true]) {
     b.globalCompositeOperation = glow ? "lighter" : "source-over";
-    parcels.forEach((p, i) => {
+    const at = { x: 0, y: 0 };
+    for (let i = 0; i < np; i++) {
       const k = buckets[i];
       const f = flameColour(bucketT(k));
-      if (f.glow !== glow) return;
-      const s = toScreen(c, vp, p.position);
+      if (f.glow !== glow) continue;
+      at.x = gas.x[i];
+      at.y = gas.y[i];
+      const s = toScreen(c, vp, at);
       // At least the smoothing length across (6 radii), and as wide as the space between parcels,
       // so neighbours overlap into one body of gas.
       const R = Math.max(1.5, size[i] * c.zoom) / PLUME_DOWN;
       const x = s.x / PLUME_DOWN;
       const y = s.y / PLUME_DOWN;
-      if (x < -R || y < -R || x > w + R || y > h + R) return;
+      if (x < -R || y < -R || x > w + R || y > h + R) continue;
       // Thinner where it has spread: the same gas over a larger area.
       b.globalAlpha = f.alpha * Math.min(1, Math.max(0.35, (0.5 / Math.max(size[i], 0.5)) ** 0.5));
       b.drawImage(sp[k], x - R, y - R, 2 * R, 2 * R);
-    });
+    }
     // The tail (GAS-011): gas gone from the gas model cools, grows and fades out.
     for (const wp of wisps) {
       const fade = wispFade(wp);
@@ -326,19 +332,22 @@ function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "tempera
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-  const parcels = world.gas.parcels;
-  if (!parcels.length) return;
+  const gas = world.gas;
+  if (!gas.count) return;
   // Batch parcels by colour so each colour is one path (2,000 parcels per frame stay cheap).
-  const groups = new Map<string, Parcel[]>();
+  const groups = new Map<string, number[]>();
   const left = -20;
   const right = vp.width + 20;
-  for (const p of parcels) {
-    const s = toScreen(c, vp, p.position);
+  const at = { x: 0, y: 0 };
+  for (let p = 0; p < gas.count; p++) {
+    at.x = gas.x[p];
+    at.y = gas.y[p];
+    const s = toScreen(c, vp, at);
     if (s.x < left || s.x > right || s.y < -20 || s.y > vp.height + 20) continue;
     let key: string;
-    if (mode === "composition") key = compositionColour(p);
+    if (mode === "composition") key = compositionColour({ composition: gas.composition[p] });
     else {
-      const T = temperatureOf(p, world.gas.scale ?? 1);
+      const T = temperatureAt(gas, p, gas.scale ?? 1);
       key = temperatureColour(T_MIN * Math.pow(T_MAX / T_MIN, Math.round(temperatureFraction(T) * (BUCKETS - 1)) / (BUCKETS - 1)));
     }
     const g = groups.get(key);
@@ -350,8 +359,10 @@ function drawGas(ctx: Ctx, world: World, c: Camera, vp: Viewport, mode: "tempera
     ctx.fillStyle = colour;
     ctx.beginPath();
     for (const p of ps) {
-      const s = toScreen(c, vp, p.position);
-      const r = Math.max(1.5, p.radius * c.zoom);
+      at.x = gas.x[p];
+      at.y = gas.y[p];
+      const s = toScreen(c, vp, at);
+      const r = Math.max(1.5, gas.radius[p] * c.zoom);
       ctx.moveTo(s.x + r, s.y);
       ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
     }

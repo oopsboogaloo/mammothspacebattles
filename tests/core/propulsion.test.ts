@@ -21,7 +21,7 @@ import {
   temperatureOf,
   timelineByStep,
   type Parcel,
-  type World,
+  type World, parcelsOf, setParcels, addParcel,
 } from "../../src/core/index.ts";
 import { readJson, ROOT } from "../helpers.ts";
 
@@ -67,13 +67,13 @@ describe("propellant and reactions", () => {
 
   it("PRP-003 a cold mixture does not ignite by itself, but does next to hot gas", () => {
     const w = createWorld(1);
-    w.gas.parcels = [parcel(), parcel({ id: 2, position: { x: 5, y: 0 } })];
+    setParcels(w.gas, [parcel(), parcel({ id: 2, position: { x: 5, y: 0 } })]);
     expect(igniteAndBurn(w.gas)).toBe(0);
     const hot = parcel({ id: 3, composition: { h2o: 1 }, position: { x: 0.1, y: 0 }, thermal: 0.01 * mixture({ h2o: 1 }).cv * 2000 });
-    w.gas.parcels.push(hot);
+    addParcel(w.gas, hot);
     expect(igniteAndBurn(w.gas)).toBe(1); // only the one within a smoothing length of the hot parcel
-    expect(w.gas.parcels[0].composition).toEqual({ h2o: 1 });
-    expect(w.gas.parcels[1].composition.h2).toBeGreaterThan(0);
+    expect(parcelsOf(w.gas)[0].composition).toEqual({ h2o: 1 });
+    expect(parcelsOf(w.gas)[1].composition.h2).toBeGreaterThan(0);
   });
 
   it("PRP-001 propellant in a tank counts toward the assembly's mass and carries its energy in the ledger", () => {
@@ -97,7 +97,7 @@ describe("propellant and reactions", () => {
     const real = createWorld(1, [], { x: 0, y: 0 }, { gas: [fill] }, getProfile("test"));
     const heavy = createWorld(1, [], { x: 0, y: 0 }, { gas: [fill] }, sandbox);
     expect(gasTotals(heavy.gas).temperature).toBeCloseTo(500, 9);
-    expect(soundSpeed(real.gas.parcels[0]) / soundSpeed(heavy.gas.parcels[0])).toBeCloseTo(10, 9);
+    expect(soundSpeed(parcelsOf(real.gas)[0]) / soundSpeed(parcelsOf(heavy.gas)[0])).toBeCloseTo(10, 9);
   });
 });
 
@@ -230,7 +230,7 @@ describe("engines", () => {
       const eng = world.bodies.find((b) => b.id === "engine")!;
       const q = sinCos(eng.angle);
       const alive = new Set<number>();
-      for (const p of world.gas.parcels) {
+      for (const p of parcelsOf(world.gas)) {
         alive.add(p.id);
         // In the engine's frame: has the parcel passed the nozzle exit (1.1 m below the chamber centre)?
         const local = invRotate(q, { x: p.position.x - eng.position.x, y: p.position.y - eng.position.y });

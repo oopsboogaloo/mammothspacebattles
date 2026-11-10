@@ -6,7 +6,7 @@ type Hook = {
   __msb: {
     sim: () => { worker: boolean; runs: number };
     sandbox: () => {
-      world: { tick: number; links: { kind: string; id: string; from?: string; to?: string }[]; gas: { parcels: unknown[] } };
+      world: { tick: number; links: { kind: string; id: string; from?: string; to?: string }[]; gas: { count: number } };
       goTo: (t: number) => void;
       snapshots: Map<number, unknown>;
       edit: (commands: unknown[], label: string) => void;

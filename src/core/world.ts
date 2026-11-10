@@ -18,7 +18,7 @@ import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
-import { SMOOTHING, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
+import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { boundingRadiusOf, massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { bodyIndex, holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
@@ -516,12 +516,12 @@ function runFeeds(world: World, dt: number): { touchedFixed: boolean; spinShift:
 /** Adds parcels for a fill, or refuses it if the parcel limit would be exceeded (PRF-003). */
 function fillGas(world: World, fill: GasFill, profile?: Profile): void {
   const limit = profile?.limit.gasParcels ?? Infinity;
-  const parcels = makeFill(fill, world.rng, wallBodies(world.bodies), world.gas.nextId, limit - world.gas.parcels.length, world.gas.scale ?? 1);
+  const parcels = makeFill(fill, world.rng, wallBodies(world.bodies), world.gas.nextId, limit - world.gas.count, world.gas.scale ?? 1);
   if (!parcels) {
-    pushEvent(world, { tick: world.tick, type: "limit.refused", data: { entity: "gasParcels", requested: fill.count, existing: world.gas.parcels.length, limit } });
+    pushEvent(world, { tick: world.tick, type: "limit.refused", data: { entity: "gasParcels", requested: fill.count, existing: world.gas.count, limit } });
     return;
   }
-  world.gas.parcels.push(...parcels);
+  for (const p of parcels) addParcel(world.gas, p);
   world.gas.nextId += parcels.length;
   pushEvent(world, { tick: world.tick, type: "gas.fill", data: { requested: fill.count, created: parcels.length } });
 }
@@ -577,13 +577,19 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
     field.impulse.y += J.y;
     field.angular += cross(r.body.position, J);
   }
-  for (const p of world.gas.parcels) {
-    const a = pull(p.position);
-    p.velocity = { x: p.velocity.x + a.x * dt, y: p.velocity.y + a.y * dt };
-    const J = { x: p.mass * a.x * dt, y: p.mass * a.y * dt };
-    field.impulse.x += J.x;
-    field.impulse.y += J.y;
-    field.angular += cross(p.position, J);
+  const gas = world.gas;
+  const at = { x: 0, y: 0 };
+  for (let i = 0; i < gas.count; i++) {
+    at.x = gas.x[i];
+    at.y = gas.y[i];
+    const a = pull(at);
+    gas.vx[i] = gas.vx[i] + a.x * dt;
+    gas.vy[i] = gas.vy[i] + a.y * dt;
+    const Jx = gas.mass[i] * a.x * dt;
+    const Jy = gas.mass[i] * a.y * dt;
+    field.impulse.x += Jx;
+    field.impulse.y += Jy;
+    field.angular += at.x * Jy - at.y * Jx;
   }
 }
 
@@ -612,6 +618,7 @@ function wrapAround(world: World): boolean {
   }
   const reach = b.farField ?? 10;
   const movedParcels = new Set<number>();
+  const gas = world.gas;
   const near: { x: number; y: number; r2: number }[] = [];
   let moved = false;
   for (const members of groups.values()) {
@@ -641,23 +648,26 @@ function wrapAround(world: World): boolean {
     if (sx === 0 && sy === 0) continue;
     moved = true;
     for (const x of members) x.position = { x: x.position.x + sx, y: x.position.y + sy };
-    for (const p of world.gas.parcels) {
-      if (movedParcels.has(p.id)) continue;
-      const dx = p.position.x - cx;
-      const dy = p.position.y - cy;
+    for (let i = 0; i < gas.count; i++) {
+      if (movedParcels.has(gas.id[i])) continue;
+      const dx = gas.x[i] - cx;
+      const dy = gas.y[i] - cy;
       if (dx * dx + dy * dy > r2) continue;
-      p.position = { x: p.position.x + sx, y: p.position.y + sy };
-      movedParcels.add(p.id);
+      gas.x[i] = gas.x[i] + sx;
+      gas.y[i] = gas.y[i] + sy;
+      movedParcels.add(gas.id[i]);
     }
   }
   // Gas outside the rectangle wraps on its own, unless it is near a free assembly: that gas (in a
   // chamber straddling the edge, say) waits outside until the assembly itself wraps and takes it.
-  for (const p of world.gas.parcels) {
-    if (movedParcels.has(p.id)) continue;
-    const { x, y } = p.position;
+  for (let i = 0; i < gas.count; i++) {
+    if (movedParcels.has(gas.id[i])) continue;
+    const x = gas.x[i];
+    const y = gas.y[i];
     if (x >= b.min.x && x < b.max.x && y >= b.min.y && y < b.max.y) continue;
     if (near.some((c) => (x - c.x) ** 2 + (y - c.y) ** 2 <= c.r2)) continue;
-    p.position = { x: x < b.min.x ? x + w : x >= b.max.x ? x - w : x, y: y < b.min.y ? y + h : y >= b.max.y ? y - h : y };
+    gas.x[i] = x < b.min.x ? x + w : x >= b.max.x ? x - w : x;
+    gas.y[i] = y < b.min.y ? y + h : y >= b.max.y ? y - h : y;
     moved = true;
   }
   return moved;
@@ -749,7 +759,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
       const drawn = status.firing ? drawPropellant(b, command * inj.rate * b.integrity * dt, gs) : null;
       inj.credit = 0;
       for (const p of runVessel(world, b, shape, drawn, dt, limit)) {
-        world.gas.parcels.push(p);
+        addParcel(world.gas, p);
         made.push(p);
       }
       continue;
@@ -757,7 +767,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
     if (inj.vessel) {
       // No longer enclosed: the chamber's gas spills out where it was.
       for (const p of spill(world, b)) {
-        world.gas.parcels.push(p);
+        addParcel(world.gas, p);
         made.push(p);
       }
     }
@@ -766,7 +776,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
       continue;
     }
     inj.credit += command * inj.rate * b.integrity * dt;
-    while (inj.credit >= inj.parcelMass && world.gas.parcels.length < limit) {
+    while (inj.credit >= inj.parcelMass && world.gas.count < limit) {
       const stores = Object.entries(inj.mixture).filter(([, y]) => y > 0);
       if (stores.some(([res, y]) => (b.contents?.find((c) => c.resource === res)?.mass ?? 0) < (inj.parcelMass / (inj.economy ?? 1)) * y)) break;
       const dm = inj.parcelMass;
@@ -780,7 +790,7 @@ function runInjectors(world: World, dt: number, profile?: Profile): Parcel[] {
       const vParcel = add(vPoint, scale(rotate(q, inj.direction), inj.speed));
       const p = emitParcel(world, b, stores, dm, dm / (inj.economy ?? 1), point, vParcel, inj.radius);
       if (inj.igniter) burn(p, gs);
-      world.gas.parcels.push(p);
+      addParcel(world.gas, p);
       made.push(p);
       inj.credit -= dm;
       inj.count += 1;
@@ -828,20 +838,20 @@ function drawPropellant(b: Body, want: number, gs: number): { mass: number; comp
  * so gas far from everything still leaves as it would (the far field needs something to be far from).
  */
 function bodiesNearGas(world: World, dt: number, keep: string[]): Body[] {
-  const ps = world.gas.parcels;
+  const gas = world.gas;
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
   let vmax = 0;
   let hmax = 0;
-  for (const p of ps) {
-    minX = Math.min(minX, p.position.x);
-    minY = Math.min(minY, p.position.y);
-    maxX = Math.max(maxX, p.position.x);
-    maxY = Math.max(maxY, p.position.y);
-    vmax = Math.max(vmax, Math.sqrt(p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y));
-    hmax = Math.max(hmax, SMOOTHING * p.radius);
+  for (let i = 0; i < gas.count; i++) {
+    minX = Math.min(minX, gas.x[i]);
+    minY = Math.min(minY, gas.y[i]);
+    maxX = Math.max(maxX, gas.x[i]);
+    maxY = Math.max(maxY, gas.y[i]);
+    vmax = Math.max(vmax, Math.sqrt(gas.vx[i] * gas.vx[i] + gas.vy[i] * gas.vy[i]));
+    hmax = Math.max(hmax, SMOOTHING * gas.radius[i]);
   }
   const R = (world.bounds.farField ?? 0) + 2 * hmax + 2 * vmax * dt + 5;
   const roots = assemblyRoots(world);
@@ -870,7 +880,7 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
     const br = b.breach;
     if (br.count === 0 && br.credit === 0) pushEvent(world, { tick: world.tick, type: "leak", data: { id: b.id } });
     br.credit += rate * dt;
-    while (br.credit >= LEAK_PARCEL && world.gas.parcels.length < limit) {
+    while (br.credit >= LEAK_PARCEL && world.gas.count < limit) {
       const gasses = (b.contents ?? []).filter((s) => SPECIES[s.resource] && s.mass > 0);
       const total = gasses.reduce((t, s) => t + s.mass, 0);
       if (total < LEAK_PARCEL) break;
@@ -895,7 +905,7 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
       const r = sub(point, b.position);
       const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
       const p = emitParcel(world, b, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, speed)), LEAK_RADIUS);
-      world.gas.parcels.push(p);
+      addParcel(world.gas, p);
       br.credit -= LEAK_PARCEL;
       br.count += 1;
     }
@@ -1102,7 +1112,10 @@ function applyOne(world: World, cmd: Command, profile?: Profile): void {
       break;
     case "gas.remove": {
       const { min, max } = cmd;
-      world.gas.parcels = world.gas.parcels.filter((p) => p.position.x < min.x || p.position.x > max.x || p.position.y < min.y || p.position.y > max.y);
+      const gas = world.gas;
+      const inside = new Uint8Array(gas.count);
+      for (let i = 0; i < gas.count; i++) inside[i] = gas.x[i] < min.x || gas.x[i] > max.x || gas.y[i] < min.y || gas.y[i] > max.y ? 0 : 1;
+      dropParcels(gas, inside);
       break;
     }
     case "rng.sample":
@@ -1214,7 +1227,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Mass, momentum and energy are unchanged; angular momentum may change as mass moves from a
   // store at the body's centre to the outlet (recorded, not checked, as for feeds), and so may
   // gravitational potential energy, by the height of the outlet above the centre.
-  if (world.bodies.some((b) => b.injector || b.breach || (b.integrity < 1 && b.contents?.length)) || world.gas.parcels.length) {
+  if (world.bodies.some((b) => b.injector || b.breach || (b.integrity < 1 && b.contents?.length)) || world.gas.count) {
     const t0 = before;
     runInjectors(world, dt, profile);
     runLeaks(world, dt, profile);
@@ -1234,13 +1247,16 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // External field.
   const field = applyField(rbs, world.gravity, dt);
   const g = world.gravity;
-  if ((g.x !== 0 || g.y !== 0) && world.gas.parcels.length) {
-    for (const p of world.gas.parcels) {
-      p.velocity = { x: p.velocity.x + g.x * dt, y: p.velocity.y + g.y * dt };
-      const J = { x: p.mass * g.x * dt, y: p.mass * g.y * dt };
-      field.impulse.x += J.x;
-      field.impulse.y += J.y;
-      field.angular += p.position.x * J.y - p.position.y * J.x;
+  if ((g.x !== 0 || g.y !== 0) && world.gas.count) {
+    const gas = world.gas;
+    for (let i = 0; i < gas.count; i++) {
+      gas.vx[i] = gas.vx[i] + g.x * dt;
+      gas.vy[i] = gas.vy[i] + g.y * dt;
+      const Jx = gas.mass[i] * g.x * dt;
+      const Jy = gas.mass[i] * g.y * dt;
+      field.impulse.x += Jx;
+      field.impulse.y += Jy;
+      field.angular += gas.x[i] * Jy - gas.y[i] * Jx;
     }
   }
   applyAttractors(world, rbs, dt, field);
@@ -1349,8 +1365,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
       if (shape) holding.push({ b, plug: plugWall(b, shape), shape });
     }
   }
-  const gasBefore = world.gas.parcels;
-  if (world.gas.parcels.length) {
+  // The parcels that leave the gas model this step, as they were when they left (for the wisps).
+  const leftGas: Parcel[] = [];
+  if (world.gas.count) {
     before = after;
     const plugs = holding.filter((h) => h.plug);
     // Only bodies that could meet the gas this step take part (wreckage far from any gas costs nothing).
@@ -1363,32 +1380,40 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     // Free flight (prototype, profile.gasFreeFlight): gas that can't come near a body this step flies
     // on its own; the rest is stepped as gas. Both are put back in their original order.
     const tm = timings?.clock();
-    const mask = profile.gasFreeFlight ? freeFlightMask(world.gas.parcels, walls, dt, profile.gasFreeFlight) : null;
+    const all = world.gas;
+    const n0 = all.count;
+    const mask = profile.gasFreeFlight ? freeFlightMask(all, walls, dt, profile.gasFreeFlight) : null;
     if (timings && mask) timings.out["gas.mask"] = timings.clock() - tm!;
-    const nFree = mask ? mask.reduce((a, v) => a + v, 0) : 0;
-    const all = world.gas.parcels;
+    let nFree = 0;
+    if (mask) for (let i = 0; i < n0; i++) nFree += mask[i];
+    // What leaves the gas this step, stepped or flying free: marked here, dropped below.
+    const gone = new Uint8Array(n0);
     let hmaxAll = 0;
-    if (nFree) for (const p of all) hmaxAll = Math.max(hmaxAll, SMOOTHING * p.radius);
-    const stepped = nFree ? { ...world.gas, parcels: all.filter((_, i) => !mask![i]), farReach: hmaxAll } : world.gas;
-    const gas: GasAccount = stepGasClustered(stepped, walls, joints, dt, world.bounds, world.gravity, closed, timings);
+    let subset: number[] | undefined;
+    if (nFree) {
+      subset = [];
+      for (let i = 0; i < n0; i++) {
+        hmaxAll = Math.max(hmaxAll, SMOOTHING * all.radius[i]);
+        if (!mask![i]) subset.push(i);
+      }
+    }
+    const gas: GasAccount = stepGasClustered(all, walls, joints, dt, world.bounds, world.gravity, closed, timings, nFree ? { subset, farReach: hmaxAll, gone } : { gone });
     if (nFree) {
       const tf = timings?.clock();
       const r0 = { ...gas.removed, momentum: { ...gas.removed.momentum } };
-      const flown = new Set(flyFree(all.filter((_, i) => mask![i]), walls, dt, world.bounds, world.gravity, closed, world.gas.scale ?? 1, gas, hmaxAll));
+      flyFree(all, mask!, walls, dt, world.bounds, world.gravity, closed, all.scale ?? 1, gas, hmaxAll, gone);
       // What flew out joins the world's running totals, as the gas step's own leavers do.
-      const tot = world.gas.removed;
+      const tot = all.removed;
       tot.count += gas.removed.count - r0.count;
       tot.mass += gas.removed.mass - r0.mass;
       tot.momentum.x += gas.removed.momentum.x - r0.momentum.x;
       tot.momentum.y += gas.removed.momentum.y - r0.momentum.y;
       tot.angularMomentum += gas.removed.angularMomentum - r0.angularMomentum;
       tot.energy += gas.removed.energy - r0.energy;
-      const kept = new Set(stepped.parcels);
-      world.gas.parcels = all.filter((p) => kept.has(p) || flown.has(p));
-      world.gas.substeps = stepped.substeps;
-      world.gas.wallImpulse = stepped.wallImpulse;
       if (timings) timings.out["gas.free"] = timings.clock() - tf!;
     }
+    for (let i = 0; i < n0; i++) if (gone[i]) leftGas.push(parcelAt(all, i));
+    if (leftGas.length) dropParcels(all, gone);
     if (profile.gasFreeFlight) world.gas.free = nFree;
     gasJointImpulse = gas.jointImpulse;
     // A plug is part of its engine.
@@ -1425,10 +1450,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     after = computeTotals(world);
     addDelta(sources.boundary, diff(before, after));
   }
-  if (gasBefore.length) {
-    const kept = new Set(world.gas.parcels);
+  if (leftGas.length) {
     const scale = world.gas.scale ?? 1;
-    spawnWisps(world, gasBefore.filter((p) => !kept.has(p)), (p) => temperatureOf(p, scale));
+    spawnWisps(world, leftGas, (p) => temperatureOf(p, scale));
   }
   mark("gas");
 
