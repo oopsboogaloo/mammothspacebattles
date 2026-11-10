@@ -31,6 +31,51 @@ export const landerScreen = signal<"title" | "select" | "play" | "scores">("titl
 /** The scenario being played (or whose scores are shown). */
 export const landerKey = signal<string>("lander-easy");
 
+/**
+ * The game on its own page (lander.html), deployed without the sandbox: nothing leads back to it.
+ * Set once at start-up.
+ */
+export const standalone = signal(false);
+
+/** In the game, the left and right Shift keys fly the left and right engines: hands apart, like the thumb pads. */
+const GAME_KEYS: Record<string, string> = { ShiftLeft: "left", ShiftRight: "right" };
+const keyGroups: Record<string, number> = {};
+let keyCounter = 5_000_000;
+
+/**
+ * The game's keys (on both pages): the engines (Shift left and right, Q/E, the arrows), and P or Esc
+ * to pause. Nothing else does anything in the game.
+ */
+export function gameKeyDown(e: KeyboardEvent): void {
+  const key = e.key.toLowerCase();
+  const channel = GAME_KEYS[e.code] || bindings.value[key];
+  if (channel && sandbox.value && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    if (!e.repeat) {
+      // Both Shift keys are "shift": the game's are told apart by where they are.
+      const pk = GAME_KEYS[e.code] ? e.code : key;
+      keyGroups[pk] = ++keyCounter;
+      // Keys go in as live input (no stall at each press).
+      sendControl(channel, 1, `Key ${key.toUpperCase()}`, keyGroups[pk]);
+    }
+    return;
+  }
+  if ((key === "p" || key === "escape") && sandbox.value) {
+    e.preventDefault();
+    playing.value = !playing.value;
+  }
+}
+
+export function gameKeyUp(e: KeyboardEvent): void {
+  const key = e.key.toLowerCase();
+  const channel = GAME_KEYS[e.code] || bindings.value[key];
+  const pk = GAME_KEYS[e.code] ? e.code : key;
+  if (channel && sandbox.value && keyGroups[pk] !== undefined) {
+    sendControl(channel, 0, `Key ${key.toUpperCase()}`, keyGroups[pk]);
+    delete keyGroups[pk];
+  }
+}
+
 /** Opens the game's title screen. */
 export function openLander(): void {
   landerScreen.value = "title";
@@ -162,9 +207,11 @@ function Select() {
         <button class="lander-btn" onClick={() => (landerScreen.value = "scores")}>
           High scores
         </button>
-        <button class="lander-btn ghost" onClick={() => (screen.value = "picker")}>
-          Back to the sandbox
-        </button>
+        {!standalone.value && (
+          <button class="lander-btn ghost" onClick={() => (screen.value = "picker")}>
+            Back to the sandbox
+          </button>
+        )}
       </div>
       <p class="lander-credit">{CREDIT}</p>
     </div>

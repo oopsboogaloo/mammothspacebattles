@@ -331,6 +331,12 @@ Priority: **M** must, **S** should.
 - **LND-050** `[S]` The EMERGENCY banner flashes red.
 - **LND-051** `[S]` Sound effects, including the siren (later milestone).
 
+**Release**
+- **LND-060** `[M]` The game has its own page (`lander.html`), to deploy on its own: the same game
+  as `?game=lander`, opening on the title screen, with nothing that leads back to the sandbox (no
+  "Back to the sandbox" button, no sandbox keys). Built with the site; on GitHub Pages it is
+  `/mammothspacebattles/lander.html`.
+
 ## 8. What the engine needs (gaps found in the code)
 
 1. **One pad only.** The landing judge takes a single fixed pad (`src/core/landing.ts`). It needs
