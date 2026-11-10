@@ -59,9 +59,10 @@ export interface Body {
    * Makes this body a source of gravity (FLT-011): every other free body and gas parcel accelerates
    * toward it at mu·r/(r² + core²)^1.5, m/s², r from it to them. One way: sources feel no gravity,
    * from each other or anything, so they keep the paths they are given. `mu` is G·M, m³/s²;
-   * `core` softens the pull near and inside the body, m.
+   * `core` softens the pull near and inside the body, m. With `feels` (FLT-014) it is pulled after
+   * all by the other sources, but never by those of its own assembly: two rocks that orbit each other.
    */
-  gravity?: { mu: number; core: number };
+  gravity?: { mu: number; core: number; feels?: boolean };
   /** How it takes damage (DMG-002). Absent: it can't be damaged. */
   material?: Material;
   /** 1 whole, 0 failed (DMG-001). At 0 it is wreckage: it no longer functions (DMG-003). */
@@ -551,11 +552,14 @@ export function nearestOffset(world: World, a: Vec2, b: Vec2): Vec2 {
 function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: Vec2; angular: number }): void {
   const src = world.bodies.filter((b) => b.gravity && b.gravity.mu > 0);
   if (!src.length) return;
-  const pull = (p: Vec2, self?: string): Vec2 => {
+  // Sources that feel each other (FLT-014): a source never pulls its own assembly's parts.
+  const roots = world.bodies.some((b) => b.gravity?.feels) ? assemblyRoots(world) : null;
+  const pull = (p: Vec2, self?: string, root?: string): Vec2 => {
     let ax = 0;
     let ay = 0;
     for (const s of src) {
       if (s.id === self) continue;
+      if (root !== undefined && (roots!.get(s.id) ?? s.id) === root) continue;
       const d = nearestOffset(world, p, s.position);
       const r2 = d.x * d.x + d.y * d.y + s.gravity!.core * s.gravity!.core;
       const k = s.gravity!.mu / (r2 * Math.sqrt(r2));
@@ -565,8 +569,8 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
     return { x: ax, y: ay };
   };
   for (const r of rbs) {
-    if (r.invMass === 0 || r.body.gravity) continue;
-    const a = pull(r.body.position, r.body.id);
+    if (r.invMass === 0 || (r.body.gravity && !r.body.gravity.feels)) continue;
+    const a = r.body.gravity ? pull(r.body.position, r.body.id, roots!.get(r.body.id) ?? r.body.id) : pull(r.body.position, r.body.id);
     r.body.velocity = { x: r.body.velocity.x + a.x * dt, y: r.body.velocity.y + a.y * dt };
     const J = { x: r.mass * a.x * dt, y: r.mass * a.y * dt };
     field.impulse.x += J.x;

@@ -7,8 +7,8 @@ test("LND-001 LND-002 LND-030 Mammoth Lander: title, mission select, and a fligh
   await expect(page.getByTestId("lander-select")).toBeVisible();
   // Each mission card shows a picture of its level, drawn from the level itself.
   await expect(page.getByTestId("lander-preview-lander-orbital")).toBeVisible({ timeout: 10_000 });
-  // All six missions are ready.
-  for (const k of ["easy", "medium", "hard", "cave", "orbital", "emergency"]) await expect(page.getByTestId(`lander-pick-lander-${k}`)).toBeEnabled();
+  // All nine missions are ready.
+  for (const k of ["easy", "medium", "hard", "cave", "cave-2", "emergency", "orbital", "binary", "heavy-orbital"]) await expect(page.getByTestId(`lander-pick-lander-${k}`)).toBeEnabled();
   await page.getByTestId("lander-pick-lander-easy").click();
   const hud = page.getByTestId("lander-hud");
   await expect(hud).toContainText("FUEL 8.10 kg");

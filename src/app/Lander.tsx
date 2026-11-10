@@ -12,14 +12,17 @@ import { sim, View } from "./View.tsx";
 import { ABANDON } from "../core/index.ts";
 import { levelPreview } from "./levelPreview.ts";
 
-/** The six scenarios, in order; those without a file yet are shown as coming soon. */
+/** The scenarios, in order; those without a file yet are shown as coming soon. */
 export const LANDER_SCENARIOS: { key: string; title: string; blurb: string }[] = [
   { key: "lander-easy", title: "Easy", blurb: "Rolling ground, five pads, plenty of fuel." },
   { key: "lander-medium", title: "Medium", blurb: "Lunar peaks; pads on slopes and in valleys. Fuel matters." },
   { key: "lander-hard", title: "Hard", blurb: "Sheer mountains and narrow ledges." },
   { key: "lander-cave", title: "Cave", blurb: "Thread the stalactites; deeper pads score more." },
+  { key: "lander-cave-2", title: "Cave 2", blurb: "A long cave that curls round; pads score by number, up to ×6." },
+  { key: "lander-emergency", title: "Emergency", blurb: "Come in fast and spinning, with a fuel leak pushing you about." },
   { key: "lander-orbital", title: "Orbital", blurb: "Come down from orbit onto a slowly spinning asteroid." },
-  { key: "lander-emergency", title: "Emergency", blurb: "Hard, with a fuel leak pushing you about." },
+  { key: "lander-binary", title: "Binary", blurb: "Two asteroids orbiting each other; both pull on you." },
+  { key: "lander-heavy-orbital", title: "Heavy Orbital", blurb: "A heavier asteroid, spinning faster, with stronger gravity." },
 ];
 
 const rawOf = (key: string) => scenarioFile(key);

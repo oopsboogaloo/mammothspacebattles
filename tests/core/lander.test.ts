@@ -267,6 +267,79 @@ describe("Mammoth Lander", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("LND-010 Cave 2: pads score by their number, and a gentle drop onto each one lands there", () => {
+    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-cave-2.json", import.meta.url), "utf8"));
+    expect(scn.world.bounds.wrap).toBe(false);
+    expect(scn.world.lander.pads.map((p: { multiplier: number }) => p.multiplier)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(scn.world.lander.solid).toEqual(["outside"]);
+    for (let n = 1; n <= 6; n++) {
+      const pad = scn.world.bodies.find((b: { id: string }) => b.id === `pad-${n}`);
+      const one = structuredClone(scn);
+      one.world.lander.start = { position: { x: pad.position.x, y: pad.position.y + 0.2 + REACH + 0.1 }, velocity: { x: 0, y: -1 } };
+      const s = parseScenario(one);
+      const prof = getProfile(s.profile);
+      const w = initialWorld(s);
+      for (let k = 0; k < 1.5 * 240; k++) stepInPlace(w, [], prof);
+      expect(w.lander!.state.landings.map((l) => l.pad)).toEqual([`pad-${n}`]);
+      expect(w.ledger.violations).toBe(0);
+    }
+  }, 120_000); // simulation-heavy: CI runs several times slower
+
+  // A gentle touchdown on a pad riding a spinning rock: just above it, tilted to its "up", moving with
+  // the rock there (its core's velocity and spin) and coming down at 1 m/s.
+  const rockLanding = (file: string, padId: string, coreId: string) => {
+    const scn = JSON.parse(readFileSync(new URL(`../../scenarios/${file}.json`, import.meta.url), "utf8"));
+    const pad = scn.world.bodies.find((b: { id: string }) => b.id === padId);
+    const core = scn.world.bodies.find((b: { id: string }) => b.id === coreId);
+    const a = pad.angle;
+    const w0 = core.angularVelocity;
+    const up = { x: -Math.sin(a), y: Math.cos(a) };
+    const h = 0.2 + REACH + 0.1;
+    const at = { x: pad.position.x + up.x * h, y: pad.position.y + up.y * h };
+    const rel = { x: at.x - core.position.x, y: at.y - core.position.y };
+    scn.world.lander.start = { position: at, velocity: { x: core.velocity.x - w0 * rel.y - up.x, y: core.velocity.y + w0 * rel.x - up.y } };
+    scn.world.lander.ship.bodies = scn.world.lander.ship.bodies.map((b: { position: { x: number; y: number }; angle?: number }) => ({
+      ...b,
+      position: { x: Math.cos(a) * b.position.x - Math.sin(a) * b.position.y, y: Math.sin(a) * b.position.x + Math.cos(a) * b.position.y },
+      angle: (b.angle ?? 0) + a,
+    }));
+    const s = parseScenario(scn);
+    const w = initialWorld(s);
+    for (let k = 0; k < 2 * 240; k++) stepInPlace(w, [], getProfile(s.profile));
+    return w;
+  };
+
+  it("FLT-014 Binary: the two rocks pull each other, equal and opposite, and orbit", () => {
+    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-binary.json", import.meta.url), "utf8"));
+    scn.world.lander.start = { position: { x: 0, y: 900 }, velocity: { x: 0, y: 0 } }; // the ship well away
+    const s = parseScenario(scn);
+    const w = initialWorld(s);
+    const rock = (pre: string) => w.bodies.filter((b) => b.id.startsWith(pre) && b.gravity);
+    const momentum = (pre: string) => rock(pre).reduce((p, b) => ({ x: p.x + b.mass * b.velocity.x, y: p.y + b.mass * b.velocity.y }), { x: 0, y: 0 });
+    const a0 = momentum("rock-a");
+    const b0 = momentum("rock-b");
+    for (let k = 0; k < 4 * 240; k++) stepInPlace(w, [], getProfile(s.profile));
+    const da = { x: momentum("rock-a").x - a0.x, y: momentum("rock-a").y - a0.y };
+    const db = { x: momentum("rock-b").x - b0.x, y: momentum("rock-b").y - b0.y };
+    // Each rock's momentum turned (it is orbiting), by equal and opposite amounts: each pulls the other.
+    expect(Math.hypot(da.x, da.y)).toBeGreaterThan(2e4); // about 4.7e4: 0.03 m/s² on 400 t for 4 s
+    expect(Math.hypot(da.x + db.x, da.y + db.y)).toBeLessThan(0.02 * Math.hypot(da.x, da.y));
+    const cores = w.bodies.filter((b) => b.gravity && b.gravity.mu > 0);
+    expect(Math.hypot(cores[0].position.x - cores[1].position.x, cores[0].position.y - cores[1].position.y)).toBeGreaterThan(200);
+    expect(w.ledger.violations).toBe(0);
+  }, 120_000); // simulation-heavy: CI runs several times slower
+
+  it("LND-011 Binary and Heavy Orbital: a gentle touchdown on a spinning rock's pad lands", () => {
+    const b = rockLanding("lander-binary", "pad-5", "rock-b-core"); // the rock turning the other way
+    expect(b.events.filter((e) => e.type === "crashed")).toEqual([]);
+    expect(b.lander!.state.landings.map((l) => l.pad)).toEqual(["pad-5"]);
+    expect(b.ledger.violations).toBe(0);
+    const h = rockLanding("lander-heavy-orbital", "pad-2", "rock-core");
+    expect(h.events.filter((e) => e.type === "crashed")).toEqual([]);
+    expect(h.lander!.state.landings.map((l) => l.pad)).toEqual(["pad-2"]);
+    expect(h.ledger.violations).toBe(0);
+  }, 120_000); // simulation-heavy: CI runs several times slower
+
   it("LND-011 Orbital: a gentle touchdown on a pad riding the spinning asteroid lands, judged against the pad", () => {
     const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-orbital.json", import.meta.url), "utf8"));
     const core = scn.world.bodies.find((b: { id: string }) => b.id === "rock-core");

@@ -219,10 +219,11 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.friction !== undefined) num(v, b.friction, `${path}.friction`, { min: 0 });
   if (b.injector !== undefined) validateInjector(v, b.injector, `${path}.injector`);
   if (b.gravity !== undefined) {
-    if (!isObj(b.gravity)) err(v, `${path}.gravity`, "must be an object {mu, core}");
+    if (!isObj(b.gravity)) err(v, `${path}.gravity`, "must be an object {mu, core, feels?}");
     else {
       num(v, b.gravity.mu, `${path}.gravity.mu`, { min: 0 });
       num(v, b.gravity.core, `${path}.gravity.core`, { positive: true });
+      if (b.gravity.feels !== undefined && typeof b.gravity.feels !== "boolean") err(v, `${path}.gravity.feels`, "must be true or false");
     }
   }
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
@@ -490,8 +491,8 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
   for (const k of ["ships", "pause", "watch", "clearBonus"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
   if (g.lines !== undefined && (!Array.isArray(g.lines) || !g.lines.every((l) => Array.isArray(l) && l.length > 1 && l.every((p) => isObj(p) && Number.isFinite(p.x) && Number.isFinite(p.y)))))
     err(v, `${path}.lines`, "must be a list of lines, each of two or more points {x, y}");
-  if (g.solid !== undefined && (!Array.isArray(g.solid) || !g.solid.every((x) => x === "below" || x === "above")))
-    err(v, `${path}.solid`, 'must be a list of "below" or "above", one for each line');
+  if (g.solid !== undefined && (!Array.isArray(g.solid) || !g.solid.every((x) => x === "below" || x === "above" || x === "outside")))
+    err(v, `${path}.solid`, 'must be a list of "below", "above" or "outside", one for each line');
 }
 
 function validateDuel(v: V, c: unknown, bodies: unknown, path: string): void {

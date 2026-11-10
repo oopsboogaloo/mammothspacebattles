@@ -11,10 +11,13 @@ export function previewCamera(world: World, vp: { width: number; height: number 
   const spec = world.lander!.spec;
   const pts = spec.pads.map((p) => world.bodies.find((b) => b.id === p.id)?.position).filter((p): p is { x: number; y: number } => !!p);
   pts.push(spec.start.position);
-  // An asteroid: the whole rock, as far out as its farthest pad.
-  const rock = world.bodies.find((b) => b.gravity && b.gravity.mu > 0);
-  if (rock) {
-    const r = Math.max(...pts.map((p) => Math.hypot(p.x - rock.position.x, p.y - rock.position.y)));
+  // Asteroids: each whole rock, as far out as its farthest pad (two rocks: each its own nearest pads).
+  const rocks = world.bodies.filter((b) => b.gravity && b.gravity.mu > 0);
+  const padPts = pts.slice(0, -1);
+  for (const rock of rocks) {
+    const d = (p: { x: number; y: number }) => Math.hypot(p.x - rock.position.x, p.y - rock.position.y);
+    const mine = padPts.filter((p) => rocks.every((o) => d(p) <= Math.hypot(p.x - o.position.x, p.y - o.position.y)));
+    const r = Math.max(...(mine.length ? mine : padPts).map(d));
     pts.push({ x: rock.position.x - r, y: rock.position.y - r }, { x: rock.position.x + r, y: rock.position.y + r });
   }
   const minX = Math.min(...pts.map((p) => p.x));
