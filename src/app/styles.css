@@ -267,6 +267,17 @@ button { cursor: pointer; }
 @keyframes lander-blink { 50% { opacity: 0.15; } }
 .lander-select { position: absolute; inset: 0; overflow: auto; padding: 32px 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .lander-select h2 { margin: 0; letter-spacing: 0.08em; }
+.lander-info { align-items: center; }
+.lander-info > * { width: min(760px, 100%); box-sizing: border-box; }
+.lander-info h2 { text-align: center; }
+.lander-info h3 { margin: 0 0 6px; font-size: 17px; color: #ffd166; letter-spacing: 0.04em; }
+.lander-info p, .lander-info li, .lander-info td, .lander-info th { font-family: var(--sans, sans-serif); font-size: 15px; line-height: 1.5; opacity: 0.9; }
+.lander-info p { margin: 0 0 8px; }
+.lander-info p.lead { text-align: center; opacity: 0.75; }
+.lander-info ul { margin: 0; padding-left: 20px; }
+.lander-info table { border-collapse: collapse; margin: 4px 0 10px; }
+.lander-info th, .lander-info td { text-align: left; padding: 4px 18px 4px 0; }
+.lander-info th { color: #9fb3d9; font-weight: 600; }
 .lander-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; width: min(1120px, 100%); }
 .lander-card { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 14px; min-height: 120px; border: 1px solid #2a3550; border-radius: 10px; background: #0b1222; color: inherit; font-family: inherit; cursor: pointer; }
 .lander-card:disabled { opacity: 0.4; cursor: default; }
