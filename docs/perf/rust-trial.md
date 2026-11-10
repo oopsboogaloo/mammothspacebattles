@@ -210,11 +210,35 @@ So on the lander levels the port removes most of the gas loop's time and nearly 
 arrays, but the step is only 4–11% faster, because the loop was a third of the gas part there. With
 more gas (gunships, battles) the step is 1.2–1.3× faster.
 
+## The iPad again, with the gas loop in WebAssembly (10 November 2026)
+
+The same iPad, Orbital, ship 3, played with thrust, on the build with the gas loop in the module:
+
+| Run | Played | Worker steps over 100 ms | Frame gaps over 100 ms | Worst step | Steps a second |
+|---|---|---|---|---|---|
+| TypeScript (`wasm=0`) | 239.5 s | 5 (1.3 a minute): gas 3, contacts 2 | 4 | 715 ms | 119.0 |
+| WebAssembly | 171.7 s | 0 | 0 | 44 ms | 120.0 |
+| WebAssembly | 583.2 s | 0 | 2, both where the game was left for 76 s | 18 ms | 120 while played |
+
+- **No frozen step in 12.5 minutes of WebAssembly** (about 680 s played). At the TypeScript run's
+  rate there would have been about 14, and at the rate of the earlier WebAssembly run, with the gas
+  loop still in TypeScript (3.8 a minute, all in the gas part), about 40.
+- **The long run's two frame gaps are not freezes:** one of 76 s and one of 113 ms straight after,
+  with no slow step. The page was not drawing (in the background, or the iPad locked). Its frame
+  and step rates in the log are low only because that minute is counted.
+- **The TypeScript run froze far less than the first one** (1.3 a minute against 5.1) on the same
+  code, with a quarter less gas time a step. Runs played by hand differ that much, so the first
+  pair's 5.1 against 3.8 said little; what holds is where the freezes land and that they stop.
+- **Speed on the iPad:** the step is about 1.1× faster (2.3 ms against 2.6 without the frozen steps),
+  as on the desktop for Orbital.
+
+So on Orbital the freezes are gone with the gas loop's typed arrays, which points at them (their
+storage is outside the heap, where §23's measure could not see) as what drove the collections.
+Not yet checked on the iPad: Emergency, which froze most, and the other levels.
+
 ## Next
 
-1. **The iPad pair again**, now that the default has the gas loop in WebAssembly: Orbital with
-   `?game=lander&diag=1&wasm=0` and with `?game=lander&diag=1`, 3 minutes or more each. If typed
-   arrays drove the collections, the freezes in the gas part should fall sharply.
+1. **Emergency on the iPad** (`?game=lander&diag=1`), 5 minutes: the same check where it froze most.
 2. **The wisps** (`stepWisps`), by what a profile says: the largest cost left on the lander levels.
 3. **Clustering and `buildWalls`** into the module, which would also end the gas part's last typed
    arrays.
