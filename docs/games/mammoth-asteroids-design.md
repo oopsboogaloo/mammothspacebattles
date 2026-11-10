@@ -71,6 +71,21 @@ G ≈ R² / M. That is about 0.02 at ρ = 20 kg/m².
 parcels) a step. It is measured in the first engine PR (§5, step 3). If it is over budget, the
 options go to Chloe before anything is changed.
 
+*Decided (Chloe, 10 November 2026):* rocks are capped at 8 a level, so the most the game asks of
+gravity is level 8's 160 sources (3.7 ms a step in the probe). Later levels get harder through the
+gunships (MAS-043). More gunships cost step time too: that is measured in step 6.
+
+*Fallback, agreed in advance (Chloe, 10 November 2026):* if per-piece gravity proves too costly
+when it is measured with the game running (on an iPad above all), the simpler model is fine: one
+gravity source for each joined group of pieces (each rock, and each chunk broken off it), at the
+group's centre of mass with the group's mass. It needs no further sign-off. Not built: the
+per-piece model is inside the budget so far.
+
+*Built and measured (step 3 of the plan).* Level 6 averages 2.96 ms a step in Node on the build
+machine, against the 6 ms budget, about 0.8 ms of it rock gravity; the table is in `docs/spec.md`
+("What it costs"). Within budget, so nothing was changed in the physics. To repeat on an iPad once
+the game runs.
+
 ### 1.4 Gold that can't be destroyed (AST-010)
 
 `AsteroidSpec.goldIndestructible?: boolean`. Gold pieces are then given no material, so contacts
@@ -105,9 +120,12 @@ interface ArcadeSpec {
   hull: string; gun: string;         // with {n}
   lives?: number;                    // 3
   rocks: { radius: 12; pieces: 20; density; bond; material; gravity: { G };
-           gold: [2, 3]; compounds: [1, 2]; speed: [min, max]; spin: number };
+           gold: [2, 3]; compounds: [1, 2]; speed: [min, max]; spin: number;
+           most: 8 };                // rocks a level: min(level, most) (MAS-020)
   gunship?: { template; hull: string; fromLevel: 3; first: 10; every: 30;  // game s
-              skill: { base: 0.3; perLevel: 0.1; max: 0.8 } };
+              skill: { base: 0.3; perLevel: 0.1; max: 0.8 };
+              // Past the level where the rocks stop growing (MAS-043), per level, in game s:
+              late: { first: -1; firstMin: 5; every: -2.5; everyMin: 10; skill: 0.05; skillMax: 1 } };
   respawn?: 1.25; grace?: 1; clearPause?: 1.5;  // game s
   shellLife?: 1.5;                   // game s, any railgun shell
   pace: 0.5;                         // to turn game time into the player's seconds for the bonus
@@ -148,7 +166,8 @@ duel, everything it adds or removes is booked under `boundary`. In order:
    was lost, spawn as below); and lay out the next level.
 8. **Waiting over:** a new ship at the clearest spot (below), at rest, pointing up, protected:
    its bodies' materials are taken off for `grace`.
-9. **Gunship due** (level ≥ fromLevel, at `levelStart + first`, then every `every`): a ring at a
+9. **Gunship due** (level ≥ fromLevel, at `levelStart + first`, then every `every`; past level
+   `rocks.most` each of the two shortens and the skill's ceiling rises, by `gunship.late`, MAS-043): a ring at a
    spot far from the ship, then 0.5 game s later the gunship (skill for the level, side `enemy`).
 
 **Clearest spot:** a 7 × 5 grid over the middle of the arena, nearest the centre first. Each point

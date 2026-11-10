@@ -23,7 +23,7 @@ import { collide } from "./collide.ts";
 import { addParcel, storeChemical, storeThermal, type Parcel } from "./gas.ts";
 import { add, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { localVertices, massProps, polygonArea } from "./shapes.ts";
-import { compareIds, type Body, type World } from "./world.ts";
+import { compareIds, nearestOffset, type Body, type World } from "./world.ts";
 
 export interface Explosive {
   /** Explosive in the shell, kg; part of the shell's mass. */
@@ -118,7 +118,7 @@ export function detonate(world: World, roots: ReadonlyMap<string, string> | null
     if (e.armed) continue;
     const gun = e.from ? byId.get(e.from) : undefined;
     const root = gun ? (roots?.get(gun.id) ?? gun.id) : undefined;
-    const near = root !== undefined && world.bodies.some((o) => o !== s && (roots?.get(o.id) ?? o.id) === root && length(sub(o.position, s.position)) < reach(o) + reach(s) + 0.2);
+    const near = root !== undefined && world.bodies.some((o) => o !== s && (roots?.get(o.id) ?? o.id) === root && length(nearestOffset(world, s.position, o.position)) < reach(o) + reach(s) + 0.2);
     if (!near) e.armed = true;
   }
   // Strikes this step: armed shells with a contact whose impulse would change their speed by more than `arm`.
@@ -271,11 +271,13 @@ function burst(world: World, s: Body, dt: number): void {
   for (const b of world.bodies) {
     if (!b.material || made.includes(b)) continue;
     const r = massProps(b.shape, 1).boundingRadius;
-    const dist = length(sub(b.position, s.position));
+    // From the body to the blast: to its nearest copy, in a wrapped world (FLT-016).
+    const toBlast = nearestOffset(world, b.position, s.position);
+    const dist = length(toBlast);
     const gap = Math.max(0, dist - r);
     if (gap >= R) continue;
     const view = Math.min(0.5, r / (Math.PI * Math.max(dist, r)));
-    const at = dist > 1e-9 ? add(b.position, scale(sub(s.position, b.position), Math.min(1, r / dist))) : b.position;
+    const at = dist > 1e-9 ? add(b.position, scale(toBlast, Math.min(1, r / dist))) : b.position;
     damageBody(world, b, E * view * (1 - gap / R), at);
   }
 }

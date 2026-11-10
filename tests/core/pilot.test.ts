@@ -239,7 +239,7 @@ describe("AI pilot navigation (phase 2)", () => {
  * Two Gunship 2s in empty space: the player's (its own ids and channels) at `player`, pointing up,
  * and an AI one (ids e1-*, channels e1.*) at `ai`, with a pilot in `mode`.
  */
-function duel(o: { mode: string; ai?: { x: number; y: number }; player?: { x: number; y: number; vx?: number; vy?: number }; combat?: number; route?: boolean }): World {
+function duel(o: { mode: string; ai?: { x: number; y: number }; player?: { x: number; y: number; vx?: number; vy?: number }; combat?: number; route?: boolean; bounds?: unknown }): World {
   const raw = readJson(join(ROOT, "scenarios", "base.json")) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   type B = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const shift = (p: B, dx: number, dy: number) => ({ x: typeof p.x === "number" ? p.x + dx : { $expr: `(${p.x.$expr}) + ${dx}` }, y: typeof p.y === "number" ? p.y + dy : { $expr: `(${p.y.$expr}) + ${dy}` } });
@@ -266,6 +266,7 @@ function duel(o: { mode: string; ai?: { x: number; y: number }; player?: { x: nu
   raw.world.gravity = { x: 0, y: 0 };
   raw.world.asteroids = [];
   delete raw.world.bounds;
+  if (o.bounds) raw.world.bounds = o.bounds;
   Object.assign(raw, { timeline: [], probes: [], assertions: [] });
   delete raw.ui;
   return initialWorld(parseScenario(raw));
@@ -345,6 +346,30 @@ describe("AI pilot combat (phase 3)", () => {
     expect(enemyPilot(w).combat!.shots).toBeGreaterThan(0);
     expect(enemyPilot(w).combat!.muzzle).toBeGreaterThan(60); // learned from its shots: Gunship 3 fires at about 96 m/s
     expect(hit).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+  }, 600_000);
+
+  it("FLT-016 in a wrapped world a Hunting pilot sees a ship only across the edge, aims at it the short way, and its shell crosses the edge and hits it", () => {
+    // 80 m apart through the middle of the world, 40 m across its top edge; the hunter sees 60 m.
+    const w = duel({ mode: "hunting", ai: { x: 0, y: 40 }, player: { x: 0, y: -40 }, combat: 1, bounds: { min: { x: -100, y: -60 }, max: { x: 100, y: 60 }, wrap: true } });
+    enemyPilot(w).detect = 60;
+    stepInPlace(w, [], sandbox);
+    expect(enemyPilot(w).combat!.target).toBe("hull");
+    expect(enemyPilot(w).plan!.enemy!.y).toBeGreaterThan(60); // the player's copy over the top edge
+    const player = () => new Set(w.bodies.filter((b) => !b.id.startsWith("e1-")).map((b) => b.id));
+    let hit = false;
+    let seam = true; // the two ships stay either side of the edge: neither wraps
+    for (let i = 0; i < 2400 && !hit; i++) {
+      stepInPlace(w, [], sandbox);
+      const own = player();
+      // The shell striking one of the player's own parts: a burst somewhere else doesn't count.
+      hit = w.events.some((e) => e.tick === w.tick - 1 && e.type === "collision" && /^e1-breech-shell-/.test(String(e.data.a) + String(e.data.b)) && (own.has(String(e.data.a)) || own.has(String(e.data.b))));
+      const at = (id: string) => w.bodies.find((x) => x.id === id)?.position.y;
+      seam &&= (at("e1-hull") ?? 1) > 0 && (at("hull") ?? -1) < 0;
+    }
+    expect(enemyPilot(w).combat!.shots).toBeGreaterThan(0);
+    expect(hit).toBe(true);
+    expect(seam).toBe(true);
     expect(w.ledger.violations).toBe(0);
   }, 600_000);
 });

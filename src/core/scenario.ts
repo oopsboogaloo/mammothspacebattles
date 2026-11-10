@@ -726,6 +726,14 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
           if (a.compoundSize !== undefined) num(v, a.compoundSize, `${p}.compoundSize`, { int: true, min: 2, max: 20 });
           for (const k of ["goldDensity", "seamStrength"]) if (a[k] !== undefined) num(v, a[k], `${p}.${k}`, { positive: true });
           if (a.reveal !== undefined) num(v, a.reveal, `${p}.reveal`, { min: 0, max: 1 });
+          if (a.gravity !== undefined) {
+            if (!isObj(a.gravity)) err(v, `${p}.gravity`, "must be an object {G, core?}");
+            else {
+              num(v, a.gravity.G, `${p}.gravity.G`, { positive: true });
+              if (a.gravity.core !== undefined) num(v, a.gravity.core, `${p}.gravity.core`, { positive: true });
+            }
+          }
+          if (a.goldIndestructible !== undefined && typeof a.goldIndestructible !== "boolean") err(v, `${p}.goldIndestructible`, "must be true or false");
         });
     }
     if (data.world.links !== undefined) {

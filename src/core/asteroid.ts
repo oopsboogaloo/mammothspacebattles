@@ -46,6 +46,14 @@ export interface AsteroidSpec {
   seamStrength?: number;
   /** Fraction of a larger fragment's integrity (by mass) it loses before its seams show. Default 0.25. */
   reveal?: number;
+  /**
+   * Every piece pulls, in proportion to its mass (AST-009): mu = G × the piece's mass, softened by
+   * `core` (default: the piece's own bounding radius, m), and felt by other rocks (FLT-014), never by
+   * its own. So a rock's pull follows its pieces as it breaks up.
+   */
+  gravity?: { G: number; core?: number };
+  /** Gold that nothing damages or removes (AST-010): its pieces carry no material. Their welds still break. */
+  goldIndestructible?: boolean;
   position: Vec2;
   velocity?: Vec2;
   angle?: number;
@@ -237,7 +245,15 @@ export function generateAsteroid(spec: AsteroidSpec): { bodies: BodyInput[]; joi
     const b = byId.get(rock[pick(rock.length)])!;
     b.mineral = "gold";
     b.mass *= spec.goldDensity ?? 2;
-    if (spec.material) b.material = { name: "gold", threshold: spec.material.threshold * 5, toughness: spec.material.toughness * 10 };
+    if (spec.goldIndestructible) delete b.material;
+    else if (spec.material) b.material = { name: "gold", threshold: spec.material.threshold * 5, toughness: spec.material.toughness * 10 };
+  }
+  // Every piece pulls by its mass (gold by its own, heavier, mass).
+  if (spec.gravity) {
+    for (const b of bodies) {
+      const reach = b.shape.kind === "polygon" ? Math.max(...b.shape.vertices.map((p) => length(p))) : 0;
+      b.gravity = { mu: spec.gravity.G * b.mass, core: spec.gravity.core ?? reach, feels: true };
+    }
   }
   return { bodies, joints };
 }
