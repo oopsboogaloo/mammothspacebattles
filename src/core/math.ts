@@ -63,21 +63,38 @@ function kCos(x: number): number {
 
 /** Deterministic sin and cos of an angle in radians. Accurate to ~1 ulp for |x| < 1e6. */
 export function sinCos(x: number): Rot {
-  if (!Number.isFinite(x)) return { c: NaN, s: NaN };
+  return sinCosInto(x, { s: 0, c: 0 });
+}
+
+/** sinCos written into `out` (and returned): for hot loops, which then make no object per angle. */
+export function sinCosInto(x: number, out: Rot): Rot {
+  if (!Number.isFinite(x)) {
+    out.c = NaN;
+    out.s = NaN;
+    return out;
+  }
   const k = Math.round(x * INV_PIO2);
   const r = x - k * PIO2_1 - k * PIO2_2 - k * PIO2_3;
   const s = kSin(r);
   const c = kCos(r);
   switch (((k % 4) + 4) % 4) {
     case 0:
-      return { s, c };
+      out.s = s;
+      out.c = c;
+      break;
     case 1:
-      return { s: c, c: -s };
+      out.s = c;
+      out.c = -s;
+      break;
     case 2:
-      return { s: -s, c: -c };
+      out.s = -s;
+      out.c = -c;
+      break;
     default:
-      return { s: -c, c: s };
+      out.s = -c;
+      out.c = s;
   }
+  return out;
 }
 
 const LN2 = 0.6931471805599453;

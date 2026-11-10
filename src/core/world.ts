@@ -20,7 +20,7 @@ import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { SMOOTHING, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, clusterGas, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type ClusterJob, type ClusterResult, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
-import { massProps, normalizePolygon, type Shape } from "./shapes.ts";
+import { boundingRadiusOf, massProps, normalizePolygon, type Shape } from "./shapes.ts";
 import { bodyIndex, holdingShape, plugWall, runVessel, spill, wallLoads, type Vessel } from "./vessel.ts";
 import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive.ts";
 import { spawnWisps, stepWisps, type Wisp } from "./wisps.ts";
@@ -628,7 +628,7 @@ function wrapAround(world: World): boolean {
     for (const x of members) {
       const dx = x.position.x - cx;
       const dy = x.position.y - cy;
-      rad = Math.max(rad, Math.sqrt(dx * dx + dy * dy) + massProps(x.shape, x.mass).boundingRadius);
+      rad = Math.max(rad, Math.sqrt(dx * dx + dy * dy) + boundingRadiusOf(x.shape));
     }
     const r2 = (rad + reach) * (rad + reach);
     const sx = cx < b.min.x ? w : cx >= b.max.x ? -w : 0;
@@ -844,7 +844,7 @@ function bodiesNearGas(world: World, dt: number, keep: string[]): Body[] {
   const rootOf = (id: string) => roots.get(id) ?? id;
   const wanted = new Set(keep.map(rootOf));
   for (const b of world.bodies) {
-    const r = massProps(b.shape, 1).boundingRadius;
+    const r = boundingRadiusOf(b.shape);
     const reach = R + r + (Math.sqrt(b.velocity.x * b.velocity.x + b.velocity.y * b.velocity.y) + Math.abs(b.angularVelocity) * r) * dt;
     const dx = Math.max(minX - b.position.x, 0, b.position.x - maxX);
     const dy = Math.max(minY - b.position.y, 0, b.position.y - maxY);
@@ -884,7 +884,7 @@ function runLeaks(world: World, dt: number, profile?: Profile): void {
       const near = world.bodies.filter((o) => {
         const dx = point.x - o.position.x;
         const dy = point.y - o.position.y;
-        const reach = massProps(o.shape, 1).boundingRadius + LEAK_RADIUS + 1e-6;
+        const reach = boundingRadiusOf(o.shape) + LEAK_RADIUS + 1e-6;
         return dx * dx + dy * dy <= reach * reach;
       });
       if (!clearOf(wallBodies(near))(point.x, point.y, LEAK_RADIUS)) break;

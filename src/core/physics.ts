@@ -10,7 +10,7 @@
 
 import { bodyMass } from "./bodies.ts";
 import { collide, type Manifold, type Placed } from "./collide.ts";
-import { assemblyOf, assemblyRoots, correctJoints, emptyAccount, finishJoints, prepareJoints, resetJoints, solveJoints, type ConstraintAccount, type JointBody } from "./joints.ts";
+import { assemblyOf, assemblyRoots, topologyToken, correctJoints, emptyAccount, finishJoints, prepareJoints, resetJoints, solveJoints, type ConstraintAccount, type JointBody } from "./joints.ts";
 import { add, cross, crossSV, dot, invRotate, length, rotate, scale, sinCos, sub, type Rot, type Vec2 } from "./math.ts";
 import type { Profile } from "./profile.ts";
 import { massProps } from "./shapes.ts";
@@ -157,23 +157,96 @@ function pairKey(a: string, b: string, key: number): string {
  * touch each other. With `group`, two in the same group (an assembly: its parts don't collide) never are.
  */
 export function broadPhase(boxes: { minX: number; minY: number; maxX: number; maxY: number }[], fixed?: readonly boolean[], group?: readonly number[]): [number, number][] {
-  const order = boxes.map((_, i) => i).sort((i, j) => boxes[i].minX - boxes[j].minX || i - j);
-  const pairs: [number, number][] = [];
-  const active: number[] = [];
-  for (const i of order) {
-    const bi = boxes[i];
+  const n = boxes.length;
+  const b = boxBuffers(n);
+  boxes.forEach((x, i) => {
+    b.minX[i] = x.minX;
+    b.minY[i] = x.minY;
+    b.maxX[i] = x.maxX;
+    b.maxY[i] = x.maxY;
+  });
+  return [...sweepPairs(n, b, fixed, group)].map((c) => [Math.floor(c / n), c % n]);
+}
+
+interface Boxes {
+  minX: Float64Array;
+  minY: Float64Array;
+  maxX: Float64Array;
+  maxY: Float64Array;
+}
+let boxScratch: Boxes = { minX: new Float64Array(0), minY: new Float64Array(0), maxX: new Float64Array(0), maxY: new Float64Array(0) };
+const sweepOrder: number[] = [];
+const sweepActive: number[] = [];
+const sweepCodes: number[] = [];
+
+/** Box arrays for n bodies, reused from step to step (one box object per body, ground included, was most of the churn here). */
+function boxBuffers(n: number): Boxes {
+  if (boxScratch.minX.length < n) {
+    const m = Math.max(n, 2 * boxScratch.minX.length);
+    boxScratch = { minX: new Float64Array(m), minY: new Float64Array(m), maxX: new Float64Array(m), maxY: new Float64Array(m) };
+  }
+  return boxScratch;
+}
+
+/**
+ * The sweep behind broadPhase, on box arrays. Each pair i<j comes back as the number i·n + j, sorted,
+ * which is the same order as sorting the pairs by i then j. The result is reused by the next call.
+ */
+function sweepPairs(n: number, b: Boxes, fixed?: readonly boolean[], group?: readonly number[]): Float64Array {
+  const { minX, minY, maxX, maxY } = b;
+  const order = sweepOrder;
+  order.length = n;
+  for (let i = 0; i < n; i++) order[i] = i;
+  order.sort((i, j) => minX[i] - minX[j] || i - j);
+  const codes = sweepCodes;
+  codes.length = 0;
+  const active = sweepActive;
+  active.length = 0;
+  for (let o = 0; o < n; o++) {
+    const i = order[o];
     let w = 0;
     for (let k = 0; k < active.length; k++) {
       const j = active[k];
-      if (boxes[j].maxX < bi.minX) continue; // falls out of the sweep
+      if (maxX[j] < minX[i]) continue; // falls out of the sweep
       active[w++] = j;
-      const bj = boxes[j];
-      if (bj.minY <= bi.maxY && bi.minY <= bj.maxY && !(fixed?.[i] && fixed[j]) && !(group && group[i] === group[j])) pairs.push(i < j ? [i, j] : [j, i]);
+      if (minY[j] <= maxY[i] && minY[i] <= maxY[j] && !(fixed?.[i] && fixed[j]) && !(group && group[i] === group[j])) codes.push(i < j ? i * n + j : j * n + i);
     }
     active.length = w;
     active.push(i);
   }
-  return pairs.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+  return Float64Array.from(codes).sort();
+}
+
+/**
+ * Assemblies by body index (body i of the world is rbs[i]): `lists` holds each assembly's indices, in
+ * order of first appearance, and `group[i]` the number of body i's assembly, in the same order.
+ * Built once per topology, not every step (two maps and hundreds of arrays a step).
+ */
+interface Groups {
+  lists: number[][];
+  group: number[];
+}
+const groupsByTopology = new WeakMap<object, Groups>();
+function assemblyGroups(world: World): Groups {
+  const token = topologyToken(world);
+  let g = groupsByTopology.get(token);
+  if (g) return g;
+  const roots = assemblyRoots(world);
+  const index = new Map<string, number>();
+  const lists: number[][] = [];
+  const group = world.bodies.map((b, i) => {
+    const root = roots.get(b.id) ?? b.id;
+    let k = index.get(root);
+    if (k === undefined) {
+      index.set(root, (k = index.size));
+      lists.push([]);
+    }
+    lists[k].push(i);
+    return k;
+  });
+  g = { lists, group };
+  groupsByTopology.set(token, g);
+  return g;
 }
 
 /**
@@ -184,16 +257,17 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   const dt = profile.timestep;
   const slop = profile.tol.penetration / 2;
   const sweep = rbs.map((r) => (r.invMass === 0 ? 0 : (length(r.body.velocity) + Math.abs(r.body.angularVelocity) * r.radius) * dt));
-  const boxes = rbs.map((r, i) => {
+  const boxes = boxBuffers(rbs.length);
+  for (let i = 0; i < rbs.length; i++) {
+    const r = rbs[i];
     const e = sweep[i] + slop;
     const p = r.body.position;
-    if (r.body.shape.kind === "disc") {
-      const rad = r.body.shape.radius + e;
-      return { minX: p.x - rad, minY: p.y - rad, maxX: p.x + rad, maxY: p.y + rad };
-    }
-    const rad = r.radius + e;
-    return { minX: p.x - rad, minY: p.y - rad, maxX: p.x + rad, maxY: p.y + rad };
-  });
+    const rad = (r.body.shape.kind === "disc" ? r.body.shape.radius : r.radius) + e;
+    boxes.minX[i] = p.x - rad;
+    boxes.minY[i] = p.y - rad;
+    boxes.maxX[i] = p.x + rad;
+    boxes.maxY[i] = p.y + rad;
+  }
 
   const previous = new Map<string, Contact>();
   // A contact's last impulse was sized for the assembly it pushed then. If welds broke last step,
@@ -215,17 +289,11 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   // neighbours' boxes (12,000 pairs a step, all thrown away).
   // Parts of one assembly never touch each other either: a welded asteroid's 130 parts overlapped
   // their neighbours' boxes, hundreds of pairs a step, all thrown away below.
-  let group: number[] | undefined;
-  if (roots) {
-    const index = new Map<string, number>();
-    group = rbs.map((r) => {
-      const root = roots.get(r.body.id) ?? r.body.id;
-      let k = index.get(root);
-      if (k === undefined) index.set(root, (k = index.size));
-      return k;
-    });
-  }
-  for (const [i, j] of broadPhase(boxes, rbs.map((r) => r.invMass === 0), group)) {
+  const group = roots ? assemblyGroups(world).group : undefined;
+  const nb = rbs.length;
+  for (const code of sweepPairs(nb, boxes, rbs.map((r) => r.invMass === 0), group)) {
+    const i = Math.floor(code / nb);
+    const j = code % nb;
     const a = rbs[i];
     const b = rbs[j];
     if (a.invMass === 0 && b.invMass === 0) continue;
@@ -504,18 +572,12 @@ export interface SolvedContacts {
  */
 export function integratePositions(rbs: RB[], dt: number, world?: World): Map<string, Vec2> {
   const rigidImpulse = new Map<string, Vec2>();
-  const grouped = new Set<RB>();
+  const grouped = new Uint8Array(rbs.length);
   if (world && world.joints.length) {
-    const roots = assemblyRoots(world);
-    const groups = new Map<string, RB[]>();
-    for (const r of rbs) {
-      const root = roots.get(r.body.id)!;
-      const g = groups.get(root);
-      if (g) g.push(r);
-      else groups.set(root, [r]);
-    }
-    for (const members of groups.values()) {
-      if (members.length < 2 || members.some((m) => m.invMass === 0)) continue;
+    for (const list of assemblyGroups(world).lists) {
+      if (list.length < 2 || list.some((i) => rbs[i].invMass === 0)) continue;
+      const members = list.map((i) => rbs[i]);
+      for (const i of list) grouped[i] = 1;
       let M = 0;
       let cx = 0;
       let cy = 0;
@@ -555,12 +617,12 @@ export function integratePositions(rbs: RB[], dt: number, world?: World): Map<st
         rigidImpulse.set(m.body.id, { x: (v.x - m.body.velocity.x) * m.mass, y: (v.y - m.body.velocity.y) * m.mass });
         m.body.velocity = v;
         m.body.angle += m.body.angularVelocity * dt;
-        grouped.add(m);
       }
     }
   }
-  for (const r of rbs) {
-    if (r.invMass === 0 || grouped.has(r)) continue;
+  for (let i = 0; i < rbs.length; i++) {
+    const r = rbs[i];
+    if (r.invMass === 0 || grouped[i]) continue;
     const b = r.body;
     b.position = { x: b.position.x + b.velocity.x * dt, y: b.position.y + b.velocity.y * dt };
     b.angle += b.angularVelocity * dt;

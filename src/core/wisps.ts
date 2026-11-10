@@ -10,7 +10,7 @@
 import { add, cross, dot, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
 import { collideDisc, worldPolygon, type Placed, type WorldPoly } from "./collide.ts";
-import { massProps } from "./shapes.ts";
+import { boundingRadiusOf, massProps } from "./shapes.ts";
 import type { Parcel } from "./gas.ts";
 import type { Body, World } from "./world.ts";
 
@@ -116,7 +116,7 @@ function fixedGrid(world: World): FixedGrid {
   const g: FixedGrid = { bodies: [], index: [], x: [], y: [], angle: [], shape: [], cells: new Map(), big: [], reach: [] };
   bodies.forEach((b, i) => {
     if (!b.fixed) return;
-    const r = massProps(b.shape, 1).boundingRadius;
+    const r = boundingRadiusOf(b.shape);
     g.bodies.push(b);
     g.index.push(i);
     g.x.push(b.position.x);
@@ -150,7 +150,7 @@ export function stepWisps(world: World, dt: number): number {
   for (let i = 0; i < bodies.length; i++) {
     const b = bodies[i];
     if (b.fixed) continue;
-    const r = massProps(b.shape, 1).boundingRadius;
+    const r = boundingRadiusOf(b.shape);
     reach[i] = r;
     if (r > 4 * CELL) bigMoving.push(i);
     else file(moving, b, i, r);
