@@ -25,7 +25,8 @@ milestone is scheduled.
    - The title "MAMMOTH LANDER" over a slow fly-by of the Easy terrain.
    - "Tap to start".
 2. **Scenario select.**
-   - Six cards: Easy, Medium, Hard, Cave, Orbital, Emergency.
+   - Nine cards (since 10 November 2026): Easy, Medium, Hard, Cave, Cave 2, Emergency, Orbital,
+     Binary, Heavy Orbital.
    - Each card shows a one-line description, its best score and the initials that set it.
    - A "High scores" button opens the tables.
 3. **Play.**
@@ -132,17 +133,20 @@ Large and readable on an iPad:
 
 ## 5. Scenarios
 
-All but Orbital use flat-world gravity (down). Orbital uses the asteroid's own gravity (FLT-011).
+All but the asteroid levels (Orbital, Binary, Heavy Orbital) use flat-world gravity (down). Those use
+the rocks' own gravity (FLT-011); Binary's two rocks also pull each other (FLT-014).
 Limits are starting values to tune in play.
 
 | | Easy | Medium | Hard | Cave | Orbital | Emergency |
 |---|---|---|---|---|---|---|
 | Gravity | 1.6 m/s² down | 1.6 | 1.6 | 1.6 | asteroid's, about 1 m/s² at the surface | 1.6 |
-| World | wraps, about 600 m wide | wraps, about 800 m | wraps, about 800 m | bounded | open space round the asteroid | wraps, as Hard |
+| World | wraps, about 600 m wide | wraps, about 800 m | wraps, about 800 m | bounded | open space round the asteroid | wraps, about 800 m |
 | Fuel | economy 5 (cut from 20 after play) | tight (economy 4) | tight (economy 3.5) | tight (economy 4) | moderate (economy 8) | Hard's, draining through a leak |
 | Start | 120 m up, 15 m/s sideways | 170 m up, 10 m/s sideways | 200 m up, 10 m/s sideways | cave mouth, still | in orbit at about 60 m | as Hard, leak open |
 | Touchdown limit | 2.0 m/s, 15° | 1.5 m/s, 12° | 1.2 m/s, 10° | 1.5 m/s, 12° | 1.5 m/s relative to the pad, 12° | 1.2 m/s, 10° |
-| Pads | 5: wide ×2 to narrow ×5 | 6: valleys and mountain shelves | 6: narrow ledges and pits | 5: ×2 to ×6, deeper is more | 6: plateaus and crater floors | Hard's |
+| Pads | 5: wide ×2 to narrow ×5 | 6: valleys and mountain shelves | 6: narrow ledges and pits | 5: ×2 to ×6, deeper is more | 6: plateaus and crater floors | 6: ledges, a pit, between twin peaks |
+
+The levels added on 10 November 2026 (Cave 2, Binary, Heavy Orbital) are described below.
 
 Fuel economy is the declared flight-test cheat (FLT-010): the tank lasts that many times longer at
 the same weight and thrust.
@@ -177,6 +181,20 @@ the same weight and thrust.
 - **Drawing:** the floor and the roof are two lines (`lander.lines`), drawn as given.
 - **Fuel:** a concern (economy 4). Getting deep and back down safely is the challenge.
 
+### Cave 2
+
+- **Layout:** drawn by hand (traced into `scripts/data/cave2.json`, 0.25 m a pixel): a cave about
+  450 m across, its mouth open to the left. A passage of stalactites and stalagmites leads down to
+  a lower gallery and round into a chamber that curls back on itself, with pad 6 on a ledge inside
+  the curl. You start outside the mouth, still.
+- **Pads:** six, scoring by their number: ×1 at the mouth to ×6 inside the curl, so the further
+  along the cave, the more a landing is worth.
+- **Built as:** one closed outline of air with overhangs (the curl), so the rock is a crust along the
+  outline on its rock side, thinned where the rock is thinner (a spike's crust never reaches through
+  into the air), and the view fills everything outside the outline (`solid: "outside"`). Narrowest
+  passages on the route are about 20 m.
+- **Fuel:** economy 4.5. Touchdown as Cave.
+
 ### Orbital
 
 - **The asteroid:** 150 m across, turning once in 7 minutes, with mountains, plateaus and crater
@@ -196,7 +214,8 @@ the same weight and thrust.
 
 ### Emergency
 
-- **Terrain:** Hard's.
+- **Terrain (its own since 10 November 2026):** sheer mountains in Hard's style but different:
+  twin peaks with a ledge pad between them, a deep pit with a pad at the bottom, 800 m round.
 - **The leak:** the ship starts with a breach in its tank. The leak drains fuel and its jet pushes
   the ship with about a tenth of one engine's thrust, using the existing leak physics (LND-040). As built:
   the tank starts at 40% integrity with its hole facing sideways, the gas jetting out at 30 m/s:
@@ -210,6 +229,26 @@ the same weight and thrust.
 - **Warnings:** a flashing red EMERGENCY banner. With sound, a siren (LND-051).
 - **Plan:** stop the spin, kill the sideways speed, and land fast before the tank empties, while
   fighting the push.
+
+### Binary (10 November 2026)
+
+- **The rocks:** two, 100 and 92 m across, 220 m apart, orbiting their common centre of mass about
+  once in 6 minutes. Each turns gently, one each way (6 and 7 minutes a turn).
+- **Gravity:** each core pulls with mu = G × its rock's mass (the same G for both, so the pulls are
+  equal and opposite and the pair's centre of mass stays nearly still), about 0.6 m/s² at a surface.
+  The rocks pull each other (FLT-014) and the ship; the ship pulls neither.
+- **Pads:** three on each rock (×2 to ×5), riding with it.
+- **Start:** in orbit 55 m over the larger rock, moving with it (a start 270 m out round the pair
+  showed only empty space: the view can't zoom out that far). The other rock swings round into view.
+- **Fuel:** economy 8.
+
+### Heavy Orbital (10 November 2026)
+
+- **The asteroid:** 180 m across and denser (about 2,000 t), with taller mountains, turning once in
+  3 minutes (Orbital: 7), so its surface moves at about 3 m/s.
+- **Gravity:** about 1.5 m/s² at the surface (Orbital: 0.9), against the ship's 4 m/s² of thrust.
+- **Pads:** six (×2 to ×5): plateaus, craters, a mountain top and a shelf.
+- **Start:** a circular orbit 70 m up. **Fuel:** economy 10.
 
 ## 6. Look and sound
 

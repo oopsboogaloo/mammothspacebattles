@@ -658,8 +658,9 @@ const GROUND_FILL = "#05070d";
 
 function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   const fixed = world.bodies.filter((b) => isGround(b) && b.shape.kind !== "disc");
-  // An asteroid's surface faces away from its centre; flat ground's faces up.
-  const centre = world.bodies.find((b) => b.gravity && b.gravity.mu > 0)?.position;
+  // An asteroid's surface faces away from its centre (the nearest rock's, with two); flat ground's faces up.
+  const rocks = world.bodies.filter((b) => b.gravity && b.gravity.mu > 0).map((b) => b.position);
+  const centreOf = (p: Vec2) => rocks.reduce<Vec2 | undefined>((best, c) => (!best || Math.hypot(p.x - c.x, p.y - c.y) < Math.hypot(p.x - best.x, p.y - best.y) ? c : best), undefined);
   ctx.fillStyle = GROUND_FILL;
   for (const b of fixed) {
     bodyPath(ctx, c, vp, b);
@@ -671,6 +672,23 @@ function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
     spec.lines.forEach((l, i) => {
       const side = spec.solid?.[i];
       if (!side || l.length < 2) return;
+      if (side === "outside") {
+        // A closed outline of air: fill a rectangle past the view with the outline cut out of it.
+        ctx.beginPath();
+        ctx.moveTo(-vp.width, -vp.height);
+        ctx.lineTo(2 * vp.width, -vp.height);
+        ctx.lineTo(2 * vp.width, 2 * vp.height);
+        ctx.lineTo(-vp.width, 2 * vp.height);
+        ctx.closePath();
+        l.forEach((p, k) => {
+          const s = toScreen(c, vp, p);
+          if (k === 0) ctx.moveTo(s.x, s.y);
+          else ctx.lineTo(s.x, s.y);
+        });
+        ctx.closePath();
+        ctx.fill("evenodd");
+        return;
+      }
       const dy = side === "below" ? -GROUND_DEPTH : GROUND_DEPTH;
       ctx.beginPath();
       l.forEach((p, k) => {
@@ -703,6 +721,7 @@ function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
     const q = sinCos(b.angle);
     const vs = localVertices(b.shape).map((v) => add(b.position, rotate(q, v)));
     // How far each vertex is out: its height, or on an asteroid its distance from the centre.
+    const centre = b.gravity ? centreOf(b.position) : undefined;
     const out = b.gravity && centre ? vs.map((v) => Math.hypot(v.x - centre.x, v.y - centre.y)) : vs.map((v) => v.y);
     const bottom = Math.min(...out);
     vs.forEach((v, i) => {
