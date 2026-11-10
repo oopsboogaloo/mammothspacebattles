@@ -391,14 +391,45 @@ describe("Mammoth Lander", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("LND-042 a wrapped level's ground reaches both edges exactly, so there is no hole at the seam", () => {
+  it("LND-042 a wrapped level's ground reaches both edges exactly and no further, so there is no hole at the seam", () => {
     for (const name of ["easy", "medium", "hard", "emergency"]) {
       const scn = JSON.parse(readFileSync(new URL(`../../scenarios/lander-${name}.json`, import.meta.url), "utf8"));
       const xs = scn.world.bodies
-        .filter((b: { id: string }) => b.id.startsWith("ground-") && !b.id.startsWith("ground-seam"))
+        .filter((b: { id: string }) => b.id.startsWith("ground-"))
         .flatMap((b: { position: { x: number }; shape: { vertices: { x: number }[] } }) => b.shape.vertices.map((v) => v.x + b.position.x));
       expect([Math.min(...xs), Math.max(...xs)]).toEqual([scn.world.bounds.min.x, scn.world.bounds.max.x]);
     }
+  });
+
+  it("LND-042 FLT-015 a ship set down on the wrap edge stands on the ground at both sides of it", () => {
+    // Easy's ground peaks at the edge (0.71 m), so the legs come down one each side of it.
+    const edge = raw.world.bounds.max.x;
+    const scn = structuredClone(raw);
+    Object.assign(scn.world.lander, { start: { position: { x: edge - 0.1, y: 0.71 + REACH + 0.2 }, velocity: { x: 0, y: -1 } } });
+    const s = parseScenario(scn);
+    const prof = getProfile(s.profile);
+    const w = initialWorld(s);
+    const on = new Map<string, Set<string>>();
+    let across = 0;
+    for (let k = 0; k < 3 * 240; k++) {
+      stepInPlace(w, [], prof);
+      for (const c of w.contacts) {
+        if (!(c.normalImpulse > 0)) continue;
+        const [ground, part] = c.a.startsWith("ground-") ? [c.a, c.b] : [c.b, c.a];
+        if (!ground.startsWith("ground-")) continue;
+        on.set(part, (on.get(part) ?? new Set()).add(ground));
+        if (c.shift) across++;
+      }
+    }
+    const last = raw.world.bodies.filter((b: { id: string }) => b.id.startsWith("ground-")).length - 1;
+    // The left leg on the last piece of ground, the right leg on the first, from across the edge.
+    expect([...on.get("l1-leg-left")!]).toContain(`ground-${last}`);
+    expect([...on.get("l1-leg-right")!]).toContain("ground-0");
+    expect(across).toBeGreaterThan(0);
+    const hull = w.bodies.find((b) => b.id === "l1-hull")!;
+    expect(hull.position.y).toBeGreaterThan(REACH - 0.5); // standing, not through the ground
+    expect(Math.hypot(hull.velocity.x, hull.velocity.y)).toBeLessThan(0.05);
+    expect(w.ledger.violations).toBe(0);
   });
 
   it("LND-040 Emergency's ship comes in fast and spinning, as one rigid body", () => {

@@ -288,6 +288,11 @@ export interface Contact {
   tangentImpulse: number; // N·s
   /** Kinetic energy this contact turned into heat this step, J (COL-006). */
   energyLost: number;
+  /**
+   * In a wrapped world, set when the pair met across an edge (FLT-015): b's copy was at its position
+   * + shift. `point` is on a's side; on b it is `point − shift`.
+   */
+  shift?: Vec2;
 }
 
 export interface WorldEvent {

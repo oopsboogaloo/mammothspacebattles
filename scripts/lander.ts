@@ -71,14 +71,13 @@ interface Pad {
 
 /**
  * Ground from a line of points: a quad from each segment down to `bottom`, fixed. Pads flatten the
- * line under them and sit on it. In a wrapped world the first and last `seam` metres are copied past
- * the opposite edges, so a ship near an edge stands on real ground (nothing collides across the
- * seam itself: FLT-012's known limit, LND-042).
+ * line under them and sit on it. In a wrapped world the line runs from edge to edge and no more: a
+ * ship at an edge stands on the ground across it (FLT-015, LND-042).
  */
 /** How deep the ground goes under its surface, m. Nothing reaches below it. */
 const CRUST = 15;
 
-function terrain(points: Vec[], pads: Pad[], opts: { width?: number; seam?: number }) {
+function terrain(points: Vec[], pads: Pad[]) {
   const bodies: Json[] = [];
   const quad = (a: Vec, b: Vec, n: string) =>
     bodies.push({
@@ -95,17 +94,6 @@ function terrain(points: Vec[], pads: Pad[], opts: { width?: number; seam?: numb
       shape: { kind: "polygon", vertices: [{ x: a.x, y: Math.min(a.y, b.y) - CRUST }, { x: b.x, y: Math.min(a.y, b.y) - CRUST }, b, a] },
     });
   for (let i = 0; i + 1 < points.length; i++) quad(points[i], points[i + 1], `ground-${i}`);
-  if (opts.width && opts.seam) {
-    const W = opts.width;
-    const x0 = points[0].x;
-    const x1 = points[points.length - 1].x;
-    for (let i = 0; i + 1 < points.length; i++) {
-      const a = points[i];
-      const b = points[i + 1];
-      if (b.x <= x0 + opts.seam) quad({ x: a.x + W, y: a.y }, { x: b.x + W, y: b.y }, `ground-seam-r${i}`);
-      if (a.x >= x1 - opts.seam) quad({ x: a.x - W, y: a.y }, { x: b.x - W, y: b.y }, `ground-seam-l${i}`);
-    }
-  }
   pads.forEach((p, k) => {
     const y = heightAt(points, p.x);
     bodies.push({ id: `pad-${k + 1}`, fixed: true, mass: 1, friction: 0.9, position: { x: p.x, y: y + 0.2 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape: { kind: "box", width: p.width, height: 0.4 } });
@@ -214,7 +202,7 @@ function scenario(o: {
       name: "lander-easy",
       title: "Mammoth Lander: Easy",
       description: "Gently rolling ground, five pads and plenty of fuel. Smaller pads score more. The ground wraps round.",
-      bodies: terrain(pts, pads, { width: W, seam: 30 }),
+      bodies: terrain(pts, pads),
       bounds: { min: { x: -W / 2, y: -2000 }, max: { x: W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
       economy: 5,
       start: { position: { x: -270, y: 120 }, velocity: { x: 15, y: 0 } },
@@ -254,7 +242,7 @@ write(
     name: "lander-medium",
     title: "Mammoth Lander: Medium",
     description: "Lunar peaks and spikes. Pads in the valleys and on shelves in the mountain sides. Fuel matters. The ground wraps round.",
-    bodies: terrain(MEDIUM.pts, MEDIUM.pads, { width: MEDIUM.W, seam: 30 }),
+    bodies: terrain(MEDIUM.pts, MEDIUM.pads),
     bounds: { min: { x: -MEDIUM.W / 2, y: -2000 }, max: { x: MEDIUM.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
     economy: 2, // halved 10 November 2026 after play
     start: { position: { x: -380, y: 170 }, velocity: { x: 10, y: 0 } },
@@ -293,7 +281,7 @@ const HARD = (() => {
 const hard = (o: { name: string; title: string; description: string; leak?: Leak; economy: number; start?: { position: Vec; velocity: Vec; spin?: number } }) =>
   scenario({
     ...o,
-    bodies: terrain(HARD.pts, HARD.pads, { width: HARD.W, seam: 30 }),
+    bodies: terrain(HARD.pts, HARD.pads),
     bounds: { min: { x: -HARD.W / 2, y: -2000 }, max: { x: HARD.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
     start: o.start ?? { position: { x: -390, y: 200 }, velocity: { x: 10, y: 0 } },
     pads: HARD.pads,
@@ -340,7 +328,7 @@ write(
     name: "lander-emergency",
     title: "Mammoth Lander: Emergency",
     description: "Sheer mountains, with a leaking tank, and you come in fast and spinning: fuel drains and the leak pushes you about. Get it under control and get down fast. The ground wraps round.",
-    bodies: terrain(EMERGENCY.pts, EMERGENCY.pads, { width: EMERGENCY.W, seam: 30 }),
+    bodies: terrain(EMERGENCY.pts, EMERGENCY.pads),
     bounds: { min: { x: -EMERGENCY.W / 2, y: -2000 }, max: { x: EMERGENCY.W / 2, y: 2000 }, wrap: true, farField: 10, depth: 2 },
     // Coming in drastic: fast sideways and spinning (about a quarter turn a second). One engine stops
     // the spin in about half a second; the leak empties the tank in about 20 s whatever you do, so a
@@ -406,7 +394,7 @@ write(
   for (let x = MOUTH; x <= XC; x += 0.5) narrow = Math.min(narrow, roof(x) - floor(x));
   if (narrow < 12) throw new Error(`the cave narrows to ${narrow.toFixed(1)} m somewhere: too tight for the ship`);
   const TOP = 300; // the top of the world
-  const bodies = terrain(fl, pads, {});
+  const bodies = terrain(fl, pads);
   // The rock over the cave, solid to the top of the world, and the end wall.
   const rock = (vertices: Vec[], n: string) =>
     bodies.push({ id: n, fixed: true, mass: 1, friction: 0.9, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape: { kind: "polygon", vertices } });

@@ -63,12 +63,13 @@ describe("flight-test arena", () => {
   });
 
   it("FLT-012 gravity in a wrapped world pulls across the edge, from the nearest copy of the source", () => {
-    const rock = disc("rock", { mass: 1000, position: { x: 9.5, y: 0 }, gravity: { mu: 10, core: 1 } });
-    const probe = disc("probe", { mass: 1, position: { x: -9.5, y: 0 } });
+    // Two metres apart across the edge, clear of each other: they would touch at one (FLT-015).
+    const rock = disc("rock", { mass: 1000, position: { x: 9, y: 0 }, gravity: { mu: 10, core: 1 } });
+    const probe = disc("probe", { mass: 1, position: { x: -9, y: 0 } });
     const w = createWorld(1, [rock, probe], { x: 0, y: 0 }, { bounds: { min: { x: -10, y: -10 }, max: { x: 10, y: 10 }, wrap: true } }, test);
     stepInPlace(w, [], test);
-    // The rock's nearest copy is at x = −10.5, one metre to the probe's left.
-    const expected = -10 / (2 * Math.sqrt(2));
+    // The rock's nearest copy is at x = −11, two metres to the probe's left: mu·r/(r² + core²)^1.5.
+    const expected = -(10 * 2) / (5 * Math.sqrt(5));
     expect(w.bodies.find((b) => b.id === "probe")!.velocity.x / test.timestep).toBeCloseTo(expected, 9);
   });
 

@@ -13,6 +13,13 @@ rescaling these values, all of which sit in the game spec (§2.1).
 
 ### 1.1 Collisions across the wrap edge (FLT-015), `src/core/physics.ts`
 
+*Built (step 2 of the plan).* Since this was written the constraint solve moved to Rust
+(`wasm/solver/src/lib.rs`). The contact search and the building of contacts are still in
+`physics.ts`, where all of this is, except position correction, which is in the Rust and takes the
+shift per contact. The velocity solve needed no change: it works from lever arms and velocities, and
+books angular momentum from the bodies' real positions. A pair found through more than one copy
+keeps the nearest. Notes and measurements: `docs/spec.md`, "Collisions across the edges".
+
 Today the broad phase sorts boxes by raw position, so two bodies on opposite sides of an edge
 never pair. In a wrapped world:
 

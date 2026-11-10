@@ -63,8 +63,9 @@ const ODX: usize = 18;
 const ODY: usize = 19;
 const ODA: usize = 20;
 
-/// Per contact: body slots, normal, friction, restitution, point count, first point.
-const CS: usize = 8;
+/// Per contact: body slots, normal, friction, restitution, point count, first point, and where b's
+/// copy is from b when the pair meets across a wrapped world's edge (0, 0 otherwise).
+const CS: usize = 10;
 const CA: usize = 0;
 const CB: usize = 1;
 const CNX: usize = 2;
@@ -73,6 +74,8 @@ const CFR: usize = 4;
 const CRE: usize = 5;
 const CNP: usize = 6;
 const CP0: usize = 7;
+const CSX: usize = 8;
+const CSY: usize = 9;
 
 /// Per contact point.
 const PS: usize = 16;
@@ -785,7 +788,13 @@ pub extern "C" fn correct_positions(nb: usize, nj: usize, nc: usize, slop: f64) 
                 let pay = b[ao + PY] + (sa * pts[po + LAX] + ca * pts[po + LAY]);
                 let pbx = b[bo + PX] + (cb * pts[po + LBX] - sb * pts[po + LBY]);
                 let pby = b[bo + PY] + (sb * pts[po + LBX] + cb * pts[po + LBY]);
-                let sep = (pbx - pax) * nx + (pby - pay) * ny;
+                // Across a wrapped world's edge, b's side of the contact is on its copy.
+                let (sx, sy) = (c[o + CSX], c[o + CSY]);
+                let sep = if sx != 0.0 || sy != 0.0 {
+                    (pbx + sx - pax) * nx + (pby + sy - pay) * ny
+                } else {
+                    (pbx - pax) * nx + (pby - pay) * ny
+                };
                 let cc = jmax(-MAX_CORRECTION, jmin(0.0, BAUMGARTE * (sep + slop)));
                 if cc >= 0.0 {
                     continue;

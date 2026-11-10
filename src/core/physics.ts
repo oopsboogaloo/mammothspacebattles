@@ -61,6 +61,11 @@ export interface SolverContact {
   isNew: boolean;
   /** For disc pairs that collide mid-step: the time of impact within the step, s. */
   toi?: number;
+  /**
+   * In a wrapped world, where b's copy is from b when the pair meets across an edge (FLT-015): the
+   * contact is with b at its position + shift. The lever arms and anchors are measured from that copy.
+   */
+  shift?: Vec2;
 }
 
 /** What the contact solver did, for the ledger. */
@@ -218,6 +223,123 @@ function sweepPairs(n: number, b: Boxes, fixed?: readonly boolean[], group?: rea
 }
 
 /**
+ * The pairs of a wrapped world (FLT-015): as sweepPairs, and also the pairs that meet across an edge
+ * or a corner. A body whose box crosses an edge gets a ghost box one width (or height, or both) back
+ * across; a body's box against another's ghost is a pair with that shift. Each pair comes back once,
+ * as (i, j, the shift of j's copy), i < j: with the copy of j nearest i if more than one is found.
+ * In order: pairs with no shift first, as sweepPairs gives them, then the shifted ones by i, then j.
+ */
+export interface WrappedPair {
+  i: number;
+  j: number;
+  sx: number;
+  sy: number;
+}
+let ghostScratch: Boxes = { minX: new Float64Array(0), minY: new Float64Array(0), maxX: new Float64Array(0), maxY: new Float64Array(0) };
+function wrappedPairs(
+  n: number,
+  b: Boxes,
+  centre: (i: number) => Vec2,
+  bounds: { min: Vec2; max: Vec2 },
+  fixed?: readonly boolean[],
+  group?: readonly number[],
+): WrappedPair[] {
+  const w = bounds.max.x - bounds.min.x;
+  const h = bounds.max.y - bounds.min.y;
+  const owner: number[] = [];
+  const gx: number[] = [];
+  const gy: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const lowX = b.minX[i] < bounds.min.x;
+    const highX = b.maxX[i] > bounds.max.x;
+    const lowY = b.minY[i] < bounds.min.y;
+    const highY = b.maxY[i] > bounds.max.y;
+    if (!lowX && !highX && !lowY && !highY) continue;
+    for (const sx of [0, lowX ? w : 0, highX ? -w : 0])
+      for (const sy of [0, lowY ? h : 0, highY ? -h : 0]) {
+        if (sx === 0 && sy === 0) continue;
+        if (owner.some((o, k) => o === i && gx[k] === sx && gy[k] === sy)) continue;
+        owner.push(i);
+        gx.push(sx);
+        gy.push(sy);
+      }
+  }
+  const out: WrappedPair[] = [];
+  if (!owner.length) {
+    for (const code of sweepPairs(n, b, fixed, group)) out.push({ i: Math.floor(code / n), j: code % n, sx: 0, sy: 0 });
+    return out;
+  }
+  const N = n + owner.length;
+  if (ghostScratch.minX.length < N) ghostScratch = { minX: new Float64Array(2 * N), minY: new Float64Array(2 * N), maxX: new Float64Array(2 * N), maxY: new Float64Array(2 * N) };
+  const e = ghostScratch;
+  e.minX.set(b.minX.subarray(0, n));
+  e.minY.set(b.minY.subarray(0, n));
+  e.maxX.set(b.maxX.subarray(0, n));
+  e.maxY.set(b.maxY.subarray(0, n));
+  const fixedAll = fixed ? fixed.slice() : undefined;
+  const groupAll = group ? group.slice() : undefined;
+  for (let k = 0; k < owner.length; k++) {
+    const o = owner[k];
+    e.minX[n + k] = b.minX[o] + gx[k];
+    e.maxX[n + k] = b.maxX[o] + gx[k];
+    e.minY[n + k] = b.minY[o] + gy[k];
+    e.maxY[n + k] = b.maxY[o] + gy[k];
+    fixedAll?.push(fixed![o]);
+    groupAll?.push(group![o]);
+  }
+  const shifted: WrappedPair[] = [];
+  for (const code of sweepPairs(N, e, fixedAll, groupAll)) {
+    const p = Math.floor(code / N);
+    const q = code % N;
+    if (p >= n) continue; // two ghosts: the same pair is found from one of the real boxes
+    if (q < n) {
+      out.push({ i: p, j: q, sx: 0, sy: 0 });
+      continue;
+    }
+    const o = owner[q - n];
+    if (o === p) continue;
+    shifted.push(p < o ? { i: p, j: o, sx: gx[q - n], sy: gy[q - n] } : { i: o, j: p, sx: -gx[q - n], sy: -gy[q - n] });
+  }
+  if (!shifted.length) return out;
+  // One copy a pair: the nearest. (Two bodies can only touch through two copies at once if together
+  // they are as wide as the world.)
+  const dist2 = (c: WrappedPair): number => {
+    const a = centre(c.i);
+    const bb = centre(c.j);
+    return (bb.x + c.sx - a.x) ** 2 + (bb.y + c.sy - a.y) ** 2;
+  };
+  const best = new Map<number, WrappedPair>();
+  for (const c of out) best.set(c.i * n + c.j, c);
+  for (const c of shifted) {
+    const k = c.i * n + c.j;
+    const kept = best.get(k);
+    if (!kept || dist2(c) < dist2(kept)) best.set(k, c);
+  }
+  const all = [...best.values()];
+  const plain = (c: WrappedPair) => (c.sx === 0 && c.sy === 0 ? 0 : 1);
+  all.sort((x, y) => plain(x) - plain(y) || x.i - y.i || x.j - y.j);
+  return all;
+}
+
+/** broadPhase for a wrapped world, on box objects (for tests). */
+export function broadPhaseWrapped(
+  boxes: { minX: number; minY: number; maxX: number; maxY: number }[],
+  bounds: { min: Vec2; max: Vec2 },
+  fixed?: readonly boolean[],
+  group?: readonly number[],
+): WrappedPair[] {
+  const n = boxes.length;
+  const b = boxBuffers(n);
+  boxes.forEach((x, i) => {
+    b.minX[i] = x.minX;
+    b.minY[i] = x.minY;
+    b.maxX[i] = x.maxX;
+    b.maxY[i] = x.maxY;
+  });
+  return wrappedPairs(n, b, (i) => ({ x: (boxes[i].minX + boxes[i].maxX) / 2, y: (boxes[i].minY + boxes[i].maxY) / 2 }), bounds, fixed, group);
+}
+
+/**
  * Assemblies by body index (body i of the world is rbs[i]): `lists` holds each assembly's indices, in
  * order of first appearance, and `group[i]` the number of body i's assembly, in the same order.
  * Built once per topology, not every step (two maps and hundreds of arrays a step).
@@ -291,19 +413,21 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
   // their neighbours' boxes, hundreds of pairs a step, all thrown away below.
   const group = roots ? assemblyGroups(world).group : undefined;
   const nb = rbs.length;
-  for (const code of sweepPairs(nb, boxes, rbs.map((r) => r.invMass === 0), group)) {
-    const i = Math.floor(code / nb);
-    const j = code % nb;
+  const fixedFlags = rbs.map((r) => r.invMass === 0);
+  // A pair of bodies i < j; in a wrapped world, with where j's copy is when they meet across an edge.
+  const pair = (i: number, j: number, shift?: Vec2): void => {
     const a = rbs[i];
     const b = rbs[j];
-    if (a.invMass === 0 && b.invMass === 0) continue;
-    if (roots && roots.get(a.body.id) === roots.get(b.body.id)) continue;
-    const m = collide(placed(a), placed(b), sweep[i] + sweep[j] + slop, slop);
-    if (!m) continue;
+    if (a.invMass === 0 && b.invMass === 0) return;
+    if (roots && roots.get(a.body.id) === roots.get(b.body.id)) return;
+    // Where b is for this contact: itself, or its copy across the edge (FLT-015).
+    const bAt = shift ? add(b.body.position, shift) : b.body.position;
+    const m = collide(placed(a), shift ? { shape: b.body.shape, position: bAt, rot: b.rot } : placed(b), sweep[i] + sweep[j] + slop, slop);
+    if (!m) return;
     let toi: number | undefined;
     if (a.body.shape.kind === "disc" && b.body.shape.kind === "disc") {
-      const impact = discImpact(a, b, m, dt);
-      if (impact === null) continue;
+      const impact = discImpact(a, b, bAt, m, dt);
+      if (impact === null) return;
       toi = impact;
     }
     const n = m.normal;
@@ -311,7 +435,7 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
     const points: SolverPoint[] = m.points.map((p) => {
       // A disc pair hitting mid-step is solved in its time-of-impact configuration: lever arms along the normal.
       const rA = toi !== undefined ? scale(n, (a.body.shape as { radius: number }).radius) : sub(p.point, a.body.position);
-      const rB = toi !== undefined ? scale(n, -(b.body.shape as { radius: number }).radius) : sub(p.point, b.body.position);
+      const rB = toi !== undefined ? scale(n, -(b.body.shape as { radius: number }).radius) : sub(p.point, bAt);
       const rnA = cross(rA, n);
       const rnB = cross(rB, n);
       const rtA = cross(rA, t);
@@ -336,7 +460,7 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
         key: p.key,
         point: p.point,
         localA: invRotate(a.rot, sub(surfA, a.body.position)),
-        localB: invRotate(b.rot, sub(surfB, b.body.position)),
+        localB: invRotate(b.rot, sub(surfB, bAt)),
       };
     });
     contacts.push({
@@ -348,7 +472,13 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
       points,
       isNew: !previousPairs.has(`${a.body.id}\u0000${b.body.id}`),
       toi,
+      ...(shift ? { shift } : {}),
     });
+  };
+  if (world.bounds.wrap) {
+    for (const c of wrappedPairs(nb, boxes, (i) => rbs[i].body.position, world.bounds, fixedFlags, group)) pair(c.i, c.j, c.sx === 0 && c.sy === 0 ? undefined : { x: c.sx, y: c.sy });
+  } else {
+    for (const code of sweepPairs(nb, boxes, fixedFlags, group)) pair(Math.floor(code / nb), code % nb);
   }
 
   const account: ContactAccount = emptyAccount();
@@ -379,6 +509,7 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
         normalImpulse: p.normalImpulse,
         tangentImpulse: p.tangentImpulse,
         energyLost: p.energyLost,
+        ...(c.shift ? { shift: c.shift } : {}),
       });
     }
     if (c.isNew && total > 0) {
@@ -396,15 +527,16 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
 /**
  * Two discs closing within this step: returns the time of impact and rewrites the
  * manifold to the line of centres at that moment, or null if they will not meet
- * this step. Already-touching discs return undefined (an ordinary contact).
+ * this step. Already-touching discs return undefined (an ordinary contact). `bAt` is where b is
+ * for this contact (its copy across the edge in a wrapped world).
  * Bodies are taken to move in straight lines over one step.
  */
-function discImpact(a: RB, b: RB, m: Manifold, dt: number): number | undefined | null {
+function discImpact(a: RB, b: RB, bAt: Vec2, m: Manifold, dt: number): number | undefined | null {
   const p = m.points[0];
   if (p.separation <= 0) return undefined;
   const ra = (a.body.shape as { radius: number }).radius;
   const R = ra + (b.body.shape as { radius: number }).radius;
-  const d0 = sub(b.body.position, a.body.position);
+  const d0 = sub(bAt, a.body.position);
   const u = sub(b.body.velocity, a.body.velocity);
   const qa = dot(u, u);
   const qb = 2 * dot(d0, u);

@@ -30,7 +30,7 @@ export type WasmExports = Exports;
 // Strides and offsets: the same as wasm/solver/src/lib.rs.
 const BS = 12;
 const JS = 21;
-const CS = 8;
+const CS = 10;
 const PS = 16;
 
 let ex: Exports | null = null;
@@ -104,6 +104,8 @@ function fillContacts(C: Float64Array, P: Float64Array, contacts: readonly Solve
     C[o + 5] = c.restitution;
     C[o + 6] = c.points.length;
     C[o + 7] = p;
+    C[o + 8] = c.shift ? c.shift.x : 0;
+    C[o + 9] = c.shift ? c.shift.y : 0;
     for (const q of c.points) {
       const po = p * PS;
       P[po] = q.rA.x;
