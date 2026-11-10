@@ -18,6 +18,7 @@ import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
+import { runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { boundingRadiusOf, massProps, normalizePolygon, type Shape } from "./shapes.ts";
@@ -330,6 +331,8 @@ export interface World {
   lander?: LanderGame;
   /** A combat duel, judged after every step (DUEL-001). */
   duel?: Duel;
+  /** Mammoth Asteroids' game: levels, gold, lives and the score (docs/games/mammoth-asteroids.md). */
+  arcade?: ArcadeGame;
   /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
   blasts?: Blast[];
   /** The plume's tail: gas gone from the gas model, fading out (GAS-011): see wisps.ts. */
@@ -391,7 +394,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -419,6 +422,8 @@ export function createWorld(
   for (const l of extra.links ?? []) addLink(world, l);
   for (const f of extra.gas ?? []) fillGas(world, f, profile);
   world.events = [];
+  // Mammoth Asteroids starts with its first ship and level in the world.
+  if (extra.arcade) world.arcade = startArcade(world, extra.arcade, ARCADE_OPS);
   world.ledger.totals = computeTotals(world);
   if (extra.challenge) world.challenge = startLanding(world, structuredClone(extra.challenge));
   if (extra.lander) world.lander = startLander(extra.lander);
@@ -473,6 +478,9 @@ function addLink(world: World, input: LinkInput): void {
   }
   world.links = [...world.links, structuredClone(link)].sort((p, q) => compareIds(p.id, q.id));
 }
+
+/** How Mammoth Asteroids' game adds its ships and rocks: as commands do. */
+const ARCADE_OPS: ArcadeOps = { addBody, addJoint, addLink };
 
 /** Control channels reaching a body through intact control links, with their values (ASM-006). */
 export function controlInputs(world: World, bodyId: string): Record<string, number> {
@@ -1507,6 +1515,16 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   if (world.duel) {
     const t0 = computeTotals(world);
     if (runDuel(world, world.duel, dt)) {
+      after = computeTotals(world);
+      addDelta(sources.boundary, diff(t0, after));
+    }
+  }
+
+  // Mammoth Asteroids (MAS-070): gold collected and spent slugs leave, and new ships and levels
+  // come in, through the boundary.
+  if (world.arcade) {
+    const t0 = computeTotals(world);
+    if (runArcade(world, dt, ARCADE_OPS)) {
       after = computeTotals(world);
       addDelta(sources.boundary, diff(t0, after));
     }

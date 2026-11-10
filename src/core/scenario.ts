@@ -10,6 +10,7 @@ import { resolveProbe } from "./probes.ts";
 import { generateAsteroid, type AsteroidSpec } from "./asteroid.ts";
 import type { LandingGoal } from "./landing.ts";
 import type { DuelGoal } from "./duel.ts";
+import type { ArcadeSpec } from "./arcade.ts";
 import { PROFILES, getProfile, type Profile } from "./profile.ts";
 import type { ShipTemplate } from "./spawn.ts";
 import { polygonProblem } from "./shapes.ts";
@@ -67,7 +68,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; asteroids?: AsteroidSpec[] };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; asteroids?: AsteroidSpec[] };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -495,6 +496,49 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
     err(v, `${path}.solid`, 'must be a list of "below", "above" or "outside", one for each line');
 }
 
+function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
+  if (!isObj(g)) return err(v, path, "must be an object {ship, hull, gun, rocks, seed}");
+  if (!isObj(g.ship) || !Array.isArray(g.ship.bodies) || !g.ship.bodies.length) err(v, `${path}.ship`, "must be {bodies, joints?, links?} with at least one body");
+  else
+    for (const k of ["hull", "gun"]) {
+      const id = g[k];
+      if (typeof id !== "string" || !id.includes("{n}")) err(v, `${path}.${k}`, 'must be an id with "{n}"');
+      else if (!g.ship.bodies.some((b) => isObj(b) && b.id === id)) err(v, `${path}.${k}`, "must be the id of one of the ship's bodies");
+    }
+  num(v, g.seed, `${path}.seed`, { int: true });
+  if (g.lives !== undefined) num(v, g.lives, `${path}.lives`, { int: true, min: 1, max: 99 });
+  for (const k of ["respawn", "grace", "clearPause"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
+  for (const k of ["shellLife", "pace"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { positive: true });
+  const r = g.rocks;
+  if (!isObj(r)) err(v, `${path}.rocks`, "must be an object {radius, pieces, density, bond, gold, compounds, speed, spin}");
+  else {
+    const p = `${path}.rocks`;
+    num(v, r.pieces, `${p}.pieces`, { int: true, min: 1, max: 200 });
+    for (const k of ["radius", "density", "bond"]) num(v, r[k], `${p}.${k}`, { positive: true });
+    if (r.material !== undefined) validateMaterial(v, r.material, `${p}.material`);
+    if (r.gravity !== undefined) {
+      if (!isObj(r.gravity)) err(v, `${p}.gravity`, "must be an object {G, core?}");
+      else {
+        num(v, r.gravity.G, `${p}.gravity.G`, { positive: true });
+        if (r.gravity.core !== undefined) num(v, r.gravity.core, `${p}.gravity.core`, { positive: true });
+      }
+    }
+    for (const [k, whole, least] of [["gold", true, 1], ["compounds", true, 0], ["speed", false, 0]] as const) {
+      const x = r[k];
+      if (!Array.isArray(x) || x.length !== 2) err(v, `${p}.${k}`, "must be [from, to]");
+      else {
+        num(v, x[0], `${p}.${k}[0]`, { int: whole, min: least, max: 50 });
+        num(v, x[1], `${p}.${k}[1]`, { int: whole, min: least, max: 50 });
+        if (typeof x[0] === "number" && typeof x[1] === "number" && x[1] < x[0]) err(v, `${p}.${k}`, "must be [from, to] with to no less than from");
+      }
+    }
+    num(v, r.spin, `${p}.spin`, { min: 0 });
+    if (r.most !== undefined) num(v, r.most, `${p}.most`, { int: true, min: 1, max: 20 });
+  }
+  // The game lays its rocks out over the arena, and puts its ship at the middle of it.
+  if (!isObj(bounds) || bounds.wrap !== true) err(v, path, "needs world.bounds with wrap: true (the arena)");
+}
+
 function validateDuel(v: V, c: unknown, bodies: unknown, path: string): void {
   if (!isObj(c)) return err(v, path, "must be an object {kind, player, enemies}");
   if (c.kind !== "duel") return err(v, `${path}.kind`, 'must be "duel"');
@@ -748,6 +792,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     if (data.world.challenge !== undefined) validateChallenge(v, data.world.challenge, data.world.bodies, "$.world.challenge");
     if (data.world.duel !== undefined) validateDuel(v, data.world.duel, data.world.bodies, "$.world.duel");
     if (data.world.lander !== undefined) validateLander(v, data.world.lander, data.world.bodies, "$.world.lander");
+    if (data.world.arcade !== undefined) validateArcade(v, data.world.arcade, data.world.bounds, "$.world.arcade");
   }
 
   let endSteps = Infinity;
@@ -871,7 +916,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade },
     getProfile(scn.profile),
   );
 }

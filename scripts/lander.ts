@@ -4,62 +4,12 @@
 //   node scripts/lander.ts            writes scenarios/lander-*.json
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseScenario, scenarioToJson } from "../src/core/index.ts";
+import { parseScenario } from "../src/core/index.ts";
+import { landShip, type Leak } from "./landShip.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;
 type Vec = { x: number; y: number };
-
-// ---------- The ship ----------
-
-const land = scenarioToJson(parseScenario(JSON.parse(readFileSync(join(root, "scenarios", "land-twin-engine.json"), "utf8")))) as Json & {
-  world: { bodies: Json[]; joints: Json[]; links: Json[] };
-};
-const shipIds = new Set<string>();
-for (const j of land.world.joints) [j.a, j.b].forEach((id) => shipIds.add(String(id)));
-const hull = land.world.bodies.find((b) => b.id === "hull")!;
-const origin = hull.position as Vec;
-const id = (x: unknown) => `l{n}-${String(x)}`;
-
-/** Each part's material: thin metal, so a crash bends and breaks it (energies in J). */
-const material = (bid: string) => (bid === "tank" ? { name: "tank", threshold: 60, toughness: 500 } : { name: "hull", threshold: 150, toughness: 3000 });
-/**
- * Weld limits, and where the welds start to bend (DMG-008): a share of the limits, beyond which a
- * load costs the weld integrity. Tuned by dropping the ship upright onto a pad: about 2 m/s does no
- * harm, 3 m/s bends the leg welds a little, 4 m/s badly, and about 4.5 m/s breaks a leg off.
- */
-const WELD = { tension: 7650, compression: 15300, shear: 5350, torque: 1840 };
-const YIELD = 0.3;
-
-/** A leak in the tank (Emergency, LND-040): how damaged it is (1 whole), and where the hole faces in its frame. */
-interface Leak {
-  integrity: number;
-  normal: Vec;
-  /** How fast the gas jets out, m/s: the push, for the same loss of fuel. */
-  speed?: number;
-}
-
-function ship(economy: number, leak?: Leak) {
-  const bodies = land.world.bodies
-    .filter((b) => shipIds.has(String(b.id)))
-    .map((b) => {
-      const out: Json = { ...b, id: id(b.id), position: { x: (b.position as Vec).x - origin.x, y: (b.position as Vec).y - origin.y }, material: material(String(b.id)) };
-      if (out.injector) out.injector = { ...(out.injector as Json), economy };
-      // The tank's charge: the propellant's stored energy. It goes off when the tank is damaged until
-      // it bursts; before that, a damaged tank leaks (DMG-004).
-      if (b.id === "tank") out.explosive = { charge: 0.05, arm: 1e6, fragments: 6, radius: 0.5, whenDestroyed: true };
-      // A leaking tank: damaged from the start, its hole on the side the leak faces (DMG-004).
-      if (b.id === "tank" && leak) {
-        const box = b.shape as { width: number; height: number };
-        out.integrity = leak.integrity;
-        out.breach = { point: { x: (leak.normal.x * box.width) / 2, y: (leak.normal.y * box.height) / 2 }, normal: leak.normal, credit: 0, count: 0, speed: leak.speed };
-      }
-      return out;
-    });
-  const joints = land.world.joints.map((j) => ({ ...j, id: id(j.id), a: id(j.a), b: id(j.b), limits: WELD, yield: YIELD }));
-  const links = land.world.links.map((l) => ({ ...l, id: id(l.id), ...(l.from !== undefined ? { from: id(l.from) } : {}), to: id(l.to) }));
-  return { bodies, joints, links };
-}
 
 // ---------- Terrain ----------
 
@@ -164,7 +114,7 @@ function scenario(o: {
       bounds: o.bounds,
       bodies: o.bodies,
       lander: {
-        ship: ship(o.economy, o.leak),
+        ship: landShip("l{n}-", o.economy, o.leak),
         hull: "l{n}-hull",
         tank: "l{n}-tank",
         start: o.start,
