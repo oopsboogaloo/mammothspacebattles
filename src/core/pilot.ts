@@ -26,7 +26,7 @@ import { bodyMass } from "./bodies.ts";
 import { assemblyOf, assemblyRoots } from "./joints.ts";
 import { massProps } from "./shapes.ts";
 import { railgunReady } from "./railgun.ts";
-import type { Body, World } from "./world.ts";
+import { nearestOffset, type Body, type World } from "./world.ts";
 
 export type PilotGoal =
   | { kind: "heading"; angle: number }
@@ -153,7 +153,7 @@ function gravityAt(world: World, p: Vec2, ship: Set<string>): Vec2 {
   let g = { ...world.gravity };
   for (const s of world.bodies) {
     if (!s.gravity || !(s.gravity.mu > 0) || ship.has(s.id)) continue;
-    const d = sub(s.position, p);
+    const d = nearestOffset(world, p, s.position); // from its nearest copy, in a wrapped world (FLT-016)
     const r2 = dot(d, d) + s.gravity.core * s.gravity.core;
     g = add(g, scale(d, s.gravity.mu / (r2 * Math.sqrt(r2))));
   }
@@ -236,6 +236,14 @@ function loadedRounds(world: World): Set<string> {
   return out;
 }
 
+/**
+ * Where a pilot takes a point to be (FLT-016): in a wrapped world, its copy nearest the ship, so
+ * everything the pilot measures from the ship (what it sees, aims at, avoids and flies to) is the
+ * short way round. In a world that doesn't wrap, the point itself.
+ */
+type Image = (p: Vec2) => Vec2;
+const imageFrom = (world: World, centre: Vec2): Image => (world.bounds.wrap ? (p) => add(centre, nearestOffset(world, centre, p)) : (p) => p);
+
 interface Obstacle {
   /** Its assembly. */
   root: string;
@@ -247,7 +255,7 @@ interface Obstacle {
 }
 
 /** Everything the pilot must not hit, as circles: each other assembly (moving or fixed) round its parts. */
-function obstacles(world: World, own: Set<string>): Obstacle[] {
+function obstacles(world: World, own: Set<string>, image: Image): Obstacle[] {
   const roots = assemblyRoots(world);
   const groups = new Map<string, Body[]>();
   // Its own shells, loaded or fired (and their fragments), are named after its magazines: not obstacles.
@@ -275,7 +283,7 @@ function obstacles(world: World, own: Set<string>): Obstacle[] {
     c = scale(c, 1 / m);
     let R = 0;
     for (const b of bs) R = Math.max(R, length(sub(b.position, c)) + massProps(b.shape, 1).boundingRadius);
-    out.push({ root, mass: bs.some((b) => b.fixed) ? Infinity : m, centre: c, radius: R, velocity: scale(v, 1 / m) });
+    out.push({ root, mass: bs.some((b) => b.fixed) ? Infinity : m, centre: image(c), radius: R, velocity: scale(v, 1 / m) });
   }
   return out;
 }
@@ -327,7 +335,7 @@ interface Ship {
 }
 
 /** Every other ship, with its side (AIP-016). */
-function shipsAround(world: World, own: Set<string>): Ship[] {
+function shipsAround(world: World, own: Set<string>, image: Image): Ship[] {
   const roots = assemblyRoots(world);
   const groups = new Map<string, Body[]>();
   for (const b of world.bodies) {
@@ -357,7 +365,7 @@ function shipsAround(world: World, own: Set<string>): Ship[] {
       c = add(c, scale(b.position, mb));
       v = add(v, scale(b.velocity, mb));
     }
-    out.push({ root, id: name.id, side: pilot ? (pilot.pilot!.side ?? "enemy") : "player", centre: scale(c, 1 / m), velocity: scale(v, 1 / m) });
+    out.push({ root, id: name.id, side: pilot ? (pilot.pilot!.side ?? "enemy") : "player", centre: image(scale(c, 1 / m)), velocity: scale(v, 1 / m) });
   }
   return out;
 }
@@ -445,6 +453,7 @@ export function runPilots(world: World, dt: number): void {
     const chans = p.model.channels;
     const q = sinCos(body.angle);
     const g = gravityAt(world, ship.centre, ids);
+    const image = imageFrom(world, ship.centre);
 
     // Learn: compare what the ship did since the last decision with what the lagged commands should have done.
     const quiet = !world.contacts.some((c) => ids.has(c.a) || ids.has(c.b)) && !world.bodies.some((b) => ids.has(b.id) && b.tractor && b.tractor.mode === "tether");
@@ -503,7 +512,7 @@ export function runPilots(world: World, dt: number): void {
     if (cb.shot) {
       const sh = world.bodies.find((b) => b.id === cb.shot);
       if (!sh) cb.shot = undefined;
-      else if (gun && length(sub(sh.position, gun.body.position)) > 6) {
+      else if (gun && length(nearestOffset(world, gun.body.position, sh.position)) > 6) {
         cb.muzzle = 0.5 * cb.muzzle + 0.5 * length(sub(sh.velocity, ship.velocity));
         cb.shot = undefined;
       }
@@ -513,7 +522,7 @@ export function runPilots(world: World, dt: number): void {
     const mode = p.mode ?? "manual";
     if (mode === "hunting" || mode === "cautious" || mode === "evading") {
       const side = p.side ?? "enemy";
-      const seen = shipsAround(world, ids).filter((x) => length(sub(x.centre, ship.centre)) <= (p.detect ?? 150));
+      const seen = shipsAround(world, ids, image).filter((x) => length(sub(x.centre, ship.centre)) <= (p.detect ?? 150));
       const foes = seen.filter((x) => x.side !== side || (mode === "hunting" && p.mad)); // a mad pilot may turn on its own side
       const nearest = (xs: Ship[]) => xs.reduce<Ship | null>((m, x) => (!m || length(sub(x.centre, ship.centre)) < length(sub(m.centre, ship.centre)) ? x : m), null);
       // Cautious: a foreign shell whose path passes within 4 ship widths of it, or a hit, starts a minute's rage.
@@ -523,7 +532,7 @@ export function runPilots(world: World, dt: number): void {
         const loaded = loadedRounds(world); // still in a gun: not fired
         for (const b of world.bodies) {
           if (!b.id.includes("-shell-") || b.id.startsWith(mine) || own.has(b.id) || loaded.has(b.id)) continue;
-          const r = sub(b.position, ship.centre);
+          const r = nearestOffset(world, ship.centre, b.position);
           const w = sub(b.velocity, ship.velocity);
           if (length(w) < 5) continue; // a loaded shell, not one in flight
           const t = Math.max(0, Math.min(3, -dot(r, w) / dot(w, w)));
@@ -531,7 +540,7 @@ export function runPilots(world: World, dt: number): void {
           if (hit || length(add(r, scale(w, t))) < 4 * 2 * ownR) {
             cb.grudgeUntil = world.tick + Math.round(60 / dt);
             const gunId = b.id.slice(0, b.id.indexOf("-shell-"));
-            const owner = shipsAround(world, ids).find((x) => assemblyOf(world, x.id).includes(gunId));
+            const owner = shipsAround(world, ids, image).find((x) => assemblyOf(world, x.id).includes(gunId));
             cb.offender = owner?.id ?? cb.offender;
           }
         }
@@ -564,7 +573,7 @@ export function runPilots(world: World, dt: number): void {
           const tol = 0.01 + 0.06 * (1 - cs);
           const loaded = gun.body.magazine!.railgun ? railgunReady(gun.body) : loadedRounds(world).has(`${gun.body.id}-shell-${gun.body.magazine!.loaded}`);
           const inRange = dist < 100;
-          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids), target.root, 0.2 * ship.mass);
+          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids, image), target.root, 0.2 * ship.mass);
           fire = loaded && inRange && clear && dot(boreWorld, dir) > sinCos(tol).c;
           label = `${angry ? "fighting back" : "attacking"} ${target.id}${fire ? ", firing" : !loaded ? ", reloading" : !clear ? ", no clear shot" : ""}`;
           if (fire && cb.pulse <= 0) {
@@ -610,7 +619,7 @@ export function runPilots(world: World, dt: number): void {
     if (goal.kind === "route" && goal.waypoints.length) {
       const i = Math.min(goal.index ?? 0, goal.waypoints.length - 1);
       const last = i === goal.waypoints.length - 1 && !goal.loop;
-      const at = goal.waypoints[i];
+      const at = image(goal.waypoints[i]);
       const tolR = 2 + 2 * (1 - s);
       if (length(sub(at, ship.centre)) < tolR * 2 && !last) goal.index = (i + 1) % goal.waypoints.length;
       p.plan.route = goal.waypoints;
@@ -631,11 +640,11 @@ export function runPilots(world: World, dt: number): void {
       if (goal.kind === "station") {
         const st = goal;
         const host = world.bodies.find((b) => b.id === st.body);
-        target = host ? add(host.position, st.offset) : ship.centre;
+        target = host ? add(image(host.position), st.offset) : ship.centre;
         carry = host ? host.velocity : carry; // move with it
         if (!label) label = `keep station on ${st.body}`;
       } else {
-        target = goal.target;
+        target = image(goal.target);
         stop = goal.stop !== false;
         cruise = goal.speed ?? cruise;
         tolP = goal.tolerance ?? tolP;
@@ -664,7 +673,7 @@ export function runPilots(world: World, dt: number): void {
     if (goal.kind === "velocity" && p.goal.kind !== "velocity") {
       const mostT = chans.reduce((m, c) => m + c.gain, 0);
       const brake = Math.max(0.3, (authority * mostT) / ship.mass - length(g));
-      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids), 3 + 4 * s, 5 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
+      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids, image), 3 + 4 * s, 5 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
       if (steered.avoiding.length) label += ", steering round";
       p.plan.avoiding = steered.avoiding;
       goal = { kind: "velocity", velocity: steered.v };

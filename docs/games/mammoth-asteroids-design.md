@@ -71,6 +71,11 @@ G ≈ R² / M. That is about 0.02 at ρ = 20 kg/m².
 parcels) a step. It is measured in the first engine PR (§5, step 3). If it is over budget, the
 options go to Chloe before anything is changed.
 
+*Built and measured (step 3 of the plan).* Level 6 averages 2.96 ms a step in Node on the build
+machine, against the 6 ms budget, about 0.8 ms of it rock gravity; the table is in `docs/spec.md`
+("What it costs"). Within budget, so nothing was changed in the physics. To repeat on an iPad once
+the game runs.
+
 ### 1.4 Gold that can't be destroyed (AST-010)
 
 `AsteroidSpec.goldIndestructible?: boolean`. Gold pieces are then given no material, so contacts

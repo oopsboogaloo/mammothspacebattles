@@ -138,4 +138,32 @@ describe("explosive shells", () => {
     // Without a material, nothing on the rock is wrecked.
     expect(shoot(false).bodies.some((b) => /^r[a-d]-\d+$/.test(b.id) && b.integrity < 1)).toBe(false);
   }, 300_000);
+
+  it("FLT-016 in a wrapped world a blast reaches across the edge: a plate just over it is damaged as one the same distance away on the near side", () => {
+    const plate = (id: string, x: number) => box(id, 0.3, 0.3, { position: { x, y: 0 }, material: { threshold: 0, toughness: 1e9 }, fixed: true });
+    const blast = (wrap: boolean) => {
+      const w = createWorld(
+        1,
+        [
+          { ...disc("shell", { mass: 1, position: { x: 9.5, y: 0 } }), shape: { kind: "disc", radius: 0.1 }, explosive: { charge: 0.5, fragments: 0, radius: 3, armed: true, trigger: true } } as never,
+          plate("near", 8.5), // 1 m to its left
+          plate("across", -9.5), // 1 m to its right, across the edge
+          plate("far", 0),
+        ],
+        { x: 0, y: 0 },
+        { bounds: { min: { x: -10, y: -10 }, max: { x: 10, y: 10 }, wrap } },
+      );
+      stepInPlace(w, [], test);
+      expect(w.events.some((e) => e.type === "detonation")).toBe(true);
+      return (id: string) => 1 - w.bodies.find((b) => b.id === id)!.integrity;
+    };
+    const round = blast(true);
+    expect(round("near")).toBeGreaterThan(0);
+    expect(round("across")).toBeCloseTo(round("near"), 12);
+    expect(round("far")).toBe(0);
+    // Where the world doesn't wrap, the plate at the other side is 19 m away: untouched.
+    const open = blast(false);
+    expect(open("near")).toBe(round("near"));
+    expect(open("across")).toBe(0);
+  });
 });

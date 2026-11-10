@@ -559,19 +559,39 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
   if (!src.length) return;
   // Sources that feel each other (FLT-014): a source never pulls its own assembly's parts.
   const roots = world.bodies.some((b) => b.gravity?.feels) ? assemblyRoots(world) : null;
+  // The sources as plain numbers, and the nearest copy worked out in place (as nearestOffset does):
+  // with every piece of every rock a source (AST-009) this loop runs sources × bodies times a step.
+  const n = src.length;
+  const sx = src.map((s) => s.position.x);
+  const sy = src.map((s) => s.position.y);
+  const mu = src.map((s) => s.gravity!.mu);
+  const core2 = src.map((s) => s.gravity!.core * s.gravity!.core);
+  const sroot = roots ? src.map((s) => roots.get(s.id) ?? s.id) : null;
+  const wrap = !!world.bounds.wrap;
+  const w = world.bounds.max.x - world.bounds.min.x;
+  const h = world.bounds.max.y - world.bounds.min.y;
+  const out = { x: 0, y: 0 };
+  /** The pull at p, into `out`. */
   const pull = (p: Vec2, self?: string, root?: string): Vec2 => {
     let ax = 0;
     let ay = 0;
-    for (const s of src) {
-      if (s.id === self) continue;
-      if (root !== undefined && (roots!.get(s.id) ?? s.id) === root) continue;
-      const d = nearestOffset(world, p, s.position);
-      const r2 = d.x * d.x + d.y * d.y + s.gravity!.core * s.gravity!.core;
-      const k = s.gravity!.mu / (r2 * Math.sqrt(r2));
-      ax += k * d.x;
-      ay += k * d.y;
+    for (let i = 0; i < n; i++) {
+      if (self !== undefined && src[i].id === self) continue;
+      if (root !== undefined && sroot![i] === root) continue;
+      let dx = sx[i] - p.x;
+      let dy = sy[i] - p.y;
+      if (wrap) {
+        dx -= w * Math.round(dx / w);
+        dy -= h * Math.round(dy / h);
+      }
+      const r2 = dx * dx + dy * dy + core2[i];
+      const k = mu[i] / (r2 * Math.sqrt(r2));
+      ax += k * dx;
+      ay += k * dy;
     }
-    return { x: ax, y: ay };
+    out.x = ax;
+    out.y = ay;
+    return out;
   };
   for (const r of rbs) {
     if (r.invMass === 0 || (r.body.gravity && !r.body.gravity.feels)) continue;

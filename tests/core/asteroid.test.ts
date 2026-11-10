@@ -165,3 +165,92 @@ describe("asteroid minerals and larger fragments", () => {
     }
   });
 });
+
+describe("asteroids whose every piece pulls, and gold that can't be destroyed (Mammoth Asteroids)", () => {
+  const test = getProfile("test");
+  const G = 0.02;
+  const pulling = { ...spec, density: 20, bond: 20_000, gold: 2, gravity: { G } };
+
+  it("AST-009 every piece pulls by its mass (gold by its own), softened by its size, and feels other rocks", () => {
+    const a = generateAsteroid(pulling);
+    for (const b of a.bodies) {
+      const reach = Math.max(...(b.shape as { vertices: { x: number; y: number }[] }).vertices.map((v) => Math.hypot(v.x, v.y)));
+      expect(b.gravity).toMatchObject({ mu: G * b.mass, feels: true });
+      expect(b.gravity!.core).toBeCloseTo(reach, 12);
+    }
+    const plain = generateAsteroid({ ...pulling, gold: 0 });
+    const gold = a.bodies.filter((b) => b.mineral === "gold");
+    expect(gold).toHaveLength(2);
+    for (const g of gold) expect(g.gravity!.mu).toBeCloseTo(2 * plain.bodies.find((b) => b.id === g.id)!.gravity!.mu, 12);
+    expect(generateAsteroid({ ...pulling, gravity: { G, core: 3 } }).bodies.every((b) => b.gravity!.core === 3)).toBe(true);
+    expect(generateAsteroid(spec).bodies.every((b) => b.gravity === undefined)).toBe(true);
+  });
+
+  it("AST-009 a rock's pieces don't pull each other: alone it stays exactly at rest, whole; a probe falls toward it at about G·M/r²", () => {
+    const a = generateAsteroid(pulling);
+    const M = a.bodies.reduce((m, b) => m + b.mass, 0);
+    const alone = createWorld(1, a.bodies, { x: 0, y: 0 }, { joints: a.joints }, test);
+    for (let i = 0; i < 240; i++) stepInPlace(alone, [], test);
+    expect(alone.bodies.every((b) => b.velocity.x === 0 && b.velocity.y === 0 && b.angularVelocity === 0)).toBe(true);
+    expect(parts(alone, "a-")).toBe(1);
+    const probe = { id: "probe", shape: { kind: "disc" as const, radius: 0.2 }, mass: 1, position: { x: 40, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 };
+    const w = createWorld(1, [...a.bodies, probe], { x: 0, y: 0 }, { joints: a.joints }, test);
+    const comX = a.bodies.reduce((x, b) => x + b.mass * b.position.x, 0) / M;
+    stepInPlace(w, [], test);
+    const p = w.bodies.find((b) => b.id === "probe")!;
+    const r = 40 - comX;
+    expect(-p.velocity.x / test.timestep).toBeGreaterThan(0.95 * ((G * M) / (r * r)));
+    expect(-p.velocity.x / test.timestep).toBeLessThan(1.05 * ((G * M) / (r * r)));
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("AST-009 a piece broken off is pulled back by the rest of its rock, and the rock toward it", () => {
+    const a = generateAsteroid(pulling);
+    // The piece furthest out, cut loose and set 2 m further out, at rest.
+    const far = a.bodies.reduce((m, b) => (Math.hypot(b.position.x, b.position.y) > Math.hypot(m.position.x, m.position.y) ? b : m));
+    const out = Math.hypot(far.position.x, far.position.y);
+    const dir = { x: far.position.x / out, y: far.position.y / out };
+    far.position = { x: far.position.x + 2 * dir.x, y: far.position.y + 2 * dir.y };
+    const w = createWorld(1, a.bodies, { x: 0, y: 0 }, { joints: a.joints.filter((j) => j.a !== far.id && j.b !== far.id) }, test);
+    for (let i = 0; i < 240; i++) stepInPlace(w, [], test);
+    const piece = w.bodies.find((b) => b.id === far.id)!;
+    const rest = w.bodies.filter((b) => b.id !== far.id);
+    expect(piece.velocity.x * dir.x + piece.velocity.y * dir.y).toBeLessThan(-0.01); // falling back
+    const restP = rest.reduce((s, b) => s + b.mass * (b.velocity.x * dir.x + b.velocity.y * dir.y), 0);
+    expect(restP).toBeGreaterThan(0); // and the rock comes to meet it
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("AST-010 indestructible gold has no material: a blast that wrecks the rock leaves the gold whole, and loose", () => {
+    const weak = { name: "rock", threshold: 10, toughness: 100 };
+    const rock = generateAsteroid({ ...spec, radius: 3, pieces: 12, material: weak, gold: 2, goldIndestructible: true });
+    const gold = rock.bodies.filter((b) => b.mineral === "gold").map((b) => b.id);
+    expect(gold).toHaveLength(2);
+    for (const b of rock.bodies) expect(b.material === undefined).toBe(gold.includes(b.id));
+    // Destructible gold keeps its tougher material, as before.
+    expect(generateAsteroid({ ...spec, material: weak, gold: 1 }).bodies.find((b) => b.mineral === "gold")!.material!.name).toBe("gold");
+    const charge = { id: "charge", shape: { kind: "disc" as const, radius: 0.1 }, mass: 1, position: { x: 5, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, explosive: { charge: 0.5, fragments: 0, radius: 12, armed: true, trigger: true } };
+    const w = createWorld(1, [...rock.bodies, charge], { x: 0, y: 0 }, { joints: rock.joints });
+    for (let i = 0; i < 30; i++) stepInPlace(w, [], sandbox);
+    expect(w.events.some((e) => e.type === "detonation")).toBe(true);
+    const left = w.bodies.filter((b) => b.id.startsWith("a-"));
+    expect(left.filter((b) => b.mineral === "gold").map((b) => b.id).sort()).toEqual([...gold].sort());
+    for (const b of left.filter((x) => x.mineral === "gold")) expect(b.integrity).toBe(1);
+    expect(left.filter((b) => b.mineral !== "gold").length).toBeLessThan(rock.bodies.length - 2); // rock was wrecked and removed
+    // The gold's welds went with the rock round it.
+    expect(w.joints.filter((j) => gold.includes(j.a) || gold.includes(j.b)).length).toBeLessThan(rock.joints.filter((j) => gold.includes(j.a) || gold.includes(j.b)).length);
+  });
+
+  it("AST-009 AST-010 a scenario's asteroid may ask for both, and they are validated", () => {
+    const raw = readJson(join(ROOT, "scenarios", "asteroid-collision.json")) as { world: { asteroids: Record<string, unknown>[] } };
+    Object.assign(raw.world.asteroids[0], { gravity: { G: 0.02 }, goldIndestructible: true });
+    const w = initialWorld(parseScenario(raw));
+    expect(w.bodies.filter((b) => b.gravity?.feels).length).toBeGreaterThan(0);
+    for (const bad of [{ gravity: { G: 0 } }, { gravity: { G: 1, core: -1 } }, { gravity: 3 }, { goldIndestructible: "yes" }]) {
+      const r = readJson(join(ROOT, "scenarios", "asteroid-collision.json")) as { world: { asteroids: Record<string, unknown>[] } };
+      Object.assign(r.world.asteroids[0], bad);
+      expect(() => parseScenario(r)).toThrow();
+    }
+  });
+});
+
