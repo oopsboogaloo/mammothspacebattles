@@ -46,6 +46,24 @@ export interface ArcadeSpec {
     /** The most rocks in a level (default 8): level N has N, up to this (MAS-020). */
     most?: number;
   };
+  /**
+   * Gunships (MAS-040…043): from level `fromLevel` one beams in `first` game seconds into the level
+   * and another every `every` after, flown by a Hunting pilot whose combat skill is `skill.base` at
+   * `fromLevel`, `perLevel` more each level, up to `max`. Past the level where the rocks stop
+   * growing (`rocks.most`), each level changes the two times by `late.first` and `late.every` (down
+   * to their least) and adds `late.skill` (up to `late.skillMax`).
+   */
+  gunship?: {
+    /** The gunship, laid out round the origin (its hull there), pointing up, with `{n}` in its ids and channels; a pilot on one of its bodies. */
+    template: { bodies: BodyInput[]; joints?: JointInput[]; links?: LinkInput[] };
+    /** Its hull, with `{n}`. */
+    hull: string;
+    fromLevel: number;
+    first: number;
+    every: number;
+    skill: { base: number; perLevel: number; max: number };
+    late?: { first: number; firstMin: number; every: number; everyMin: number; skill: number; skillMax: number };
+  };
   /** Game seconds between losing a ship and the next (default 1.25). */
   respawn?: number;
   /** Game seconds a new ship takes no damage after a loss (default 1). */
@@ -88,8 +106,16 @@ export interface ArcadeState {
   shells: Record<string, number>;
   /** Rock pieces a player's slug touched lately (their own rock's pieces with them): the step. */
   slugHits: Record<string, number>;
+  /** When the next gunship is due, s (none this level if undefined). */
+  nextGunship?: number;
+  /** A gunship about to beam in: when, and where its ring is. */
+  incoming?: { at: number; x: number; y: number };
+  /** This level's gunships (`g{n}-…`), and whether each is out of the fight. */
+  gunships: { n: number; hull: string; out: boolean }[];
+  /** Gunships so far this game: numbers the next. */
+  gunshipCount: number;
   /** For the game-over screen. */
-  stats: { gold: number; welds: number; shots: number };
+  stats: { gold: number; welds: number; shots: number; gunships: number };
 }
 
 export interface ArcadeGame {
@@ -106,7 +132,10 @@ export interface ArcadeOps {
 
 export const ARCADE_DEFAULTS = { lives: 3, respawn: 1.25, grace: 1, clearPause: 1.5, shellLife: 0.7, pace: 0.5, most: 8 };
 
-export const ARCADE_SCORES = { gold: 500, weld: 10 };
+export const ARCADE_SCORES = { gold: 500, weld: 10, gunship: 1000 };
+/** A gunship's ring shows this long before it beams in, game s; and it comes in at least this far from the player, m. */
+const GUNSHIP_WARNING = 0.5;
+const GUNSHIP_CLEAR = 70;
 /** A weld that breaks within this long of a player's slug touching its rock scores, game s. */
 const SLUG_CREDIT = 0.25;
 /** A rock keeps this far from the ship, and from the next rock's edge, when a level is laid out, m. */
@@ -262,7 +291,91 @@ function layout(world: World, game: ArcadeGame, ops: ArcadeOps, shipAt: Vec2): v
   }
   state.gold = { total: gold.length, left: gold.sort() };
   state.levelStart = world.time;
+  // The level's gunships: none yet, the first due when the level's plan says.
+  const plan = gunshipPlan(spec, state.level);
+  state.gunships = [];
+  state.incoming = undefined;
+  state.nextGunship = plan ? world.time + plan.first : undefined;
   world.events.push({ tick: world.tick, type: "arcade.level", data: { level: state.level, rocks: count, gold: gold.length } });
+}
+
+/** When a level's gunships come, and how well they fight (MAS-040, MAS-041, MAS-043); null if it has none. */
+export function gunshipPlan(spec: ArcadeSpec, level: number): { first: number; every: number; skill: number } | null {
+  const g = spec.gunship;
+  if (!g || level < g.fromLevel) return null;
+  const most = spec.rocks.most ?? ARCADE_DEFAULTS.most;
+  const extra = g.late ? Math.max(0, level - most) : 0;
+  const skill = Math.min(g.skill.max, g.skill.base + g.skill.perLevel * (level - g.fromLevel));
+  if (!g.late || extra === 0) return { first: g.first, every: g.every, skill };
+  return {
+    first: Math.max(g.late.firstMin, g.first + g.late.first * extra),
+    every: Math.max(g.late.everyMin, g.every + g.late.every * extra),
+    skill: Math.min(g.late.skillMax, skill + g.late.skill * extra),
+  };
+}
+
+/** How clear a point stays over the next few seconds: its least distance to any free body's edge, each taken to drift in a straight line, m. */
+function clearance(world: World, p: Vec2, free: { b: World["bodies"][number]; reach: number }[]): number {
+  let worst = Infinity;
+  for (const { b, reach } of free) {
+    const r = offset(world, p, b.position);
+    const v = b.velocity;
+    const vv = v.x * v.x + v.y * v.y;
+    const t = vv > 1e-12 ? Math.min(LOOK_AHEAD, Math.max(0, -(r.x * v.x + r.y * v.y) / vv)) : 0;
+    const cx = r.x + v.x * t;
+    const cy = r.y + v.y * t;
+    const d = Math.sqrt(cx * cx + cy * cy) - reach;
+    if (d < worst) worst = d;
+  }
+  return worst;
+}
+
+/**
+ * Where a gunship beams in (MAS-040): of a 9 × 5 grid over the whole arena, a point at least 70 m
+ * from the player the short way round whose clearance over the next few seconds is greatest
+ * (clearances past 40 m count the same); the furthest from the player wins a tie.
+ */
+export function gunshipSpot(world: World, player: Vec2): Vec2 {
+  const W = world.bounds.max.x - world.bounds.min.x;
+  const H = world.bounds.max.y - world.bounds.min.y;
+  const free = world.bodies.filter((b) => !b.fixed).map((b) => ({ b, reach: massProps(b.shape, 1).boundingRadius }));
+  let best: Vec2 | null = null;
+  let bestScore = -Infinity;
+  let bestFar = -Infinity;
+  for (const least of [GUNSHIP_CLEAR, 0]) {
+    for (let i = 0; i < 9; i++)
+      for (let j = 0; j < 5; j++) {
+        const p = { x: world.bounds.min.x + ((i + 0.5) * W) / 9, y: world.bounds.min.y + ((j + 0.5) * H) / 5 };
+        const o = offset(world, player, p);
+        const far = Math.sqrt(o.x * o.x + o.y * o.y);
+        if (far < least) continue;
+        const score = Math.min(clearance(world, p, free), CLEAR_ENOUGH);
+        if (score > bestScore || (score === bestScore && far > bestFar)) {
+          best = p;
+          bestScore = score;
+          bestFar = far;
+        }
+      }
+    if (best) break;
+  }
+  return best ?? centre(world);
+}
+
+/** Beams gunship number `state.gunshipCount + 1` in at a spot, at rest, pointing up, its pilot's combat skill the level's. */
+function addGunship(world: World, game: ArcadeGame, ops: ArcadeOps, at: Vec2, skill: number): void {
+  const { spec, state } = game;
+  const g = spec.gunship!;
+  const n = (state.gunshipCount += 1);
+  const t = withN(g.template, n);
+  for (const b of t.bodies) {
+    const body: BodyInput = { ...b, position: { x: at.x + b.position.x, y: at.y + b.position.y }, velocity: { x: 0, y: 0 }, angularVelocity: 0 };
+    if (body.pilot) body.pilot = { ...body.pilot, skill: { ...body.pilot.skill, combat: skill } };
+    ops.addBody(world, body);
+  }
+  for (const j of t.joints ?? []) ops.addJoint(world, j);
+  for (const l of t.links ?? []) ops.addLink(world, l);
+  state.gunships.push({ n, hull: withN(g.hull, n), out: false });
+  world.events.push({ tick: world.tick, type: "arcade.gunship", data: { n, x: at.x, y: at.y, skill } });
 }
 
 /**
@@ -282,18 +395,7 @@ export function clearestSpot(world: World): Vec2 {
   let best = points[0];
   let bestScore = -Infinity;
   for (const p of points) {
-    let worst = Infinity;
-    for (const { b, reach } of free) {
-      const r = offset(world, p, b.position);
-      const v = b.velocity;
-      const vv = v.x * v.x + v.y * v.y;
-      const t = vv > 1e-12 ? Math.min(LOOK_AHEAD, Math.max(0, -(r.x * v.x + r.y * v.y) / vv)) : 0;
-      const cx = r.x + v.x * t;
-      const cy = r.y + v.y * t;
-      const d = Math.sqrt(cx * cx + cy * cy) - reach;
-      if (d < worst) worst = d;
-    }
-    const score = Math.min(worst, CLEAR_ENOUGH);
+    const score = Math.min(clearance(world, p, free), CLEAR_ENOUGH);
     if (score > bestScore) {
       bestScore = score;
       best = p;
@@ -318,7 +420,9 @@ export function startArcade(world: World, spec: ArcadeSpec, ops: ArcadeOps): Arc
       beams: [],
       shells: {},
       slugHits: {},
-      stats: { gold: 0, welds: 0, shots: 0 },
+      gunships: [],
+      gunshipCount: 0,
+      stats: { gold: 0, welds: 0, shots: 0, gunships: 0 },
     },
   };
   const at = centre(world);
@@ -426,8 +530,41 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
     }
   }
 
+  // 5. A gunship out of the fight (the same rule) scores once; its pilot lets go and its wreck stays.
+  for (const g of s.gunships) {
+    if (g.out || shipState(world, g.hull).flies) continue;
+    g.out = true;
+    s.score += ARCADE_SCORES.gunship;
+    s.stats.gunships += 1;
+    const prefix = `g${g.n}-`;
+    for (const b of world.bodies) {
+      if (!b.id.startsWith(prefix) || !b.pilot) continue;
+      for (const ch of Object.keys(b.pilot.command)) world.controls[ch] = 0;
+      delete b.pilot;
+    }
+    world.links = world.links.filter((l) => !(l.kind === "control" && l.to.startsWith(prefix)));
+    world.events.push({ tick: world.tick, type: "arcade.gunship.out", data: { n: g.n } });
+  }
+
   // 6. Protection over.
   if (due(s.graceUntil)) endGrace(world, game);
+
+  // 9. Gunships: a ring where the next will come, then the gunship.
+  if (spec.gunship && (s.phase === "playing" || s.phase === "waiting")) {
+    const plan = gunshipPlan(spec, s.level);
+    if (s.incoming && due(s.incoming.at)) {
+      const at = { x: s.incoming.x, y: s.incoming.y };
+      s.incoming = undefined;
+      if (plan) addGunship(world, game, ops, at, plan.skill);
+      changed = true;
+    } else if (plan && !s.incoming && due(s.nextGunship)) {
+      const hull = world.bodies.find((b) => b.id === hullId);
+      const at = gunshipSpot(world, hull ? hull.position : centre(world));
+      s.incoming = { at: now + GUNSHIP_WARNING, x: at.x, y: at.y };
+      s.beams.push({ at: world.tick, x: at.x, y: at.y, r: 6 });
+      s.nextGunship = (s.nextGunship ?? now) + plan.every;
+    }
+  }
 
   // 7. The last gold collected: the bonus, a pause, then the next level.
   if ((s.phase === "playing" || s.phase === "waiting") && s.gold.total > 0 && !s.gold.left.length) {

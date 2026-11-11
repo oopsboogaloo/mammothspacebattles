@@ -2,7 +2,7 @@
 // (Lander's breakable LAND ship with a railgun on its nose) and the rocks' tuning. The game itself
 // lays out each level (src/core/arcade.ts).
 //   node scripts/asteroids.ts            writes scenarios/asteroids.json
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
 import { landShip, material, WELD, YIELD } from "./landShip.ts";
@@ -45,6 +45,24 @@ function ship() {
   };
 }
 
+/**
+ * The gunship: the stress test's Gunship 3 with its Hunting pilot (ids and channels `g{n}`, side
+ * "enemy"), without its tractor. Its shell is a small solid slug, not Gunship 3's 1 kg explosive
+ * one: sized so a hit damages the LAND ship without usually destroying it (MAS-041).
+ */
+function gunship() {
+  const stress = JSON.parse(readFileSync(join(root, "scenarios", "stress-test.json"), "utf8")) as { ui: { spawn: { bodies: Json[]; joints: Json[]; links: Json[] } } };
+  const t = JSON.parse(JSON.stringify(stress.ui.spawn).replaceAll("s{n}", "g{n}")) as { bodies: Json[]; joints: Json[]; links: Json[] };
+  for (const b of t.bodies) {
+    delete b.tractor;
+    if (b.pilot) b.pilot = { ...(b.pilot as Json), side: "enemy" };
+    const mag = b.magazine as (Json & { shell: Json }) | undefined;
+    if (mag) mag.shell = { shape: { kind: "disc", radius: 0.1 }, mass: 0.15, restitution: 0, friction: 0.3 };
+  }
+  return { bodies: t.bodies, joints: t.joints, links: t.links.filter((l) => l.channel !== "g{n}.tractor") };
+}
+type Json = Record<string, unknown>;
+
 const scenario = {
   schema: 1,
   name: "asteroids",
@@ -75,6 +93,17 @@ const scenario = {
         speed: [2, 6],
         spin: 0.1,
         most: 8,
+      },
+      // Game seconds: 20 s into the level and every minute after, on screen (MAS-040). From level 9,
+      // where the rocks stop growing, 2 s sooner and 5 s closer together a level, and more skilled (MAS-043).
+      gunship: {
+        template: gunship(),
+        hull: "g{n}-hull",
+        fromLevel: 3,
+        first: 10,
+        every: 30,
+        skill: { base: 0.3, perLevel: 0.1, max: 0.8 },
+        late: { first: -1, firstMin: 5, every: -2.5, everyMin: 10, skill: 0.05, skillMax: 1 },
       },
       respawn: 1.25,
       grace: 1,

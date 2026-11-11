@@ -203,6 +203,47 @@ welds, with `gravity` and `goldIndestructible` on.
 Wiring in `world.ts`: `world.arcade?`, set from the scenario at start (`startArcade`), and
 `runArcade` in the step next to the duel's hook. Validation in `scenario.ts`.
 
+### 2.4 Gunships (step 6 of the plan, built)
+
+- **The spec's `gunship`**: the template (Gunship 3 from the stress test, ids and channels `g{n}`,
+  side "enemy", no tractor), its hull, `fromLevel` 3, `first` 10 and `every` 30 game s, the skill
+  (0.3 at level 3, 0.1 more a level, to 0.8), and `late` for the levels past `rocks.most`
+  (MAS-043). `gunshipPlan(spec, level)` gives a level's times and skill.
+- **Coming in.** When one is due, a ring shows at its spot for 0.5 game s, then it beams in there
+  at rest. The spot (`gunshipSpot`) is the clearest of a 9 × 5 grid over the whole arena that is
+  at least 70 m from the player the short way round; the furthest from the player wins a tie.
+- **Out of the fight** by the duel's rule (hull gone, or no working engine welded to it): 1,000,
+  once, whatever destroyed it. Its pilot is removed, its control links are cut, its wreck stays.
+- **At a level clear** they beam out with everything else. Gunship numbers go on counting through
+  the game, so no id is used twice.
+- **Its shell** is a 0.15 kg solid disc at 96 m/s (691 J), not Gunship 3's 1 kg explosive shell. A
+  square hit takes about 6% off a hull part of the LAND ship and over half the tank; a glancing
+  one about 1%; one on a light chamber wall, nothing. In a trial against a ship that didn't move,
+  a gunship at skill 0.3 needed five hits in 1.3 s to put it out. Its shells last 0.7 game s like
+  the player's (67 m), which is past its stand-off distance of 35–55 m.
+- **The pilot sees the player's ship** because a ship is now a working engine and a gun of either
+  kind: a railgun counts as a gun (before, only a gas cannon did). No existing scenario changes
+  (the same hashes).
+- **The player's slug against a gunship:** Gunship 3's parts are thin (threshold 50 J, toughness
+  600 J), and a slug carries 2,000 J, so one slug destroys the part it hits. To tune in step 8.
+
+**What gunships cost** (level 8, the ship idle and protected so it stays; 2,400 steps; Node on the
+cloud build machine, 11 November 2026; budget 6 ms a step):
+
+| Gunships flying | Bodies | Mean step, ms | Worst step, ms | Mean with no rock gravity, ms |
+|---|---|---|---|---|
+| 0 | 179 | 2.84 | 9.9 | 1.91 |
+| 1 | 202 | 4.06 | 9.8 | 2.70 |
+| 2 | 225 | 4.56 | 12.2 | 3.26 |
+| 3 | 248 | 5.48 | 15.1 | 3.82 |
+| 4 | 268 | 6.28 | 22.2 | 4.29 |
+
+Each gunship costs about 0.9 ms a step, and nothing limits how many pile up: from level 12 one
+comes every 20 s on screen. Four at once are over the budget here, and an iPad is slower. About
+2 ms of the 6.3 ms is per-piece rock gravity (each of a gunship's 23 parts is pulled by all 160
+pieces), which the agreed fallback (§1.3: one source for each joined group) would mostly remove.
+**Open, for Chloe:** whether to limit how many gunships fly at once.
+
 ## 3. The ship and scenarios, `scripts/asteroids.ts`
 
 - **Ship:** Lander's breakable LAND ship (its materials, welds and yield are factored out of
