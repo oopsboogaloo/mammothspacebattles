@@ -123,9 +123,9 @@ below:
   then the game is over.
 - **The gunship's settings** (`gunship`, and step 5 and 9 of the hook) are not in the spec type
   yet; they come with step 6.
-- **Rock tuning is provisional** (`bond` 20,000 N/m, material threshold 100 J, toughness 20,000 J):
+- **Rock tuning was provisional** (`bond` 20,000 N/m, material threshold 100 J, toughness 20,000 J):
   in a trial of 60 slugs into a still rock, each slug took about 4% off the piece it hit, a piece
-  was destroyed after about 30, and the first welds broke then. Retuned in step 8.
+  was destroyed after about 30, and the first welds broke then. Changed in §2.3a.
 - **Holding fire pushes the ship back hard**: each shot kicks it 0.59 m/s (20 N·s against 34 kg),
   so a full second of fire is 4.7 m/s. For the tuning after play.
 
@@ -202,6 +202,33 @@ welds, with `gravity` and `goldIndestructible` on.
 
 Wiring in `world.ts`: `world.arcade?`, set from the scenario at start (`startArcade`), and
 `runArcade` in the step next to the duel's hook. Validation in `scenario.ts`.
+
+### 2.3a The explosive slug (11 November 2026, after Chloe first played)
+
+The solid slug did nothing a player could see: rock pieces took 20,000 J to destroy and a slug
+carries 2,000 J. Two changes:
+
+- **The slug is explosive:** 0.05 kg of its 0.1 kg is charge (TNT's heat), no casing fragments,
+  blast radius 3 m. In this profile chemical energy is scaled down 100 times with the gas, so the
+  charge is 2.1 kJ, about the slug's own energy of motion. On its own that changed little
+  (measured: charges from 2 g to 20 g on the tough rock all left the first weld break at about
+  the same shot).
+- **Rock pieces are a tenth as tough** (toughness 2,000 J, threshold 100 J as before).
+
+Measured on a still rock 40 m away, firing steadily (8 slugs a game second):
+
+| | First weld breaks at slug | Rock first splits at slug | After 16 slugs |
+|---|---|---|---|
+| Solid slug, toughness 20,000 (before) | 28 | never in 55 | nothing broken |
+| Explosive, toughness 20,000 | 22 | never in 55 | nothing broken |
+| Explosive, toughness 5,000 | 6 | 54 | 16 welds, 3 pieces |
+| **Explosive, toughness 2,000 (now)** | **4** | **11** | **26 welds, 6 pieces** |
+| Explosive, toughness 1,000 | 2 | 9 | 29 welds, 7 pieces |
+
+Step time was unchanged (about 1 ms a step on level 1 while firing), and the ledger stayed clean.
+The slug has no material now: it bursts on a strike, or bounces off a graze and goes at the end
+of its 0.7 s. Rocks colliding with each other break up more than before, as their pieces are
+weaker to every blow. The gunship's shell stays a solid slug.
 
 ### 2.4 Gunships (step 6 of the plan, built)
 

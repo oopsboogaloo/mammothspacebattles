@@ -17,12 +17,16 @@ const WIDTH = 284;
 
 /**
  * The railgun: a small block on top of the hull, on the ship's centre line, so its recoil pushes the
- * ship straight back and doesn't turn it. Its slug is light and weak: it breaks up when it hits.
+ * ship straight back and doesn't turn it. Its slug is light and explosive: it bursts when it hits.
  * Times are game seconds: a reload of 0.125 is four shots a second on screen.
  */
 function ship() {
   const s = landShip("p{n}-", ECONOMY);
-  const slug = { shape: { kind: "disc", radius: 0.06 }, mass: 0.1, restitution: 0, friction: 0.3, material: { name: "slug", threshold: 0, toughness: 50 } };
+  // An explosive slug (asked for by Chloe after playing, 11 November 2026: a solid one did nothing to
+  // the rocks): half its 0.1 kg is charge, which goes off when it strikes. No casing fragments: the
+  // blast damages what is within 3 m and its gas pushes. In this profile's gas scale the charge is
+  // 2.1 kJ, about the slug's own 2 kJ of motion.
+  const slug = { shape: { kind: "disc", radius: 0.06 }, mass: 0.1, restitution: 0, friction: 0.3, explosive: { charge: 0.05, fragments: 0, radius: 3 } };
   const gun = {
     id: "p{n}-gun",
     shape: { kind: "box", width: 0.5, height: 0.3 },
@@ -83,9 +87,11 @@ const scenario = {
         radius: 12,
         pieces: 20,
         density: 20,
-        // The mining tuning (tough pieces, weaker bonds), to retune for the slug (design §5 step 8).
+        // Pieces a tenth as tough as the mining tuning's (20,000 J), so the slug breaks a rock up: a
+        // weld goes by the fourth slug and the rock splits by about the eleventh (measured on a still
+        // rock). To tune further after play (design §5 step 8).
         bond: 20_000,
-        material: { name: "rock", threshold: 100, toughness: 20_000 },
+        material: { name: "rock", threshold: 100, toughness: 2000 },
         // About 1 m/s² at a large rock's surface: G ≈ R² / M, M ≈ 0.8 π R² × density.
         gravity: { G: 0.02 },
         gold: [2, 3],

@@ -215,7 +215,7 @@ describe("Mammoth Asteroids", () => {
     expect(breaks).toBeGreaterThan(0);
     expect(st(w).stats.welds).toBe(breaks);
     expect(st(w).score).toBe(ARCADE_SCORES.weld * breaks);
-    expect(st(w).stats.shots).toBeGreaterThan(10);
+    expect(st(w).stats.shots).toBeGreaterThan(0);
 
     // No slugs: a piece wrecked some other way takes its welds with it, and scores nothing.
     const quiet = game();
@@ -224,6 +224,42 @@ describe("Mammoth Asteroids", () => {
     quiet.step(0.1);
     expect(quiet.w.events.some((e) => e.type === "joint.break" && (e.data.a === piece.id || e.data.b === piece.id))).toBe(true);
     expect(st(quiet.w).score).toBe(0);
+  }, 120_000);
+
+  it("MAS-021 MAS-030 the explosive slug breaks a rock up: welds go within a few shots, pieces are wrecked, and the rock comes apart; a solid slug on the old tough rock did none of that", () => {
+    const shell = raw.world.arcade.ship.bodies.find((b: { id: string }) => b.id === "p{n}-gun").magazine.shell;
+    expect(shell).toMatchObject({ mass: 0.1, explosive: { charge: 0.05, fragments: 0, radius: 3 } });
+    const fire = (edit?: (scn: typeof raw) => void) => {
+      const { w, step } = game(edit);
+      rockAbove(w);
+      step(3, [set("fire", 1)]); // 24 slugs
+      const rockEvents = (type: string, key: string) => w.events.filter((e) => e.type === type && String(e.data[key]).startsWith("a1-0-")).length;
+      return {
+        w,
+        shots: st(w).stats.shots,
+        bursts: w.events.filter((e) => e.type === "detonation").length,
+        welds: rockEvents("joint.break", "a"),
+        wrecked: rockEvents("destroyed.removed", "id"),
+      };
+    };
+    const now = fire();
+    expect(now.shots).toBe(24);
+    expect(now.bursts).toBeGreaterThan(15); // nearly every slug reaches the rock and goes off
+    expect(now.welds).toBeGreaterThan(15);
+    expect(now.wrecked).toBeGreaterThanOrEqual(4);
+    expect(st(now.w).score).toBe(ARCADE_SCORES.weld * st(now.w).stats.welds);
+    expect(st(now.w).stats.welds).toBeGreaterThan(10);
+    // Gold is untouched by the blasts, and the ship by its own slugs.
+    expect(prefixed(now.w, "a1-0-").filter((b) => b.mineral === "gold")).toHaveLength(st(now.w).gold.total);
+    expect(st(now.w)).toMatchObject({ lost: false, lives: 3 });
+    expect(now.w.ledger.violations).toBe(0);
+    // As it was: a solid slug, and pieces ten times as tough. 24 slugs break nothing.
+    const before = fire((scn) => {
+      const gun = scn.world.arcade.ship.bodies.find((b: { id: string }) => b.id === "p{n}-gun");
+      delete gun.magazine.shell.explosive;
+      scn.world.arcade.rocks.material.toughness = 20_000;
+    });
+    expect(before).toMatchObject({ shots: 24, bursts: 0, welds: 0, wrecked: 0 });
   }, 120_000);
 
   it("MAS-031 MAS-032 MAS-033 a lost ship stays as a wreck the keys no longer fly; the next comes after the wait at a clear spot, at rest, protected for a while", () => {
