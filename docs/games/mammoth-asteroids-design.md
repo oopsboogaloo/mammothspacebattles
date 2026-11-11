@@ -380,6 +380,14 @@ would mostly remove. That is the next change.
   - **Measured in empty space** (LAND ship first, the same way): forward 4.29 → 12.9 m/s² (3.0
     times), turning 1.74 → 3.47 rad/s² (2.0 times), reverse 4.2 m/s². Economy 30: the tanks last
     about two minutes of full thrust. A step with the ship alone at full thrust is 1.3 ms.
+  - **Tuned after play (11 November 2026):** Chloe asked for a stronger forward engine, more
+    cannon damage and stronger gravity. The main thruster's flow is 4.86 kg/s: 19.3 m/s² forward
+    (half as much again), economy 45 for the same two minutes. The shell's charge has six times
+    TNT's energy and a 4 m blast (it had three times and 3 m): nine shells leave a rock in 8 chunks
+    with 11 of its 20 pieces destroyed. Rock gravity is doubled (G 0.186, about 2 m/s² at a large
+    rock's surface). Welds between a struck rock's pieces now score wherever in that rock they
+    break: the stronger blast destroys the piece it strikes in the same step, and only the welds
+    of that piece were being scored.
   - **Welds:** 3 times Lander's, the gun's mount 6 times, two welds between each tank and its
     generator. Nothing bends with all 40 shells fired still, forward, turning or reversing, nor
     spinning at 40 rad/s.
