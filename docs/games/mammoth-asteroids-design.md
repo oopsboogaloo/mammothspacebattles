@@ -81,6 +81,13 @@ gravity source for each joined group of pieces (each rock, and each chunk broken
 group's centre of mass with the group's mass. It needs no further sign-off. Not built: the
 per-piece model is inside the budget so far.
 
+*Built (11 November 2026), as AST-011.* With gunships flying, per-piece gravity was 1.2 ms of a
+5.8 ms step on level 8 (three gunships), so the fallback is now what the game uses: `rocks.gravity`
+is `{ G: 0.093, joined: true }`. `G` is higher than before because a joined rock's pull is softened
+by half its reach: about `G M / (1.4 R²)` at the surface, still about 1 m/s². Three gunships on
+level 8 now average 4.6 ms a step. The table is in `docs/spec.md` ("Rocks that pull as one").
+What it gives up: close in, a rock pulls toward its centre and not toward its nearer lumps.
+
 *Built and measured (step 3 of the plan).* Level 6 averages 2.96 ms a step in Node on the build
 machine, against the 6 ms budget, about 0.8 ms of it rock gravity; the table is in `docs/spec.md`
 ("What it costs"). Within budget, so nothing was changed in the physics. To repeat on an iPad once

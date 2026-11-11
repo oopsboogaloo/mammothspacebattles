@@ -76,13 +76,13 @@ describe("Mammoth Asteroids", () => {
       const dy = b.position.y - H * Math.round(b.position.y / H);
       expect(Math.hypot(dx, dy)).toBeGreaterThan(50 - 12 * 1.1);
     }
-    // Its gold: 2 or 3 pieces, which nothing can damage (AST-010); every piece pulls (AST-009).
+    // Its gold: 2 or 3 pieces, which nothing can damage (AST-010); the rock pulls as one (AST-011).
     const gold = pieces.filter((b) => b.mineral === "gold");
     expect(gold.length).toBeGreaterThanOrEqual(2);
     expect(gold.length).toBeLessThanOrEqual(3);
     expect(s.gold).toEqual({ total: gold.length, left: gold.map((b) => b.id).sort() });
     expect(gold.every((b) => b.material === undefined)).toBe(true);
-    expect(pieces.every((b) => b.gravity?.feels && b.gravity.mu > 0)).toBe(true);
+    expect(pieces.every((b) => b.gravity?.feels && b.gravity.joined && b.gravity.mu > 0)).toBe(true);
     // The ship: the LAND ship at the centre, at rest, with 40 shells and a full tank.
     expect(body(w, "p1-hull")).toMatchObject({ position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 });
     expect(body(w, "p1-gun")!.magazine).toMatchObject({ count: 40, railgun: { channel: "fire", speed: 96 } });

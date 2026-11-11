@@ -94,8 +94,10 @@ const scenario = {
         density: 6,
         bond: 800,
         material: { name: "rock", threshold: 100, toughness: 20_000 },
-        // About 1 m/s² at a large rock's surface: G ≈ R² / M, M ≈ 0.8 π R² × density.
-        gravity: { G: 0.067 },
+        // About 1 m/s² at a large rock's surface. The pieces welded together pull as one source
+        // (AST-011), softened by half the rock's reach, so at the surface the pull is about
+        // G M / (1.4 R²), with M ≈ 0.8 π R² × density.
+        gravity: { G: 0.093, joined: true },
         gold: [2, 3],
         compounds: [1, 2],
         speed: [2, 6],

@@ -254,3 +254,83 @@ describe("asteroids whose every piece pulls, and gold that can't be destroyed (M
   });
 });
 
+describe("rocks that pull as one (AST-011)", () => {
+  const test = getProfile("test");
+  const G = 0.02;
+  const pieces = { ...spec, density: 20, bond: 20_000, gold: 2, gravity: { G } };
+  const joined = { ...pieces, gravity: { G, joined: true } };
+  const probe = (x: number) => ({ id: "probe", shape: { kind: "disc" as const, radius: 0.2 }, mass: 1, position: { x, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
+  /** The acceleration a probe at x feels in its first step, m/s² toward the rock (at the origin). */
+  const pullAt = (rockSpec: typeof pieces, x: number) => {
+    const a = generateAsteroid(rockSpec);
+    const w = createWorld(1, [...a.bodies, probe(x)], { x: 0, y: 0 }, { joints: a.joints }, test);
+    stepInPlace(w, [], test);
+    expect(w.ledger.violations).toBe(0);
+    return -w.bodies.find((b) => b.id === "probe")!.velocity.x / test.timestep;
+  };
+
+  it("AST-011 the generator marks every piece as joined, with the same mu and core as before", () => {
+    const a = generateAsteroid(joined);
+    const b = generateAsteroid(pieces);
+    expect(a.bodies.every((x) => x.gravity?.joined === true && x.gravity.feels === true)).toBe(true);
+    expect(a.bodies.map((x) => [x.gravity!.mu, x.gravity!.core])).toEqual(b.bodies.map((x) => [x.gravity!.mu, x.gravity!.core]));
+    expect(b.bodies.every((x) => x.gravity!.joined === undefined)).toBe(true);
+  });
+
+  it("AST-011 from a distance a joined rock pulls as its pieces do; near its surface a little less, softened by half its reach", () => {
+    // 40 m from a 6 m rock: within 2% of the pieces' pull, and of G·M/r².
+    const far = pullAt(joined, 40);
+    expect(far / pullAt(pieces, 40)).toBeGreaterThan(0.98);
+    expect(far / pullAt(pieces, 40)).toBeLessThan(1.02);
+    // 15 m out (the rock reaches about 6.6 m): within 10%.
+    expect(pullAt(joined, 15) / pullAt(pieces, 15)).toBeGreaterThan(0.9);
+    expect(pullAt(joined, 15) / pullAt(pieces, 15)).toBeLessThan(1.1);
+    // Just off its surface: weaker than the pieces' pull, but more than half of it.
+    const near = pullAt(joined, 8) / pullAt(pieces, 8);
+    expect(near).toBeLessThan(1);
+    expect(near).toBeGreaterThan(0.5);
+  });
+
+  it("AST-011 a joined rock alone stays exactly at rest, whole: its pieces don't pull each other", () => {
+    const a = generateAsteroid(joined);
+    const w = createWorld(1, a.bodies, { x: 0, y: 0 }, { joints: a.joints }, test);
+    for (let i = 0; i < 240; i++) stepInPlace(w, [], test);
+    expect(w.bodies.every((b) => b.velocity.x === 0 && b.velocity.y === 0 && b.angularVelocity === 0)).toBe(true);
+    expect(parts(w, "a-")).toBe(1);
+  });
+
+  it("AST-011 a piece that breaks off is a source of its own: it falls back to the rock, and the rock comes to meet it", () => {
+    const a = generateAsteroid(joined);
+    const far = a.bodies.reduce((m, b) => (Math.hypot(b.position.x, b.position.y) > Math.hypot(m.position.x, m.position.y) ? b : m));
+    const out = Math.hypot(far.position.x, far.position.y);
+    const dir = { x: far.position.x / out, y: far.position.y / out };
+    far.position = { x: far.position.x + 2 * dir.x, y: far.position.y + 2 * dir.y };
+    const w = createWorld(1, a.bodies, { x: 0, y: 0 }, { joints: a.joints.filter((j) => j.a !== far.id && j.b !== far.id) }, test);
+    for (let i = 0; i < 240; i++) stepInPlace(w, [], test);
+    const piece = w.bodies.find((b) => b.id === far.id)!;
+    const rest = w.bodies.filter((b) => b.id !== far.id);
+    expect(piece.velocity.x * dir.x + piece.velocity.y * dir.y).toBeLessThan(-0.01);
+    expect(rest.reduce((s, b) => s + b.mass * (b.velocity.x * dir.x + b.velocity.y * dir.y), 0)).toBeGreaterThan(0);
+    // The rest is still one rock: none of its welds has broken.
+    expect(w.joints).toHaveLength(a.joints.filter((j) => j.a !== far.id && j.b !== far.id).length);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("AST-011 two joined rocks pull each other, equal and opposite to within a few percent, and a scenario may ask for it", () => {
+    const left = generateAsteroid({ ...joined, id: "l", position: { x: -30, y: 0 } });
+    const right = generateAsteroid({ ...joined, id: "r", seed: 9, position: { x: 30, y: 0 } });
+    const w = createWorld(1, [...left.bodies, ...right.bodies], { x: 0, y: 0 }, { joints: [...left.joints, ...right.joints] }, test);
+    stepInPlace(w, [], test);
+    const p = (prefix: string) => w.bodies.filter((b) => b.id.startsWith(prefix)).reduce((s, b) => s + b.mass * b.velocity.x, 0);
+    expect(p("l-")).toBeGreaterThan(0); // toward the other
+    expect(p("r-")).toBeLessThan(0);
+    expect(Math.abs(p("l-") + p("r-")) / p("l-")).toBeLessThan(0.05);
+    const raw = readJson(join(ROOT, "scenarios", "asteroid-collision.json")) as { world: { asteroids: Record<string, unknown>[] } };
+    Object.assign(raw.world.asteroids[0], { gravity: { G: 0.02, joined: true } });
+    expect(initialWorld(parseScenario(raw)).bodies.some((b) => b.gravity?.joined)).toBe(true);
+    Object.assign(raw.world.asteroids[0], { gravity: { G: 0.02, joined: "yes" } });
+    expect(() => parseScenario(raw)).toThrow(/joined/);
+  });
+});
+
+
