@@ -22,7 +22,7 @@
 // allowing for gravity.
 
 import { add, cross, dot, expD, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
-import { bodyMass } from "./bodies.ts";
+import { bodiesById, bodyMass } from "./bodies.ts";
 import { assemblyOf, assemblyRoots } from "./joints.ts";
 import { massProps } from "./shapes.ts";
 import { railgunReady } from "./railgun.ts";
@@ -45,8 +45,11 @@ export type PilotGoal =
  * and ignores everyone. "hunting": it attacks any ship of another side it sees. "cautious": it flies
  * its route, watches the player when near, and fights back for a minute once fired toward.
  * "evading": it flies its route and runs from ships of other sides that close on it.
+ * "clearing" (AIP-020, Mammoth Asteroids' demo): it collects loose gold by flying gently into it;
+ * with none loose, it shoots the rock piece welded to gold that is nearest it, to free the gold;
+ * with no gold left in the rocks, the nearest rock.
  */
-export type PilotMode = "manual" | "ignoring" | "hunting" | "cautious" | "evading";
+export type PilotMode = "manual" | "ignoring" | "hunting" | "cautious" | "evading" | "clearing";
 
 /** What the pilot knows about one engine channel, in the body frame of the pilot's body. */
 export interface ThrustChannel {
@@ -107,6 +110,8 @@ export function normalizePilot(p: PilotInput): Pilot {
   return { ...PILOT_DEFAULTS, goal: { kind: "idle" }, ...p, skill: { ...PILOT_DEFAULTS.skill, ...p.skill }, command: { ...p.command }, lagged: { ...p.lagged } };
 }
 
+/** Collecting gold, it doesn't steer round what is within this of the gold's centre, m (plus the thing's own size). */
+const SEEK_CLEAR = 10;
 /** Exhaust speed the design assumes before the pilot has seen its engines work, m/s: low on purpose. */
 const DESIGN_EXHAUST_SPEED = 50;
 /** Engines take this long to answer a command, s (chamber pressure building). */
@@ -521,7 +526,11 @@ export function runPilots(world: World, dt: number): void {
     let aim: Vec2 | null = null; // where the bore should point, if fighting
     let fire = false;
     const mode = p.mode ?? "manual";
-    if (mode === "hunting" || mode === "cautious" || mode === "evading") {
+    // Something it is flying into on purpose (gold to collect): not steered round, and nor is what
+    // lies right beside it (the rubble it came out of), or it would never get there.
+    let seeking: string | null = null;
+    let seekingAt: Vec2 | null = null;
+    if (mode === "hunting" || mode === "cautious" || mode === "evading" || mode === "clearing") {
       const side = p.side ?? "enemy";
       const seen = shipsAround(world, ids, image).filter((x) => length(sub(x.centre, ship.centre)) <= (p.detect ?? 150));
       const foes = seen.filter((x) => x.side !== side || (mode === "hunting" && p.mad)); // a mad pilot may turn on its own side
@@ -548,17 +557,45 @@ export function runPilots(world: World, dt: number): void {
       }
       const angry = mode === "cautious" && cb.grudgeUntil !== undefined && world.tick < cb.grudgeUntil;
       let target: Ship | null = null;
+      // Clearing (AIP-020): loose gold to collect, else a rock piece to shoot.
+      let collect: Body | null = null;
+      if (mode === "clearing") {
+        const roots = assemblyRoots(world);
+        const sizes = new Map<string, number>();
+        for (const b of world.bodies) sizes.set(roots.get(b.id)!, (sizes.get(roots.get(b.id)!) ?? 0) + 1);
+        const far = (b: Body) => length(nearestOffset(world, ship.centre, b.position));
+        const nearestOf = (bs: Body[]) => bs.reduce<Body | null>((m, b) => (!m || far(b) < far(m) ? b : m), null);
+        // Loose: on its own, or with one other piece still stuck to it.
+        collect = nearestOf(world.bodies.filter((b) => b.mineral === "gold" && !b.compound && !ids.has(b.id) && (sizes.get(roots.get(b.id)!) ?? 1) <= 2));
+        if (!collect) {
+          // The rock pieces welded to gold (hidden gold too: it shoots at where the rock holds it).
+          const byId = bodiesById(world);
+          const holding: Body[] = [];
+          for (const j of world.joints) {
+            const a = byId.get(j.a);
+            const b = byId.get(j.b);
+            if (!a || !b || (a.mineral === "gold") === (b.mineral === "gold")) continue;
+            holding.push(a.mineral === "gold" ? b : a);
+          }
+          const piece = nearestOf(holding) ?? nearestOf(world.bodies.filter((b) => b.material?.name === "rock" && !ids.has(b.id)));
+          if (piece) target = { root: roots.get(piece.id)!, id: piece.id, side: "rock", centre: image(piece.position), velocity: piece.velocity };
+        }
+      }
       if (mode === "hunting") target = nearest(foes);
       else if (angry) target = seen.find((x) => x.id === cb.offender) ?? nearest(foes.filter((x) => x.side === "player"));
       if (target) {
         // Attack: close to a stand-off distance, matching its motion, then turn and fire.
         cb.target = target.id;
-        const standoff = 35 + 20 * (1 - cs);
+        // A rock is 12 m across its radius and drifts at up to 6 m/s: Clearing stands further off.
+        const standoff = (mode === "clearing" ? 50 : 35) + 20 * (1 - cs);
         const d = sub(target.centre, ship.centre);
         const dist = length(d);
         const relV = length(sub(ship.velocity, target.velocity));
-        if (dist < standoff + 20 && relV < 3) cb.attacking = true;
-        else if (dist > standoff + 40 || relV > 6) cb.attacking = false;
+        // A rock is big and comes on: Clearing backs off to its distance again when the rock closes
+        // on it, where a hunter holds its ground to shoot.
+        const tooNear = mode === "clearing" && dist < standoff - 10;
+        if (dist < standoff + 20 && relV < 3 && !tooNear) cb.attacking = true;
+        else if (dist > standoff + 40 || relV > 6 || tooNear) cb.attacking = false;
         p.plan.enemy = target.centre;
         if (cb.attacking && gun) {
           const muzzleAt = add(gun.body.position, rotate(sinCos(gun.body.angle), gun.body.magazine!.at));
@@ -591,7 +628,15 @@ export function runPilots(world: World, dt: number): void {
       } else {
         cb.target = undefined;
         cb.attacking = false;
-        const threat = nearest(foes);
+        if (collect) {
+          // Fly into it gently: keeping station on it closes at a speed in proportion to the gap.
+          goal = { kind: "station", body: collect.id, offset: { x: 0, y: 0 } };
+          seeking = assemblyRoots(world).get(collect.id) ?? collect.id;
+          seekingAt = image(collect.position);
+          label = `collecting ${collect.id}`;
+          p.plan.target = image(collect.position);
+        }
+        const threat = collect ? null : nearest(foes);
         const tooClose = threat && length(sub(threat.centre, ship.centre)) < 60 && dot(sub(threat.velocity, ship.velocity), sub(ship.centre, threat.centre)) > 0;
         if (mode === "evading" && threat && (tooClose || (p.fleeing && length(sub(threat.centre, ship.centre)) < 100))) {
           // Evading: run, straight away from it, until there is room again.
@@ -608,7 +653,7 @@ export function runPilots(world: World, dt: number): void {
           else if (gun) aim = scale(watch, 1 / (length(watch) || 1));
           label = `watching ${pl.id}`;
           p.plan.enemy = pl.centre;
-        } else {
+        } else if (!collect) {
           p.fleeing = false;
           if (p.route && p.goal.kind !== "route") p.goal = { kind: "route", waypoints: p.route.waypoints, loop: p.route.loop ?? true, speed: p.route.speed, index: 0 };
           goal = p.goal;
@@ -657,7 +702,9 @@ export function runPilots(world: World, dt: number): void {
       const r = Math.max(0, dist - 0.5 * tolP); // aim inside the tolerance
       const vStop = aBrake * (-tFlip + Math.sqrt(tFlip * tFlip + (2 * r) / aBrake));
       // Keeping station, it closes gently (speed in proportion to the gap), so as not to overshoot a moving mark.
-      const speed = goal.kind === "station" ? Math.min(cruise, vStop, 0.3 * dist) : stop ? Math.min(cruise, vStop) : cruise;
+      let speed = goal.kind === "station" ? Math.min(cruise, vStop, 0.3 * dist) : stop ? Math.min(cruise, vStop) : cruise;
+      // Flying into gold (hundreds of kilograms of it): the last stretch at walking pace.
+      if (seekingAt) speed = Math.min(speed, 1.2 + 0.15 * Math.max(0, dist - 10));
       // Holding at a mark, small drifts matter: every turn to hold the heading also pushes the ship.
       if (goal.kind === "point" && stop && dist < 2 * tolP) holdTight = true;
       let vWant = dist > 1e-6 ? add(carry, scale(d, speed / dist)) : carry;
@@ -674,7 +721,7 @@ export function runPilots(world: World, dt: number): void {
     if (goal.kind === "velocity" && p.goal.kind !== "velocity") {
       const mostT = chans.reduce((m, c) => m + c.gain, 0);
       const brake = Math.max(0.3, (authority * mostT) / ship.mass - length(g));
-      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids, image), 3 + 4 * s, 5 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
+      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids, image).filter((o) => o.root !== seeking && !(seekingAt && length(sub(o.centre, seekingAt)) < o.radius + SEEK_CLEAR)), 3 + 4 * s, 5 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
       if (steered.avoiding.length) label += ", steering round";
       p.plan.avoiding = steered.avoiding;
       goal = { kind: "velocity", velocity: steered.v };
@@ -752,7 +799,7 @@ export function runPilots(world: World, dt: number): void {
       world.controls[c.channel] = u[i];
     });
     // The trigger: a short press, held for the pulse (AIP-012).
-    if (gun && (mode === "hunting" || mode === "cautious")) world.controls[gun.channel] = p.command[gun.channel] = cb.pulse > 0 ? 1 : 0;
+    if (gun && (mode === "hunting" || mode === "cautious" || mode === "clearing")) world.controls[gun.channel] = p.command[gun.channel] = cb.pulse > 0 ? 1 : 0;
     if (cb.pulse > 0) cb.pulse -= 1;
     p.seen = { tick: world.tick, velocity: ship.velocity, omega: ship.omega, quiet };
   }

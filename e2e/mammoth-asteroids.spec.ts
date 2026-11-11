@@ -154,3 +154,61 @@ test("MAS-052 the game cancels the browser's pinch zoom", async ({ page }) => {
   });
   expect(cancelled).toBe(true);
 });
+
+test("MAS-008 the sandbox's start screen has a button that opens the game's own page", async ({ page }) => {
+  await page.goto("./");
+  const open = page.getByTestId("open-asteroids");
+  await expect(open).toHaveText("Play Mammoth Asteroids");
+  // It sits with Lander's button and looks like it.
+  const lander = page.getByTestId("open-lander");
+  for (const prop of ["background-color", "color", "height", "font-size"]) await expect(open).toHaveCSS(prop, await lander.evaluate((e, p) => getComputedStyle(e).getPropertyValue(p), prop));
+  await open.click();
+  await expect(page).toHaveTitle("Mammoth Asteroids");
+  await expect(page.getByTestId("mas-start")).toBeVisible();
+});
+
+test("MAS-001 MAS-060 behind the title an AI pilot plays the game for real; Play starts the player's own game", async ({ page }) => {
+  await page.goto("./asteroids.html?seed=4");
+  await expect(page.getByRole("heading", { name: "MAMMOTH ASTEROIDS" })).toBeVisible();
+  for (const b of ["mas-start", "mas-open-howto", "mas-open-physics", "mas-open-scores"]) await expect(page.getByTestId(b)).toBeVisible();
+  // The demo: the game running, its ship flown by a Clearing pilot, with no HUD or buttons of the game's.
+  const demo = () =>
+    page.evaluate(() => {
+      const m = (window as unknown as { __msb: { sandbox: () => { world: { time: number; arcade: { spec: { demo?: boolean } }; bodies: { id: string; pilot?: { mode: string } }[] } } | null } }).__msb;
+      const w = m.sandbox()?.world;
+      return w ? { demo: !!w.arcade.spec.demo, time: w.time, pilot: w.bodies.find((b) => b.pilot)?.pilot?.mode ?? null } : null;
+    });
+  await expect.poll(async () => (await demo())?.time ?? 0, { timeout: 15_000 }).toBeGreaterThan(1);
+  expect(await demo()).toMatchObject({ demo: true, pilot: "clearing" });
+  await expect(page.getByTestId("mas-hud")).toHaveCount(0);
+  await expect(page.getByTestId("thrust-fire")).toHaveCount(0);
+  // The keys do nothing to it.
+  await page.keyboard.down("Space");
+  await page.waitForTimeout(300);
+  await page.keyboard.up("Space");
+  expect((await demo())!.demo).toBe(true);
+  // Play: a new game with no pilot.
+  await page.getByTestId("mas-start").click();
+  await expect(page.getByTestId("mas-score")).toHaveText("SCORE 0");
+  expect(await demo()).toMatchObject({ demo: false, pilot: null });
+});
+
+test("MAS-007 How to play and The physics open from the title, each with Back, and the demo carries on after", async ({ page }) => {
+  await page.goto("./asteroids.html?seed=4");
+  await page.getByTestId("mas-open-howto").click();
+  const howto = page.getByTestId("mas-howto");
+  await expect(howto.getByRole("heading", { name: "HOW TO PLAY" })).toBeVisible();
+  for (const text of ["Collect all the gold", "Space or W", "three ships", "three at the most", "1,000 × N"]) await expect(howto).toContainText(text);
+  await page.getByTestId("mas-back").click();
+  await expect(page.getByTestId("mas-start")).toBeVisible();
+  await page.getByTestId("mas-open-physics").click();
+  const physics = page.getByTestId("mas-physics");
+  await expect(physics.getByRole("heading", { name: "THE PHYSICS" })).toBeVisible();
+  for (const text of ["There is no thrust force", "railgun", "Where the game cheats", "Gold can't be damaged", "fifteen times"]) await expect(physics).toContainText(text);
+  // White on black, as the rest of the game.
+  await expect(physics).toHaveCSS("color", "rgb(255, 255, 255)");
+  await page.getByTestId("mas-back").click();
+  const time = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { time: number } } } }).__msb.sandbox().world.time);
+  const t0 = await time();
+  await expect.poll(time, { timeout: 10_000 }).toBeGreaterThan(t0 + 0.5);
+});

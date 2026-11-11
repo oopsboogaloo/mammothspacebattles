@@ -202,7 +202,7 @@ Priority: **M** must, **S** should.
 - **MAS-006** `[M]` Buttons are black rectangles with a white border and white sans-serif text.
 - **MAS-007** `[M]` How to play and The physics pages, each with a Back button (§5).
 - **MAS-008** `[M]` Its own page, `asteroids.html`, built and deployed with the site, with nothing
-  leading back to the sandbox (as LND-060).
+  leading back to the sandbox (as LND-060). The sandbox's start screen has a button that opens it.
 
 **Arena**
 - **MAS-010** `[M]` The arena is the whole view, fixed. Its height is 160 m, and its width follows

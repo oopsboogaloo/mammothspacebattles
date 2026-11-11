@@ -660,3 +660,60 @@ describe("Mammoth Asteroids: gunships", () => {
   });
 });
 
+describe("Mammoth Asteroids: the demo and its Clearing pilot", () => {
+  const demo = (seed: number) => game((scn) => Object.assign(scn.world.arcade, { demo: true, seed }));
+
+  it("MAS-060 AIP-020 the demo's ship has a Clearing pilot on its hull, flying through the ship's own channels; the player's game has none", () => {
+    const { w, step } = demo(4);
+    expect(body(w, "p1-hull")!.pilot).toMatchObject({ mode: "clearing", side: "player" });
+    expect(game().w.bodies.some((b) => b.pilot)).toBe(false);
+    step(3);
+    // It has set the engines, and only its own three channels exist.
+    expect(Object.keys(w.controls).sort()).toEqual(["fire", "left", "right"]);
+    expect(body(w, "p1-hull")!.velocity).not.toEqual({ x: 0, y: 0 });
+    expect(body(w, "p1-hull")!.pilot!.intent).toMatch(/a1-0-\d+/); // closing on, or attacking, a piece of the rock
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("AIP-020 MAS-060 it shoots the rock where it holds gold, frees a piece and collects it, within 40 game seconds", () => {
+    const { w, step } = demo(4);
+    let got = false;
+    for (let k = 0; k < 80 && !got; k++) {
+      step(0.5);
+      got = w.events.some((e) => e.type === "arcade.gold");
+    }
+    expect(got).toBe(true);
+    expect(st(w).stats.shots).toBeGreaterThan(0);
+    expect(st(w).stats.gold).toBe(1);
+    expect(st(w).score).toBeGreaterThanOrEqual(ARCADE_SCORES.gold);
+    // What it shot at first was a rock piece welded to gold.
+    const first = w.events.find((e) => e.type === "detonation")!;
+    expect(first).toBeDefined();
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("MAS-060 a lost demo ship's pilot goes with it, and the next ship has its own", () => {
+    const { w, step } = demo(4);
+    step(1);
+    body(w, "p1-hull")!.integrity = 0.0001; // nearly gone: it stays in the world, wrecked by the next knock
+    for (const id of ["p1-engine-l", "p1-engine-r"]) body(w, id)!.integrity = 0; // no engine: lost
+    step(2 / 240);
+    expect(st(w)).toMatchObject({ lost: true, lives: 2 });
+    expect(prefixed(w, "p1-").some((b) => b.pilot)).toBe(false);
+    step(1.25 + 2 / 240);
+    expect(body(w, "p2-hull")!.pilot).toMatchObject({ mode: "clearing" });
+    expect(w.bodies.filter((b) => b.pilot)).toHaveLength(1);
+  });
+
+  it("MAS-060 the demo replays exactly", () => {
+    const run = () => {
+      const { w, step } = demo(4);
+      step(8);
+      return w;
+    };
+    expect(hashValue(run())).toBe(hashValue(run()));
+    expect(() => game((scn) => (scn.world.arcade.demo = "yes"))).toThrow(/demo/);
+  }, 120_000);
+});
+
+

@@ -242,7 +242,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       }
       if (pl.interval !== undefined) num(v, pl.interval, `${pp}.interval`, { int: true, min: 1, max: 240 });
       if (pl.goal !== undefined) validatePilotGoal(v, pl.goal, `${pp}.goal`);
-      const MODES = ["manual", "ignoring", "hunting", "cautious", "evading"];
+      const MODES = ["manual", "ignoring", "hunting", "cautious", "evading", "clearing"];
       if (pl.mode !== undefined && !MODES.includes(pl.mode as string)) err(v, `${pp}.mode`, `must be one of ${MODES.join(", ")}`);
       if (pl.side !== undefined) str(v, pl.side, `${pp}.side`);
       if (pl.detect !== undefined) num(v, pl.detect, `${pp}.detect`, { positive: true });
@@ -507,6 +507,7 @@ function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
       else if (!g.ship.bodies.some((b) => isObj(b) && b.id === id)) err(v, `${path}.${k}`, "must be the id of one of the ship's bodies");
     }
   num(v, g.seed, `${path}.seed`, { int: true });
+  if (g.demo !== undefined && typeof g.demo !== "boolean") err(v, `${path}.demo`, "must be true or false");
   if (g.lives !== undefined) num(v, g.lives, `${path}.lives`, { int: true, min: 1, max: 99 });
   for (const k of ["respawn", "grace", "clearPause"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
   for (const k of ["shellLife", "pace"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { positive: true });

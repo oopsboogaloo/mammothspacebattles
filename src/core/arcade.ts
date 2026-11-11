@@ -76,6 +76,11 @@ export interface ArcadeSpec {
   shellLife?: number;
   /** Game seconds in one of the player's (default 0.5). */
   pace?: number;
+  /**
+   * The title screen's game (MAS-060): every ship has a pilot in Clearing mode on its hull, flying
+   * it through its own controls.
+   */
+  demo?: boolean;
   /** Lays out the levels: the same seed, the same levels. */
   seed: number;
 }
@@ -212,6 +217,8 @@ function addShip(world: World, game: ArcadeGame, ops: ArcadeOps, pose: Pose, gra
       angularVelocity: w,
     };
     if (grace > 0) delete body.material;
+    // The demo's ship flies itself (AIP-020).
+    if (spec.demo && body.id === withN(spec.hull, state.n)) body.pilot = { mode: "clearing", goal: { kind: "idle" }, side: "player", skill: { flight: 0.8, combat: 0.8 } };
     ops.addBody(world, body);
   }
   for (const j of t.joints ?? []) ops.addJoint(world, j);
@@ -527,6 +534,8 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
     // The keys fly only the next ship: the wreck and what broke off it lose their control links.
     const prefix = `p${s.n}-`;
     world.links = world.links.filter((l) => !(l.kind === "control" && l.to.startsWith(prefix)));
+    // The demo's pilot goes with its ship.
+    for (const b of world.bodies) if (b.pilot && b.id.startsWith(prefix)) delete b.pilot;
     world.events.push({ tick: world.tick, type: "arcade.lost", data: { n: s.n, lives: s.lives } });
     if (s.phase === "playing") {
       s.phase = "waiting";

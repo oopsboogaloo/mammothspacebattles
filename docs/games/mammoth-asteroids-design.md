@@ -114,6 +114,24 @@ attitude, station keeping, `aimAt`, `clearShot`, `avoid`):
 
 It flies only through the ship's channels, like every pilot (AIP-001).
 
+*Clearing, built (step 7 of the plan, 11 November 2026).* As above, with these particulars:
+
+- **Loose gold** is a visible gold piece on its own or with one other piece still stuck to it. It
+  flies into the nearest by keeping station on it with no offset, so it closes at a speed in
+  proportion to the gap, and at no more than 1.2 m/s over the last 10 m (a piece is some 230 kg,
+  five times the ship). It doesn't steer round the gold, or round anything within 10 m of it (the
+  rubble it came out of).
+- **Shooting:** it stands off 50 m plus up to 20 for low skill (a hunter: 35), and backs off to
+  that again when the rock comes within 10 m of it, where a hunter would hold its ground.
+- **How well it plays** (four games, headless, 284 × 160 m arena): it frees and collects its
+  first gold in 20 to 65 game seconds in three of the four, and is out of ships in 60 to 140. It
+  rarely clears a level: most ships are lost to rubble near the gold it is going for. It is a demo
+  that plays, not a good player. The title starts a new demo 3 s after each one is over.
+- **In the game:** `demo: true` in the spec puts the pilot on each new ship's hull (side "player",
+  flight and combat skill 0.8). A lost ship's pilot is removed with its control links.
+- **One scenario, not two:** the page sets `demo` on its copy of `asteroids.json`, where §3
+  planned a second file.
+
 ## 2. The game in the world (MAS-070), `src/core/arcade.ts`
 
 *Built (step 4 of the plan), without the gunships (step 6).* What the build changed from the text
@@ -329,6 +347,12 @@ would mostly remove. That is the next change.
   width is set by the page) and no fixed bodies.
 
 ## 4. The page, `asteroids.html`
+
+*Step 7 (11 November 2026):* the title now runs the demo behind its name and buttons (the same
+view, with no HUD), and has How to play and The physics, each a page of text with Back. The demo
+rests while another page is up and carries on after. The sandbox's start screen has a "Play
+Mammoth Asteroids" button beside Lander's (asked for by Chloe): a link to this page, which still
+has nothing leading back.
 
 *Built (step 5 of the plan):* the title (static until the demo, step 7), play, the HUD, the keys
 and touch buttons, pause, game over with initials, and the high scores. How to play and The
