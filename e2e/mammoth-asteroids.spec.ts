@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { shot } from "./helpers.ts";
 
 interface Hook {
   sandbox: () => { world: { controls: Record<string, number>; bounds: { min: { x: number; y: number }; max: { x: number; y: number } }; bodies: { id: string; integrity: number }[]; arcade: { state: { lives: number; score: number } } } };
@@ -271,4 +272,29 @@ test("MAS-007 How to play and The physics open from the title, each with Back, a
   const time = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { time: number } } } }).__msb.sandbox().world.time);
   const t0 = await time();
   await expect.poll(time, { timeout: 30_000 }).toBeGreaterThan(t0 + 0.1);
+});
+
+test("TST-010 screenshots of Mammoth Asteroids for the M9 review: the title, play, the pause menu and the two pages", async ({ page }, info) => {
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.goto("./asteroids.html?seed=4");
+  await expect(page.getByTestId("mas-start")).toBeVisible();
+  await page.waitForTimeout(1500); // the demo under way behind the title
+  await shot(page, info, "mas-title");
+  await page.getByTestId("mas-open-howto").click();
+  await expect(page.getByTestId("mas-howto")).toBeVisible();
+  await shot(page, info, "mas-howto");
+  await page.getByTestId("mas-back").click();
+  await page.getByTestId("mas-open-physics").click();
+  await expect(page.getByTestId("mas-physics")).toBeVisible();
+  await shot(page, info, "mas-physics");
+  await page.getByTestId("mas-back").click();
+  await page.getByTestId("mas-start").click();
+  await expect(page.getByTestId("mas-hud")).toBeVisible();
+  await page.keyboard.down("ArrowUp");
+  await page.waitForTimeout(400);
+  await page.keyboard.up("ArrowUp");
+  await shot(page, info, "mas-play");
+  await page.getByTestId("mas-pause").click();
+  await expect(page.getByTestId("mas-paused")).toBeVisible();
+  await shot(page, info, "mas-paused");
 });

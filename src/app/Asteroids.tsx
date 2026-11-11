@@ -445,7 +445,7 @@ function HowToPlay() {
       <p>The pause menu can swap left and right.</p>
       <p>The ship has five engines: a main thruster at the back, and two small thrusters on each wing, one facing back and one facing forward. Turning fires one back thruster and the opposite front one, so the ship turns where it is. Forward fires the main thruster and both back ones. Reverse fires both front ones: a seventh of the forward push, enough to brake.</p>
       <h3>Gold</h3>
-      <p>Touch a gold piece with any part of the ship to collect it, whether it is loose or still in its rock. Gold can't be destroyed. Some of it is hidden inside larger fragments of rock and can't be collected until the fragment cracks open. GOLD on the top bar shows how many pieces are left.</p>
+      <p>Touch a gold piece with any part of the ship to collect it, whether it is loose or still in its rock. Gold can't be destroyed. Some of it is hidden inside larger fragments of rock and can't be collected until the fragment cracks open. GOLD on the top bar shows how many pieces are left. Collecting it doesn't knock or damage the ship, however fast you are going.</p>
       <h3>Ships and damage</h3>
       <p>You have three ships. A ship is lost when its hull is destroyed or it has no working engine left. Short of that you fly on with the damage: a damaged engine pushes less, a lost wing takes its tank and thrusters with it, and a holed tank leaks. A magazine that is destroyed explodes violently; the battery and the tanks explode too, less so. A thruster knocked off burns out in under a second and is then dead, and the tank it was fed from leaks. A whole wing knocked off burns on until its tank is empty. The wreck stays where it is. The next ship beams in after a moment and can't be damaged for two seconds, while it flashes. Each new ship, and each new level, has a full tank and 120 shells.</p>
       <h3>Gunships</h3>
@@ -509,7 +509,7 @@ function Physics() {
       <ul>
         <li>Fuel goes sixty-six times further than it would for real, so the tanks last.</li>
         <li>A shell's blast makes thirty-three times the shell's weight in gas (5.5 kg from a 0.17 kg shell), so it can push the rock's pieces apart.</li>
-        <li>Gold can't be damaged or destroyed.</li>
+        <li>Gold can't be damaged or destroyed. Gold you can collect doesn't collide with your ship: it would be a blow from something heavier than the ship.</li>
         <li>Space doesn't wrap round. This arena does, both ways.</li>
         <li>New ships, new levels and beamed-out rocks appear and vanish. The ledger records them as crossing the world's boundary.</li>
         <li>A shell is removed after flying 144 m, so it can't come round and hit you.</li>

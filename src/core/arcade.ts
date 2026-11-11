@@ -11,6 +11,7 @@
 
 import { generateAsteroid } from "./asteroid.ts";
 import { bodiesById } from "./bodies.ts";
+import { collide } from "./collide.ts";
 import type { Material } from "./damage.ts";
 import { shipState } from "./duel.ts";
 import { removeBodies } from "./dust.ts";
@@ -198,6 +199,7 @@ const TOUCH = 0.05;
 const ROCK_PIECE = /^a\d+-\d+-\d+$/;
 const PLAYER_SLUG = /^p\d+-.*-shell-\d+$/;
 
+const withId = (id: string, n: number): string => id.replaceAll("{n}", String(n));
 const withN = <T>(x: T, n: number): T => JSON.parse(JSON.stringify(x).replaceAll("{n}", String(n))) as T;
 
 /** From a to b the short way round a world that wraps. */
@@ -741,15 +743,32 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
     }
   }
 
-  // 3. Gold the ship is touching, if it can be seen (not inside a larger fragment whose seams don't show).
+  // 3. Gold the ship is touching, if it can be seen (not inside a larger fragment whose seams don't
+  // show). The ship doesn't collide with gold it can collect: it would be a blow from a piece
+  // heavier than the ship (at 25 m/s it wrecked the gun and broke five welds). Gold the ship can
+  // see passes through the ship's parts, and is collected as soon as their outlines meet.
   if (!s.lost && s.gold.left.length && world.bodies.some((b) => b.id === hullId)) {
     const ship = new Set(assemblyOf(world, hullId));
-    const left = new Set(s.gold.left);
+    const byId = bodiesById(world);
+    const parts = [...ship].map((id) => byId.get(id)!).map((b) => ({ b, at: { shape: b.shape, position: b.position, rot: sinCos(b.angle) }, r: massProps(b.shape, 1).boundingRadius }));
+    const own = (spec.ship.bodies ?? []).map((b) => withId(b.id, s.n));
     const got = new Set<string>();
-    for (const c of world.contacts) {
-      if (!(c.normalImpulse > 0 || c.separation <= TOUCH)) continue;
-      const id = ship.has(c.a) && left.has(c.b) ? c.b : ship.has(c.b) && left.has(c.a) ? c.a : null;
-      if (id && !world.bodies.find((b) => b.id === id)?.compound) got.add(id);
+    for (const id of s.gold.left) {
+      const g = byId.get(id);
+      if (!g || g.compound) continue;
+      if (g.passes?.[0] !== own[0]) g.passes = own;
+      const gr = massProps(g.shape, 1).boundingRadius;
+      const rot = sinCos(g.angle);
+      for (const p of parts) {
+        // The gold's copy nearest the part: they may meet across the arena's edge.
+        const o = offset(world, p.b.position, g.position);
+        if (o.x * o.x + o.y * o.y > (p.r + gr + TOUCH) * (p.r + gr + TOUCH)) continue;
+        const m = collide(p.at, { shape: g.shape, position: { x: p.b.position.x + o.x, y: p.b.position.y + o.y }, rot }, TOUCH, 0);
+        if (m?.points.some((pt) => pt.separation <= TOUCH)) {
+          got.add(id);
+          break;
+        }
+      }
     }
     if (got.size) {
       removeBodies(world, got, "arcade.gold");

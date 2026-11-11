@@ -460,6 +460,21 @@ would mostly remove. That is the next change.
     for the same two minutes. Shells leave at 144 m/s and kick 0.36 m/s. A shell now lasts 1 game
     second, not 1.4: the ship's flies 144 m from it, still less than the arena's height, and a
     gunship's (96 m/s) flies 96 m, where it flew 134.
+  - **Collecting gold is no collision (11 November 2026).** Chloe found the ship sometimes took
+    damage collecting gold. It was a real contact with a 105 kg piece, counted as collected only
+    after the blow. One piece straight at the ship's nose:
+
+    | Closing speed | The gun | Welds | The ship |
+    |---|---|---|---|
+    | 1 and 3 m/s | unharmed | whole | hardly moved |
+    | 6 m/s | 2% | whole | pushed to 1.5 m/s |
+    | 12 m/s | 21% | one bent 5% | pushed to 3.9 m/s |
+    | 25 m/s | 90% | five broken, six bent | thrown back at 13 m/s |
+
+    A body can now name bodies it never collides with (`passes`, core). The game gives each piece
+    of gold the ship can collect the ship's part ids, and collects it when its outline comes
+    within 5 cm of a part of the ship (the nearest copy, across an edge). The ship's shells still
+    strike gold.
   - **Welds:** 3 times Lander's, the gun's mount 6 times, two welds between each tank and its
     generator. Nothing bends with all 40 shells fired still, forward, turning or reversing, nor
     spinning at 40 rad/s.
