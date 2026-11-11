@@ -25,8 +25,8 @@ export function shipStatus(world: World): { fuel: number; slugs: number; damage:
   for (const b of world.bodies) {
     if (!b.id.startsWith(prefix) || b.id.includes("-shell-")) continue;
     own.add(b.id);
-    // The tank's share: the engines' own small stores fill and empty as they fire.
-    if (b.id === `${prefix}tank`)
+    // The tanks' share: the engines' own small stores fill and empty as they fire.
+    if (b.id.startsWith(`${prefix}tank`))
       for (const c of b.contents ?? []) {
         fuel += c.mass;
         capacity += c.capacity;

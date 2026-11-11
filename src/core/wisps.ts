@@ -25,10 +25,19 @@ export interface Wisp {
   age: number;
   /** Its temperature when it left the gas, K (for its colour). */
   temperature: number;
+  /** How long it lasts, s, where that is not `WISP_LIFE` (Mammoth Asteroids). */
+  life?: number;
 }
 
 /** How long a wisp lasts, s. */
 export const WISP_LIFE = 1;
+/**
+ * How long a wisp lasts in Mammoth Asteroids' wrapped arena, s. A ship's exhaust leaves it at about
+ * 200 m/s, so a 1 s tail crossed most of the 160 m arena: a ship thrusting up through the top edge
+ * came back in at the bottom as the tail it had left behind arrived there, 0.7 to 0.9 s old, and
+ * was pushed round by it (0.6 rad/s). At this life the tail is gone before the ship can meet it.
+ */
+export const WISP_LIFE_ARCADE = 0.4;
 /** How much a wisp grows by the time it fades out. */
 export const WISP_GROW = 3;
 /** Most wisps at once; the oldest go first. */
@@ -37,7 +46,7 @@ export const WISP_LIMIT = 8000;
 const RESTITUTION = 0.3;
 
 /** How far through its life a wisp is, 0–1. */
-export const wispFade = (w: Wisp): number => Math.min(1, w.age / WISP_LIFE);
+export const wispFade = (w: Wisp): number => Math.min(1, w.age / (w.life ?? WISP_LIFE));
 export const wispMass = (w: Wisp): number => w.mass * (1 - wispFade(w));
 export const wispRadius = (w: Wisp): number => w.radius * (1 + (WISP_GROW - 1) * wispFade(w));
 
@@ -49,7 +58,9 @@ export function spawnWisps(world: World, gone: readonly Parcel[], temperature: (
   for (const p of gone) {
     const inside = b.wrap || (p.position.x >= b.min.x && p.position.x <= b.max.x && p.position.y >= b.min.y && p.position.y <= b.max.y);
     if (!inside) continue;
-    list.push({ position: { ...p.position }, velocity: { ...p.velocity }, mass: p.mass, radius: p.radius, age: 0, temperature: temperature(p) });
+    const wisp: Wisp = { position: { ...p.position }, velocity: { ...p.velocity }, mass: p.mass, radius: p.radius, age: 0, temperature: temperature(p) };
+    if (world.arcade) wisp.life = WISP_LIFE_ARCADE;
+    list.push(wisp);
   }
   if (list.length > WISP_LIMIT) list.splice(0, list.length - WISP_LIMIT);
 }
@@ -220,7 +231,7 @@ export function stepWisps(world: World, dt: number, bigGrid = true): number {
   const kept: Wisp[] = [];
   for (const w of list) {
     w.age += dt;
-    if (w.age >= WISP_LIFE) continue;
+    if (w.age >= (w.life ?? WISP_LIFE)) continue;
     // In place, the same arithmetic as before: a wisp's vectors are its own (spawnWisps copies them),
     // and a thousand wisps made two new objects each, every step.
     w.velocity.x = w.velocity.x + g.x * dt;

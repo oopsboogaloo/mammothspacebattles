@@ -15,7 +15,7 @@ requirement IDs (MAS-…) are this game's own. The engine changes the game needs
 
 | Question | Decision |
 |---|---|
-| Ship | The LAND ship from Lander as it is for now, plus a railgun on the nose firing forward. Two engines, Q and E: both together push forward; one alone turns. |
+| Ship | The game's own ship (Chloe's sketch, 11 November 2026): a cockpit with a railgun on its nose, a battery, two generators, two magazines, and a fuel tank as each wing. A main thruster and four small ones: it turns where it is, and can brake. It replaced Lander's LAND ship, which the game started with. |
 | Arena | One fixed screen: the whole arena is the view, as in the classic game. It wraps exactly at the screen's edges, with no hidden margin. Something leaving one edge shows at the other at once. |
 | Arena size | 160 m high; its width follows the screen's shape (about 213 m on an iPad in landscape, 284 m at 16:9), within 1.2–2.2 × the height. |
 | Levels | Level N has N asteroids, each holding 2 or 3 gold pieces. A level is cleared when every gold piece has been collected. |
@@ -35,7 +35,7 @@ requirement IDs (MAS-…) are this game's own. The engine changes the game needs
 ## 2. Flow
 
 1. **Title screen.**
-   - Behind it, an AI-flown LAND ship plays the game for real: shooting rocks, chasing gold and
+   - Behind it, an AI-flown ship plays the game for real: shooting rocks, chasing gold and
      dodging, level after level.
    - Over it, in white: **MAMMOTH ASTEROIDS**, and buttons **Play**, **How to play**,
      **The physics** and **High scores**.
@@ -87,9 +87,23 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
 
 ### The ship
 
-- **The LAND ship** with Lander's materials and bending welds (DMG-008): a grazing hit on a small
-  rock may survive, with damage. Damage can affect flight: a damaged engine pushes less, a bent or
-  lost leg shifts the balance, and a damaged tank leaks (and its leak pushes).
+- **Its parts,** welded together, with Lander's materials and bending welds (DMG-008):
+  - the cockpit (the hull: the ship is lost with it), with the railgun on its nose;
+  - the battery under the cockpit, and a generator each side of it (neither does anything yet:
+    energy use is to come);
+  - a magazine on each generator;
+  - a fuel tank as each wing;
+  - the main thruster under the battery, and two small thrusters on each wing, one facing back
+    and one facing forward.
+- **Controls:** left and right turn the ship where it is (one back thruster and the opposite front
+  one). Both together are forward: the main thruster and both back ones. Reverse fires both front
+  ones, to brake.
+- **Handling:** 12.9 m/s² forward, 4.2 m/s² in reverse, 3.5 rad/s² turning: three times the LAND
+  ship's acceleration and twice its turning. To tune after play.
+- **Damage:** a grazing hit on a small rock may survive, with damage. A damaged engine pushes
+  less, a lost wing takes its tank and thrusters with it, and a damaged tank leaks (and its leak
+  pushes). A destroyed magazine explodes violently and the ship is lost. A destroyed battery or
+  tank explodes too, less so: the ship flies on, damaged.
 - **The railgun** sits on the nose and fires forward. Each shot pushes the ship back.
 - **Lost** when the hull is destroyed or no working engine is still welded to it.
 - **The wreck stays** as ordinary debris until the level ends.
@@ -112,7 +126,7 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
   sooner (down to 10 s), the next ones 5 s closer together (down to every 20 s), and their combat
   skill goes on rising past its earlier ceiling, to the pilot's best. The numbers are a first
   setting, to tune after play.
-- **Shells:** sized so one hit damages the LAND ship without usually destroying it. Measured and
+- **Shells:** sized so one hit damages the ship without usually destroying it. Measured and
   tuned in tests.
 - **Killed** like any ship: its hull destroyed or no working engine left. Its wreck stays as
   debris.
@@ -230,21 +244,27 @@ Priority: **M** must, **S** should.
   in place, and the next level beams in.
 
 **Ship and lives**
-- **MAS-030** `[M]` The ship is the LAND ship, with Lander's materials and bending welds, and a
-  railgun on its nose (an explosive shell, about 1 m/s of kick a shot). Its welds are stronger than
-  Lander's (3 times; the gun's mount 6 times), so the recoil of a whole magazine does it no harm.
+- **MAS-030** `[M]` The ship is the game's own (a cockpit, battery, two generators, two magazines,
+  two fuel tanks, five engines), with Lander's materials and bending welds, and a railgun on its
+  nose (an explosive shell, about 0.7 m/s of kick a shot). Its welds are stronger than Lander's
+  (3 times; the gun's mount 6 times), so the recoil of a whole magazine does it no harm.
 - **MAS-031** `[M]` The ship is lost when its hull is gone or no working engine is still welded to
   it. 3 lives a game.
 - **MAS-032** `[M]` A lost ship's wreck stays until the level ends. The next ship beams in about
   2.5 s later, at rest, at a clear spot, and takes no damage for 2 s.
 - **MAS-033** `[M]` Every new ship has a full tank and magazine.
 - **MAS-034** `[S]` The ship flashes while protected.
+- **MAS-035** `[M]` Left and right each fire one back thruster and the opposite front one, turning
+  the ship where it is. Both together fire the main thruster and both back ones. Reverse fires
+  both front ones. About 12.9 m/s² forward, 4.2 m/s² in reverse and 3.5 rad/s² turning.
+- **MAS-036** `[M]` A destroyed magazine explodes violently: the ship is lost. A destroyed battery
+  explodes too, and the ship flies on damaged.
 
 **Gunships**
 - **MAS-040** `[M]` From level 3, a Gunship 3 with a Hunting AI beams in at 20 s and every 60 s
   after, at a clear spot away from the player, after a brief ring warning. Three fly at the most:
   one that is due waits until another is out of the fight.
-- **MAS-041** `[M]` Its combat skill rises with the level. Its shells damage the LAND ship without
+- **MAS-041** `[M]` Its combat skill rises with the level. Its shells damage the ship without
   usually destroying it in one hit.
 - **MAS-043** `[M]` From level 9, where the rocks stop growing, each level brings the first gunship
   2 s sooner (10 s at the least) and the rest 5 s closer together (20 s at the least), and the
@@ -255,11 +275,11 @@ Priority: **M** must, **S** should.
 **Scoring and HUD**
 - **MAS-050** `[M]` Scoring as in §3.
 - **MAS-051** `[M]` The HUD shows score, level, lives, gold left, fuel, slugs and damage.
-- **MAS-052** `[M]` Touch: two thrust buttons and a fire button, working together (multi-touch).
+- **MAS-052** `[M]` Touch: left, right, reverse and fire buttons, working together (multi-touch).
   Keyboard as in §4.
 
 **Demo**
-- **MAS-060** `[M]` The title screen's game is played by an AI pilot flying the LAND ship through
+- **MAS-060** `[M]` The title screen's game is played by an AI pilot flying the ship through
   its controls: it shoots the nearest rock, chases the nearest visible gold, and avoids what is
   about to hit it (AIP-020). When it clears a level, the next one starts; when it loses its last
   ship, the demo starts again.

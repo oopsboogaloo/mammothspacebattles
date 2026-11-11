@@ -66,6 +66,12 @@ export interface ArcadeSpec {
     most?: number;
     late?: { first: number; firstMin: number; every: number; everyMin: number; skill: number; skillMax: number };
   };
+  /**
+   * How the player's controls drive the ship's engines (MAS-035): each row's `channel` is on when
+   * any of its `any` holds, that is, every channel in its `on` is held and none in its `off`. The
+   * demo's pilot sets the engines' channels itself, so the demo has no mixing.
+   */
+  mix?: { channel: string; any: { on: string[]; off?: string[] }[] }[];
   /** Game seconds between losing a ship and the next (default 1.25). */
   respawn?: number;
   /** Game seconds a new ship takes no damage after a loss (default 1). */
@@ -83,6 +89,19 @@ export interface ArcadeSpec {
   demo?: boolean;
   /** Lays out the levels: the same seed, the same levels. */
   seed: number;
+}
+
+/** Sets the engines' channels from the player's controls (the spec's `mix`), each step. */
+export function arcadeMix(world: World): void {
+  const spec = world.arcade?.spec;
+  if (!spec?.mix || spec.demo) return;
+  const held = (c: string) => (world.controls[c] ?? 0) > 0;
+  let next: Record<string, number> | null = null;
+  for (const row of spec.mix) {
+    const value = row.any.some((r) => r.on.every(held) && !(r.off ?? []).some(held)) ? 1 : 0;
+    if ((world.controls[row.channel] ?? 0) !== value) (next ??= { ...world.controls })[row.channel] = value;
+  }
+  if (next) world.controls = next;
 }
 
 export type ArcadePhase = "playing" | "clearing" | "waiting" | "over";

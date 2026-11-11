@@ -364,6 +364,35 @@ would mostly remove. That is the next change.
   of the ship twice (at 1.5 times the tank's and wing's welds still bend). Built with margin: the
   mount 6 times, the rest 3 times. The parts' materials are unchanged. A stronger ship also
   survives harder knocks from rocks; not measured.
+  *The game's own ship (11 November 2026),* from Chloe's sketch, replaces the LAND ship
+  (`scripts/asteroidShip.ts`; Lander's ship and `scripts/landShip.ts` are unchanged):
+  - **Parts (23, 67 kg with 40 shells and 16.2 kg of propellant):** cockpit `p{n}-hull` (a
+    six-sided dome, 6 kg), gun (0.3 × 0.7 m), battery, two generators, two magazines, two tanks
+    (1.5 × 1 m, 8.1 kg of propellant each), and five engines of three parts each: a head that
+    injects and lights the propellant, and two walls that open out as its nozzle.
+  - **Engines:** the main one under the battery (2.8 kg/s), and two on each wing 2.05 m out (0.68
+    kg/s each), one firing back and one forward. Each wing's pair is fed by its own tank. The main
+    one is fed by both, each giving just over half its draw, so the tanks empty together.
+  - **Controls (MAS-035):** the game's spec has `mix`, rows of `{ channel, any: [{ on, off }] }`:
+    an engine's channel is on when any row holds. The core sets the engines' channels from the
+    player's `left`, `right` and `reverse` each step. The demo's pilot sets the engines' channels
+    itself, so the demo has no mixing.
+  - **Measured in empty space** (LAND ship first, the same way): forward 4.29 → 12.9 m/s² (3.0
+    times), turning 1.74 → 3.47 rad/s² (2.0 times), reverse 4.2 m/s². Economy 30: the tanks last
+    about two minutes of full thrust. A step with the ship alone at full thrust is 1.3 ms.
+  - **Welds:** 3 times Lander's, the gun's mount 6 times, two welds between each tank and its
+    generator. Nothing bends with all 40 shells fired still, forward, turning or reversing, nor
+    spinning at 40 rad/s.
+  - **Explosions (MAS-036):** a magazine holds 1 kg of TNT in its 3 kg, reaching 6 m. Destroyed,
+    it takes the cockpit, both tanks, the battery, a generator and the main thruster with it, and
+    leaves about 14 damaged parts. (2 kg at three times TNT's energy left nothing at all.) The
+    battery holds 0.05 kg: it breaks four welds and damages four parts, and the ship flies on.
+  - **The shells' weight is on the gun,** not in the magazines: the engine keeps a gun's shells
+    in the gun's own body. The magazines are parts that explode; losing one loses no shells.
+  - **The exhaust's tail lasts 0.4 s in this game, not 1 s** (`WISP_LIFE_ARCADE`). Exhaust leaves
+    at about 200 m/s, so a 1 s tail crossed most of the 160 m arena. A ship thrusting up through
+    the top edge came back in at the bottom as the tail it had left arrived there, and was turned
+    by it (0.6 rad/s). The LAND ship was too slow to show it.
 - **Gunship:** the Gunship 3 template from `stress-test.json`'s spawn (`s{n}` → `g{n}`, side
   `enemy`), with its shells tuned so one hit damages the LAND ship (§5, step 6).
 - **Scenarios:** `asteroids.json` (the game) and `asteroids-demo.json` (the same, `demo: true`,

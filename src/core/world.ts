@@ -18,7 +18,7 @@ import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
-import { runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
+import { arcadeMix, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { boundingRadiusOf, massProps, normalizePolygon, type Shape } from "./shapes.ts";
@@ -1255,6 +1255,8 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   const fromTick = world.tick;
   applyCommands(world, world.lander ? [...landerCommands(world), ...commands] : commands, profile);
   if (world.lander) landerStartJudge(world);
+  // Mammoth Asteroids' ship: the player's controls drive its engines (MAS-035).
+  if (world.arcade?.spec.mix) arcadeMix(world);
   // AI pilots decide and set their own channels, as a player's keys would (AIP-001, AIP-002).
   if (world.bodies.some((b) => b.pilot)) runPilots(world, profile.timestep);
   mark("commands");

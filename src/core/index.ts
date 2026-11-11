@@ -25,7 +25,7 @@ export * from "./spawn.ts";
 export * from "./shapes.ts";
 export * from "./stepper.ts";
 export * from "./world.ts";
-export { spawnWisps, stepWisps, wispFade, wispMass, wispRadius, WISP_GROW, WISP_LIFE, WISP_LIMIT, type Wisp } from "./wisps.ts";
+export { spawnWisps, stepWisps, wispFade, wispMass, wispRadius, WISP_GROW, WISP_LIFE, WISP_LIFE_ARCADE, WISP_LIMIT, type Wisp } from "./wisps.ts";
 export { burst, removeDestroyed, stepDust, DUST_LIMIT, type Dust, type DustKind } from "./dust.ts";
 export { runDuel, startDuel, type Duel, type DuelGoal, type DuelPhase, type DuelStatus } from "./duel.ts";
 export * from "./lander.ts";

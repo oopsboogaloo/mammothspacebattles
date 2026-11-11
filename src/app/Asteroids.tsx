@@ -80,7 +80,7 @@ function useArenaCamera(): void {
   }, []);
 }
 
-/** The keys (MAS-052): each holds its channels on while it is down. ↑ is both engines. */
+/** The keys (MAS-052): each holds its channels on while it is down. ↑ is left and right together: forward. */
 const KEYS: Record<string, string[]> = {
   KeyQ: ["left"],
   ArrowLeft: ["left"],
@@ -89,6 +89,8 @@ const KEYS: Record<string, string[]> = {
   ArrowRight: ["right"],
   ShiftRight: ["right"],
   ArrowUp: ["left", "right"],
+  KeyS: ["reverse"],
+  ArrowDown: ["reverse"],
   Space: ["fire"],
   KeyW: ["fire"],
 };
@@ -270,6 +272,7 @@ function Play() {
       {!over && (
         <>
           <Thrust channel="left" label="L" side="left" className="mas-thrust" />
+          <Thrust channel="reverse" label="REV" side="reverse" className="mas-thrust" />
           <Thrust channel="fire" label="FIRE" side="fire" className="mas-thrust" />
           <Thrust channel="right" label="R" side="right" className="mas-thrust" />
         </>
@@ -404,19 +407,24 @@ function HowToPlay() {
             <th>Touch</th>
           </tr>
           <tr>
-            <td>Left engine</td>
+            <td>Turn left</td>
             <td>Q, ← or Left Shift</td>
             <td>hold L</td>
           </tr>
           <tr>
-            <td>Right engine</td>
+            <td>Turn right</td>
             <td>E, → or Right Shift</td>
             <td>hold R</td>
           </tr>
           <tr>
-            <td>Both engines</td>
+            <td>Forward</td>
             <td>both keys, or ↑</td>
             <td>both buttons</td>
+          </tr>
+          <tr>
+            <td>Reverse (brake)</td>
+            <td>S or ↓</td>
+            <td>hold REV</td>
           </tr>
           <tr>
             <td>Fire</td>
@@ -430,11 +438,11 @@ function HowToPlay() {
           </tr>
         </tbody>
       </table>
-      <p>Both engines together push you forward. One engine alone turns you: the left engine turns the nose right, the right engine turns it left. There are no brakes: to slow down, turn round and burn.</p>
+      <p>The ship has five engines: a main thruster at the back, and two small thrusters on each wing, one facing back and one facing forward. Turning fires one back thruster and the opposite front one, so the ship turns where it is. Forward fires the main thruster and both back ones. Reverse fires both front ones: a third of the forward push, enough to brake.</p>
       <h3>Gold</h3>
       <p>Touch a gold piece with any part of the ship to collect it, whether it is loose or still in its rock. Gold can't be destroyed. Some of it is hidden inside larger fragments of rock and can't be collected until the fragment cracks open. GOLD on the top bar shows how many pieces are left.</p>
       <h3>Ships and damage</h3>
-      <p>You have three ships. A ship is lost when its hull is destroyed or it has no working engine left. Short of that you fly on with the damage: a damaged engine pushes less, a lost leg shifts the balance, and a holed tank leaks. The wreck stays where it is. The next ship beams in after a moment and can't be damaged for two seconds, while it flashes. Each new ship, and each new level, has a full tank and 40 shells.</p>
+      <p>You have three ships. A ship is lost when its hull is destroyed or it has no working engine left. Short of that you fly on with the damage: a damaged engine pushes less, a lost wing takes its tank and thrusters with it, and a holed tank leaks. A magazine that is destroyed explodes violently; the battery and the tanks explode too, less so. The wreck stays where it is. The next ship beams in after a moment and can't be damaged for two seconds, while it flashes. Each new ship, and each new level, has a full tank and 40 shells.</p>
       <h3>Gunships</h3>
       <p>From level 3 a gunship beams in 20 seconds into the level, and another every minute, three at the most. A ring shows where it will appear. It hunts you and shoots; one hit damages you without destroying you. From level 9 they come sooner, more often and shoot better.</p>
       <h3>Scoring</h3>
@@ -476,9 +484,9 @@ function Physics() {
     <Page id="mas-physics" title="THE PHYSICS">
       <p>Nothing in Mammoth Asteroids is scripted. The ship flies, the rocks break and the gold drifts free because of the physics.</p>
       <h3>Welded parts</h3>
-      <p>The ship is a set of rigid parts (hull, wing, tank, legs, gun and each engine's chamber and nozzle walls) welded together, each with its own mass. A rock is about twenty pieces welded along their shared edges. Everything that touches pushes equal and opposite, with friction. The world runs 240 steps a second and is deterministic: the same inputs always give the same game.</p>
+      <p>The ship is a set of rigid parts (cockpit, battery, two generators, two magazines, two fuel tanks, the gun, and each engine's head and nozzle walls) welded together, each with its own mass. A rock is about twenty pieces welded along their shared edges. Everything that touches pushes equal and opposite, with friction. The world runs 240 steps a second and is deterministic: the same inputs always give the same game.</p>
       <h3>Thrust is gas</h3>
-      <p>There is no thrust force. The engines burn hydrogen and oxygen in their chambers, and the hot gas pushes on the chamber walls and leaves through the nozzle. The tank drains as you burn, so the ship gets lighter.</p>
+      <p>There is no thrust force. The engines burn hydrogen and oxygen in their chambers, and the hot gas pushes on the engine's head and walls and leaves through the nozzle. The tanks drain as you burn, so the ship gets lighter.</p>
       <h3>The gun</h3>
       <p>The gun is a railgun: it throws a half-kilogram shell at 96 m/s, and the ship is pushed back with the same momentum. Forty shells weigh 20 kg, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within three metres, and its gas pushes the rock's pieces apart.</p>
       <h3>Welds bend and break</h3>
@@ -486,7 +494,7 @@ function Physics() {
       <h3>Damage</h3>
       <p>Impact and blast energy beyond a part's threshold costs it integrity. A part at zero is destroyed and leaves as dust. A damaged engine gives less thrust, and a damaged tank leaks; the leak pushes the ship.</p>
       <h3>Gravity</h3>
-      <p>Every rock, and every chunk broken off one, pulls by its mass: about 1 m/s² at a large rock's surface, a quarter of your thrust. Rocks pull each other and you; the ship pulls nothing.</p>
+      <p>Every rock, and every chunk broken off one, pulls by its mass: about 1 m/s² at a large rock's surface, a thirteenth of your forward thrust. Rocks pull each other and you; the ship pulls nothing.</p>
       <h3>The wrap</h3>
       <p>The arena has no edges. Collisions, gravity, blasts and the gunships' aim all work across them.</p>
       <h3>Nothing created, nothing lost</h3>
