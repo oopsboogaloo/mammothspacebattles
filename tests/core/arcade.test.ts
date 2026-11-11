@@ -274,6 +274,31 @@ describe("Mammoth Asteroids", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("MAS-024 collecting gold is no collision: a piece heavier than the ship, met at 25 m/s, is collected without a touch, a push or any damage", () => {
+    const { w, step } = game();
+    const g = looseGold(w);
+    expect(g.mass).toBeGreaterThan(67); // heavier than the ship
+    g.position = { x: 0, y: 12 };
+    g.velocity = { x: 0, y: -25 }; // straight at the ship's nose
+    settle(w);
+    const welds = w.joints.filter((j) => j.a.startsWith("p1-")).length;
+    let touched = false;
+    for (let i = 0; i < 240 && !w.events.some((e) => e.type === "arcade.gold"); i++) {
+      step(1 / 240);
+      touched ||= w.contacts.some((c) => c.a === g.id || c.b === g.id);
+    }
+    expect(st(w).stats.gold).toBe(1);
+    expect(touched).toBe(false);
+    step(0.25);
+    const ship = prefixed(w, "p1-");
+    expect(ship.filter((b) => b.integrity < 1).map((b) => b.id)).toEqual([]);
+    expect(w.joints.filter((j) => j.a.startsWith("p1-")).length).toBe(welds);
+    expect(w.joints.filter((j) => j.integrity < 1).map((j) => j.id)).toEqual([]);
+    // Not pushed: only the rock's pull has moved it (it was thrown back at 13 m/s).
+    expect(Math.hypot(body(w, "p1-hull")!.velocity.x, body(w, "p1-hull")!.velocity.y)).toBeLessThan(0.5);
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("MAS-024 gold hidden inside a larger fragment whose seams don't show is not collected, though the ship touches it", () => {
     const { w, step } = game();
     const g = looseGold(w);

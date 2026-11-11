@@ -420,6 +420,8 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
     const b = rbs[j];
     if (a.invMass === 0 && b.invMass === 0) return;
     if (roots && roots.get(a.body.id) === roots.get(b.body.id)) return;
+    // One passes through the other (gold and the ship collecting it, MAS-024).
+    if (a.body.passes?.includes(b.body.id) || b.body.passes?.includes(a.body.id)) return;
     // Where b is for this contact: itself, or its copy across the edge (FLT-015).
     const bAt = shift ? add(b.body.position, shift) : b.body.position;
     const m = collide(placed(a), shift ? { shape: b.body.shape, position: bAt, rot: b.rot } : placed(b), sweep[i] + sweep[j] + slop, slop);

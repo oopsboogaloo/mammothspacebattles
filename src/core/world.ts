@@ -85,6 +85,11 @@ export interface Body {
   pilot?: Pilot;
   /** What it is made of, if valuable (AST-006): "gold". Drawn in its colour once it can be seen. */
   mineral?: string;
+  /**
+   * Bodies it never collides with, by id: they pass through it (Mammoth Asteroids' gold and the
+   * ship that collects it, MAS-024).
+   */
+  passes?: readonly string[];
   /** Part of a larger asteroid fragment whose seams don't show yet (AST-007): see asteroid.ts. */
   compound?: { id: string; reveal: number; seams?: number };
 }

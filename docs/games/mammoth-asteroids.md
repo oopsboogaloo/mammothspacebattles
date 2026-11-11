@@ -187,6 +187,10 @@ not bend them.
 - A piece that is destroyed leaves a burst of gas that pushes its neighbours apart (MAS-027). The
   burst does no damage, so bursts don't chain.
 - Gold cannot be damaged.
+- Gold the ship can collect does not collide with the ship (MAS-024): a piece weighs about 105 kg,
+  more than the ship. As a collision, at 12 m/s it took 21% off the gun; at 25 m/s 90%, with five
+  welds broken and the ship thrown back at 13 m/s. Gold still hidden inside a larger fragment is
+  rock to the ship, and collides.
 
 **Weapons**
 
@@ -332,6 +336,8 @@ Priority: **M** must, **S** should.
 - **MAS-024** `[M]` The ship touching a gold piece not hidden in an unrevealed larger fragment
   collects it: it leaves the arena, its welds go with it, and it scores 500. The ledger records
   what leaves under `boundary`.
+  Collecting is no collision: gold the ship can collect passes through the ship's parts, and is
+  collected as soon as their outlines meet. Nothing is pushed or damaged.
 - **MAS-025** `[M]` When every gold piece of the level has been collected, the level is cleared:
   bonus, then the level's rocks, debris and gunships beam out, the ship is swapped for a fresh one
   in place, and the next level beams in.
