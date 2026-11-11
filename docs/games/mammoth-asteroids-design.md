@@ -357,6 +357,13 @@ would mostly remove. That is the next change.
   muzzle 200 m/s. The slug is a 0.06 m disc of 0.1 kg with a weak material, so it breaks up into
   dust when it hits. The bore is along +y, through the centre of mass, so recoil doesn't spin
   the ship. Fuel economy generous (to tune; start at 15).
+  *As built, after play (11 November 2026):* with Lander's welds the recoil broke the ship. Each
+  shot bent the gun's mount a little (DMG-008), the mount broke at about the 19th shot, and the
+  loose gun then shot its own ship. Measured by firing all 40 shells in empty space, still, under
+  thrust and turning each way: nothing bends once the mount is 4 times Lander's welds and the rest
+  of the ship twice (at 1.5 times the tank's and wing's welds still bend). Built with margin: the
+  mount 6 times, the rest 3 times. The parts' materials are unchanged. A stronger ship also
+  survives harder knocks from rocks; not measured.
 - **Gunship:** the Gunship 3 template from `stress-test.json`'s spawn (`s{n}` → `g{n}`, side
   `enemy`), with its shells tuned so one hit damages the LAND ship (§5, step 6).
 - **Scenarios:** `asteroids.json` (the game) and `asteroids-demo.json` (the same, `demo: true`,

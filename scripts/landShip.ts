@@ -39,7 +39,7 @@ export interface Leak {
  * The ship as a template: its parts round the hull's centre, pointing up, their ids `prefix` + the
  * LAND ship's (with `{n}` for the ship's number), its control channels left and right.
  */
-export function landShip(prefix: string, economy: number, leak?: Leak) {
+export function landShip(prefix: string, economy: number, leak?: Leak, weld = WELD) {
   const id = (x: unknown) => `${prefix}${String(x)}`;
   const bodies = land.world.bodies
     .filter((b) => shipIds.has(String(b.id)))
@@ -57,7 +57,7 @@ export function landShip(prefix: string, economy: number, leak?: Leak) {
       }
       return out;
     });
-  const joints = land.world.joints.map((j) => ({ ...j, id: id(j.id), a: id(j.a), b: id(j.b), limits: WELD, yield: YIELD }));
+  const joints = land.world.joints.map((j) => ({ ...j, id: id(j.id), a: id(j.a), b: id(j.b), limits: weld, yield: YIELD }));
   const links = land.world.links.map((l) => ({ ...l, id: id(l.id), ...(l.from !== undefined ? { from: id(l.from) } : {}), to: id(l.to) }));
   return { bodies, joints, links };
 }

@@ -392,6 +392,23 @@ describe("Mammoth Asteroids", () => {
     expect(hashValue(run(700))).toBe(hashValue(a));
   }, 120_000);
 
+  it("MAS-030 the recoil of all 40 shells leaves the ship whole: no weld bends and no part is damaged, still, under thrust or turning", () => {
+    for (const held of [[], ["left", "right"], ["left"], ["right"]]) {
+      const { w, step } = game();
+      // Empty space: nothing but the ship, so only its own gun can hurt it.
+      w.bodies = w.bodies.filter((b) => b.id.startsWith("p1-"));
+      w.joints = w.joints.filter((j) => j.a.startsWith("p1-") && j.b.startsWith("p1-"));
+      settle(w);
+      const welds = w.joints.length;
+      step(11, [set("fire", 1), ...held.map((c) => set(c, 1))]);
+      expect(body(w, "p1-gun")!.magazine!.count).toBe(0);
+      expect(st(w).phase).toBe("playing");
+      expect(w.joints.length).toBe(welds);
+      expect(w.joints.filter((j) => j.integrity < 1).map((j) => j.id)).toEqual([]);
+      expect(prefixed(w, "p1-").filter((b) => !b.id.includes("shell") && b.integrity < 1).map((b) => b.id)).toEqual([]);
+    }
+  });
+
   it("MAS-032 the clearest spot is the centre when nothing is near, and moves off the path of what is coming", () => {
     const bounds = { min: { x: -100, y: -80 }, max: { x: 100, y: 80 }, wrap: true };
     expect(clearestSpot(createWorld(1, [], { x: 0, y: 0 }, { bounds }))).toEqual({ x: 0, y: 0 });

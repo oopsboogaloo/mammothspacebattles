@@ -16,12 +16,23 @@ const HEIGHT = 160;
 const WIDTH = 284;
 
 /**
+ * The ship's welds are stronger than Lander's (asked for by Chloe after playing, 11 November 2026:
+ * the recoil was breaking the ship). With Lander's welds each shot bent the gun's mount a little, it
+ * broke at about the 19th shot, and the loose gun then shot its own ship. Measured by firing all 40
+ * shells in empty space, still, under thrust and turning each way: nothing bends once the mount is
+ * 4 times Lander's welds and the rest of the ship twice. These have margin over that.
+ */
+const stronger = (k: number) => ({ tension: WELD.tension * k, compression: WELD.compression * k, shear: WELD.shear * k, torque: WELD.torque * k });
+const SHIP_WELD = stronger(3);
+const GUN_WELD = stronger(6);
+
+/**
  * The railgun: a small block on top of the hull, on the ship's centre line, so its recoil pushes the
  * ship straight back and doesn't turn it. Its slug is light and explosive: it bursts when it hits.
  * Times are game seconds: a reload of 0.25 is two shots a second on screen.
  */
 function ship() {
-  const s = landShip("p{n}-", ECONOMY);
+  const s = landShip("p{n}-", ECONOMY, undefined, SHIP_WELD);
   // An explosive shell (asked for by Chloe after playing, 11 November 2026: a solid slug did nothing
   // to the rocks). It is the Mammoth scenario's, from the mining tuning (AST-008): 0.5 kg, 0.3 kg of
   // it charge, launched at 96 m/s. The blast's gas pushes the rock's pieces apart. No casing
@@ -43,7 +54,7 @@ function ship() {
     // The muzzle is just past the block's top; the bore is along +y.
     magazine: { count: 40, reload: 0.25, at: { x: 0, y: 0.31 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } },
   };
-  const weld = (side: string, x: number) => ({ id: `p{n}-gun-${side}`, a: "p{n}-hull", b: "p{n}-gun", anchorA: { x, y: 0.5 }, anchorB: { x, y: -0.15 }, limits: WELD, yield: YIELD });
+  const weld = (side: string, x: number) => ({ id: `p{n}-gun-${side}`, a: "p{n}-hull", b: "p{n}-gun", anchorA: { x, y: 0.5 }, anchorB: { x, y: -0.15 }, limits: GUN_WELD, yield: YIELD });
   return {
     bodies: [...s.bodies, gun],
     joints: [...s.joints, weld("l", -0.2), weld("r", 0.2)],

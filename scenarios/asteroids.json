@@ -782,10 +782,10 @@
               "y": 0.4
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -802,10 +802,10 @@
               "y": 0.4
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -822,10 +822,10 @@
               "y": 0.05
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -842,10 +842,10 @@
               "y": 0.05
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -862,10 +862,10 @@
               "y": 0.3
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -882,10 +882,10 @@
               "y": 0.3
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -902,10 +902,10 @@
               "y": 0.4
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -922,10 +922,10 @@
               "y": 0.4
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -942,10 +942,10 @@
               "y": 0.05
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -962,10 +962,10 @@
               "y": 0.05
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -982,10 +982,10 @@
               "y": 0.3
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -1002,10 +1002,10 @@
               "y": 0.3
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -1022,10 +1022,10 @@
               "y": 0.1
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -1042,10 +1042,10 @@
               "y": 0.1
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -1062,10 +1062,10 @@
               "y": -0.25
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -1082,10 +1082,10 @@
               "y": -0.5
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -1102,10 +1102,10 @@
               "y": 1.021429
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -1122,10 +1122,10 @@
               "y": 1.021429
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
             },
             "yield": 0.3
           },
@@ -1142,10 +1142,10 @@
               "y": -0.15
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 45900,
+              "compression": 91800,
+              "shear": 32100,
+              "torque": 11040
             },
             "yield": 0.3
           },
@@ -1162,10 +1162,10 @@
               "y": -0.15
             },
             "limits": {
-              "tension": 7650,
-              "compression": 15300,
-              "shear": 5350,
-              "torque": 1840
+              "tension": 45900,
+              "compression": 91800,
+              "shear": 32100,
+              "torque": 11040
             },
             "yield": 0.3
           }

@@ -231,7 +231,8 @@ Priority: **M** must, **S** should.
 
 **Ship and lives**
 - **MAS-030** `[M]` The ship is the LAND ship, with Lander's materials and bending welds, and a
-  railgun on its nose (an explosive shell, about 1 m/s of kick a shot).
+  railgun on its nose (an explosive shell, about 1 m/s of kick a shot). Its welds are stronger than
+  Lander's (3 times; the gun's mount 6 times), so the recoil of a whole magazine does it no harm.
 - **MAS-031** `[M]` The ship is lost when its hull is gone or no working engine is still welded to
   it. 3 lives a game.
 - **MAS-032** `[M]` A lost ship's wreck stays until the level ends. The next ship beams in about
