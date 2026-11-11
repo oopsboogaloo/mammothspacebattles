@@ -178,7 +178,9 @@ test("MAS-001 MAS-060 behind the title an AI pilot plays the game for real; Play
       const w = m.sandbox()?.world;
       return w ? { demo: !!w.arcade.spec.demo, time: w.time, pilot: w.bodies.find((b) => b.pilot)?.pilot?.mode ?? null } : null;
     });
-  await expect.poll(async () => (await demo())?.time ?? 0, { timeout: 15_000 }).toBeGreaterThan(1);
+  // CI's WebKit ran this demo at about 16 steps a second (237 steps in 15 s), so the check is that
+  // it is running, not how far it has got.
+  await expect.poll(async () => (await demo())?.time ?? 0, { timeout: 30_000 }).toBeGreaterThan(0.25);
   expect(await demo()).toMatchObject({ demo: true, pilot: "clearing" });
   await expect(page.getByTestId("mas-hud")).toHaveCount(0);
   await expect(page.getByTestId("thrust-fire")).toHaveCount(0);
@@ -210,5 +212,5 @@ test("MAS-007 How to play and The physics open from the title, each with Back, a
   await page.getByTestId("mas-back").click();
   const time = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { time: number } } } }).__msb.sandbox().world.time);
   const t0 = await time();
-  await expect.poll(time, { timeout: 10_000 }).toBeGreaterThan(t0 + 0.5);
+  await expect.poll(time, { timeout: 30_000 }).toBeGreaterThan(t0 + 0.1);
 });
