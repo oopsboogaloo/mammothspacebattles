@@ -1042,7 +1042,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
         continue;
       }
       // A ship that is protected flashes (MAS-034).
-      if (flashing && b.id.startsWith(flashing)) ctx.globalAlpha = 0.3;
+      const dim = flashing !== null && b.id.startsWith(flashing);
+      if (dim) ctx.globalAlpha = 0.3;
       bodyPath(ctx, cam, vp, b);
       ctx.fillStyle = fill;
       ctx.fill();
@@ -1053,7 +1054,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       if (hidden && b.shape.kind !== "disc" && !selected) strokeOutline(ctx, cam, vp, b, hidden, fill);
       else ctx.stroke();
       ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
+      if (dim) ctx.globalAlpha = 1;
       if (opts.arcade || (b.compound && !selected)) continue; // no orientation mark or label to give its pieces away (none at all in the game)
       // Orientation mark: centre to the body's local +x edge, so rotation is visible.
       const q = sinCos(b.angle);
