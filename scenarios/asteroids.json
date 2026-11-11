@@ -2747,7 +2747,13 @@
                   },
                   "mass": 0.3,
                   "restitution": 0,
-                  "friction": 0.3
+                  "friction": 0.3,
+                  "explosive": {
+                    "charge": 0.05,
+                    "heat": 12000000,
+                    "fragments": 0,
+                    "radius": 2
+                  }
                 },
                 "railgun": {
                   "channel": "g{n}.fire",

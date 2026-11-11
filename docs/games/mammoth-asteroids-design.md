@@ -446,6 +446,14 @@ would mostly remove. That is the next change.
     | 0.005 | 21 and 20 | 10 and 3 | yes |
 
     The player's own ship is unchanged: it takes blasts whole.
+  - **The gunship's shell has a charge (11 November 2026).** Chloe found its solid 0.3 kg shell
+    not effective: 5 to 18% off the part it struck. One shell at each of seven places on the ship:
+
+    | Shell | The part struck | Those round it | Tanks destroyed | Ship lost |
+    |---|---|---|---|---|
+    | solid | 5 to 18% | none | 1 of 7 | never |
+    | 3 kJ, 1.5 m | 14 to 42% | up to 48% | 3 of 7 | never |
+    | 6 kJ, 2 m (chosen) | 37 to 74% | 5 to 25% | 4 of 7 | never |
   - **Welds:** 3 times Lander's, the gun's mount 6 times, two welds between each tank and its
     generator. Nothing bends with all 40 shells fired still, forward, turning or reversing, nor
     spinning at 40 rad/s.

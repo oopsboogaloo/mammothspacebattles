@@ -66,6 +66,13 @@ function ship() {
 /** The gunship's solid shell, kg (0.15 until 11 November 2026, when Chloe asked for more damage). */
 const GUNSHIP_SHELL = 0.3;
 const GUNSHIP_BLAST = 0.01;
+/**
+ * The gunship's shell carries a small charge (asked for by Chloe, 11 November 2026: its solid
+ * shell was not effective, 5 to 18% off the part it struck). 6 kJ, reaching 2 m: a hit takes 35 to
+ * 75% off the part it strikes and 5 to 25% off those round it, and a hit near a tank destroys the
+ * tank. No single hit loses the ship. With 3 kJ and 1.5 m: 15 to 45%.
+ */
+const GUNSHIP_CHARGE = { charge: 0.05, heat: 1.2e7, fragments: 0, radius: 2 };
 function gunship() {
   const stress = JSON.parse(readFileSync(join(root, "scenarios", "stress-test.json"), "utf8")) as { ui: { spawn: { bodies: Json[]; joints: Json[]; links: Json[] } } };
   const t = JSON.parse(JSON.stringify(stress.ui.spawn).replaceAll("s{n}", "g{n}")) as { bodies: Json[]; joints: Json[]; links: Json[] };
@@ -78,7 +85,7 @@ function gunship() {
     // of the fight, and leaves 20 parts as wreckage with most of their welds broken.
     if (b.material) b.material = { ...(b.material as Json), blast: GUNSHIP_BLAST };
     const mag = b.magazine as (Json & { shell: Json }) | undefined;
-    if (mag) mag.shell = { shape: { kind: "disc", radius: 0.1 }, mass: GUNSHIP_SHELL, restitution: 0, friction: 0.3 };
+    if (mag) mag.shell = { shape: { kind: "disc", radius: 0.1 }, mass: GUNSHIP_SHELL, restitution: 0, friction: 0.3, explosive: GUNSHIP_CHARGE };
   }
   return { bodies: t.bodies, joints: t.joints, links: t.links.filter((l) => l.channel !== "g{n}.tractor") };
 }

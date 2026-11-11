@@ -869,8 +869,7 @@ describe("Mammoth Asteroids: gunships", () => {
 
   it("MAS-041 one hit from a gunship's shell on a tank, thruster or gun damages the player's ship, and no single hit destroys it, wherever it lands", () => {
     const shell = raw.world.arcade.gunship.template.bodies.find((b: { magazine?: unknown }) => b.magazine).magazine;
-    expect(shell.shell).toMatchObject({ mass: 0.3 });
-    expect(shell.shell.explosive).toBeUndefined();
+    expect(shell.shell).toMatchObject({ mass: 0.3, explosive: { charge: 0.05, heat: 1.2e7, fragments: 0, radius: 2 } });
     // From the left at a tank, from the left at a front thruster, from below into the main thruster,
     // from above at the gun, and from the right at the other front thruster (the cockpit's centre is the origin).
     const shots: [{ x: number; y: number }, { x: number; y: number }][] = [
@@ -890,9 +889,9 @@ describe("Mammoth Asteroids: gunships", () => {
       // Damaged: a part or a weld has lost integrity. Not destroyed: the ship flies on.
       const ship = prefixed(w, "p1-");
       const worst = Math.max(...ship.map((b) => 1 - b.integrity), ...w.joints.filter((j) => j.a.startsWith("p1-")).map((j) => 1 - j.integrity));
-      // A square hit takes 15 to 18% off a hull part and 5 to 9% off a thruster. A tank is destroyed
-      // and explodes; the ship flies on without it.
-      expect(worst).toBeGreaterThan(0.005);
+      // Its charge takes 35 to 75% off the part it strikes and less off those round it. A tank
+      // struck, or beside the strike, is destroyed and explodes; the ship flies on without it.
+      expect(worst).toBeGreaterThan(0.1);
       expect(st(w)).toMatchObject({ lost: false, lives: 3, phase: "playing" });
       expect(body(w, "p1-hull")!.integrity).toBeGreaterThan(0.5);
       expect(w.ledger.violations).toBe(0);

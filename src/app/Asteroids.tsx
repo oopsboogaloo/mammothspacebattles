@@ -444,7 +444,7 @@ function HowToPlay() {
       <h3>Ships and damage</h3>
       <p>You have three ships. A ship is lost when its hull is destroyed or it has no working engine left. Short of that you fly on with the damage: a damaged engine pushes less, a lost wing takes its tank and thrusters with it, and a holed tank leaks. A magazine that is destroyed explodes violently; the battery and the tanks explode too, less so. A thruster knocked off burns out in under a second and is then dead, and the tank it was fed from leaks. A whole wing knocked off burns on until its tank is empty. The wreck stays where it is. The next ship beams in after a moment and can't be damaged for two seconds, while it flashes. Each new ship, and each new level, has a full tank and 120 shells.</p>
       <h3>Gunships</h3>
-      <p>From level 3 a gunship beams in 20 seconds into the level, and another every minute, three at the most. A ring shows where it will appear. It hunts you and shoots; one hit damages you without destroying you, though a hit on a fuel tank blows the tank up. From level 9 they come sooner, more often and shoot better.</p>
+      <p>From level 3 a gunship beams in 20 seconds into the level, and another every minute, three at the most. A ring shows where it will appear. It hunts you and shoots; its shells burst when they hit: one damages several parts without destroying the ship, and a hit on or beside a fuel tank blows the tank up. From level 9 they come sooner, more often and shoot better.</p>
       <h3>Scoring</h3>
       <table>
         <tbody>

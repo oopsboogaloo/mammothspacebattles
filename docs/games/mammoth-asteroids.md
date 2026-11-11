@@ -193,7 +193,7 @@ not bend them.
 | | What it is | What a hit does |
 |---|---|---|
 | The ship's shell | 0.167 kg at 96 m/s; a charge of 151 kJ and 5.5 kg of gas; blast reaches 4 m | destroys rock pieces near the hit and pushes the rest apart; one puts a gunship out of the fight, destroying its tank and a part or two and leaving the other 20 as wreckage in pieces; never goes off against its own ship |
-| A gunship's shell | a 0.3 kg solid slug | takes 15 to 18% off a hull part and 5 to 9% off a thruster; destroys a tank, which explodes; no single hit loses the ship |
+| A gunship's shell | 0.3 kg with a charge of 6 kJ; blast reaches 2 m | takes 35 to 75% off the part it strikes and 5 to 25% off those round it; destroys a tank it strikes or lands beside, which explodes; no single hit loses the ship |
 | A destroyed magazine | 1 kg of TNT, reaching 6 m | takes the cockpit, both tanks, the battery, a generator and the main thruster |
 | A destroyed battery | 0.05 kg of TNT, reaching 1 m | breaks four welds and damages four parts |
 | A destroyed tank with fuel | 0.05 kg of TNT and its fuel, reaching 0.5 m | breaks about ten welds; the ship flies on |
@@ -212,9 +212,10 @@ not bend them.
   sooner (down to 10 s), the next ones 5 s closer together (down to every 20 s), and their combat
   skill goes on rising past its earlier ceiling, to the pilot's best. The numbers are a first
   setting, to tune after play.
-- **Shells:** a 0.3 kg solid slug (0.15 kg until 11 November 2026, when Chloe asked for more
-  damage). One hit takes 15 to 18% off a hull part and 5 to 9% off a thruster, and destroys a
-  tank, which explodes. No single hit loses the ship. Measured in tests.
+- **Shells:** 0.3 kg with a small charge (6 kJ, reaching 2 m). First a 0.15 kg solid slug, then
+  0.3 kg, then the charge (all 11 November 2026: Chloe found them not effective). One hit takes
+  35 to 75% off the part it strikes and 5 to 25% off those round it, and destroys a tank it
+  strikes or lands beside, which explodes. No single hit loses the ship. Measured in tests.
 - **Killed** like any ship: its hull destroyed or no working engine left. Its wreck stays as
   debris.
 - **At a level clear** the remaining gunships beam out with the rocks. A gunship doesn't need
