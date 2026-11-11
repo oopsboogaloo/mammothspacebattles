@@ -50,7 +50,9 @@ function ship() {
   // 120 shells of 0.167 kg, so the magazine still weighs 20 kg and a shot kicks a third as hard.
   // Each blast is as it was: the same energy (0.1 kg of charge at three times the energy a kg) and
   // the same 5.5 kg of gas (5.33 kg of it made from nothing).
-  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05, explosive: { charge: 0.1, fragments: 0, radius: 4, heat: 1.512e8, gas: 5.333333 } };
+  // `safe`: the shell never goes off against its own ship. Blasts' gas blows these light shells
+  // about, and one blown back onto the ship as it left the gun destroyed the ship.
+  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05, explosive: { charge: 0.1, fragments: 0, radius: 4, heat: 1.512e8, gas: 5.333333, safe: true } };
   // The muzzle is just past the gun's top (the gun is 0.7 m long, the shell 0.22 m); the bore is along +y.
   const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine });
@@ -111,6 +113,12 @@ const scenario = {
         // G M / (1.4 R²), with M ≈ 0.8 π R² × density.
         gravity: { G: 0.186, joined: true },
         orbit: true,
+        // Where a piece is destroyed, a burst of gas pushes the pieces round it apart (MAS-027).
+        // Half one of the ship's shells: half the energy and 2.7 kg of gas. It does no blast damage,
+        // so one burst doesn't set off the next. As strong as a shell (tried first), nine shells at
+        // a rock 40 m off threw a piece into the ship within two seconds and set off its magazine.
+        // To tune after play.
+        burst: { charge: 0.1, heat: 7.56e7, gas: 2.6 },
         gold: [2, 3],
         compounds: [1, 2],
         speed: [2, 6],

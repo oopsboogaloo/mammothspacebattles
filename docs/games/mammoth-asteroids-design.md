@@ -406,6 +406,26 @@ would mostly remove. That is the next change.
     - *Shells (the same day).* 120 of 0.167 kg, where there were 40 of 0.5 kg: the magazine
       still weighs 20 kg, and a shot kicks 0.24 m/s, a third as hard. Each blast is unchanged:
       0.1 kg of charge at three times the energy a kg, and 5.5 kg of gas, 5.33 kg of it made.
+  - **Bursts, dead thrusters and leaks (11 November 2026, asked for by Chloe):**
+    - *Bursts (MAS-027).* `rocks.burst`: where a piece of rock is destroyed the game adds a small
+      charge that goes off at the next step (0.1 kg, 76 kJ, 2.7 kg of gas: half a shell's blast).
+      Its blast radius is 1 cm, so it damages nothing and bursts don't chain. As strong as a shell,
+      nine shells at a rock 40 m off wrecked the ship within two seconds.
+    - *Shells are `safe`.* The bursts' gas blew a shell that had just left the gun back onto the
+      ship, where it went off and set off a magazine. A `safe` charge never goes off against the
+      assembly of the gun that fired it (`explosive.safe`).
+    - *Fuel lines (MAS-037).* Each step the game checks each tank and engine the design joins by
+      a feed link. If either is gone or no longer part of the ship, the feed links are removed.
+      An engine that still exists gets a control channel of its own, held on, so it burns what is
+      in its store (0.4 game seconds) and is then dead. If the tank and engine are no longer
+      joined, the tank gets a breach on its top or bottom face, nearest the engine's place in the
+      design, and loses 0.1 of its integrity: the leak rule (DMG-004) then drains it at about
+      0.05 kg/s when full. A wing lost whole keeps its thrusters, so only its line to the main
+      thruster leaks.
+    - *Engines explode when destroyed:* 0.4% of the engine's mass as charge (5 g for a small
+      thruster). Ten times that destroyed the tank beside it, which then exploded too.
+    - *Measured* (three rocks, nine shells each, and level 8 left alone for 80 s): too chaotic
+      to show a clear change in chunks or step time (4.3 to 5.1 ms a step against 5.1 without).
   - **Welds:** 3 times Lander's, the gun's mount 6 times, two welds between each tank and its
     generator. Nothing bends with all 40 shells fired still, forward, turning or reversing, nor
     spinning at 40 rad/s.

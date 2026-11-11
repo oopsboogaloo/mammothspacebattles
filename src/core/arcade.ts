@@ -49,6 +49,12 @@ export interface ArcadeSpec {
      * others' pull would hold it on a circle, all turning the same way.
      */
     orbit?: boolean;
+    /**
+     * Where a rock's piece is destroyed, a charge goes off (MAS-027): its gas pushes the pieces round
+     * it apart. It does no blast damage, so one burst doesn't set off the next. `charge` kg at
+     * `heat` J/kg (TNT's by default), and `gas` kg of gas made with it (`explosive.gas`).
+     */
+    burst?: { charge: number; heat?: number; gas?: number };
     /** The most rocks in a level (default 8): level N has N, up to this (MAS-020). */
     most?: number;
   };
@@ -138,6 +144,9 @@ export interface ArcadeState {
   shells: Record<string, number>;
   /** Rock pieces a player's slug touched lately (their own rock's pieces with them): the step. */
   slugHits: Record<string, number>;
+  /** The ship's fuel lines that have been cut (MAS-037), as "tank>engine", and bursts made so far. */
+  cut?: string[];
+  bursts?: number;
   /** When the next gunship is due, s (none this level if undefined). */
   nextGunship?: number;
   /** A gunship about to beam in: when, and where its ring is. */
@@ -490,6 +499,61 @@ export function clearestSpot(world: World): Vec2 {
   return best;
 }
 
+/** The side of a burst's charge, m: the size of a shell, so its gas comes out as a shell's does. */
+const BURST_SIZE = 0.24;
+/** How much of a tank's integrity a cut fuel line costs it: the leak's size (DMG-004). */
+const LINE_LEAK = 0.1;
+
+/**
+ * Cuts the fuel lines of the ship's engines that are no longer part of it (MAS-037), and returns
+ * whether anything changed. A line is a tank and an engine the ship's design feeds from it.
+ *   - The feed links go, so the engine has only what is in its own small store.
+ *   - An engine that still exists burns that off: its control moves to a channel of its own, held on.
+ *   - If the tank is no longer joined to the engine, it leaks where the line left it: a breach at
+ *     the top or bottom face nearest the engine's place in the design, and LINE_LEAK off its integrity.
+ */
+function cutLines(world: World, game: ArcadeGame, hullId: string): boolean {
+  const { spec, state: s } = game;
+  const id = (x: string) => x.replaceAll("{n}", String(s.n));
+  const lines = new Map<string, { tank: string; engine: string }>();
+  for (const l of spec.ship.links ?? []) if (l.kind === "feed" && l.from !== undefined) lines.set(`${id(l.from)}>${id(l.to)}`, { tank: id(l.from), engine: id(l.to) });
+  const cut = new Set(s.cut ?? []);
+  let ship: Set<string> | null = null;
+  let changed = false;
+  for (const [key, line] of lines) {
+    if (cut.has(key)) continue;
+    const tank = world.bodies.find((b) => b.id === line.tank);
+    const engine = world.bodies.find((b) => b.id === line.engine);
+    ship ??= new Set(assemblyOf(world, hullId));
+    if (tank && engine && ship.has(tank.id) && ship.has(engine.id)) continue;
+    cut.add(key);
+    changed = true;
+    const gone = world.links.filter((l) => l.kind === "feed" && l.from === line.tank && l.to === line.engine);
+    for (const l of gone) world.events.push({ tick: world.tick, type: "link.break", data: { id: l.id, to: l.to } });
+    if (gone.length) world.links = world.links.filter((l) => !gone.includes(l));
+    // What is left in the engine burns off: it fires on a channel of its own until its store is empty.
+    if (engine?.injector && !ship.has(engine.id) && !engine.injector.channel.endsWith(".residual")) {
+      const channel = `${engine.id}.residual`;
+      world.links = world.links.map((l) => (l.kind === "control" && l.to === engine.id && l.channel === engine.injector!.channel ? { ...l, channel } : l));
+      engine.injector.channel = channel;
+      world.controls = { ...world.controls, [channel]: 1 };
+    }
+    // The tank leaks where the line left it, unless the two are still joined (a wing lost whole).
+    if (!tank || (engine && assemblyOf(world, tank.id).includes(engine.id)) || tank.shape.kind !== "box") continue;
+    const at = (x: string) => (spec.ship.bodies.find((b) => id(b.id) === x)?.position ?? { x: 0, y: 0 }) as Vec2;
+    const d = { x: at(line.engine).x - at(line.tank).x, y: at(line.engine).y - at(line.tank).y };
+    const up = d.y > 0 ? 1 : -1;
+    const hw = tank.shape.width / 2;
+    const hh = tank.shape.height / 2;
+    const x = Math.abs(d.y) > 1e-9 ? (d.x * hh) / Math.abs(d.y) : d.x;
+    tank.breach = { point: { x: Math.max(-hw + 0.1, Math.min(hw - 0.1, x)), y: up * hh }, normal: { x: 0, y: up }, credit: tank.breach?.credit ?? 0, count: tank.breach?.count ?? 0 };
+    tank.integrity = Math.max(0.05, tank.integrity - LINE_LEAK);
+    world.events.push({ tick: world.tick, type: "arcade.line", data: { tank: tank.id, engine: line.engine } });
+  }
+  if (changed) s.cut = [...cut].sort();
+  return changed;
+}
+
 /** A new game: ship 1 at the centre, pointing up, and level 1 round it. */
 export function startArcade(world: World, spec: ArcadeSpec, ops: ArcadeOps): ArcadeGame {
   const game: ArcadeGame = {
@@ -584,7 +648,33 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
     s.stats.welds += 1;
   }
 
+  // 2a. Where a rock's piece was destroyed this step, a burst of gas (MAS-027).
+  if (spec.rocks.burst) {
+    for (const e of recent) {
+      if (e.type !== "destroyed.removed" || !ROCK_PIECE.test(String(e.data.id))) continue;
+      const k = (s.bursts = (s.bursts ?? 0) + 1);
+      ops.addBody(world, {
+        id: `burst-${k}`,
+        shape: { kind: "box", width: BURST_SIZE, height: BURST_SIZE },
+        mass: spec.rocks.burst.charge,
+        position: { x: Number(e.data.x), y: Number(e.data.y) },
+        velocity: { x: 0, y: 0 },
+        angle: 0,
+        angularVelocity: 0,
+        // Armed and triggered: it goes off at the next step, whatever it touches. No fragments, and
+        // a blast too short to reach a neighbour: only its gas acts.
+        explosive: { charge: spec.rocks.burst.charge, ...(spec.rocks.burst.heat !== undefined ? { heat: spec.rocks.burst.heat } : {}), gas: spec.rocks.burst.gas ?? 0, fragments: 0, radius: 0.01, armed: true, trigger: true },
+      });
+      changed = true;
+    }
+  }
+
   if (s.phase === "over") return changed;
+
+  // 2b. The ship's fuel lines (MAS-037). An engine no longer welded to the ship, or destroyed, has
+  // its line cut. What is left in the engine burns off at once, and then it is dead. Where the
+  // line left its tank, the tank leaks.
+  if (!s.lost && world.bodies.some((b) => b.id === hullId)) changed = cutLines(world, game, hullId) || changed;
 
   // 3. Gold the ship is touching, if it can be seen (not inside a larger fragment whose seams don't show).
   if (!s.lost && s.gold.left.length && world.bodies.some((b) => b.id === hullId)) {

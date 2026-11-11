@@ -100,6 +100,10 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
   ones, to brake.
 - **Handling:** 19.3 m/s² forward, 4.2 m/s² in reverse, 3.5 rad/s² turning: three times the LAND
   ship's acceleration at first, then half as much again for a stronger forward engine, and twice its turning. To tune after play.
+- **Lost thrusters:** a thruster knocked off burns what is left in it, under a second, and then
+  only drifts; the controls no longer reach it. Destroyed, it goes up in a small explosion.
+  Either way its tank leaks where its line was (about 0.05 kg/s from a full tank), and the leak
+  pushes the ship.
 - **Damage:** a grazing hit on a small rock may survive, with damage. A damaged engine pushes
   less, a lost wing takes its tank and thrusters with it, and a damaged tank leaks (and its leak
   pushes). A destroyed magazine explodes violently and the ship is lost. A destroyed battery or
@@ -231,6 +235,8 @@ Priority: **M** must, **S** should.
 - **MAS-020** `[M]` Level N starts with N large rocks, 8 at most (levels 8 and up have 8), placed away from the ship and each other,
   drifting and turning, each with 2 or 3 gold pieces. The same level from the same seed is laid
   out the same.
+- **MAS-027** `[S]` Where a rock's piece is destroyed, a burst of gas pushes the pieces round it
+  apart. It does no blast damage, so one burst doesn't set off the next.
 - **MAS-026** `[S]` A level of two or more rocks starts with them in rough orbit round each
   other: each moving across the line to their centre of mass, at the speed that would hold a
   circle, all turning the same way, with no momentum overall.
@@ -263,6 +269,10 @@ Priority: **M** must, **S** should.
   both front ones. About 19.3 m/s² forward, 4.2 m/s² in reverse and 3.5 rad/s² turning.
 - **MAS-036** `[M]` A destroyed magazine explodes violently: the ship is lost. A destroyed battery
   explodes too, and the ship flies on damaged.
+- **MAS-037** `[M]` An engine no longer welded to the ship, or destroyed, has its fuel line cut.
+  One that still exists burns what is left in it (under a second) and is then dead. Destroyed, it
+  goes up in a small explosion. The tank it was fed from leaks where the line left it, unless the
+  two came away together.
 
 **Gunships**
 - **MAS-040** `[M]` From level 3, a Gunship 3 with a Hunting AI beams in at 20 s and every 60 s
