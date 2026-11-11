@@ -420,7 +420,7 @@ describe("Mammoth Asteroids", () => {
       expect(w.joints.filter((j) => j.integrity < 1).map((j) => j.id)).toEqual([]);
       expect(prefixed(w, "p1-").filter((b) => !b.id.includes("shell") && b.integrity < 1).map((b) => b.id)).toEqual([]);
     }
-  }, 120_000); // five 11 s flights: 15 s here, over the 20 s limit on CI
+  }, 120_000); // five 11 s flights: 11 s here, over the 20 s limit on CI
 
   it("MAS-035 the player's controls drive the five engines: a turn fires one back thruster and the opposite front one, both fire the main and both back ones, reverse both front ones", () => {
     const firing = (held: string[]) => {
