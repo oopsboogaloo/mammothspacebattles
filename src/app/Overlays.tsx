@@ -87,6 +87,10 @@ export function Picker() {
         <button class="btn primary" onClick={openLander} data-testid="open-lander">
           Play Mammoth Lander
         </button>
+        {/* The game's own page (asteroids.html): it has no way back, so this is a plain link. */}
+        <a class="btn primary" href="asteroids.html" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }} data-testid="open-asteroids">
+          Play Mammoth Asteroids
+        </a>
         <button class="btn" onClick={openFile} data-testid="open-file">
           Open scenario file…
         </button>

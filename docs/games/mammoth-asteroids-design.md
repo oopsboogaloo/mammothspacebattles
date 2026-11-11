@@ -114,6 +114,24 @@ attitude, station keeping, `aimAt`, `clearShot`, `avoid`):
 
 It flies only through the ship's channels, like every pilot (AIP-001).
 
+*Clearing, built (step 7 of the plan, 11 November 2026).* As above, with these particulars:
+
+- **Loose gold** is a visible gold piece on its own or with one other piece still stuck to it. It
+  flies into the nearest by keeping station on it with no offset, so it closes at a speed in
+  proportion to the gap, and at no more than 1.2 m/s over the last 10 m (a piece is some 230 kg,
+  five times the ship). It doesn't steer round the gold, or round anything within 10 m of it (the
+  rubble it came out of).
+- **Shooting:** it stands off 50 m plus up to 20 for low skill (a hunter: 35), and backs off to
+  that again when the rock comes within 10 m of it, where a hunter would hold its ground.
+- **How well it plays** (four games, headless, 284 × 160 m arena): it frees and collects its
+  first gold in 20 to 65 game seconds in three of the four, and is out of ships in 60 to 140. It
+  rarely clears a level: most ships are lost to rubble near the gold it is going for. It is a demo
+  that plays, not a good player. The title starts a new demo 3 s after each one is over.
+- **In the game:** `demo: true` in the spec puts the pilot on each new ship's hull (side "player",
+  flight and combat skill 0.8). A lost ship's pilot is removed with its control links.
+- **One scenario, not two:** the page sets `demo` on its copy of `asteroids.json`, where §3
+  planned a second file.
+
 ## 2. The game in the world (MAS-070), `src/core/arcade.ts`
 
 *Built (step 4 of the plan), without the gunships (step 6).* What the build changed from the text
@@ -249,6 +267,23 @@ A small charge on the light slug (2 g to 20 g) changed nothing at all. An earlie
 day made the pieces a tenth as tough instead (toughness 2,000 J): that destroys pieces where they
 are hit (six in sixteen slugs) and is not what the experiments had found, so it was replaced.
 
+**More power (Chloe, 11 November 2026, after playing with the shell above).** The charge now has
+three times TNT's energy (`heat` 12.6 MJ/kg: 37.8 kJ a shell in this profile) and a 3 m blast. The
+shell's mass is the same, so the ship's weight and the recoil are too. Measured the same way,
+bonds 800 N/m, chunks / pieces destroyed on four shapes:
+
+| Shell | Hit 1 | Hit 2 | Hit 4 | Hit 8 |
+|---|---|---|---|---|
+| TNT, 2 m (the mining tuning's) | 1–2 / 0 | 1–3 / 0 | 2–4 / 0 | 3–6 / 1–2 |
+| 0.45 kg of TNT, 3 m | 1–2 / 0 | 1–3 / 0 | 1–3 / 1 | 3–12 / 2–4 |
+| 2 × TNT, 3 m | 1–2 / 0 | 1–3 / 0 | 1–8 / 1–2 | 4–12 / 3–4 |
+| **3 × TNT, 3 m (now)** | **1–2 / 0** | **1–3 / 1–2** | **3–6 / 2–4** | **10–14 / 3–7** |
+| 5 × TNT, 4 m | 1–3 / 1 | 1–4 / 2–4 | 5–12 / 3–6 | 9–13 / 6–11 |
+| TNT, 2 m, bonds 500 N/m | 1–4 / 0 | 1–7 / 0 | 3–9 / 0 | 11–15 / 1 |
+
+It now destroys some of what it hits as well as pushing the rest apart. The dials, if it wants
+more or less: the charge's energy (`heat`) and the blast radius, in `scripts/asteroids.ts`.
+
 **What it changes for the ship.** Forty 0.5 kg shells are 20 kg, so a full ship is 48 kg, not 34:
 it accelerates about 4.3 m/s² on both engines with a full magazine, against 6.3 before, and gets
 lighter as it fires. A shot kicks it about 1 m/s (0.6 before) at half the rate of fire.
@@ -329,6 +364,12 @@ would mostly remove. That is the next change.
   width is set by the page) and no fixed bodies.
 
 ## 4. The page, `asteroids.html`
+
+*Step 7 (11 November 2026):* the title now runs the demo behind its name and buttons (the same
+view, with no HUD), and has How to play and The physics, each a page of text with Back. The demo
+rests while another page is up and carries on after. The sandbox's start screen has a "Play
+Mammoth Asteroids" button beside Lander's (asked for by Chloe): a link to this page, which still
+has nothing leading back.
 
 *Built (step 5 of the plan):* the title (static until the demo, step 7), play, the HUD, the keys
 and touch buttons, pause, game over with initials, and the high scores. How to play and The

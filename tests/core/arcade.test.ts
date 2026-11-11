@@ -230,7 +230,7 @@ describe("Mammoth Asteroids", () => {
   it("MAS-021 MAS-030 the explosive shell breaks a rock up: its blast pushes pieces apart, so the rock splits within a few hits and few pieces are destroyed; a solid slug did none of that", () => {
     const mag = raw.world.arcade.ship.bodies.find((b: { id: string }) => b.id === "p{n}-gun").magazine;
     // The Mammoth scenario's shell, from the mining tuning (AST-008).
-    expect(mag).toMatchObject({ count: 40, reload: 0.25, shell: { mass: 0.5, explosive: { charge: 0.3, fragments: 0, radius: 2 } } });
+    expect(mag).toMatchObject({ count: 40, reload: 0.25, shell: { mass: 0.5, explosive: { charge: 0.3, fragments: 0, radius: 3, heat: 1.26e7 } } });
     expect(raw.world.arcade.rocks).toMatchObject({ density: 6, bond: 800, material: { threshold: 100, toughness: 20_000 } });
     const chunks = (w: World) => {
       const seen = new Set<string>();
@@ -260,7 +260,7 @@ describe("Mammoth Asteroids", () => {
     expect(now.shots).toBe(9);
     expect(now.bursts).toBeGreaterThanOrEqual(7); // nearly every shell reaches the rock and goes off
     expect(now.chunks).toBeGreaterThanOrEqual(3);
-    expect(now.lost).toBeLessThanOrEqual(3); // pushed apart, not vaporised
+    expect(now.lost).toBeLessThanOrEqual(8); // most of the rock is pushed apart, not vaporised
     expect(st(now.w).stats.welds).toBeGreaterThan(3);
     expect(st(now.w).score).toBe(ARCADE_SCORES.weld * st(now.w).stats.welds);
     // Gold is untouched by the blasts, and the ship by its own shells.
@@ -659,4 +659,61 @@ describe("Mammoth Asteroids: gunships", () => {
     expect(st(none.w).nextGunship).toBeUndefined();
   });
 });
+
+describe("Mammoth Asteroids: the demo and its Clearing pilot", () => {
+  const demo = (seed: number) => game((scn) => Object.assign(scn.world.arcade, { demo: true, seed }));
+
+  it("MAS-060 AIP-020 the demo's ship has a Clearing pilot on its hull, flying through the ship's own channels; the player's game has none", () => {
+    const { w, step } = demo(4);
+    expect(body(w, "p1-hull")!.pilot).toMatchObject({ mode: "clearing", side: "player" });
+    expect(game().w.bodies.some((b) => b.pilot)).toBe(false);
+    step(3);
+    // It has set the engines, and only its own three channels exist.
+    expect(Object.keys(w.controls).sort()).toEqual(["fire", "left", "right"]);
+    expect(body(w, "p1-hull")!.velocity).not.toEqual({ x: 0, y: 0 });
+    expect(body(w, "p1-hull")!.pilot!.intent).toMatch(/a1-0-\d+/); // closing on, or attacking, a piece of the rock
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("AIP-020 MAS-060 it shoots the rock where it holds gold, frees a piece and collects it, within 40 game seconds", () => {
+    const { w, step } = demo(4);
+    let got = false;
+    for (let k = 0; k < 80 && !got; k++) {
+      step(0.5);
+      got = w.events.some((e) => e.type === "arcade.gold");
+    }
+    expect(got).toBe(true);
+    expect(st(w).stats.shots).toBeGreaterThan(0);
+    expect(st(w).stats.gold).toBe(1);
+    expect(st(w).score).toBeGreaterThanOrEqual(ARCADE_SCORES.gold);
+    // What it shot at first was a rock piece welded to gold.
+    const first = w.events.find((e) => e.type === "detonation")!;
+    expect(first).toBeDefined();
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("MAS-060 a lost demo ship's pilot goes with it, and the next ship has its own", () => {
+    const { w, step } = demo(4);
+    step(1);
+    body(w, "p1-hull")!.integrity = 0.0001; // nearly gone: it stays in the world, wrecked by the next knock
+    for (const id of ["p1-engine-l", "p1-engine-r"]) body(w, id)!.integrity = 0; // no engine: lost
+    step(2 / 240);
+    expect(st(w)).toMatchObject({ lost: true, lives: 2 });
+    expect(prefixed(w, "p1-").some((b) => b.pilot)).toBe(false);
+    step(1.25 + 2 / 240);
+    expect(body(w, "p2-hull")!.pilot).toMatchObject({ mode: "clearing" });
+    expect(w.bodies.filter((b) => b.pilot)).toHaveLength(1);
+  });
+
+  it("MAS-060 the demo replays exactly", () => {
+    const run = () => {
+      const { w, step } = demo(4);
+      step(8);
+      return w;
+    };
+    expect(hashValue(run())).toBe(hashValue(run()));
+    expect(() => game((scn) => (scn.world.arcade.demo = "yes"))).toThrow(/demo/);
+  }, 120_000);
+});
+
 

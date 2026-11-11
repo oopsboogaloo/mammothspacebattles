@@ -365,3 +365,14 @@ button { cursor: pointer; }
 .mas-thrust.right { right: max(18px, env(safe-area-inset-right)); }
 .mas-thrust.fire { left: 50%; transform: translateX(-50%); width: 120px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
 .mas-thrust:active { background: #fff; color: #000; }
+.mas-title.over { background: transparent; pointer-events: none; }
+.mas-title.over h1 { text-shadow: 0 0 12px #000, 0 0 4px #000; }
+.mas-title.over .mas-col, .mas-title.over .mas-credit { pointer-events: auto; }
+.mas-page { justify-content: flex-start; gap: 18px; user-select: text; -webkit-user-select: text; touch-action: pan-y; }
+.mas-text { width: min(760px, 100%); text-align: left; font-size: 15px; line-height: 1.5; }
+.mas-text h3 { margin: 18px 0 6px; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; }
+.mas-text p { margin: 0 0 8px; }
+.mas-text ul { margin: 0; padding-left: 20px; }
+.mas-text table { border-collapse: collapse; margin: 4px 0 10px; }
+.mas-text th, .mas-text td { text-align: left; padding: 4px 18px 4px 0; vertical-align: top; }
+.mas-text th { font-weight: 600; border-bottom: 1px solid #fff; }
