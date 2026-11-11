@@ -735,6 +735,114 @@ describe("Mammoth Asteroids", () => {
   });
 });
 
+describe("Mammoth Asteroids: tuning (design §5 step 8)", () => {
+  /** How many groups of welded pieces a rock is in. */
+  const chunks = (w: World, prefix: string): number => {
+    const seen = new Set<string>();
+    let n = 0;
+    for (const b of prefixed(w, prefix)) {
+      if (seen.has(b.id)) continue;
+      n++;
+      const stack = [b.id];
+      while (stack.length) {
+        const id = stack.pop()!;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        for (const j of w.joints) if (j.a === id) stack.push(j.b); else if (j.b === id) stack.push(j.a);
+      }
+    }
+    return n;
+  };
+  /** Sets a rock's pieces round a point, moving together. */
+  const place = (w: World, prefix: string, at: { x: number; y: number }, velocity: { x: number; y: number }): Body[] => {
+    const rock = prefixed(w, prefix);
+    const M = rock.reduce((m, b) => m + b.mass, 0);
+    const c = { x: rock.reduce((x, b) => x + b.mass * b.position.x, 0) / M, y: rock.reduce((y, b) => y + b.mass * b.position.y, 0) / M };
+    for (const b of rock) {
+      b.position = { x: b.position.x - c.x + at.x, y: b.position.y - c.y + at.y };
+      b.velocity = { ...velocity };
+      b.angularVelocity = 0;
+    }
+    return rock;
+  };
+
+  it("MAS-021 MAS-024 a few shells free a gold piece: 2 to 8, on three rocks", () => {
+    for (const seed of [1, 2, 3]) {
+      const { w, step } = game((scn) => (scn.world.arcade.seed = seed));
+      place(w, "a1-0-", { x: 0, y: 40 }, { x: 0, y: 0 });
+      settle(w);
+      const gold = [...st(w).gold.left];
+      const free = () => gold.some((id) => body(w, id) && !body(w, id)!.compound && !w.joints.some((j) => j.a === id || j.b === id));
+      step(1 / 240, [set("fire", 1)]);
+      for (let i = 0; i < 240 * 10 && !free(); i++) step(1 / 240);
+      expect(free()).toBe(true);
+      // Measured: 4, 3 and 3 shells (and 3, 7 and 2 on three more rocks).
+      expect(st(w).stats.shots).toBeGreaterThanOrEqual(2);
+      expect(st(w).stats.shots).toBeLessThanOrEqual(8);
+      expect(st(w)).toMatchObject({ lost: false });
+      expect(w.ledger.violations).toBe(0);
+    }
+  }, 120_000);
+
+  it("MAS-021 two rocks that meet, even at 2 m/s, break each other up along their welds and destroy almost nothing", () => {
+    for (const closing of [2, 5]) {
+      const { w, step } = game();
+      st(w).level = 1;
+      st(w).gold.left = [];
+      step(1.5 + 2 / 240);
+      const a = place(w, "a2-0-", { x: -15, y: 50 }, { x: closing / 2, y: 0 });
+      const b = place(w, "a2-1-", { x: 15, y: 50 }, { x: -closing / 2, y: 0 });
+      settle(w);
+      const pieces = a.length + b.length;
+      const welds = w.joints.filter((j) => j.a.startsWith("a2-")).length;
+      step(20);
+      // Measured: 87 and 88 of 88 welds broken, 39 and 40 chunks, 0 pieces destroyed.
+      expect(welds - w.joints.filter((j) => j.a.startsWith("a2-")).length).toBeGreaterThan(0.8 * welds);
+      expect(chunks(w, "a2-")).toBeGreaterThan(0.75 * pieces);
+      expect(pieces - prefixed(w, "a2-").length).toBeLessThanOrEqual(3);
+      expect(w.ledger.violations).toBe(0);
+    }
+  }, 240_000);
+
+  it("MAS-030 the ship against rock: a 140 kg piece glancing a wing at 8 m/s does no harm; a whole rock on the nose costs the gun at 10 m/s and breaks welds at 20, and the ship flies on", () => {
+    const worst = (w: World) => Math.max(...prefixed(w, "p1-").map((b) => 1 - b.integrity));
+    const shipWelds = (w: World) => w.joints.filter((j) => j.a.startsWith("p1-")).length;
+    // A loose piece of rock coming down past the right wing, clipping its front thruster.
+    const graze = game();
+    const piece = prefixed(graze.w, "a1-0-").find((b) => b.mineral !== "gold" && !b.compound)!;
+    graze.w.bodies = graze.w.bodies.filter((b) => b.id.startsWith("p1-") || b === piece);
+    graze.w.joints = graze.w.joints.filter((j) => j.a.startsWith("p1-"));
+    piece.position = { x: 4.5, y: 14 };
+    piece.velocity = { x: 0, y: -8 };
+    piece.angularVelocity = 0;
+    settle(graze.w);
+    const welds = shipWelds(graze.w);
+    graze.step(6);
+    expect(graze.w.events.some((e) => e.type === "collision" && [e.data.a, e.data.b].includes(piece.id) && [e.data.a, e.data.b].some((x) => String(x).startsWith("p1-")))).toBe(true);
+    expect(worst(graze.w)).toBeLessThan(0.02);
+    expect(shipWelds(graze.w)).toBe(welds);
+    expect(st(graze.w)).toMatchObject({ lost: false, lives: 3 });
+    // A whole rock, nose first. Measured: 10 m/s takes 15% off the gun; 20 m/s takes 81% off it and breaks seven welds.
+    const ram = (speed: number) => {
+      const { w, step } = game();
+      place(w, "a1-0-", { x: 0, y: 22 }, { x: 0, y: -speed });
+      settle(w);
+      step(4);
+      return w;
+    };
+    const slow = ram(10);
+    expect(1 - body(slow, "p1-gun")!.integrity).toBeGreaterThan(0.05);
+    expect(1 - body(slow, "p1-gun")!.integrity).toBeLessThan(0.4);
+    expect(shipWelds(slow)).toBe(welds);
+    expect(st(slow)).toMatchObject({ lost: false, lives: 3 });
+    const fast = ram(20);
+    expect(shipWelds(fast)).toBeLessThan(welds);
+    expect(st(fast)).toMatchObject({ lost: false, lives: 3 });
+    expect(chunks(fast, "a1-0-")).toBeGreaterThan(5); // the rock comes off worse
+    expect(fast.ledger.violations).toBe(0);
+  }, 120_000);
+});
+
 describe("Mammoth Asteroids: gunships", () => {
   /** A game taken straight to `level`, the ship at rest at the centre. */
   function at(level: number, edit?: (scn: typeof raw) => void) {
