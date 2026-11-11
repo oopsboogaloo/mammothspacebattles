@@ -21,8 +21,8 @@ requirement IDs (MAS-…) are this game's own. The engine changes the game needs
 | Levels | Level N has N asteroids, each holding 2 or 3 gold pieces. A level is cleared when every gold piece has been collected. |
 | Gold | Can't be destroyed. Collected by touching it with the ship, once it can be seen: any gold not hidden inside an unrevealed larger fragment, whether or not it is still in a rock. |
 | Gravity | Every rock piece pulls by its own mass. Each rock's pull is about 1 m/s² at its surface (a quarter of the ship's thrust). Rocks pull each other; the ship pulls nothing. In the wrapped arena each rock pulls from its nearest copy (as now). |
-| Rocks | Pieces a tenth as tough as the mining tuning's, so the slug breaks a rock up: a weld goes within a few slugs and a rock splits in about a dozen. Rocks chip and crack each other when they collide. |
-| Railgun | A light explosive slug (0.1 kg at 200 m/s, half of it charge, about 4 shots a second) that bursts when it strikes, damaging what is within 3 m. Each shot kicks the ship back about 0.6 m/s. A slug flies 140 m and is gone: less than the arena's height, so it can't come round and hit you. (First a solid slug; made explosive on 11 November 2026 after Chloe played: the solid one did nothing to the rocks.) |
+| Rocks | The mining tuning (AST-008): light rock (6 kg/m²) of tough pieces with weak bonds, the bonds scaled down for these bigger pieces (800 N/m). A shell's blast splits a rock within 2–4 hits and leaves it in 3–10 chunks by hit 8, with few pieces destroyed. Rocks that collide break each other up. |
+| Railgun | An explosive shell: the Mammoth scenario's, from the mining tuning (0.5 kg at 96 m/s, 0.3 kg of it charge, a 2 m blast, about 2 shots a second, 40 shells). It bursts when it strikes, and the blast's gas pushes the rock's pieces apart. Each shot kicks the ship back about 1 m/s. A shell flies 134 m and is gone: less than the arena's height, so it can't come round and hit you. (First a light solid slug, which did nothing to the rocks; changed on 11 November 2026 after Chloe played.) |
 | Life lost | The hull destroyed, or no working engine still welded to it (the duel's rule). Damage short of that is flown with. |
 | Lives | 3. The wreck stays as debris for the rest of the level. The next ship beams in at a safe spot after about 2.5 s, protected from damage for 2 s. |
 | Supplies | A full tank and magazine with every new ship and at every new level. |
@@ -97,7 +97,7 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
   that stays clearest of rocks for the next few seconds, at rest, pointing up. For 2 s it takes no
   damage, shown by flashing. Its welds can still break under a big enough load.
 - **Supplies:** every new ship, and every ship at a level start, has a full tank (fuel economy
-  cheat, FLT-010) and a full magazine (about 60 slugs).
+  cheat, FLT-010) and a full magazine (40 shells).
 
 ### Gunships
 
@@ -230,7 +230,7 @@ Priority: **M** must, **S** should.
 
 **Ship and lives**
 - **MAS-030** `[M]` The ship is the LAND ship, with Lander's materials and bending welds, and a
-  railgun on its nose (a light explosive slug, about 0.6 m/s of kick a shot).
+  railgun on its nose (an explosive shell, about 1 m/s of kick a shot).
 - **MAS-031** `[M]` The ship is lost when its hull is gone or no working engine is still welded to
   it. 3 lives a game.
 - **MAS-032** `[M]` A lost ship's wreck stays until the level ends. The next ship beams in about
@@ -310,7 +310,7 @@ for speed, goes back to Chloe before it is made.
 | Indestructible gold | Gold has no material (a generator option). |
 | What else must respect the wrap | Blasts and the AI; gas and the tractor later. |
 | View | The whole arena on one fixed screen, shaped like the screen. |
-| Railgun | A light explosive slug, a small kick. |
+| Railgun | An explosive shell (the mining tuning's), a kick of about 1 m/s. |
 | Life lost | Hull gone or no working engine. |
 | Fuel and ammo | Refilled with each new ship and each level. |
 | Collecting gold | Any visible gold, by touch. |

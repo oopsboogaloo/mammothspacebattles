@@ -738,30 +738,31 @@
               "toughness": 3000
             },
             "magazine": {
-              "count": 60,
-              "reload": 0.125,
+              "count": 40,
+              "reload": 0.25,
               "at": {
                 "x": 0,
-                "y": 0.3
+                "y": 0.31
               },
               "angle": 0,
               "shell": {
                 "shape": {
-                  "kind": "disc",
-                  "radius": 0.06
+                  "kind": "box",
+                  "width": 0.26,
+                  "height": 0.22
                 },
-                "mass": 0.1,
+                "mass": 0.5,
                 "restitution": 0,
-                "friction": 0.3,
+                "friction": 0.05,
                 "explosive": {
-                  "charge": 0.05,
+                  "charge": 0.3,
                   "fragments": 0,
-                  "radius": 3
+                  "radius": 2
                 }
               },
               "railgun": {
                 "channel": "fire",
-                "speed": 200
+                "speed": 96
               }
             }
           }
@@ -1227,15 +1228,15 @@
       "rocks": {
         "radius": 12,
         "pieces": 20,
-        "density": 20,
-        "bond": 20000,
+        "density": 6,
+        "bond": 800,
         "material": {
           "name": "rock",
           "threshold": 100,
-          "toughness": 2000
+          "toughness": 20000
         },
         "gravity": {
-          "G": 0.02
+          "G": 0.067
         },
         "gold": [
           2,
@@ -2521,7 +2522,7 @@
       "respawn": 1.25,
       "grace": 1,
       "clearPause": 1.5,
-      "shellLife": 0.7,
+      "shellLife": 1.4,
       "pace": 0.5,
       "seed": 1
     }

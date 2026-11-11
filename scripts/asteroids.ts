@@ -18,15 +18,15 @@ const WIDTH = 284;
 /**
  * The railgun: a small block on top of the hull, on the ship's centre line, so its recoil pushes the
  * ship straight back and doesn't turn it. Its slug is light and explosive: it bursts when it hits.
- * Times are game seconds: a reload of 0.125 is four shots a second on screen.
+ * Times are game seconds: a reload of 0.25 is two shots a second on screen.
  */
 function ship() {
   const s = landShip("p{n}-", ECONOMY);
-  // An explosive slug (asked for by Chloe after playing, 11 November 2026: a solid one did nothing to
-  // the rocks): half its 0.1 kg is charge, which goes off when it strikes. No casing fragments: the
-  // blast damages what is within 3 m and its gas pushes. In this profile's gas scale the charge is
-  // 2.1 kJ, about the slug's own 2 kJ of motion.
-  const slug = { shape: { kind: "disc", radius: 0.06 }, mass: 0.1, restitution: 0, friction: 0.3, explosive: { charge: 0.05, fragments: 0, radius: 3 } };
+  // An explosive shell (asked for by Chloe after playing, 11 November 2026: a solid slug did nothing
+  // to the rocks). It is the Mammoth scenario's, from the mining tuning (AST-008): 0.5 kg, 0.3 kg of
+  // it charge, a 2 m blast, launched at 96 m/s. The blast's gas pushes the rock's pieces apart. No
+  // casing fragments: they would fly round the arena.
+  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 2 } };
   const gun = {
     id: "p{n}-gun",
     shape: { kind: "box", width: 0.5, height: 0.3 },
@@ -39,7 +39,7 @@ function ship() {
     friction: 0.3,
     material: material("gun"),
     // The muzzle is just past the block's top; the bore is along +y.
-    magazine: { count: 60, reload: 0.125, at: { x: 0, y: 0.3 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 200 } },
+    magazine: { count: 40, reload: 0.25, at: { x: 0, y: 0.31 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } },
   };
   const weld = (side: string, x: number) => ({ id: `p{n}-gun-${side}`, a: "p{n}-hull", b: "p{n}-gun", anchorA: { x, y: 0.5 }, anchorB: { x, y: -0.15 }, limits: WELD, yield: YIELD });
   return {
@@ -86,14 +86,16 @@ const scenario = {
       rocks: {
         radius: 12,
         pieces: 20,
-        density: 20,
-        // Pieces a tenth as tough as the mining tuning's (20,000 J), so the slug breaks a rock up: a
-        // weld goes by the fourth slug and the rock splits by about the eleventh (measured on a still
-        // rock). To tune further after play (design §5 step 8).
-        bond: 20_000,
-        material: { name: "rock", threshold: 100, toughness: 2000 },
+        // The mining tuning (AST-008): light rock of tough pieces and weak bonds, so a shell's blast
+        // pushes pieces apart and few are destroyed. The bonds are 800 N/m, not that tuning's 3,500:
+        // a bond's strength goes with the length of its edge, and these pieces are about three times
+        // the size of the 4 m rocks it was tuned on. Measured on four shapes: a rock splits by hit
+        // 2–4 and is in 3–10 chunks by hit 8, with 1–3 of its 20 pieces destroyed (design §2.3a).
+        density: 6,
+        bond: 800,
+        material: { name: "rock", threshold: 100, toughness: 20_000 },
         // About 1 m/s² at a large rock's surface: G ≈ R² / M, M ≈ 0.8 π R² × density.
-        gravity: { G: 0.02 },
+        gravity: { G: 0.067 },
         gold: [2, 3],
         compounds: [1, 2],
         speed: [2, 6],
@@ -115,9 +117,9 @@ const scenario = {
       respawn: 1.25,
       grace: 1,
       clearPause: 1.5,
-      // A slug flies 140 m: less than the arena's height, so one fired straight up or down can't come
-      // round the arena and hit the ship that fired it (at 1.5 s it did, in under a second).
-      shellLife: 0.7,
+      // A shell flies 134 m: less than the arena's height, so one fired straight up or down can't come
+      // round the arena and hit the ship that fired it.
+      shellLife: 1.4,
       pace: 0.5,
       seed: 1,
     },
