@@ -104,6 +104,9 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
   only drifts; the controls no longer reach it. Destroyed, it goes up in a small explosion.
   Either way its tank leaks where its line was (about 0.05 kg/s from a full tank), and the leak
   pushes the ship.
+- **A lost wing:** a tank that comes away with its thrusters keeps feeding them. They burn, with
+  no key held, for about 18 game seconds, and the tank leaks from the side that was joined to
+  the ship. When the tank is empty the wing is dead, and no longer explodes if destroyed.
 - **Damage:** a grazing hit on a small rock may survive, with damage. A damaged engine pushes
   less, a lost wing takes its tank and thrusters with it, and a damaged tank leaks (and its leak
   pushes). A destroyed magazine explodes violently and the ship is lost. A destroyed battery or
@@ -272,8 +275,10 @@ Priority: **M** must, **S** should.
 - **MAS-038** `[S]` The ship's cockpit is filled light blue, so the way the ship faces shows.
 - **MAS-037** `[M]` An engine no longer welded to the ship, or destroyed, has its fuel line cut.
   One that still exists burns what is left in it (under a second) and is then dead. Destroyed, it
-  goes up in a small explosion. The tank it was fed from leaks where the line left it, unless the
-  two came away together.
+  goes up in a small explosion. The tank it was fed from leaks where the line left it. A wing
+  lost whole (a tank with its thrusters) burns on from its tank, with no key held, and leaks from
+  the side that was joined to the ship, until the tank is empty or the wing breaks up. A tank
+  with fuel in it explodes when destroyed; an empty one does not.
 
 **Gunships**
 - **MAS-040** `[M]` From level 3, a Gunship 3 with a Hunting AI beams in at 20 s and every 60 s

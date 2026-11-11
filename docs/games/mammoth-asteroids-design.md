@@ -420,8 +420,14 @@ would mostly remove. That is the next change.
       in its store (0.4 game seconds) and is then dead. If the tank and engine are no longer
       joined, the tank gets a breach on its top or bottom face, nearest the engine's place in the
       design, and loses 0.1 of its integrity: the leak rule (DMG-004) then drains it at about
-      0.05 kg/s when full. A wing lost whole keeps its thrusters, so only its line to the main
-      thruster leaks.
+      0.05 kg/s when full.
+    - *A wing lost whole (asked for the same day).* While a tank and its engine are joined but
+      off the ship, and the tank has fuel, the line stays: the engine fires on its own channel,
+      fed by the tank. Its economy drops from 45 to 3, and its feed rate rises to match: at the
+      ship's economy the wing burned for 165 game seconds; now about 18. The tank's cut line to
+      the main thruster makes it leak from the side that was welded to the ship. The back and
+      front thrusters of a wing push opposite ways, so the wing hardly moves. An empty tank
+      loses its charge, so it no longer explodes when destroyed.
     - *Engines explode when destroyed:* 0.4% of the engine's mass as charge (5 g for a small
       thruster). Ten times that destroyed the tank beside it, which then exploded too.
     - *Measured* (three rocks, nine shells each, and level 8 left alone for 80 s): too chaotic

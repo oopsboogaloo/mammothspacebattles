@@ -18,7 +18,7 @@ import { assemblyOf } from "./joints.ts";
 import { rotate, sinCos, type Vec2 } from "./math.ts";
 import { createRng, nextFloat } from "./prng.ts";
 import { massProps } from "./shapes.ts";
-import type { BodyInput, JointInput, LinkInput, World } from "./world.ts";
+import type { Body, BodyInput, JointInput, LinkInput, World } from "./world.ts";
 
 export interface ArcadeSpec {
   /** The ship, laid out round the origin (its hull there), pointing up, with `{n}` in its ids (not its control channels). */
@@ -146,6 +146,8 @@ export interface ArcadeState {
   slugHits: Record<string, number>;
   /** The ship's fuel lines that have been cut (MAS-037), as "tank>engine", and bursts made so far. */
   cut?: string[];
+  /** Lines of a wing lost whole, whose engines burn on from its tank (MAS-037). */
+  burning?: string[];
   bursts?: number;
   /** When the next gunship is due, s (none this level if undefined). */
   nextGunship?: number;
@@ -503,14 +505,24 @@ export function clearestSpot(world: World): Vec2 {
 const BURST_SIZE = 0.24;
 /** How much of a tank's integrity a cut fuel line costs it: the leak's size (DMG-004). */
 const LINE_LEAK = 0.1;
+/**
+ * The fuel economy (FLT-010) of a lost wing's engines. The ship's is generous, so a tank lasts a
+ * level: at that rate a lost wing burned for 165 game seconds. At this it burns for about 20.
+ */
+const WING_ECONOMY = 3;
 
 /**
- * Cuts the fuel lines of the ship's engines that are no longer part of it (MAS-037), and returns
- * whether anything changed. A line is a tank and an engine the ship's design feeds from it.
- *   - The feed links go, so the engine has only what is in its own small store.
- *   - An engine that still exists burns that off: its control moves to a channel of its own, held on.
- *   - If the tank is no longer joined to the engine, it leaks where the line left it: a breach at
- *     the top or bottom face nearest the engine's place in the design, and LINE_LEAK off its integrity.
+ * Looks after the fuel lines of the ship's engines that are no longer part of it (MAS-037), and
+ * returns whether anything changed. A line is a tank and an engine the ship's design feeds from it.
+ *   - Tank and engine still joined, off the ship (a wing lost whole): the line stays. The engine's
+ *     control moves to a channel of its own, held on, so it burns until the tank is empty or the
+ *     two part.
+ *   - Otherwise the line is cut: its feed links go. An engine that still exists burns what is left
+ *     in its own small store, on its own channel, and is then dead.
+ *   - A tank whose line is cut leaks (LINE_LEAK off its integrity). A tank still on the ship leaks
+ *     where the engine was: the top or bottom face nearest its place in the design. A tank that has
+ *     left the ship leaks from the side that was welded to it.
+ *   - An empty tank has nothing to go up with: it loses its charge.
  */
 function cutLines(world: World, game: ArcadeGame, hullId: string): boolean {
   const { spec, state: s } = game;
@@ -518,39 +530,83 @@ function cutLines(world: World, game: ArcadeGame, hullId: string): boolean {
   const lines = new Map<string, { tank: string; engine: string }>();
   for (const l of spec.ship.links ?? []) if (l.kind === "feed" && l.from !== undefined) lines.set(`${id(l.from)}>${id(l.to)}`, { tank: id(l.from), engine: id(l.to) });
   const cut = new Set(s.cut ?? []);
+  const burning = new Set(s.burning ?? []);
+  const at = (x: string) => (spec.ship.bodies.find((b) => id(b.id) === x)?.position ?? { x: 0, y: 0 }) as Vec2;
   let ship: Set<string> | null = null;
   let changed = false;
+  /** The engine fires from now on, whatever the player's controls say. */
+  const holdOn = (engine: Body, economy?: number): void => {
+    if (!engine.injector) return;
+    if (economy !== undefined && (engine.injector.economy ?? 1) > economy) engine.injector.economy = economy;
+    if (engine.injector.channel.endsWith(".residual")) return;
+    const channel = `${engine.id}.residual`;
+    world.links = world.links.map((l) => (l.kind === "control" && l.to === engine.id && l.channel === engine.injector!.channel ? { ...l, channel } : l));
+    engine.injector.channel = channel;
+    world.controls = { ...world.controls, [channel]: 1 };
+  };
+  const tanks = new Set<string>();
   for (const [key, line] of lines) {
+    tanks.add(line.tank);
     if (cut.has(key)) continue;
     const tank = world.bodies.find((b) => b.id === line.tank);
     const engine = world.bodies.find((b) => b.id === line.engine);
     ship ??= new Set(assemblyOf(world, hullId));
     if (tank && engine && ship.has(tank.id) && ship.has(engine.id)) continue;
+    const joined = !!tank && !!engine && assemblyOf(world, tank.id).includes(engine.id);
+    const fuel = tank ? (tank.contents ?? []).reduce((m, c) => m + c.mass, 0) : 0;
+    if (joined && fuel > 1e-6) {
+      // A wing lost whole: its engine burns on from its tank.
+      if (!burning.has(key)) {
+        burning.add(key);
+        // Its feed carries as much more as its economy is less, so the engine burns at full flow.
+        const was = engine.injector?.economy ?? 1;
+        if (was > WING_ECONOMY) world.links = world.links.map((l) => (l.kind === "feed" && l.from === line.tank && l.to === line.engine ? { ...l, rate: (l.rate * was) / WING_ECONOMY } : l));
+        holdOn(engine, WING_ECONOMY);
+        changed = true;
+      }
+      continue;
+    }
     cut.add(key);
+    burning.delete(key);
     changed = true;
     const gone = world.links.filter((l) => l.kind === "feed" && l.from === line.tank && l.to === line.engine);
     for (const l of gone) world.events.push({ tick: world.tick, type: "link.break", data: { id: l.id, to: l.to } });
     if (gone.length) world.links = world.links.filter((l) => !gone.includes(l));
-    // What is left in the engine burns off: it fires on a channel of its own until its store is empty.
-    if (engine?.injector && !ship.has(engine.id) && !engine.injector.channel.endsWith(".residual")) {
-      const channel = `${engine.id}.residual`;
-      world.links = world.links.map((l) => (l.kind === "control" && l.to === engine.id && l.channel === engine.injector!.channel ? { ...l, channel } : l));
-      engine.injector.channel = channel;
-      world.controls = { ...world.controls, [channel]: 1 };
-    }
-    // The tank leaks where the line left it, unless the two are still joined (a wing lost whole).
-    if (!tank || (engine && assemblyOf(world, tank.id).includes(engine.id)) || tank.shape.kind !== "box") continue;
-    const at = (x: string) => (spec.ship.bodies.find((b) => id(b.id) === x)?.position ?? { x: 0, y: 0 }) as Vec2;
-    const d = { x: at(line.engine).x - at(line.tank).x, y: at(line.engine).y - at(line.tank).y };
-    const up = d.y > 0 ? 1 : -1;
+    if (engine && !ship.has(engine.id)) holdOn(engine);
+    if (!tank || joined || tank.shape.kind !== "box") continue;
     const hw = tank.shape.width / 2;
     const hh = tank.shape.height / 2;
-    const x = Math.abs(d.y) > 1e-9 ? (d.x * hh) / Math.abs(d.y) : d.x;
-    tank.breach = { point: { x: Math.max(-hw + 0.1, Math.min(hw - 0.1, x)), y: up * hh }, normal: { x: 0, y: up }, credit: tank.breach?.credit ?? 0, count: tank.breach?.count ?? 0 };
+    let point: Vec2;
+    let normal: Vec2;
+    if (ship.has(tank.id)) {
+      // Still on the ship: where the engine was.
+      const d = { x: at(line.engine).x - at(line.tank).x, y: at(line.engine).y - at(line.tank).y };
+      const up = d.y > 0 ? 1 : -1;
+      const x = Math.abs(d.y) > 1e-9 ? (d.x * hh) / Math.abs(d.y) : d.x;
+      point = { x: Math.max(-hw + 0.1, Math.min(hw - 0.1, x)), y: up * hh };
+      normal = { x: 0, y: up };
+    } else {
+      // Off the ship: the side that was welded to it.
+      const side = at(spec.hull).x - at(line.tank).x >= 0 ? 1 : -1;
+      point = { x: side * hw, y: 0 };
+      normal = { x: side, y: 0 };
+    }
+    tank.breach = { point, normal, credit: tank.breach?.credit ?? 0, count: tank.breach?.count ?? 0 };
     tank.integrity = Math.max(0.05, tank.integrity - LINE_LEAK);
     world.events.push({ tick: world.tick, type: "arcade.line", data: { tank: tank.id, engine: line.engine } });
   }
-  if (changed) s.cut = [...cut].sort();
+  // An empty tank doesn't explode when it is destroyed.
+  for (const t of tanks) {
+    const tank = world.bodies.find((b) => b.id === t);
+    if (tank?.explosive?.whenDestroyed && !(tank.contents ?? []).some((c) => c.mass > 1e-6)) {
+      delete tank.explosive;
+      changed = true;
+    }
+  }
+  if (changed) {
+    s.cut = [...cut].sort();
+    s.burning = [...burning].sort();
+  }
   return changed;
 }
 

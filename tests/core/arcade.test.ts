@@ -610,7 +610,7 @@ describe("Mammoth Asteroids", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("MAS-037 a destroyed thruster goes up in a small explosion and its tank leaks; the main thruster destroyed, both tanks leak; a wing lost whole, its thrusters burn out", () => {
+  it("MAS-037 a destroyed thruster goes up in a small explosion and its tank leaks; the main thruster destroyed, both tanks leak", () => {
     const one = alone();
     one.step(0.1);
     body(one.w, "p1-back-l")!.integrity = 0;
@@ -628,18 +628,42 @@ describe("Mammoth Asteroids", () => {
     for (const t of ["p1-tank-l", "p1-tank-r"]) expect(body(main.w, t)!.integrity).toBeLessThan(0.91);
     expect(st(main.w).lost).toBe(false); // the four small thrusters still fly it
 
-    const wing = alone();
-    wing.step(0.1);
-    wing.w.joints = wing.w.joints.filter((j) => !j.id.startsWith("p1-w-tank-gen-l"));
-    let fired = false;
-    for (let i = 0; i < 240; i++) {
-      wing.step(1 / 240);
-      fired ||= ["p1-back-l", "p1-front-l"].every((e) => body(wing.w, e)!.injector!.firing);
-    }
-    expect(fired).toBe(true);
-    expect(["p1-back-l", "p1-front-l"].some((e) => body(wing.w, e)!.injector!.firing)).toBe(false);
-    expect(st(wing.w).cut).toEqual(["p1-tank-l>p1-back-l", "p1-tank-l>p1-front-l", "p1-tank-l>p1-main"]);
-    expect(wing.w.ledger.violations).toBe(0);
+    expect(main.w.ledger.violations).toBe(0);
+  });
+
+  it("MAS-037 a wing lost whole burns on from its tank and leaks from the side that was joined, until the tank is empty; an empty tank destroyed doesn't explode, a tank with fuel in it does", () => {
+    const { w, step } = alone();
+    step(0.1);
+    const fuel = () => body(w, "p1-tank-l")!.contents!.reduce((m, c) => m + c.mass, 0);
+    w.joints = w.joints.filter((j) => !j.id.startsWith("p1-w-tank-gen-l")); // the left wing comes off
+    step(2);
+    const firing = () => ["p1-back-l", "p1-front-l"].filter((e) => body(w, e)!.injector!.firing);
+    // Both its thrusters burn, with no key held; only its line to the main thruster is cut.
+    expect(firing()).toHaveLength(2);
+    expect(st(w)).toMatchObject({ lost: false, cut: ["p1-tank-l>p1-main"], burning: ["p1-tank-l>p1-back-l", "p1-tank-l>p1-front-l"] });
+    // It leaks from the side that was welded to the ship (the left tank's right side).
+    expect(body(w, "p1-tank-l")!.breach).toMatchObject({ point: { x: 0.75, y: 0 }, normal: { x: 1, y: 0 } });
+    expect(body(w, "p1-tank-l")!.integrity).toBeCloseTo(0.9, 9);
+    const f2 = fuel();
+    step(4);
+    expect(firing()).toHaveLength(2); // still burning
+    expect(f2 - fuel()).toBeGreaterThan(1); // about 0.45 kg/s: it burns for some 18 s, not the ship's two minutes
+    // Until the tank is empty. Then it is dead, and has nothing to go up with.
+    step(16);
+    expect(fuel()).toBeLessThan(1e-3);
+    expect(firing()).toHaveLength(0);
+    expect(st(w).burning).toEqual([]);
+    expect(st(w).cut).toEqual(["p1-tank-l>p1-back-l", "p1-tank-l>p1-front-l", "p1-tank-l>p1-main"]);
+    const before = w.events.filter((e) => e.type === "detonation").length;
+    body(w, "p1-tank-l")!.integrity = 0;
+    step(0.2);
+    expect(body(w, "p1-tank-l")).toBeUndefined();
+    expect(w.events.filter((e) => e.type === "detonation").length).toBe(before);
+    // The other tank still has fuel in it: destroyed, it explodes.
+    body(w, "p1-tank-r")!.integrity = 0;
+    step(0.2);
+    expect(w.events.filter((e) => e.type === "detonation").map((e) => e.data.id)).toContain("p1-tank-r");
+    expect(w.ledger.violations).toBe(0);
   });
 
   it("MAS-032 the clearest spot is the centre when nothing is near, and moves off the path of what is coming", () => {
