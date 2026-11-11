@@ -706,6 +706,32 @@ describe("Mammoth Asteroids", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("MAS-039 self-destruct: the ship goes up at once and is lost, costing a life; the next ship comes as after any loss, and the control is spent", () => {
+    const { w, step } = alone();
+    step(0.2);
+    step(2 / 240, [set("destruct", 1)]);
+    expect(w.events.some((e) => e.type === "arcade.destruct")).toBe(true);
+    expect(w.controls.destruct).toBe(0);
+    step(0.1);
+    // The cockpit is gone, and what explodes when destroyed has: both magazines, both tanks, the battery and the engines.
+    expect(body(w, "p1-hull")).toBeUndefined();
+    const went = w.events.filter((e) => e.type === "detonation").map((e) => String(e.data.id));
+    for (const part of ["p1-mag-l", "p1-mag-r", "p1-tank-l", "p1-tank-r", "p1-battery", "p1-main"]) expect(went).toContain(part);
+    expect(st(w)).toMatchObject({ lost: true, lives: 2, phase: "waiting" });
+    // The next ship beams in after the usual wait, whole, and is not destroyed in its turn.
+    step(1.25 + 0.5);
+    expect(st(w)).toMatchObject({ lost: false, lives: 2, n: 2, phase: "playing" });
+    expect(body(w, "p2-hull")!.integrity).toBe(1);
+    expect(w.ledger.violations).toBe(0);
+    // Pressed while no ship is flying, it does nothing and is spent.
+    const over = alone();
+    st(over.w).phase = "waiting";
+    st(over.w).lost = true;
+    over.step(2 / 240, [set("destruct", 1)]);
+    expect(over.w.events.some((e) => e.type === "arcade.destruct")).toBe(false);
+    expect(over.w.controls.destruct).toBe(0);
+  });
+
   it("MAS-032 the clearest spot is the centre when nothing is near, and moves off the path of what is coming", () => {
     const bounds = { min: { x: -100, y: -80 }, max: { x: 100, y: 80 }, wrap: true };
     expect(clearestSpot(createWorld(1, [], { x: 0, y: 0 }, { bounds }))).toEqual({ x: 0, y: 0 });

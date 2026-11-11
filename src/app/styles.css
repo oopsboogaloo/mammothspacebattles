@@ -343,7 +343,9 @@ button { cursor: pointer; }
 .mas-hud { position: absolute; top: 0; left: 0; right: 0; display: flex; gap: 6px 18px; align-items: center; flex-wrap: wrap; padding: 8px 12px; font-size: 13px; letter-spacing: 0.04em; pointer-events: none; }
 .mas-hud b { font-size: 15px; }
 .mas-hud .bad, .mas-hud .bad b { color: #ff6b6b; }
-.mas-hud button { pointer-events: auto; margin-left: auto; }
+.mas-hud button { pointer-events: auto; }
+.mas-hud-buttons { margin-left: auto; display: flex; gap: 8px; }
+.mas-btn.danger { background: #ff6b6b; border-color: #ff6b6b; color: #000; }
 .mas-ships { letter-spacing: 0.2em; }
 .mas-fuel { position: relative; display: inline-block; width: 120px; height: 16px; border: 1px solid #fff; }
 .mas-fuel i { position: absolute; inset: 0 auto 0 0; background: #fff; }

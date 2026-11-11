@@ -641,9 +641,14 @@ const STAR_LAYERS = [
 const STAR_TILE = 256; // px
 const STARS_PER_TILE = 5;
 const STAR_PX_PER_M = 10;
-function starHash(a: number, b: number, c: number): number {
-  let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
+export function starHash(a: number, b: number, c: number): number {
+  // Each input is mixed in turn and the whole stirred twice. A weaker mix left a star's x and y
+  // moving together, which drew the stars along diagonal lines.
+  let h = Math.imul(a | 0, 0x9e3779b1) ^ 0x85ebca6b;
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) ^ Math.imul(b | 0, 0x85ebca77);
+  h = Math.imul(h ^ (h >>> 13), 0x297a2d39) ^ Math.imul(c | 0, 0xc2b2ae3d);
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 function drawStars(ctx: Ctx, c: { x: number; y: number }, vp: Viewport): void {
