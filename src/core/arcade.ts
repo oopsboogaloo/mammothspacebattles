@@ -35,7 +35,7 @@ export interface ArcadeSpec {
     bond: number;
     material?: Material;
     /** Every piece pulls by its mass (AST-009). */
-    gravity?: { G: number; core?: number };
+    gravity?: { G: number; core?: number; joined?: boolean };
     /** Gold pieces in each rock, and larger fragments: from, to. */
     gold: [number, number];
     compounds: [number, number];

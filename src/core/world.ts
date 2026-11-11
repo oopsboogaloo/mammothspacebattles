@@ -62,8 +62,11 @@ export interface Body {
    * from each other or anything, so they keep the paths they are given. `mu` is G·M, m³/s²;
    * `core` softens the pull near and inside the body, m. With `feels` (FLT-014) it is pulled after
    * all by the other sources, but never by those of its own assembly: two rocks that orbit each other.
+   * With `joined` (AST-011) it pulls as one with the other joined sources it is welded to: one pull
+   * from their centre, with their mu together, softened by half their reach from it. A rock of twenty
+   * pieces is then one source, not twenty, and a piece that breaks off is a source of its own.
    */
-  gravity?: { mu: number; core: number; feels?: boolean };
+  gravity?: { mu: number; core: number; feels?: boolean; joined?: boolean };
   /** How it takes damage (DMG-002). Absent: it can't be damaged. */
   material?: Material;
   /** 1 whole, 0 failed (DMG-001). At 0 it is wreckage: it no longer functions (DMG-003). */
@@ -566,15 +569,64 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
   const src = world.bodies.filter((b) => b.gravity && b.gravity.mu > 0);
   if (!src.length) return;
   // Sources that feel each other (FLT-014): a source never pulls its own assembly's parts.
-  const roots = world.bodies.some((b) => b.gravity?.feels) ? assemblyRoots(world) : null;
+  const roots = world.bodies.some((b) => b.gravity?.feels || b.gravity?.joined) ? assemblyRoots(world) : null;
   // The sources as plain numbers, and the nearest copy worked out in place (as nearestOffset does):
   // with every piece of every rock a source (AST-009) this loop runs sources × bodies times a step.
-  const n = src.length;
-  const sx = src.map((s) => s.position.x);
-  const sy = src.map((s) => s.position.y);
-  const mu = src.map((s) => s.gravity!.mu);
-  const core2 = src.map((s) => s.gravity!.core * s.gravity!.core);
-  const sroot = roots ? src.map((s) => roots.get(s.id) ?? s.id) : null;
+  const sx: number[] = [];
+  const sy: number[] = [];
+  const mu: number[] = [];
+  const core2: number[] = [];
+  /** Each source's body (a group of joined sources has none), and its assembly. */
+  const sid: string[] = [];
+  const sroot: string[] | null = roots ? [] : null;
+  // Joined sources (AST-011) pull as one for each assembly: gathered here, in order of first appearance.
+  const groups = new Map<string, { mu: number; mx: number; my: number; members: Body[]; at: number }>();
+  for (const s of src) {
+    const g = s.gravity!;
+    const root = roots ? (roots.get(s.id) ?? s.id) : s.id;
+    if (g.joined) {
+      let group = groups.get(root);
+      if (!group) {
+        groups.set(root, (group = { mu: 0, mx: 0, my: 0, members: [], at: sx.length }));
+        // Its place in the lists, filled in below.
+        sx.push(0);
+        sy.push(0);
+        mu.push(0);
+        core2.push(0);
+        sid.push("");
+        sroot!.push(root);
+      }
+      group.mu += g.mu;
+      group.mx += g.mu * s.position.x;
+      group.my += g.mu * s.position.y;
+      group.members.push(s);
+      continue;
+    }
+    sx.push(s.position.x);
+    sy.push(s.position.y);
+    mu.push(g.mu);
+    core2.push(g.core * g.core);
+    sid.push(s.id);
+    sroot?.push(root);
+  }
+  for (const group of groups.values()) {
+    const cx = group.mx / group.mu;
+    const cy = group.my / group.mu;
+    // Its reach: the furthest of its members' own cores from the centre. Softened by half of it,
+    // so the pull at a round rock's surface is about 0.7 of mu / R², and falls to nothing at its centre.
+    let reach = 0;
+    for (const m of group.members) {
+      const dx = m.position.x - cx;
+      const dy = m.position.y - cy;
+      const d = Math.sqrt(dx * dx + dy * dy) + m.gravity!.core;
+      if (d > reach) reach = d;
+    }
+    sx[group.at] = cx;
+    sy[group.at] = cy;
+    mu[group.at] = group.mu;
+    core2[group.at] = 0.25 * reach * reach;
+  }
+  const n = sx.length;
   const wrap = !!world.bounds.wrap;
   const w = world.bounds.max.x - world.bounds.min.x;
   const h = world.bounds.max.y - world.bounds.min.y;
@@ -584,7 +636,7 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
     let ax = 0;
     let ay = 0;
     for (let i = 0; i < n; i++) {
-      if (self !== undefined && src[i].id === self) continue;
+      if (self !== undefined && sid[i] === self) continue;
       if (root !== undefined && sroot![i] === root) continue;
       let dx = sx[i] - p.x;
       let dy = sy[i] - p.y;

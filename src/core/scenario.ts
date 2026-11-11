@@ -225,6 +225,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       num(v, b.gravity.mu, `${path}.gravity.mu`, { min: 0 });
       num(v, b.gravity.core, `${path}.gravity.core`, { positive: true });
       if (b.gravity.feels !== undefined && typeof b.gravity.feels !== "boolean") err(v, `${path}.gravity.feels`, "must be true or false");
+      if (b.gravity.joined !== undefined && typeof b.gravity.joined !== "boolean") err(v, `${path}.gravity.joined`, "must be true or false");
     }
   }
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
@@ -521,6 +522,7 @@ function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
       else {
         num(v, r.gravity.G, `${p}.gravity.G`, { positive: true });
         if (r.gravity.core !== undefined) num(v, r.gravity.core, `${p}.gravity.core`, { positive: true });
+        if (r.gravity.joined !== undefined && typeof r.gravity.joined !== "boolean") err(v, `${p}.gravity.joined`, "must be true or false");
       }
     }
     for (const [k, whole, least] of [["gold", true, 1], ["compounds", true, 0], ["speed", false, 0]] as const) {
@@ -801,6 +803,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
             else {
               num(v, a.gravity.G, `${p}.gravity.G`, { positive: true });
               if (a.gravity.core !== undefined) num(v, a.gravity.core, `${p}.gravity.core`, { positive: true });
+              if (a.gravity.joined !== undefined && typeof a.gravity.joined !== "boolean") err(v, `${p}.gravity.joined`, "must be true or false");
             }
           }
           if (a.goldIndestructible !== undefined && typeof a.goldIndestructible !== "boolean") err(v, `${p}.goldIndestructible`, "must be true or false");

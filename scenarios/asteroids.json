@@ -1236,7 +1236,8 @@
           "toughness": 20000
         },
         "gravity": {
-          "G": 0.067
+          "G": 0.093,
+          "joined": true
         },
         "gold": [
           2,

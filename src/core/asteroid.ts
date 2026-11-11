@@ -49,9 +49,11 @@ export interface AsteroidSpec {
   /**
    * Every piece pulls, in proportion to its mass (AST-009): mu = G × the piece's mass, softened by
    * `core` (default: the piece's own bounding radius, m), and felt by other rocks (FLT-014), never by
-   * its own. So a rock's pull follows its pieces as it breaks up.
+   * its own. So a rock's pull follows its pieces as it breaks up. With `joined` (AST-011) the pieces
+   * welded together pull as one source, from their centre: far cheaper with many rocks, and the same
+   * from a distance.
    */
-  gravity?: { G: number; core?: number };
+  gravity?: { G: number; core?: number; joined?: boolean };
   /** Gold that nothing damages or removes (AST-010): its pieces carry no material. Their welds still break. */
   goldIndestructible?: boolean;
   position: Vec2;
@@ -252,7 +254,7 @@ export function generateAsteroid(spec: AsteroidSpec): { bodies: BodyInput[]; joi
   if (spec.gravity) {
     for (const b of bodies) {
       const reach = b.shape.kind === "polygon" ? Math.max(...b.shape.vertices.map((p) => length(p))) : 0;
-      b.gravity = { mu: spec.gravity.G * b.mass, core: spec.gravity.core ?? reach, feels: true };
+      b.gravity = { mu: spec.gravity.G * b.mass, core: spec.gravity.core ?? reach, feels: true, ...(spec.gravity.joined ? { joined: true } : {}) };
     }
   }
   return { bodies, joints };

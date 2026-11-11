@@ -20,7 +20,7 @@ requirement IDs (MAS-…) are this game's own. The engine changes the game needs
 | Arena size | 160 m high; its width follows the screen's shape (about 213 m on an iPad in landscape, 284 m at 16:9), within 1.2–2.2 × the height. |
 | Levels | Level N has N asteroids, each holding 2 or 3 gold pieces. A level is cleared when every gold piece has been collected. |
 | Gold | Can't be destroyed. Collected by touching it with the ship, once it can be seen: any gold not hidden inside an unrevealed larger fragment, whether or not it is still in a rock. |
-| Gravity | Every rock piece pulls by its own mass. Each rock's pull is about 1 m/s² at its surface (a quarter of the ship's thrust). Rocks pull each other; the ship pulls nothing. In the wrapped arena each rock pulls from its nearest copy (as now). |
+| Gravity | Every joined group of rock pieces pulls as one, by its mass, from its centre: a whole rock, or a chunk or piece broken off it (from 11 November 2026, for the step time; before, every piece pulled on its own). Each rock's pull is about 1 m/s² at its surface (a quarter of the ship's thrust). Rocks pull each other; the ship pulls nothing. In the wrapped arena each rock pulls from its nearest copy (as now). |
 | Rocks | The mining tuning (AST-008): light rock (6 kg/m²) of tough pieces with weak bonds, the bonds scaled down for these bigger pieces (800 N/m). A shell's blast splits a rock within 2–4 hits and leaves it in 3–10 chunks by hit 8, with few pieces destroyed. Rocks that collide break each other up. |
 | Railgun | An explosive shell: the Mammoth scenario's, from the mining tuning (0.5 kg at 96 m/s, 0.3 kg of it charge, a 2 m blast, about 2 shots a second, 40 shells). It bursts when it strikes, and the blast's gas pushes the rock's pieces apart. Each shot kicks the ship back about 1 m/s. A shell flies 134 m and is gone: less than the arena's height, so it can't come round and hit you. (First a light solid slug, which did nothing to the rocks; changed on 11 November 2026 after Chloe played.) |
 | Life lost | The hull destroyed, or no working engine still welded to it (the duel's rule). Damage short of that is flown with. |
@@ -218,8 +218,9 @@ Priority: **M** must, **S** should.
   out the same.
 - **MAS-021** `[M]` Rocks break along their welds and take damage from hits and collisions,
   through the ordinary weld and damage rules.
-- **MAS-022** `[M]` Every rock piece pulls by its mass, about 1 m/s² at a large rock's surface.
-  Rocks pull each other and not themselves (AST-009).
+- **MAS-022** `[M]` Rock pulls by its mass, about 1 m/s² at a large rock's surface: each joined
+  group of pieces as one source (AST-011), so a broken-off chunk pulls by its own mass. Rocks pull
+  each other and not themselves.
 - **MAS-023** `[M]` Gold can't be damaged or destroyed (AST-010).
 - **MAS-024** `[M]` The ship touching a gold piece not hidden in an unrevealed larger fragment
   collects it: it leaves the arena, its welds go with it, and it scores 500. The ledger records
