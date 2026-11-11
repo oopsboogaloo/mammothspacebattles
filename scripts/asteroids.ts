@@ -24,9 +24,11 @@ function ship() {
   const s = landShip("p{n}-", ECONOMY);
   // An explosive shell (asked for by Chloe after playing, 11 November 2026: a solid slug did nothing
   // to the rocks). It is the Mammoth scenario's, from the mining tuning (AST-008): 0.5 kg, 0.3 kg of
-  // it charge, a 2 m blast, launched at 96 m/s. The blast's gas pushes the rock's pieces apart. No
-  // casing fragments: they would fly round the arena.
-  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 2 } };
+  // it charge, launched at 96 m/s. The blast's gas pushes the rock's pieces apart. No casing
+  // fragments: they would fly round the arena. Chloe then asked for more power (11 November 2026):
+  // the charge has three times TNT's energy (37.8 kJ in this profile) and a 3 m blast, where that
+  // tuning had TNT and 2 m. The shell's mass, and so the ship's weight and the recoil, are the same.
+  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 3, heat: 1.26e7 } };
   const gun = {
     id: "p{n}-gun",
     shape: { kind: "box", width: 0.5, height: 0.3 },

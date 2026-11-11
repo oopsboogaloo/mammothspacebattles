@@ -267,6 +267,23 @@ A small charge on the light slug (2 g to 20 g) changed nothing at all. An earlie
 day made the pieces a tenth as tough instead (toughness 2,000 J): that destroys pieces where they
 are hit (six in sixteen slugs) and is not what the experiments had found, so it was replaced.
 
+**More power (Chloe, 11 November 2026, after playing with the shell above).** The charge now has
+three times TNT's energy (`heat` 12.6 MJ/kg: 37.8 kJ a shell in this profile) and a 3 m blast. The
+shell's mass is the same, so the ship's weight and the recoil are too. Measured the same way,
+bonds 800 N/m, chunks / pieces destroyed on four shapes:
+
+| Shell | Hit 1 | Hit 2 | Hit 4 | Hit 8 |
+|---|---|---|---|---|
+| TNT, 2 m (the mining tuning's) | 1–2 / 0 | 1–3 / 0 | 2–4 / 0 | 3–6 / 1–2 |
+| 0.45 kg of TNT, 3 m | 1–2 / 0 | 1–3 / 0 | 1–3 / 1 | 3–12 / 2–4 |
+| 2 × TNT, 3 m | 1–2 / 0 | 1–3 / 0 | 1–8 / 1–2 | 4–12 / 3–4 |
+| **3 × TNT, 3 m (now)** | **1–2 / 0** | **1–3 / 1–2** | **3–6 / 2–4** | **10–14 / 3–7** |
+| 5 × TNT, 4 m | 1–3 / 1 | 1–4 / 2–4 | 5–12 / 3–6 | 9–13 / 6–11 |
+| TNT, 2 m, bonds 500 N/m | 1–4 / 0 | 1–7 / 0 | 3–9 / 0 | 11–15 / 1 |
+
+It now destroys some of what it hits as well as pushing the rest apart. The dials, if it wants
+more or less: the charge's energy (`heat`) and the blast radius, in `scripts/asteroids.ts`.
+
 **What it changes for the ship.** Forty 0.5 kg shells are 20 kg, so a full ship is 48 kg, not 34:
 it accelerates about 4.3 m/s² on both engines with a full magazine, against 6.3 before, and gets
 lighter as it fires. A shot kicks it about 1 m/s (0.6 before) at half the rate of fire.

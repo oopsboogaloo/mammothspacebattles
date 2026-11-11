@@ -480,7 +480,7 @@ function Physics() {
       <h3>Thrust is gas</h3>
       <p>There is no thrust force. The engines burn hydrogen and oxygen in their chambers, and the hot gas pushes on the chamber walls and leaves through the nozzle. The tank drains as you burn, so the ship gets lighter.</p>
       <h3>The gun</h3>
-      <p>The gun is a railgun: it throws a half-kilogram shell at 96 m/s, and the ship is pushed back with the same momentum. Forty shells weigh 20 kg, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within two metres, and its gas pushes the rock's pieces apart.</p>
+      <p>The gun is a railgun: it throws a half-kilogram shell at 96 m/s, and the ship is pushed back with the same momentum. Forty shells weigh 20 kg, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within three metres, and its gas pushes the rock's pieces apart.</p>
       <h3>Welds bend and break</h3>
       <p>Every weld has limits in tension, compression, shear and torque. A load past its limit breaks it. On the ship, a load past 30% of the limit bends the weld and leaves it weaker. A rock breaks along its welds: a blast, or another rock, loads them until they go.</p>
       <h3>Damage</h3>

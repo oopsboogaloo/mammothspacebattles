@@ -757,7 +757,8 @@
                 "explosive": {
                   "charge": 0.3,
                   "fragments": 0,
-                  "radius": 2
+                  "radius": 3,
+                  "heat": 12600000
                 }
               },
               "railgun": {
