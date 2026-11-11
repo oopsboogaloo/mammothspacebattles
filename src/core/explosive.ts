@@ -298,7 +298,7 @@ function burst(world: World, s: Body, dt: number): void {
     if (gap >= R) continue;
     const view = Math.min(0.5, r / (Math.PI * Math.max(dist, r)));
     const at = dist > 1e-9 ? add(b.position, scale(toBlast, Math.min(1, r / dist))) : b.position;
-    damageBody(world, b, E * view * (1 - gap / R), at);
+    damageBody(world, b, E * view * (1 - gap / R) * (b.material.blast ?? 1), at);
   }
 }
 

@@ -316,6 +316,7 @@ function validateMaterial(v: V, m: unknown, path: string): void {
   num(v, m.threshold, `${path}.threshold`, { min: 0 });
   num(v, m.toughness, `${path}.toughness`, { positive: true });
   if (m.name !== undefined) str(v, m.name, `${path}.name`);
+  if (m.blast !== undefined) num(v, m.blast, `${path}.blast`, { min: 0, max: 1 });
 }
 
 function validatePilotGoal(v: V, g: unknown, path: string): void {

@@ -120,6 +120,85 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
 - **Supplies:** every new ship, and every ship at a level start, has a full tank (fuel economy
   cheat, FLT-010) and a full magazine (120 shells).
 
+### Damage model
+
+All the damage rules in one place. The core rules are the engine's (`docs/spec.md`, DMG and WPN);
+the rest are this game's (MAS-027, MAS-031, MAS-036, MAS-037, MAS-041). The numbers, and why
+they are what they are, are in the design notes (`mammoth-asteroids-design.md` §3).
+
+**The rules every part follows**
+
+- **Integrity.** Every part, weld and link has an integrity from 1 (whole) to 0 (DMG-001).
+- **Hits.** A collision or a blast delivers energy to a part. What is beyond the part's threshold
+  costs it integrity: (energy − threshold) ÷ toughness (DMG-002). The welds near the hit and the
+  part's links lose the same.
+- **At 0** a part is destroyed: it leaves in a puff of dust, and its welds and links go with it
+  (DMG-003, DMG-007).
+- **Welds** break when a load passes a limit (tension, compression, shear or torque). A load past
+  30% of a limit bends the weld and leaves it weaker (DMG-008).
+- **Leaks.** A damaged part that holds gas leaks through a breach, faster the more it is damaged
+  and the fuller it is: 0.5 kg/s × (1 − integrity) × how full (DMG-004). The leak pushes the part.
+- **Protection.** A new ship takes no damage for 2 s (it has no materials for that time). Its
+  welds can still break under load.
+
+**Materials**
+
+| | Threshold | Toughness |
+|---|---|---|
+| The ship's parts, but for its tanks | 150 J | 3,000 J |
+| The ship's tanks | 60 J | 500 J |
+| A gunship's parts, but for its tank | 50 J | 600 J |
+| A gunship's tank | 20 J | 100 J |
+| Rock | 200 J | 40,000 J |
+| Gold | cannot be damaged | |
+
+A gunship's metal takes 1% of a blast's declared damage (`material.blast`). The ship's shell is
+sized to crack rock 67 times as tough: taken whole, one shell destroyed 20 to 22 of a gunship's
+22 parts and left nothing to see. The blast's gas, and the shell's own hit, act on it in full.
+
+The ship's welds are 3 times Lander's (the gun's mount 6 times), so its own recoil and thrust do
+not bend them.
+
+**What happens to each part of the ship**
+
+| Part | Damaged | Knocked off the ship | Destroyed |
+|---|---|---|---|
+| Cockpit | nothing more | the ship is lost | the ship is lost |
+| Thruster (its head) | its thrust falls with its integrity: half at 50% | burns what is left in it (under a second), then is dead; its tank leaks where it was | a small explosion; its tank leaks where it was |
+| Thruster's nozzle wall | no change to its flow | the nozzle is without that wall (effect on thrust not measured) | the same |
+| Fuel tank | leaks from where it was first hit | leaks from the side that was joined | explodes if it has fuel in it; not if empty |
+| Wing (a tank with its thrusters) | | its thrusters burn on, with no key held, until the tank is empty (about 18 game seconds) or the wing breaks up; the tank leaks from the side that was joined | |
+| Magazine | nothing more | nothing more: the shells are counted on the gun | explodes violently: the ship is lost |
+| Battery | nothing more | nothing more | a small explosion; the ship flies on, damaged |
+| Generator | nothing more | the wing beyond it comes off with it | nothing more |
+| Gun | nothing more | dead: the fire control no longer reaches it | no more shells |
+
+- **The ship is lost** when its cockpit is gone, or no working engine is still welded to it
+  (MAS-031). A lost ship's controls are cut: nothing of its wreck fires again.
+- **A thruster's thrust** is its propellant flow, which is its full flow times its head's
+  integrity. Measured with the three forward engines damaged alike: 19.3 m/s² whole, 9.7 at 50%,
+  4.8 at 25%. One damaged thruster makes the ship pull to one side.
+- **A cut fuel line** costs its tank 0.1 of its integrity, which is the hole it leaks through:
+  about 0.05 kg/s from a full tank.
+
+**Rocks**
+
+- A rock breaks along its welds: a blast, a collision or another rock loads them until they go.
+- A piece that is destroyed leaves a burst of gas that pushes its neighbours apart (MAS-027). The
+  burst does no damage, so bursts don't chain.
+- Gold cannot be damaged.
+
+**Weapons**
+
+| | What it is | What a hit does |
+|---|---|---|
+| The ship's shell | 0.167 kg at 96 m/s; a charge of 151 kJ and 5.5 kg of gas; blast reaches 4 m | destroys rock pieces near the hit and pushes the rest apart; one puts a gunship out of the fight, destroying its tank and a part or two and leaving the other 20 as wreckage in pieces; never goes off against its own ship |
+| A gunship's shell | 0.3 kg with a charge of 6 kJ; blast reaches 2 m | takes 35 to 75% off the part it strikes and 5 to 25% off those round it; destroys a tank it strikes or lands beside, which explodes; no single hit loses the ship |
+| A destroyed magazine | 1 kg of TNT, reaching 6 m | takes the cockpit, both tanks, the battery, a generator and the main thruster |
+| A destroyed battery | 0.05 kg of TNT, reaching 1 m | breaks four welds and damages four parts |
+| A destroyed tank with fuel | 0.05 kg of TNT and its fuel, reaching 0.5 m | breaks about ten welds; the ship flies on |
+| A destroyed thruster | 5 g of TNT (12 g for the main one) | damages the tank beside it a little |
+
 ### Gunships
 
 - **From level 3:** a Gunship 3 beams in 20 s into the level, then another every minute after.
@@ -133,9 +212,10 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
   sooner (down to 10 s), the next ones 5 s closer together (down to every 20 s), and their combat
   skill goes on rising past its earlier ceiling, to the pilot's best. The numbers are a first
   setting, to tune after play.
-- **Shells:** a 0.3 kg solid slug (0.15 kg until 11 November 2026, when Chloe asked for more
-  damage). One hit takes 15 to 18% off a hull part and 5 to 9% off a thruster, and destroys a
-  tank, which explodes. No single hit loses the ship. Measured in tests.
+- **Shells:** 0.3 kg with a small charge (6 kJ, reaching 2 m). First a 0.15 kg solid slug, then
+  0.3 kg, then the charge (all 11 November 2026: Chloe found them not effective). One hit takes
+  35 to 75% off the part it strikes and 5 to 25% off those round it, and destroys a tank it
+  strikes or lands beside, which explodes. No single hit loses the ship. Measured in tests.
 - **Killed** like any ship: its hull destroyed or no working engine left. Its wreck stays as
   debris.
 - **At a level clear** the remaining gunships beam out with the rocks. A gunship doesn't need
@@ -274,7 +354,8 @@ Priority: **M** must, **S** should.
   explodes too, and the ship flies on damaged.
 - **MAS-038** `[S]` The ship's cockpit is filled light blue, so the way the ship faces shows.
 - **MAS-037** `[M]` An engine no longer welded to the ship, or destroyed, has its fuel line cut.
-  One that still exists burns what is left in it (under a second) and is then dead. Destroyed, it
+  One that still exists burns what is left in it (under a second) and is then dead. A gun knocked
+  off the ship no longer fires. Destroyed, it
   goes up in a small explosion. The tank it was fed from leaks where the line left it. A wing
   lost whole (a tank with its thrusters) burns on from its tank, with no key held, and leaks from
   the side that was joined to the ship, until the tank is empty or the wing breaks up. A tank

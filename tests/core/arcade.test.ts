@@ -610,6 +610,20 @@ describe("Mammoth Asteroids", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("MAS-037 a gun knocked off the ship no longer fires", () => {
+    const { w, step } = alone();
+    step(0.3, [set("fire", 1)]);
+    const shots = st(w).stats.shots;
+    expect(shots).toBeGreaterThan(0);
+    w.joints = w.joints.filter((j) => !j.id.startsWith("p1-w-gun-")); // the gun comes off
+    step(2);
+    expect(body(w, "p1-gun")).toBeDefined();
+    expect(w.links.some((l) => l.kind === "control" && l.to === "p1-gun")).toBe(false);
+    expect(st(w).stats.shots).toBeLessThanOrEqual(shots + 1); // at most the shot already on its way
+    expect(st(w)).toMatchObject({ lost: false, lives: 3 });
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("MAS-037 a destroyed thruster goes up in a small explosion and its tank leaks; the main thruster destroyed, both tanks leak", () => {
     const one = alone();
     one.step(0.1);
@@ -855,8 +869,7 @@ describe("Mammoth Asteroids: gunships", () => {
 
   it("MAS-041 one hit from a gunship's shell on a tank, thruster or gun damages the player's ship, and no single hit destroys it, wherever it lands", () => {
     const shell = raw.world.arcade.gunship.template.bodies.find((b: { magazine?: unknown }) => b.magazine).magazine;
-    expect(shell.shell).toMatchObject({ mass: 0.3 });
-    expect(shell.shell.explosive).toBeUndefined();
+    expect(shell.shell).toMatchObject({ mass: 0.3, explosive: { charge: 0.05, heat: 1.2e7, fragments: 0, radius: 2 } });
     // From the left at a tank, from the left at a front thruster, from below into the main thruster,
     // from above at the gun, and from the right at the other front thruster (the cockpit's centre is the origin).
     const shots: [{ x: number; y: number }, { x: number; y: number }][] = [
@@ -876,9 +889,9 @@ describe("Mammoth Asteroids: gunships", () => {
       // Damaged: a part or a weld has lost integrity. Not destroyed: the ship flies on.
       const ship = prefixed(w, "p1-");
       const worst = Math.max(...ship.map((b) => 1 - b.integrity), ...w.joints.filter((j) => j.a.startsWith("p1-")).map((j) => 1 - j.integrity));
-      // A square hit takes 15 to 18% off a hull part and 5 to 9% off a thruster. A tank is destroyed
-      // and explodes; the ship flies on without it.
-      expect(worst).toBeGreaterThan(0.005);
+      // Its charge takes 35 to 75% off the part it strikes and less off those round it. A tank
+      // struck, or beside the strike, is destroyed and explodes; the ship flies on without it.
+      expect(worst).toBeGreaterThan(0.1);
       expect(st(w)).toMatchObject({ lost: false, lives: 3, phase: "playing" });
       expect(body(w, "p1-hull")!.integrity).toBeGreaterThan(0.5);
       expect(w.ledger.violations).toBe(0);
@@ -902,6 +915,42 @@ describe("Mammoth Asteroids: gunships", () => {
     expect(w.controls["g1.left"] ?? 0).toBe(0);
     expect(w.ledger.violations).toBe(0);
   });
+
+  it("MAS-042 one of the ship's shells puts a gunship out of the fight and leaves most of it as wreckage, not dust", () => {
+    for (const aim of [0, 1.9]) {
+      // A gunship held still 30 m ahead of the ship: aimed at its hull, then at a wing tip.
+      const { w, step } = at(3, (scn) => (scn.world.arcade.gunship.first = 0.05));
+      w.bodies = w.bodies.filter((b) => !b.id.startsWith("a3-"));
+      w.joints = w.joints.filter((j) => !j.a.startsWith("a3-"));
+      settle(w);
+      for (let k = 0; k < 600 && !body(w, "g1-hull"); k++) step(1 / 240);
+      const ship = prefixed(w, "g1-");
+      const hull = body(w, "g1-hull")!;
+      const here = hullOf(w).position;
+      const d = { x: here.x + aim - hull.position.x, y: here.y + 30 - hull.position.y };
+      for (const b of ship) {
+        b.position = { x: b.position.x + d.x, y: b.position.y + d.y };
+        b.velocity = { x: 0, y: 0 };
+        b.angularVelocity = 0;
+        delete b.pilot;
+      }
+      settle(w);
+      const score = st(w).score;
+      step(2 / 240, [set("fire", 1)]);
+      step(2, [set("fire", 0)]);
+      expect(w.events.filter((e) => e.type === "detonation" && String(e.data.id).includes("-gun-shell-"))).toHaveLength(1);
+      // Out of the fight, scored once.
+      expect(st(w).gunships[0].out).toBe(true);
+      expect(st(w).score - score).toBeGreaterThanOrEqual(ARCADE_SCORES.gunship);
+      // Wreckage: most of its 22 parts are still there (taken whole, the blast left 0 to 2).
+      const left = prefixed(w, "g1-").filter((b) => !b.id.includes("-shell-"));
+      expect(ship.length).toBe(22);
+      expect(left.length).toBeGreaterThanOrEqual(15);
+      expect(left.some((b) => b.integrity < 1)).toBe(true);
+      expect(w.joints.filter((j) => j.a.startsWith("g1-")).length).toBeLessThan(21); // and it is in pieces
+      expect(w.ledger.violations).toBe(0);
+    }
+  }, 120_000);
 
   it("MAS-070 a level with a gunship hunting and firing replays exactly, its shells gone after their time", () => {
     const run = () => {
