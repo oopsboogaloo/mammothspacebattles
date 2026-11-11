@@ -371,7 +371,7 @@
               },
               "railgun": {
                 "channel": "fire",
-                "speed": 96
+                "speed": 144
               }
             }
           },
@@ -411,17 +411,17 @@
               {
                 "resource": "h2",
                 "mass": 0,
-                "capacity": 0.0108
+                "capacity": 0.01728
               },
               {
                 "resource": "o2",
                 "mass": 0,
-                "capacity": 0.0864
+                "capacity": 0.13824
               }
             ],
             "injector": {
               "channel": "main",
-              "rate": 4.86,
+              "rate": 7.776,
               "mixture": {
                 "h2": 0.1111111111111111,
                 "o2": 0.8888888888888888
@@ -436,14 +436,14 @@
               },
               "width": 0.75,
               "speed": 10,
-              "parcelMass": 0.00972,
+              "parcelMass": 0.015552,
               "radius": 0.035,
               "igniter": true,
               "chamber": {
                 "width": 1.2,
                 "length": 1.35
               },
-              "economy": 45
+              "economy": 66
             }
           },
           {
@@ -598,7 +598,7 @@
                 "width": 0.8,
                 "length": 0.95
               },
-              "economy": 45
+              "economy": 66
             }
           },
           {
@@ -753,7 +753,7 @@
                 "width": 0.8,
                 "length": 0.95
               },
-              "economy": 45
+              "economy": 66
             }
           },
           {
@@ -908,7 +908,7 @@
                 "width": 0.8,
                 "length": 0.95
               },
-              "economy": 45
+              "economy": 66
             }
           },
           {
@@ -1063,7 +1063,7 @@
                 "width": 0.8,
                 "length": 0.95
               },
-              "economy": 45
+              "economy": 66
             }
           },
           {
@@ -1760,7 +1760,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-main",
             "resource": "h2",
-            "rate": 0.00624
+            "rate": 0.006807
           },
           {
             "id": "p{n}-feed-o2-main-0",
@@ -1768,7 +1768,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-main",
             "resource": "o2",
-            "rate": 0.04992
+            "rate": 0.054458
           },
           {
             "id": "p{n}-feed-h2-main-1",
@@ -1776,7 +1776,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-main",
             "resource": "h2",
-            "rate": 0.00624
+            "rate": 0.006807
           },
           {
             "id": "p{n}-feed-o2-main-1",
@@ -1784,7 +1784,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-main",
             "resource": "o2",
-            "rate": 0.04992
+            "rate": 0.054458
           },
           {
             "id": "p{n}-ctl-main",
@@ -1798,7 +1798,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-back-l",
             "resource": "h2",
-            "rate": 0.006716
+            "rate": 0.004579
           },
           {
             "id": "p{n}-feed-o2-back-l",
@@ -1806,7 +1806,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-back-l",
             "resource": "o2",
-            "rate": 0.053728
+            "rate": 0.036633
           },
           {
             "id": "p{n}-ctl-back-l",
@@ -1820,7 +1820,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-front-l",
             "resource": "h2",
-            "rate": 0.006716
+            "rate": 0.004579
           },
           {
             "id": "p{n}-feed-o2-front-l",
@@ -1828,7 +1828,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-front-l",
             "resource": "o2",
-            "rate": 0.053728
+            "rate": 0.036633
           },
           {
             "id": "p{n}-ctl-front-l",
@@ -1842,7 +1842,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-back-r",
             "resource": "h2",
-            "rate": 0.006716
+            "rate": 0.004579
           },
           {
             "id": "p{n}-feed-o2-back-r",
@@ -1850,7 +1850,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-back-r",
             "resource": "o2",
-            "rate": 0.053728
+            "rate": 0.036633
           },
           {
             "id": "p{n}-ctl-back-r",
@@ -1864,7 +1864,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-front-r",
             "resource": "h2",
-            "rate": 0.006716
+            "rate": 0.004579
           },
           {
             "id": "p{n}-feed-o2-front-r",
@@ -1872,7 +1872,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-front-r",
             "resource": "o2",
-            "rate": 0.053728
+            "rate": 0.036633
           },
           {
             "id": "p{n}-ctl-front-r",
@@ -1971,7 +1971,7 @@
           "toughness": 40000
         },
         "gravity": {
-          "G": 0.186,
+          "G": 0.093,
           "joined": true
         },
         "orbit": true,
@@ -3292,7 +3292,7 @@
       "respawn": 1.25,
       "grace": 1,
       "clearPause": 1.5,
-      "shellLife": 1.4,
+      "shellLife": 1,
       "pace": 0.5,
       "seed": 1
     }

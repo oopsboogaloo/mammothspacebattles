@@ -310,6 +310,10 @@ Priority: **M** must, **S** should.
 - **LND-030** `[M]` Two touch thrust buttons (multi-touch). Q/E and the arrow keys on a keyboard.
   The browser must not zoom the game: two thumbs moving apart are a pinch, so pinch and double-tap
   zoom are cancelled in the game, and if the page zooms anyway the game pauses until it is zoomed back.
+- **LND-035** `[S]` A left control (the L button, Q, Left Shift, ←) turns the ship left, which
+  fires its right engine; a right control the left engine: the same way round as Mammoth
+  Asteroids. An option in the pause menu, kept with the browser and shared with Mammoth
+  Asteroids, swaps them, so a left control fires the left engine (as it did until 11 November 2026).
 - **LND-031** `[S]` The camera follows the ship and zooms in near the ground.
 - **LND-032** `[S]` After a crash, the verdict shows only once the wreck has played out (about
   2.5 s), and the next ship waits that long too.

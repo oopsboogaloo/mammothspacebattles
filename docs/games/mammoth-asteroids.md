@@ -20,9 +20,9 @@ requirement IDs (MAS-…) are this game's own. The engine changes the game needs
 | Arena size | 160 m high; its width follows the screen's shape (about 213 m on an iPad in landscape, 284 m at 16:9), within 1.2–2.2 × the height. |
 | Levels | Level N has N asteroids, each holding 2 or 3 gold pieces. A level is cleared when every gold piece has been collected. |
 | Gold | Can't be destroyed. Collected by touching it with the ship, once it can be seen: any gold not hidden inside an unrevealed larger fragment, whether or not it is still in a rock. |
-| Gravity | Every joined group of rock pieces pulls as one, by its mass, from its centre: a whole rock, or a chunk or piece broken off it (from 11 November 2026, for the step time; before, every piece pulled on its own). Each rock's pull is about 2 m/s² at its surface (a tenth of the ship's forward thrust; 1 m/s² until 11 November 2026, when Chloe asked for stronger gravity). Rocks pull each other; the ship pulls nothing. In the wrapped arena each rock pulls from its nearest copy (as now). |
+| Gravity | Every joined group of rock pieces pulls as one, by its mass, from its centre: a whole rock, or a chunk or piece broken off it (from 11 November 2026, for the step time; before, every piece pulled on its own). Each rock's pull is about 1 m/s² at its surface (doubled on 11 November 2026 when Chloe asked for stronger gravity, and halved again the same day). Rocks pull each other; the ship pulls nothing. In the wrapped arena each rock pulls from its nearest copy (as now). |
 | Rocks | The mining tuning (AST-008): light rock (6 kg/m²) of tough pieces with weak bonds, the bonds scaled down for these bigger pieces (800 N/m). Nine shells leave a rock in 8 chunks with 11 of its 20 pieces destroyed (one rock measured, with the stronger shell of 11 November 2026). Then the rock was made twice as tough, with a shell of twice the energy and more gas: 8 to 13 chunks, 7 to 12 pieces destroyed, the pieces leaving at 1 to 3 m/s. From level 2 the rocks start in rough orbit round each other. Rocks that collide break each other up. |
-| Railgun | An explosive shell: the Mammoth scenario's, from the mining tuning, made more powerful (0.167 kg at 96 m/s, 0.1 kg of it charge with thirty-six times TNT's energy: the same blast as the 0.5 kg shell it was until 11 November 2026, when Chloe asked for three times the shells at a third of the weight; a 4 m blast, its blast making 5 kg more gas than the shell weighs (a cheat, recorded by the ledger: the shell's own gas is too little to push 100 kg pieces), about 2 shots a second, 120 shells). It bursts when it strikes, and the blast's gas pushes the rock's pieces apart. Each shot kicks the ship back about 0.24 m/s. A shell flies 134 m and is gone: less than the arena's height, so it can't come round and hit you. (First a light solid slug, which did nothing to the rocks; changed on 11 November 2026 after Chloe played.) |
+| Railgun | An explosive shell: the Mammoth scenario's, from the mining tuning, made more powerful (0.167 kg at 144 m/s, half as fast again as the 96 m/s it had until 11 November 2026, 0.1 kg of it charge with thirty-six times TNT's energy: the same blast as the 0.5 kg shell it was until 11 November 2026, when Chloe asked for three times the shells at a third of the weight; a 4 m blast, its blast making 5 kg more gas than the shell weighs (a cheat, recorded by the ledger: the shell's own gas is too little to push 100 kg pieces), about 2 shots a second, 120 shells). It bursts when it strikes, and the blast's gas pushes the rock's pieces apart. Each shot kicks the ship back about 0.36 m/s. A shell flies 144 m and is gone: less than the arena's height, so it can't come round and hit you. (First a light solid slug, which did nothing to the rocks; changed on 11 November 2026 after Chloe played.) |
 | Life lost | The hull destroyed, or no working engine still welded to it (the duel's rule). Damage short of that is flown with. |
 | Lives | 3. The wreck stays as debris for the rest of the level. The next ship beams in at a safe spot after about 2.5 s, protected from damage for 2 s. |
 | Supplies | A full tank and magazine with every new ship and at every new level. |
@@ -69,7 +69,7 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
 - **Breaking** is the weld model: hits and collisions load and damage the welds, and those past
   their limits break (AST-003). Pieces take damage from hits, and destroyed pieces leave as dust
   (DMG-007).
-- **Gravity:** every piece pulls with its own mass. A large rock pulls about 2 m/s² at its surface.
+- **Gravity:** every piece pulls with its own mass. A large rock pulls about 1 m/s² at its surface.
   A broken-off chunk pulls by its own mass, so loose pieces fall back onto big rocks and chunks can
   re-collect. The ship is pulled, too: left idle it drifts in. Parts of one rock don't pull each
   other.
@@ -98,7 +98,7 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
 - **Controls:** left and right turn the ship where it is (one back thruster and the opposite front
   one). Both together are forward: the main thruster and both back ones. Reverse fires both front
   ones, to brake.
-- **Handling:** 19.3 m/s² forward, 4.2 m/s² in reverse, 3.5 rad/s² turning: three times the LAND
+- **Handling:** 28.3 m/s² forward, 4.2 m/s² in reverse, 3.5 rad/s² turning: three times the LAND
   ship's acceleration at first, then half as much again for a stronger forward engine, and twice its turning. To tune after play.
 - **Lost thrusters:** a thruster knocked off burns what is left in it, under a second, and then
   only drifts; the controls no longer reach it. Destroyed, it goes up in a small explosion.
@@ -176,8 +176,8 @@ not bend them.
 - **The ship is lost** when its cockpit is gone, or no working engine is still welded to it
   (MAS-031). A lost ship's controls are cut: nothing of its wreck fires again.
 - **A thruster's thrust** is its propellant flow, which is its full flow times its head's
-  integrity. Measured with the three forward engines damaged alike: 19.3 m/s² whole, 9.7 at 50%,
-  4.8 at 25%. One damaged thruster makes the ship pull to one side.
+  integrity. Measured with the three forward engines damaged alike: 28.3 m/s² whole, about 14 at 50%,
+  about 7 at 25% (scaled from the 9.7 and 4.8 measured when it made 19.3 whole). One damaged thruster makes the ship pull to one side.
 - **A cut fuel line** costs its tank 0.1 of its integrity, which is the hole it leaks through:
   about 0.05 kg/s from a full tank.
 
@@ -192,7 +192,7 @@ not bend them.
 
 | | What it is | What a hit does |
 |---|---|---|
-| The ship's shell | 0.167 kg at 96 m/s; a charge of 151 kJ and 5.5 kg of gas; blast reaches 4 m | destroys rock pieces near the hit and pushes the rest apart; one puts a gunship out of the fight, destroying its tank and a part or two and leaving the other 20 as wreckage in pieces; never goes off against its own ship |
+| The ship's shell | 0.167 kg at 144 m/s; a charge of 151 kJ and 5.5 kg of gas; blast reaches 4 m | destroys rock pieces near the hit and pushes the rest apart; one puts a gunship out of the fight, destroying its tank and a part or two and leaving the other 20 as wreckage in pieces; never goes off against its own ship |
 | A gunship's shell | 0.3 kg with a charge of 6 kJ; blast reaches 2 m | takes 35 to 75% off the part it strikes and 5 to 25% off those round it; destroys a tank it strikes or lands beside, which explodes; no single hit loses the ship |
 | A destroyed magazine | 1 kg of TNT, reaching 6 m | takes the cockpit, both tanks, the battery, a generator and the main thruster |
 | A destroyed battery | 0.05 kg of TNT, reaching 1 m | breaks four welds and damages four parts |
@@ -325,7 +325,7 @@ Priority: **M** must, **S** should.
   circle, all turning the same way, with no momentum overall.
 - **MAS-021** `[M]` Rocks break along their welds and take damage from hits and collisions,
   through the ordinary weld and damage rules.
-- **MAS-022** `[M]` Rock pulls by its mass, about 2 m/s² at a large rock's surface: each joined
+- **MAS-022** `[M]` Rock pulls by its mass, about 1 m/s² at a large rock's surface: each joined
   group of pieces as one source (AST-011), so a broken-off chunk pulls by its own mass. Rocks pull
   each other and not themselves.
 - **MAS-023** `[M]` Gold can't be damaged or destroyed (AST-010).
@@ -339,7 +339,7 @@ Priority: **M** must, **S** should.
 **Ship and lives**
 - **MAS-030** `[M]` The ship is the game's own (a cockpit, battery, two generators, two magazines,
   two fuel tanks, five engines), with Lander's materials and bending welds, and a railgun on its
-  nose (an explosive shell, about 0.24 m/s of kick a shot). Its welds are stronger than Lander's
+  nose (an explosive shell, about 0.36 m/s of kick a shot). Its welds are stronger than Lander's
   (3 times; the gun's mount 6 times), so the recoil of a whole magazine does it no harm.
 - **MAS-031** `[M]` The ship is lost when its hull is gone or no working engine is still welded to
   it. 3 lives a game.
@@ -349,7 +349,7 @@ Priority: **M** must, **S** should.
 - **MAS-034** `[S]` The ship flashes while protected.
 - **MAS-035** `[M]` Left and right each fire one back thruster and the opposite front one, turning
   the ship where it is. Both together fire the main thruster and both back ones. Reverse fires
-  both front ones. About 19.3 m/s² forward, 4.2 m/s² in reverse and 3.5 rad/s² turning.
+  both front ones. About 28.3 m/s² forward, 4.2 m/s² in reverse and 3.5 rad/s² turning.
 - **MAS-036** `[M]` A destroyed magazine explodes violently: the ship is lost. A destroyed battery
   explodes too, and the ship flies on damaged.
 - **MAS-038** `[S]` The ship's cockpit is filled light blue, so the way the ship faces shows.
@@ -377,6 +377,9 @@ Priority: **M** must, **S** should.
 - **MAS-050** `[M]` Scoring as in §3.
 - **MAS-051** `[M]` The HUD shows score, level, lives, gold left, fuel, slugs and damage.
 - **MAS-052** `[M]` Touch: left, right, reverse and fire buttons, working together (multi-touch).
+  Reverse is beside the left button and fire beside the right one.
+- **MAS-053** `[S]` An option in the pause menu, kept with the browser and shared with Mammoth
+  Lander, swaps left and right: a left control then turns the ship right.
   Keyboard as in §4.
 
 **Demo**
@@ -433,7 +436,7 @@ for speed, goes back to Chloe before it is made.
 | Indestructible gold | Gold has no material (a generator option). |
 | What else must respect the wrap | Blasts and the AI; gas and the tractor later. |
 | View | The whole arena on one fixed screen, shaped like the screen. |
-| Railgun | An explosive shell (the mining tuning's), a kick of about 0.24 m/s. |
+| Railgun | An explosive shell (the mining tuning's), a kick of about 0.36 m/s. |
 | Life lost | Hull gone or no working engine. |
 | Fuel and ammo | Refilled with each new ship and each level. |
 | Collecting gold | Any visible gold, by touch. |
@@ -446,5 +449,5 @@ for speed, goes back to Chloe before it is made.
 | Demo | A new AI mode that clears rocks. |
 | Repair | Fresh ship each level. |
 | Controls | Q/E + Space; two thrust buttons and a fire button. |
-| Gravity strength | About 2 m/s² at a large rock's surface. |
+| Gravity strength | About 1 m/s² at a large rock's surface. |
 | Rock toughness | The mining tuning. |

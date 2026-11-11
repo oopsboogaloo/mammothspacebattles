@@ -15,15 +15,16 @@ const root = new URL("..", import.meta.url).pathname;
  * that ship (48 kg) made 4.29 m/s² with both engines and 1.74 rad/s² with one; this one (67 kg)
  * made 12.9 m/s² with the main and both back thrusters, 3.48 rad/s² turning, and 4.2 m/s² braking.
  * After playing it she asked for a stronger forward engine (11 November 2026): the main thruster's
- * flow went from 2.8 to 4.86 kg/s, which makes 19.3 m/s² forward, half as much again.
+ * flow went from 2.8 to 4.86 kg/s, which made 19.3 m/s² forward, half as much again. Then 60% more
+ * power from the main thruster (11 November 2026): 7.776 kg/s, which makes 28.3 m/s² forward.
  */
 const SMALL = 0.68;
-const MAIN = 4.86;
+const MAIN = 7.776;
 /**
  * Fuel economy (FLT-010): the two tanks (16.2 kg) last about two minutes of full thrust, as the LAND
  * ship's one did. To tune after play.
  */
-const ECONOMY = 45;
+const ECONOMY = 66;
 /** The arena: 160 m high; the page sets the width from the screen's shape (this is 16:9). */
 const HEIGHT = 160;
 const WIDTH = 284;
@@ -53,8 +54,9 @@ function ship() {
   // `safe`: the shell never goes off against its own ship. Blasts' gas blows these light shells
   // about, and one blown back onto the ship as it left the gun destroyed the ship.
   const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05, explosive: { charge: 0.1, fragments: 0, radius: 4, heat: 1.512e8, gas: 5.333333, safe: true } };
+  // 144 m/s: half as fast again as the 96 m/s it had (asked for by Chloe, 11 November 2026).
   // The muzzle is just past the gun's top (the gun is 0.7 m long, the shell 0.22 m); the bore is along +y.
-  const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } };
+  const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine });
 }
 
@@ -120,11 +122,11 @@ const scenario = {
         bond: 800,
         // Twice the mining tuning's toughness, with a shell of twice the energy: the same damage.
         material: { name: "rock", threshold: 200, toughness: 40_000 },
-        // About 2 m/s² at a large rock's surface (doubled on 11 November 2026: Chloe asked for
-        // stronger gravity). The pieces welded together pull as one source
+        // About 1 m/s² at a large rock's surface. (Doubled on 11 November 2026, when Chloe asked
+        // for stronger gravity, and halved again the same day after more play.) The pieces welded together pull as one source
         // (AST-011), softened by half the rock's reach, so at the surface the pull is about
         // G M / (1.4 R²), with M ≈ 0.8 π R² × density.
-        gravity: { G: 0.186, joined: true },
+        gravity: { G: 0.093, joined: true },
         orbit: true,
         // Where a piece is destroyed, a burst of gas pushes the pieces round it apart (MAS-027).
         // Half one of the ship's shells: half the energy and 2.7 kg of gas. It does no blast damage,
@@ -153,9 +155,10 @@ const scenario = {
       respawn: 1.25,
       grace: 1,
       clearPause: 1.5,
-      // A shell flies 134 m: less than the arena's height, so one fired straight up or down can't come
-      // round the arena and hit the ship that fired it.
-      shellLife: 1.4,
+      // A shell lasts 1 game second: the ship's flies 144 m from it, less than the arena's height, so
+      // one fired straight up or down can't come round the arena and hit the ship that fired it. A
+      // gunship's, at 96 m/s, flies 96 m.
+      shellLife: 1,
       pace: 0.5,
       seed: 1,
     },
