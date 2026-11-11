@@ -392,8 +392,14 @@ export interface RenderOptions {
   pad?: string;
   /** Draw fixed bodies as plain ground with a single surface line (Mammoth Lander). */
   groundLine?: boolean;
-  /** A faint starfield behind everything, drifting slower than the world (parallax), so motion reads. */
-  stars?: boolean;
+  /** A faint starfield behind everything, drifting slower than the world (parallax), so motion reads. "still": it doesn't move (a view that never does). */
+  stars?: boolean | "still";
+  /**
+   * Mammoth Asteroids' view (MAS-011): black space; the copies across a wrapped world's edges drawn
+   * exactly as the originals (gold, wrecks, a protected ship's flashing), with no seam line; no
+   * orientation marks; beam rings; and black outside the arena if the screen is another shape.
+   */
+  arcade?: boolean;
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -640,7 +646,7 @@ function starHash(a: number, b: number, c: number): number {
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
-function drawStars(ctx: Ctx, c: Camera, vp: Viewport): void {
+function drawStars(ctx: Ctx, c: { x: number; y: number }, vp: Viewport): void {
   ctx.fillStyle = "#dfe7ff";
   STAR_LAYERS.forEach((layer, l) => {
     // Where the sky's origin sits on screen for this layer.
@@ -932,10 +938,46 @@ function drawDust(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   ctx.globalAlpha = 1;
 }
 
+/** Mammoth Asteroids' rocks: dark grey, light edges. */
+const ROCK_FILL = "#1b1b1d";
+const ROCK_STROKE = "#b9b9b9";
+
+/** How long a beam ring shows, s of game time (as the game keeps them). */
+const BEAM_LIFE = 0.5;
+
+/** Mammoth Asteroids' beam rings: a white ring growing from where something beamed in, fading as it goes. */
+function drawBeams(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  const beams = world.arcade?.state.beams;
+  if (!beams?.length) return;
+  const dt = world.tick > 0 ? world.time / world.tick : 1 / 240;
+  for (const b of beams) {
+    const age = Math.min(1, Math.max(0, ((world.tick - b.at) * dt) / BEAM_LIFE));
+    const s = toScreen(c, vp, { x: b.x, y: b.y });
+    ctx.globalAlpha = 1 - age;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, Math.max(2, b.r * (0.3 + 1.2 * age) * c.zoom), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** Black over whatever shows outside the arena, when the screen isn't the arena's shape (MAS-010). */
+function maskOutside(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  const a = toScreen(c, vp, { x: world.bounds.min.x, y: world.bounds.max.y }); // top left
+  const b = toScreen(c, vp, { x: world.bounds.max.x, y: world.bounds.min.y }); // bottom right
+  ctx.fillStyle = "#000";
+  if (a.x > 0.5) ctx.fillRect(0, 0, a.x, vp.height);
+  if (b.x < vp.width - 0.5) ctx.fillRect(b.x, 0, vp.width - b.x, vp.height);
+  if (a.y > 0.5) ctx.fillRect(0, 0, vp.width, a.y);
+  if (b.y < vp.height - 0.5) ctx.fillRect(0, b.y, vp.width, vp.height - b.y);
+}
+
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
-  ctx.fillStyle = COLORS.background;
+  ctx.fillStyle = opts.arcade ? "#000" : COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
-  if (opts.stars) drawStars(ctx, c, vp);
+  if (opts.stars) drawStars(ctx, opts.stars === "still" ? { x: 0, y: 0 } : c, vp);
   if (opts.overlays.has("grid")) drawGrid(ctx, c, vp);
   // A wrapped world (FLT-012): its neighbouring copies first, plain, so the seam doesn't show.
   if (world.bounds.wrap) {
@@ -948,6 +990,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
         const g = world.challenge?.goal;
         if (g?.pads) for (const p of g.pads) drawPad(ctx, world, ci, vp, p.id, `×${p.multiplier}`, g.used?.includes(p.id));
       }
+      // The game's copies are the same drawing as the originals, below (MAS-011).
+      if (opts.arcade) continue;
       for (const b of world.bodies) {
         if (opts.groundLine && isGround(b)) continue; // drawn as ground above; ships and debris still show
         bodyPath(ctx, ci, vp, b);
@@ -958,8 +1002,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
         ctx.stroke();
       }
     }
-    // The seam is the sandbox's: the game hides it.
-    if (!opts.groundLine) drawSeam(ctx, world, c, vp);
+    // The seam is the sandbox's: the games hide it.
+    if (!opts.groundLine && !opts.arcade) drawSeam(ctx, world, c, vp);
   }
   // Gas under bodies, so walls stay crisp.
   drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
@@ -975,43 +1019,74 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   // Ground as a single line (Mammoth Lander): fixed bodies filled plainly, with only the edges along
   // the surface drawn, not the sides and bottoms where the pieces meet.
   if (opts.groundLine) drawGroundLine(ctx, world, c, vp);
-  for (const b of world.bodies) {
-    if (opts.groundLine && isGround(b)) continue;
-    const selected = opts.selection.has(b.id);
-    const hover = opts.hover === b.id;
-    // Gold shows once it can be seen: not while hidden inside a larger fragment (AST-006).
-    const gold = b.mineral === "gold" && !b.compound;
-    const fill = b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : b.fixed ? COLORS.fixed : COLORS.body;
-    bodyPath(ctx, c, vp, b);
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.lineWidth = selected ? 3 : hover ? 2 : 1.25;
-    ctx.strokeStyle = selected ? COLORS.selected : hover ? COLORS.hover : gold ? COLORS.goldStroke : b.fixed ? COLORS.fixedStroke : COLORS.bodyStroke;
-    ctx.setLineDash(b.fixed && !selected ? [6, 4] : []);
-    const hidden = seams.get(b.id);
-    if (hidden && b.shape.kind !== "disc" && !selected) strokeOutline(ctx, c, vp, b, hidden, fill);
-    else ctx.stroke();
-    ctx.setLineDash([]);
-    if (b.compound && !selected) continue; // no orientation mark or label to give its pieces away
-    // Orientation mark: centre to the body's local +x edge, so rotation is visible.
-    const q = sinCos(b.angle);
-    const reach = b.shape.kind === "disc" ? b.shape.radius : b.shape.kind === "box" ? b.shape.width / 2 : massProps(b.shape, b.mass).boundingRadius;
-    const s0 = toScreen(c, vp, b.position);
-    const s1 = toScreen(c, vp, add(b.position, rotate(q, { x: reach, y: 0 })));
-    ctx.strokeStyle = selected ? COLORS.selected : COLORS.bodyStroke;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(s0.x, s0.y);
-    ctx.lineTo(s1.x, s1.y);
-    ctx.stroke();
-    // Id label when the body is big enough on screen to carry one.
-    if (opts.labels !== false && reach * c.zoom > 18) {
-      ctx.fillStyle = selected ? COLORS.selected : COLORS.label;
-      ctx.font = "12px 'IBM Plex Mono', monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText(b.id, s0.x, s0.y + Math.max(8, reach * c.zoom * 0.35));
+  // Every body: its fill and outline by what it is, then its orientation mark and label.
+  const grace = world.arcade?.state.graceUntil !== undefined && Math.floor(world.time * 10) % 2 === 0;
+  const flashing = grace ? `p${world.arcade!.state.n}-` : null;
+  const drawBodies = (cam: Camera): void => {
+    for (const b of world.bodies) {
+      if (opts.groundLine && isGround(b)) continue;
+      const selected = opts.selection.has(b.id);
+      const hover = opts.hover === b.id;
+      // Gold shows once it can be seen: not while hidden inside a larger fragment (AST-006).
+      const gold = b.mineral === "gold" && !b.compound;
+      // The game's rocks are dark grey with light edges (every piece of one carries its gravity).
+      const rock = opts.arcade && !!b.gravity && !gold;
+      const fill = b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : b.fixed ? COLORS.fixed : COLORS.body;
+      // In Mammoth Asteroids a slug is too small to see at the arena's scale: a white dot, 2 px at least.
+      if (opts.arcade && b.id.includes("-shell-") && b.shape.kind === "disc") {
+        const at = toScreen(cam, vp, b.position);
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(at.x, at.y, Math.max(2, b.shape.radius * cam.zoom), 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
+      // A ship that is protected flashes (MAS-034).
+      if (flashing && b.id.startsWith(flashing)) ctx.globalAlpha = 0.3;
+      bodyPath(ctx, cam, vp, b);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.lineWidth = selected ? 3 : hover ? 2 : 1.25;
+      ctx.strokeStyle = selected ? COLORS.selected : hover ? COLORS.hover : gold ? COLORS.goldStroke : rock ? ROCK_STROKE : b.fixed ? COLORS.fixedStroke : COLORS.bodyStroke;
+      ctx.setLineDash(b.fixed && !selected ? [6, 4] : []);
+      const hidden = seams.get(b.id);
+      if (hidden && b.shape.kind !== "disc" && !selected) strokeOutline(ctx, cam, vp, b, hidden, fill);
+      else ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      if (opts.arcade || (b.compound && !selected)) continue; // no orientation mark or label to give its pieces away (none at all in the game)
+      // Orientation mark: centre to the body's local +x edge, so rotation is visible.
+      const q = sinCos(b.angle);
+      const reach = b.shape.kind === "disc" ? b.shape.radius : b.shape.kind === "box" ? b.shape.width / 2 : massProps(b.shape, b.mass).boundingRadius;
+      const s0 = toScreen(cam, vp, b.position);
+      const s1 = toScreen(cam, vp, add(b.position, rotate(q, { x: reach, y: 0 })));
+      ctx.strokeStyle = selected ? COLORS.selected : COLORS.bodyStroke;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(s0.x, s0.y);
+      ctx.lineTo(s1.x, s1.y);
+      ctx.stroke();
+      // Id label when the body is big enough on screen to carry one.
+      if (opts.labels !== false && reach * cam.zoom > 18) {
+        ctx.fillStyle = selected ? COLORS.selected : COLORS.label;
+        ctx.font = "12px 'IBM Plex Mono', monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(b.id, s0.x, s0.y + Math.max(8, reach * cam.zoom * 0.35));
+      }
     }
+  };
+  if (opts.arcade && world.bounds.wrap)
+    for (const [ox, oy] of wrapImages(world, c, vp)) {
+      const ci = { ...c, x: c.x - ox, y: c.y - oy };
+      drawDust(ctx, world, ci, vp);
+      drawBodies(ci);
+      drawBeams(ctx, world, ci, vp);
+    }
+  drawBodies(c);
+  if (opts.arcade) {
+    drawBeams(ctx, world, c, vp);
+    maskOutside(ctx, world, c, vp);
   }
   drawTractors(ctx, world, c, vp);
   // Several pads, each with its multiplier (Mammoth Lander, LND-010); or the one pad.

@@ -1,0 +1,156 @@
+import { expect, test, type Page } from "@playwright/test";
+
+interface Hook {
+  sandbox: () => { world: { controls: Record<string, number>; bounds: { min: { x: number; y: number }; max: { x: number; y: number } }; bodies: { id: string; integrity: number }[]; arcade: { state: { lives: number; score: number } } } };
+  arcade: () => { phase: string; level: number; lives: number; score: number; stats: { shots: number }; gold: { total: number } } | null;
+  toPage: (x: number, y: number) => { x: number; y: number };
+}
+const hook = <T,>(page: Page, f: (m: Hook) => T): Promise<T> => page.evaluate(`(${f.toString()})(window.__msb)`) as Promise<T>;
+const start = async (page: Page, query = "?seed=1") => {
+  await page.goto(`./asteroids.html${query}`);
+  await page.getByTestId("mas-start").click();
+  await expect(page.getByTestId("mas-hud")).toBeVisible();
+};
+
+test("MAS-001 MAS-002 MAS-008 Mammoth Asteroids on its own page: the title, then play with only the arena, the HUD and the buttons", async ({ page }) => {
+  await page.goto("./asteroids.html?seed=1");
+  await expect(page).toHaveTitle("Mammoth Asteroids");
+  await expect(page.getByRole("heading", { name: "MAMMOTH ASTEROIDS" })).toBeVisible();
+  // Black buttons with a white border and white text, square corners (MAS-006).
+  const play = page.getByTestId("mas-start");
+  await expect(play).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await expect(play).toHaveCSS("border-top-color", "rgb(255, 255, 255)");
+  await expect(play).toHaveCSS("border-top-width", "2px");
+  await expect(play).toHaveCSS("border-radius", "0px");
+  await expect(play).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(page.getByRole("button", { name: "High scores" })).toBeVisible();
+  // Nothing leads to the sandbox.
+  await expect(page.getByText("sandbox", { exact: false })).toHaveCount(0);
+  await play.click();
+  await expect(page.getByTestId("mas-score")).toHaveText("SCORE 0");
+  await expect(page.getByTestId("mas-level")).toHaveText("LEVEL 1");
+  await expect(page.getByTestId("mas-lives")).toHaveText("▲▲▲");
+  await expect(page.getByTestId("mas-gold")).toHaveText(/GOLD [23] \/ [23]/);
+  await expect(page.getByTestId("mas-slugs")).toHaveText("SLUGS 60");
+  await expect(page.getByTestId("mas-damage")).toHaveText("DAMAGE 0%");
+  for (const b of ["thrust-left", "thrust-right", "thrust-fire", "mas-pause"]) await expect(page.getByTestId(b)).toBeVisible();
+  // No sandbox panels or tools, and none of the view's own overlays.
+  await expect(page.getByTestId("sandbox")).toHaveCount(0);
+  await expect(page.getByText("Keys", { exact: true })).toBeHidden();
+  // The game is running.
+  await expect.poll(() => hook(page, (m) => m.arcade()?.phase)).toBe("playing");
+});
+
+test("MAS-010 the arena is the whole view: the screen's shape, 160 m high, its corners at the view's corners", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await start(page);
+  const b = await hook(page, (m) => m.sandbox().world.bounds);
+  expect(b.max.y - b.min.y).toBe(160);
+  expect(b.max.x - b.min.x).toBeCloseTo(160 * (1280 / 720), 6);
+  await expect
+    .poll(async () => {
+      const c = await hook(page, (m) => {
+        const w = m.sandbox().world.bounds;
+        return [m.toPage(w.min.x, w.max.y), m.toPage(w.max.x, w.min.y)];
+      });
+      return Math.max(Math.abs(c[0].x), Math.abs(c[0].y), Math.abs(c[1].x - 1280), Math.abs(c[1].y - 720));
+    })
+    .toBeLessThan(1.5);
+});
+
+test("MAS-052 the keys: Space fires slugs, ↑ burns both engines, and letting go stops them", async ({ page }) => {
+  await start(page);
+  await page.keyboard.down("Space");
+  await expect.poll(() => hook(page, (m) => m.arcade()!.stats.shots), { timeout: 10_000 }).toBeGreaterThan(1);
+  await page.keyboard.up("Space");
+  await expect(page.getByTestId("mas-slugs")).not.toHaveText("SLUGS 60");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.fire ?? 0)).toBe(0);
+  await page.keyboard.down("ArrowUp");
+  await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.left ?? 0, m.sandbox().world.controls.right ?? 0].join())).toBe("1,1");
+  // Q with ↑ still down, then Q up: the left engine stays on for ↑.
+  await page.keyboard.down("q");
+  await page.keyboard.up("q");
+  await page.waitForTimeout(300);
+  expect(await hook(page, (m) => m.sandbox().world.controls.left)).toBe(1);
+  await page.keyboard.up("ArrowUp");
+  await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.left ?? 0, m.sandbox().world.controls.right ?? 0].join())).toBe("0,0");
+  // E and the right Shift are the right engine.
+  await page.keyboard.down("e");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.right ?? 0)).toBe(1);
+  await page.keyboard.up("e");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.right ?? 0)).toBe(0);
+});
+
+test("MAS-052 touch: the fire button fires while held, with a thrust button held at the same time", async ({ page }) => {
+  await start(page);
+  const fire = page.getByTestId("thrust-fire");
+  const left = page.getByTestId("thrust-left");
+  await left.dispatchEvent("pointerdown", { pointerId: 1 });
+  await fire.dispatchEvent("pointerdown", { pointerId: 2 });
+  await expect.poll(() => hook(page, (m) => m.arcade()!.stats.shots), { timeout: 10_000 }).toBeGreaterThan(1);
+  expect(await hook(page, (m) => m.sandbox().world.controls.left)).toBe(1);
+  await fire.dispatchEvent("pointerup", { pointerId: 2 });
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.fire ?? 0)).toBe(0);
+  expect(await hook(page, (m) => m.sandbox().world.controls.left)).toBe(1); // still held
+  await left.dispatchEvent("pointerup", { pointerId: 1 });
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.left ?? 0)).toBe(0);
+});
+
+test("MAS-004 P and Esc pause; the menu resumes, or quits to the title", async ({ page }) => {
+  await start(page);
+  await page.keyboard.press("p");
+  await expect(page.getByTestId("mas-paused")).toBeVisible();
+  await page.getByTestId("mas-resume").click();
+  await expect(page.getByTestId("mas-paused")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("mas-paused")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("mas-paused")).toHaveCount(0);
+  await page.getByTestId("mas-pause").click();
+  await page.getByTestId("mas-quit").click();
+  await expect(page.getByTestId("mas-title")).toBeVisible();
+  // And a new game starts from the title.
+  await page.getByTestId("mas-start").click();
+  await expect(page.getByTestId("mas-score")).toHaveText("SCORE 0");
+});
+
+test("MAS-005 game over, initials for a high score, and the table kept through a reload", async ({ page }) => {
+  // Stepping on the page (?worker=0), so the test can end the game: one ship left, its hull destroyed.
+  await start(page, "?seed=1&worker=0");
+  await hook(page, (m) => {
+    const w = m.sandbox().world;
+    w.arcade.state.lives = 1;
+    w.arcade.state.score = 1230;
+    w.bodies.find((b) => b.id === "p1-hull")!.integrity = 0;
+  });
+  await expect(page.getByTestId("mas-over")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("mas-over")).toContainText("Score 1230 · level 1");
+  // Initials: B, A, C.
+  const next = page.getByRole("button", { name: "Next letter" });
+  await next.nth(0).click();
+  await next.nth(2).click();
+  await next.nth(2).click();
+  await page.getByTestId("mas-save").click();
+  const mine = page.getByTestId("mas-score-mine");
+  await expect(mine).toContainText("BAC");
+  await expect(mine).toContainText("1230");
+  await expect(mine).toContainText("level 1");
+  await page.reload();
+  await page.getByTestId("mas-open-scores").click();
+  await expect(page.getByTestId("mas-scores")).toContainText("BAC");
+  await expect(page.getByTestId("mas-scores")).toContainText("1230");
+  await page.getByTestId("mas-scores-back").click();
+  await expect(page.getByTestId("mas-title")).toBeVisible();
+});
+
+test("MAS-052 the game cancels the browser's pinch zoom", async ({ page }) => {
+  await page.goto("./asteroids.html");
+  const viewport = () => page.evaluate(() => document.querySelector('meta[name="viewport"]')!.getAttribute("content"));
+  await expect.poll(viewport).toContain("maximum-scale=1.0");
+  const cancelled = await page.evaluate(() => {
+    const e = new Event("gesturestart", { cancelable: true });
+    document.dispatchEvent(e);
+    return e.defaultPrevented;
+  });
+  expect(cancelled).toBe(true);
+});
