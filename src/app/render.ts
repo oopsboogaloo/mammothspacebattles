@@ -940,6 +940,9 @@ function drawDust(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
 
 /** Mammoth Asteroids' rocks: dark grey, light edges. */
 const ROCK_FILL = "#1b1b1d";
+/** The game's ship has a light blue cockpit, so the way it faces shows (MAS-038). */
+export const COCKPIT_FILL = "#8fd3ff";
+const COCKPIT = /^p\d+-hull$/;
 const ROCK_STROKE = "#b9b9b9";
 
 /** How long a beam ring shows, s of game time (as the game keeps them). */
@@ -1031,7 +1034,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       const gold = b.mineral === "gold" && !b.compound;
       // The game's rocks are dark grey with light edges (every piece of one carries its gravity).
       const rock = opts.arcade && !!b.gravity && !gold;
-      const fill = b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : b.fixed ? COLORS.fixed : COLORS.body;
+      const cockpit = opts.arcade && COCKPIT.test(b.id);
+      const fill = b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : cockpit ? COCKPIT_FILL : b.fixed ? COLORS.fixed : COLORS.body;
       // In Mammoth Asteroids a slug is too small to see at the arena's scale: a white dot, 2 px at least.
       if (opts.arcade && b.id.includes("-shell-")) {
         const at = toScreen(cam, vp, b.position);

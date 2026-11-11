@@ -365,7 +365,8 @@
                   "fragments": 0,
                   "radius": 4,
                   "heat": 151200000,
-                  "gas": 5.333333
+                  "gas": 5.333333,
+                  "safe": true
                 }
               },
               "railgun": {
@@ -398,6 +399,13 @@
               "name": "hull",
               "threshold": 150,
               "toughness": 3000
+            },
+            "explosive": {
+              "charge": 0.012,
+              "arm": 1000000,
+              "fragments": 4,
+              "radius": 0.5,
+              "whenDestroyed": true
             },
             "contents": [
               {
@@ -547,6 +555,13 @@
               "threshold": 150,
               "toughness": 3000
             },
+            "explosive": {
+              "charge": 0.0048,
+              "arm": 1000000,
+              "fragments": 4,
+              "radius": 0.5,
+              "whenDestroyed": true
+            },
             "contents": [
               {
                 "resource": "h2",
@@ -694,6 +709,13 @@
               "name": "hull",
               "threshold": 150,
               "toughness": 3000
+            },
+            "explosive": {
+              "charge": 0.0048,
+              "arm": 1000000,
+              "fragments": 4,
+              "radius": 0.5,
+              "whenDestroyed": true
             },
             "contents": [
               {
@@ -843,6 +865,13 @@
               "threshold": 150,
               "toughness": 3000
             },
+            "explosive": {
+              "charge": 0.0048,
+              "arm": 1000000,
+              "fragments": 4,
+              "radius": 0.5,
+              "whenDestroyed": true
+            },
             "contents": [
               {
                 "resource": "h2",
@@ -990,6 +1019,13 @@
               "name": "hull",
               "threshold": 150,
               "toughness": 3000
+            },
+            "explosive": {
+              "charge": 0.0048,
+              "arm": 1000000,
+              "fragments": 4,
+              "radius": 0.5,
+              "whenDestroyed": true
             },
             "contents": [
               {
@@ -1939,6 +1975,11 @@
           "joined": true
         },
         "orbit": true,
+        "burst": {
+          "charge": 0.1,
+          "heat": 75600000,
+          "gas": 2.6
+        },
         "gold": [
           2,
           3

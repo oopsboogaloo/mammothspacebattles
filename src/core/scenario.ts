@@ -364,6 +364,7 @@ function validateExplosive(v: V, e: unknown, mass: unknown, path: string): void 
   if (e.fragments !== undefined) num(v, e.fragments, `${path}.fragments`, { int: true, min: 0, max: 8 });
   if (e.radius !== undefined) num(v, e.radius, `${path}.radius`, { positive: true });
   if (e.gas !== undefined) num(v, e.gas, `${path}.gas`, { min: 0 });
+  if (e.safe !== undefined && typeof e.safe !== "boolean") err(v, `${path}.safe`, "must be true or false");
   if (e.arm !== undefined) num(v, e.arm, `${path}.arm`, { min: 0 });
   if (e.whenDestroyed !== undefined && typeof e.whenDestroyed !== "boolean") err(v, `${path}.whenDestroyed`, "must be true or false");
 }
@@ -530,6 +531,14 @@ function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
     num(v, r.pieces, `${p}.pieces`, { int: true, min: 1, max: 200 });
     for (const k of ["radius", "density", "bond"]) num(v, r[k], `${p}.${k}`, { positive: true });
     if (r.material !== undefined) validateMaterial(v, r.material, `${p}.material`);
+    if (r.burst !== undefined) {
+      if (!isObj(r.burst)) err(v, `${p}.burst`, "must be an object {charge, heat?, gas?}");
+      else {
+        num(v, r.burst.charge, `${p}.burst.charge`, { positive: true });
+        if (r.burst.heat !== undefined) num(v, r.burst.heat, `${p}.burst.heat`, { positive: true });
+        if (r.burst.gas !== undefined) num(v, r.burst.gas, `${p}.burst.gas`, { min: 0 });
+      }
+    }
     if (r.orbit !== undefined && typeof r.orbit !== "boolean") err(v, `${p}.orbit`, "must be true or false");
     else if (r.orbit && r.gravity === undefined) err(v, `${p}.orbit`, "needs the rocks' gravity");
     if (r.gravity !== undefined) {

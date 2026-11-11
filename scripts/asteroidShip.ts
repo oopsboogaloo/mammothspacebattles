@@ -140,6 +140,8 @@ export function asteroidShip(t: ShipTuning) {
       restitution: 0,
       friction: 0.3,
       material: HULL,
+      // What is left in an engine goes up with it: a small explosion when it is destroyed (MAS-037).
+      explosive: { charge: round(0.004 * mass), arm: 1e6, fragments: 4, radius: 0.5, whenDestroyed: true },
       contents: [
         { resource: "h2", mass: 0, capacity: round(rate * 0.02 * MIX.h2) },
         { resource: "o2", mass: 0, capacity: round(rate * 0.02 * MIX.o2) },

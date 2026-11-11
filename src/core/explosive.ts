@@ -44,6 +44,11 @@ export interface Explosive {
   gas?: number;
   /** Blast damage reaches this far, m. Default 2. */
   radius?: number;
+  /**
+   * A shell that never goes off against the ship that fired it (its gun's assembly): a blast's gas
+   * can blow a light shell back onto its own ship. Default false.
+   */
+  safe?: boolean;
   /** Strikes slower than this don't set it off, m/s. Default 5. */
   arm?: number;
   /** State: the body that loaded it (its gun), and whether it has left that gun's assembly. */
@@ -134,7 +139,13 @@ export function detonate(world: World, roots: ReadonlyMap<string, string> | null
     const e = s.explosive!;
     if (!e.armed) continue;
     let J = 0;
-    for (const c of world.contacts) if (c.a === s.id || c.b === s.id) J = Math.max(J, c.normalImpulse);
+    const own = e.safe && e.from !== undefined ? (roots?.get(e.from) ?? e.from) : undefined;
+    for (const c of world.contacts) {
+      if (c.a !== s.id && c.b !== s.id) continue;
+      const other = c.a === s.id ? c.b : c.a;
+      if (own !== undefined && (roots?.get(other) ?? other) === own) continue;
+      J = Math.max(J, c.normalImpulse);
+    }
     if (e.trigger || (e.whenDestroyed && s.integrity <= 0) || J > (e.arm ?? 5) * bodyMass(s)) struck.push(s);
   }
   for (const s of struck) burst(world, s, dt);

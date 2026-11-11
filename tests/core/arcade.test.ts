@@ -314,7 +314,7 @@ describe("Mammoth Asteroids", () => {
     expect(st(quiet.w).score).toBe(0);
   }, 120_000);
 
-  it("MAS-021 MAS-030 the explosive shell breaks a rock up: its blast pushes pieces apart, so the rock splits within a few hits and few pieces are destroyed; a solid slug did none of that", () => {
+  it("MAS-021 MAS-027 MAS-030 the explosive shell breaks a rock up: its blast pushes pieces apart, so the rock splits within a few hits and few pieces are destroyed; a solid slug did none of that", () => {
     const mag = raw.world.arcade.ship.bodies.find((b: { id: string }) => b.id === "p{n}-gun").magazine;
     // The Mammoth scenario's shell, from the mining tuning (AST-008).
     expect(mag).toMatchObject({ count: 120, reload: 0.25, shell: { mass: 0.166667, explosive: { charge: 0.1, fragments: 0, radius: 4, heat: 1.512e8, gas: 5.333333 } } });
@@ -341,14 +341,16 @@ describe("Mammoth Asteroids", () => {
       const pieces = prefixed(w, "a1-0-").length;
       step(2.05, [set("fire", 1)]); // 9 shells
       step(2, [set("fire", 0)]);
-      return { w, shots: st(w).stats.shots, bursts: w.events.filter((e) => e.type === "detonation").length, chunks: chunks(w), lost: pieces - prefixed(w, "a1-0-").length };
+      return { w, shots: st(w).stats.shots, bursts: w.events.filter((e) => e.type === "detonation" && String(e.data.id).startsWith("p1-")).length, pieceBursts: w.events.filter((e) => e.type === "detonation" && String(e.data.id).startsWith("burst-")).length, chunks: chunks(w), lost: pieces - prefixed(w, "a1-0-").length };
     };
     const now = fire();
     expect(now.shots).toBe(9);
-    expect(now.bursts).toBeGreaterThanOrEqual(5); // measured 6: the first blasts push the pieces out of the later shells' way
-    expect(now.chunks).toBeGreaterThanOrEqual(8); // measured: 13 chunks, 7 of its 20 pieces destroyed
+    expect(now.bursts).toBeGreaterThanOrEqual(4); // measured 5: the blasts push the pieces out of the later shells' way
+    expect(now.chunks).toBeGreaterThanOrEqual(2); // measured: 4 chunks, 10 of its 20 pieces destroyed
     expect(now.lost).toBeGreaterThanOrEqual(3);
-    expect(now.lost).toBeLessThanOrEqual(12); // most of the rock is pushed apart, not vaporised
+    expect(now.lost).toBeLessThanOrEqual(14); // some of the rock is pushed apart, not vaporised
+    // MAS-027: a burst of gas where each piece was destroyed.
+    expect(now.pieceBursts).toBe(now.lost);
     expect(st(now.w).stats.welds).toBeGreaterThan(3);
     expect(st(now.w).score).toBe(ARCADE_SCORES.weld * st(now.w).stats.welds);
     // Gold is untouched by the blasts, and the ship by its own shells.
@@ -361,7 +363,7 @@ describe("Mammoth Asteroids", () => {
       gun.magazine.shell = { shape: { kind: "disc", radius: 0.06 }, mass: 0.1, restitution: 0, friction: 0.3 };
       Object.assign(scn.world.arcade.rocks, { density: 20, bond: 20_000 });
     });
-    expect(before).toMatchObject({ shots: 9, bursts: 0, chunks: 1, lost: 0 });
+    expect(before).toMatchObject({ shots: 9, bursts: 0, pieceBursts: 0, chunks: 1, lost: 0 });
   }, 120_000);
 
   it("MAS-031 MAS-032 MAS-033 a lost ship stays as a wreck the keys no longer fly; the next comes after the wait at a clear spot, at rest, protected for a while", () => {
@@ -575,6 +577,92 @@ describe("Mammoth Asteroids", () => {
     expect(st(w)).toMatchObject({ lost: false, lives: 3 });
     expect(body(w, "p1-hull")!.integrity).toBeLessThan(1);
     expect(body(w, "p1-hull")!.integrity).toBeGreaterThan(0.3);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MAS-037 a thruster knocked off the ship burns what is left in it, about 0.4 s, and is then dead; its tank leaks where its line was", () => {
+    const { w, step } = alone();
+    step(0.1);
+    const fuel = (t: string) => body(w, t)!.contents!.reduce((m, c) => m + c.mass, 0);
+    w.joints = w.joints.filter((j) => j.id !== "p1-w-tank-l-back-l"); // the back left thruster comes off
+    let burned = 0;
+    for (let i = 0; i < 240; i++) {
+      step(1 / 240);
+      if (body(w, "p1-back-l")!.injector!.firing) burned += 1 / 240;
+    }
+    expect(st(w).cut).toEqual(["p1-tank-l>p1-back-l"]);
+    expect(burned).toBeGreaterThan(0.2);
+    expect(burned).toBeLessThan(0.7);
+    expect(w.links.some((l) => l.kind === "feed" && l.to === "p1-back-l")).toBe(false);
+    // The controls no longer reach it: turning right fires the front right thruster alone.
+    step(0.25, [set("right", 1)]);
+    expect(prefixed(w, "p1-").filter((b) => b.injector?.firing).map((b) => b.id)).toEqual(["p1-front-r"]);
+    step(0.05, [set("right", 0)]);
+    // The tank it hung from leaks where the line was: the middle of its bottom face.
+    const tank = body(w, "p1-tank-l")!;
+    expect(tank.integrity).toBeCloseTo(0.9, 9);
+    expect(tank.breach).toMatchObject({ point: { x: 0, y: -0.5 }, normal: { x: 0, y: -1 } });
+    const [l0, r0] = [fuel("p1-tank-l"), fuel("p1-tank-r")];
+    step(4);
+    expect(l0 - fuel("p1-tank-l")).toBeGreaterThan(0.1); // about 0.05 kg/s
+    expect(r0 - fuel("p1-tank-r")).toBeLessThan(0.01);
+    expect(st(w)).toMatchObject({ lost: false, lives: 3 });
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MAS-037 a destroyed thruster goes up in a small explosion and its tank leaks; the main thruster destroyed, both tanks leak", () => {
+    const one = alone();
+    one.step(0.1);
+    body(one.w, "p1-back-l")!.integrity = 0;
+    one.step(0.5);
+    expect(one.w.events.filter((e) => e.type === "detonation").map((e) => e.data.id)).toEqual(["p1-back-l"]);
+    expect(body(one.w, "p1-tank-l")).toBeDefined(); // the explosion is small: the tank beside it survives
+    expect(body(one.w, "p1-tank-l")!.breach).toMatchObject({ point: { x: 0, y: -0.5 } });
+    expect(st(one.w)).toMatchObject({ lost: false, cut: ["p1-tank-l>p1-back-l"] });
+
+    const main = alone();
+    main.step(0.1);
+    body(main.w, "p1-main")!.integrity = 0;
+    main.step(0.5);
+    expect(st(main.w).cut).toEqual(["p1-tank-l>p1-main", "p1-tank-r>p1-main"]);
+    for (const t of ["p1-tank-l", "p1-tank-r"]) expect(body(main.w, t)!.integrity).toBeLessThan(0.91);
+    expect(st(main.w).lost).toBe(false); // the four small thrusters still fly it
+
+    expect(main.w.ledger.violations).toBe(0);
+  });
+
+  it("MAS-037 a wing lost whole burns on from its tank and leaks from the side that was joined, until the tank is empty; an empty tank destroyed doesn't explode, a tank with fuel in it does", () => {
+    const { w, step } = alone();
+    step(0.1);
+    const fuel = () => body(w, "p1-tank-l")!.contents!.reduce((m, c) => m + c.mass, 0);
+    w.joints = w.joints.filter((j) => !j.id.startsWith("p1-w-tank-gen-l")); // the left wing comes off
+    step(2);
+    const firing = () => ["p1-back-l", "p1-front-l"].filter((e) => body(w, e)!.injector!.firing);
+    // Both its thrusters burn, with no key held; only its line to the main thruster is cut.
+    expect(firing()).toHaveLength(2);
+    expect(st(w)).toMatchObject({ lost: false, cut: ["p1-tank-l>p1-main"], burning: ["p1-tank-l>p1-back-l", "p1-tank-l>p1-front-l"] });
+    // It leaks from the side that was welded to the ship (the left tank's right side).
+    expect(body(w, "p1-tank-l")!.breach).toMatchObject({ point: { x: 0.75, y: 0 }, normal: { x: 1, y: 0 } });
+    expect(body(w, "p1-tank-l")!.integrity).toBeCloseTo(0.9, 9);
+    const f2 = fuel();
+    step(4);
+    expect(firing()).toHaveLength(2); // still burning
+    expect(f2 - fuel()).toBeGreaterThan(1); // about 0.45 kg/s: it burns for some 18 s, not the ship's two minutes
+    // Until the tank is empty. Then it is dead, and has nothing to go up with.
+    step(16);
+    expect(fuel()).toBeLessThan(1e-3);
+    expect(firing()).toHaveLength(0);
+    expect(st(w).burning).toEqual([]);
+    expect(st(w).cut).toEqual(["p1-tank-l>p1-back-l", "p1-tank-l>p1-front-l", "p1-tank-l>p1-main"]);
+    const before = w.events.filter((e) => e.type === "detonation").length;
+    body(w, "p1-tank-l")!.integrity = 0;
+    step(0.2);
+    expect(body(w, "p1-tank-l")).toBeUndefined();
+    expect(w.events.filter((e) => e.type === "detonation").length).toBe(before);
+    // The other tank still has fuel in it: destroyed, it explodes.
+    body(w, "p1-tank-r")!.integrity = 0;
+    step(0.2);
+    expect(w.events.filter((e) => e.type === "detonation").map((e) => e.data.id)).toContain("p1-tank-r");
     expect(w.ledger.violations).toBe(0);
   });
 

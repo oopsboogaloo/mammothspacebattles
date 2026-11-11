@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { arenaFor, shipStatus } from "../../src/app/asteroidsHud.ts";
 import { scoreBoard, TABLE_SIZE, type Store } from "../../src/app/scores.ts";
-import { COLORS, renderFrame, type Ctx } from "../../src/app/render.ts";
+import { COCKPIT_FILL, COLORS, renderFrame, type Ctx } from "../../src/app/render.ts";
 import { getProfile, initialWorld, parseScenario, stepInPlace } from "../../src/core/index.ts";
 
 const raw = JSON.parse(readFileSync(new URL("../../scenarios/asteroids.json", import.meta.url), "utf8"));
@@ -89,6 +89,17 @@ describe("Mammoth Asteroids' page", () => {
     expect(goldFills(calls)).toBeGreaterThanOrEqual(2 * pieces);
     expect(goldFills(calls) % pieces).toBe(0);
     expect(plain.calls.some((c) => c.startsWith("setLineDash(2,6)"))).toBe(true);
+  });
+
+  it("MAS-038 the ship's cockpit is filled light blue in the game, and plain in the sandbox's view", () => {
+    const w = world();
+    const cockpits = (arcade: boolean) => {
+      const { ctx, calls } = recorder();
+      renderFrame(ctx, w, { x: 0, y: 0, zoom: 4 }, { width: 800, height: 450 }, { overlays: new Set(), selection: new Set(), hover: null, labels: false, ...(arcade ? { arcade: true } : {}) });
+      return calls.filter((c) => c.startsWith("fill(") && c.includes(`fill=${COCKPIT_FILL}`)).length;
+    };
+    expect(cockpits(true)).toBe(1); // one part of the ship: its cockpit
+    expect(cockpits(false)).toBe(0);
   });
 
   it("MAS-034 a protected ship flashes, and a beam ring shows where it came in", () => {
