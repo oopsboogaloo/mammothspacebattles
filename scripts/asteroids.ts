@@ -46,9 +46,13 @@ function ship() {
   // energy, and the rock is twice as tough so the blast destroys no more of it. Measured on three
   // rocks, nine shells each: the pieces leave at 1 to 3 m/s (the fastest at 4 to 5), where they
   // left at 0.5 to 2; 8 to 13 chunks, 7 to 12 pieces destroyed.
-  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 4, heat: 5.04e7, gas: 5 } };
+  // Then three times the shells at a third of the weight (asked for by Chloe, 11 November 2026):
+  // 120 shells of 0.167 kg, so the magazine still weighs 20 kg and a shot kicks a third as hard.
+  // Each blast is as it was: the same energy (0.1 kg of charge at three times the energy a kg) and
+  // the same 5.5 kg of gas (5.33 kg of it made from nothing).
+  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05, explosive: { charge: 0.1, fragments: 0, radius: 4, heat: 1.512e8, gas: 5.333333 } };
   // The muzzle is just past the gun's top (the gun is 0.7 m long, the shell 0.22 m); the bore is along +y.
-  const magazine = { count: 40, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } };
+  const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine });
 }
 

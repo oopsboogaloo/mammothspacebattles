@@ -403,6 +403,9 @@ would mostly remove. That is the next change.
       80 s: 136 chunks and 5.7 ms a step (drifting: 154 and 6.0).
     - *Gunship shells.* 0.3 kg, not 0.15: a hit takes 15 to 18% off a hull part (it took about
       6%) and destroys a tank, which explodes; the ship flies on.
+    - *Shells (the same day).* 120 of 0.167 kg, where there were 40 of 0.5 kg: the magazine
+      still weighs 20 kg, and a shot kicks 0.24 m/s, a third as hard. Each blast is unchanged:
+      0.1 kg of charge at three times the energy a kg, and 5.5 kg of gas, 5.33 kg of it made.
   - **Welds:** 3 times Lander's, the gun's mount 6 times, two welds between each tank and its
     generator. Nothing bends with all 40 shells fired still, forward, turning or reversing, nor
     spinning at 40 rad/s.

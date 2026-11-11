@@ -22,7 +22,7 @@ requirement IDs (MAS-…) are this game's own. The engine changes the game needs
 | Gold | Can't be destroyed. Collected by touching it with the ship, once it can be seen: any gold not hidden inside an unrevealed larger fragment, whether or not it is still in a rock. |
 | Gravity | Every joined group of rock pieces pulls as one, by its mass, from its centre: a whole rock, or a chunk or piece broken off it (from 11 November 2026, for the step time; before, every piece pulled on its own). Each rock's pull is about 2 m/s² at its surface (a tenth of the ship's forward thrust; 1 m/s² until 11 November 2026, when Chloe asked for stronger gravity). Rocks pull each other; the ship pulls nothing. In the wrapped arena each rock pulls from its nearest copy (as now). |
 | Rocks | The mining tuning (AST-008): light rock (6 kg/m²) of tough pieces with weak bonds, the bonds scaled down for these bigger pieces (800 N/m). Nine shells leave a rock in 8 chunks with 11 of its 20 pieces destroyed (one rock measured, with the stronger shell of 11 November 2026). Then the rock was made twice as tough, with a shell of twice the energy and more gas: 8 to 13 chunks, 7 to 12 pieces destroyed, the pieces leaving at 1 to 3 m/s. From level 2 the rocks start in rough orbit round each other. Rocks that collide break each other up. |
-| Railgun | An explosive shell: the Mammoth scenario's, from the mining tuning, made more powerful (0.5 kg at 96 m/s, 0.3 kg of it charge with twelve times TNT's energy, a 4 m blast, its blast making 5 kg more gas than the shell weighs (a cheat, recorded by the ledger: the shell's own gas is too little to push 100 kg pieces), about 2 shots a second, 40 shells). It bursts when it strikes, and the blast's gas pushes the rock's pieces apart. Each shot kicks the ship back about 0.7 m/s. A shell flies 134 m and is gone: less than the arena's height, so it can't come round and hit you. (First a light solid slug, which did nothing to the rocks; changed on 11 November 2026 after Chloe played.) |
+| Railgun | An explosive shell: the Mammoth scenario's, from the mining tuning, made more powerful (0.167 kg at 96 m/s, 0.1 kg of it charge with thirty-six times TNT's energy: the same blast as the 0.5 kg shell it was until 11 November 2026, when Chloe asked for three times the shells at a third of the weight; a 4 m blast, its blast making 5 kg more gas than the shell weighs (a cheat, recorded by the ledger: the shell's own gas is too little to push 100 kg pieces), about 2 shots a second, 120 shells). It bursts when it strikes, and the blast's gas pushes the rock's pieces apart. Each shot kicks the ship back about 0.24 m/s. A shell flies 134 m and is gone: less than the arena's height, so it can't come round and hit you. (First a light solid slug, which did nothing to the rocks; changed on 11 November 2026 after Chloe played.) |
 | Life lost | The hull destroyed, or no working engine still welded to it (the duel's rule). Damage short of that is flown with. |
 | Lives | 3. The wreck stays as debris for the rest of the level. The next ship beams in at a safe spot after about 2.5 s, protected from damage for 2 s. |
 | Supplies | A full tank and magazine with every new ship and at every new level. |
@@ -111,7 +111,7 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
   that stays clearest of rocks for the next few seconds, at rest, pointing up. For 2 s it takes no
   damage, shown by flashing. Its welds can still break under a big enough load.
 - **Supplies:** every new ship, and every ship at a level start, has a full tank (fuel economy
-  cheat, FLT-010) and a full magazine (40 shells).
+  cheat, FLT-010) and a full magazine (120 shells).
 
 ### Gunships
 
@@ -250,7 +250,7 @@ Priority: **M** must, **S** should.
 **Ship and lives**
 - **MAS-030** `[M]` The ship is the game's own (a cockpit, battery, two generators, two magazines,
   two fuel tanks, five engines), with Lander's materials and bending welds, and a railgun on its
-  nose (an explosive shell, about 0.7 m/s of kick a shot). Its welds are stronger than Lander's
+  nose (an explosive shell, about 0.24 m/s of kick a shot). Its welds are stronger than Lander's
   (3 times; the gun's mount 6 times), so the recoil of a whole magazine does it no harm.
 - **MAS-031** `[M]` The ship is lost when its hull is gone or no working engine is still welded to
   it. 3 lives a game.
@@ -336,7 +336,7 @@ for speed, goes back to Chloe before it is made.
 | Indestructible gold | Gold has no material (a generator option). |
 | What else must respect the wrap | Blasts and the AI; gas and the tractor later. |
 | View | The whole arena on one fixed screen, shaped like the screen. |
-| Railgun | An explosive shell (the mining tuning's), a kick of about 1 m/s. |
+| Railgun | An explosive shell (the mining tuning's), a kick of about 0.24 m/s. |
 | Life lost | Hull gone or no working engine. |
 | Fuel and ammo | Refilled with each new ship and each level. |
 | Collecting gold | Any visible gold, by touch. |

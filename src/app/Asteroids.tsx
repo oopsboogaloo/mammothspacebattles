@@ -442,7 +442,7 @@ function HowToPlay() {
       <h3>Gold</h3>
       <p>Touch a gold piece with any part of the ship to collect it, whether it is loose or still in its rock. Gold can't be destroyed. Some of it is hidden inside larger fragments of rock and can't be collected until the fragment cracks open. GOLD on the top bar shows how many pieces are left.</p>
       <h3>Ships and damage</h3>
-      <p>You have three ships. A ship is lost when its hull is destroyed or it has no working engine left. Short of that you fly on with the damage: a damaged engine pushes less, a lost wing takes its tank and thrusters with it, and a holed tank leaks. A magazine that is destroyed explodes violently; the battery and the tanks explode too, less so. The wreck stays where it is. The next ship beams in after a moment and can't be damaged for two seconds, while it flashes. Each new ship, and each new level, has a full tank and 40 shells.</p>
+      <p>You have three ships. A ship is lost when its hull is destroyed or it has no working engine left. Short of that you fly on with the damage: a damaged engine pushes less, a lost wing takes its tank and thrusters with it, and a holed tank leaks. A magazine that is destroyed explodes violently; the battery and the tanks explode too, less so. The wreck stays where it is. The next ship beams in after a moment and can't be damaged for two seconds, while it flashes. Each new ship, and each new level, has a full tank and 120 shells.</p>
       <h3>Gunships</h3>
       <p>From level 3 a gunship beams in 20 seconds into the level, and another every minute, three at the most. A ring shows where it will appear. It hunts you and shoots; one hit damages you without destroying you, though a hit on a fuel tank blows the tank up. From level 9 they come sooner, more often and shoot better.</p>
       <h3>Scoring</h3>
@@ -469,7 +469,7 @@ function HowToPlay() {
       <h3>Tips</h3>
       <ul>
         <li>Shoot the rock next to the gold to free it. A few shells split a rock.</li>
-        <li>Mind the recoil: every shot pushes you back about a metre a second.</li>
+        <li>Mind the recoil: every shot pushes you back a little, about a quarter of a metre a second.</li>
         <li>Rocks pull you in. Left alone, you drift into the nearest one.</li>
         <li>From level 2 the rocks start out circling each other. They don't keep it up for ever.</li>
         <li>Come up on gold slowly. A piece weighs several times what your ship does.</li>
@@ -489,7 +489,7 @@ function Physics() {
       <h3>Thrust is gas</h3>
       <p>There is no thrust force. The engines burn hydrogen and oxygen in their chambers, and the hot gas pushes on the engine's head and walls and leaves through the nozzle. The tanks drain as you burn, so the ship gets lighter.</p>
       <h3>The gun</h3>
-      <p>The gun is a railgun: it throws a half-kilogram shell at 96 m/s, and the ship is pushed back with the same momentum. Forty shells weigh 20 kg, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within four metres, and its gas pushes the rock's pieces apart.</p>
+      <p>The gun is a railgun: it throws a 170 gram shell at 96 m/s, and the ship is pushed back with the same momentum. A hundred and twenty shells weigh 20 kg, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within four metres, and its gas pushes the rock's pieces apart.</p>
       <h3>Welds bend and break</h3>
       <p>Every weld has limits in tension, compression, shear and torque. A load past its limit breaks it. On the ship, a load past 30% of the limit bends the weld and leaves it weaker. A rock breaks along its welds: a blast, or another rock, loads them until they go.</p>
       <h3>Damage</h3>
@@ -503,7 +503,7 @@ function Physics() {
       <h3>Where the game cheats</h3>
       <ul>
         <li>Fuel goes forty-five times further than it would for real, so the tanks last.</li>
-        <li>A shell's blast makes eleven times the shell's weight in gas (5.5 kg from a 0.5 kg shell), so it can push the rock's pieces apart.</li>
+        <li>A shell's blast makes thirty-three times the shell's weight in gas (5.5 kg from a 0.17 kg shell), so it can push the rock's pieces apart.</li>
         <li>Gold can't be damaged or destroyed.</li>
         <li>Space doesn't wrap round. This arena does, both ways.</li>
         <li>New ships, new levels and beamed-out rocks appear and vanish. The ledger records them as crossing the world's boundary.</li>
