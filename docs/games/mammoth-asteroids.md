@@ -165,7 +165,7 @@ not bend them.
 | Magazine | nothing more | nothing more: the shells are counted on the gun | explodes violently: the ship is lost |
 | Battery | nothing more | nothing more | a small explosion; the ship flies on, damaged |
 | Generator | nothing more | the wing beyond it comes off with it | nothing more |
-| Gun | nothing more | still fires while the key is held: its control is not cut | no more shells |
+| Gun | nothing more | dead: the fire control no longer reaches it | no more shells |
 
 - **The ship is lost** when its cockpit is gone, or no working engine is still welded to it
   (MAS-031). A lost ship's controls are cut: nothing of its wreck fires again.
@@ -347,7 +347,8 @@ Priority: **M** must, **S** should.
   explodes too, and the ship flies on damaged.
 - **MAS-038** `[S]` The ship's cockpit is filled light blue, so the way the ship faces shows.
 - **MAS-037** `[M]` An engine no longer welded to the ship, or destroyed, has its fuel line cut.
-  One that still exists burns what is left in it (under a second) and is then dead. Destroyed, it
+  One that still exists burns what is left in it (under a second) and is then dead. A gun knocked
+  off the ship no longer fires. Destroyed, it
   goes up in a small explosion. The tank it was fed from leaks where the line left it. A wing
   lost whole (a tank with its thrusters) burns on from its tank, with no key held, and leaks from
   the side that was joined to the ship, until the tank is empty or the wing breaks up. A tank

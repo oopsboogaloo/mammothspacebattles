@@ -610,6 +610,20 @@ describe("Mammoth Asteroids", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("MAS-037 a gun knocked off the ship no longer fires", () => {
+    const { w, step } = alone();
+    step(0.3, [set("fire", 1)]);
+    const shots = st(w).stats.shots;
+    expect(shots).toBeGreaterThan(0);
+    w.joints = w.joints.filter((j) => !j.id.startsWith("p1-w-gun-")); // the gun comes off
+    step(2);
+    expect(body(w, "p1-gun")).toBeDefined();
+    expect(w.links.some((l) => l.kind === "control" && l.to === "p1-gun")).toBe(false);
+    expect(st(w).stats.shots).toBeLessThanOrEqual(shots + 1); // at most the shot already on its way
+    expect(st(w)).toMatchObject({ lost: false, lives: 3 });
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("MAS-037 a destroyed thruster goes up in a small explosion and its tank leaks; the main thruster destroyed, both tanks leak", () => {
     const one = alone();
     one.step(0.1);

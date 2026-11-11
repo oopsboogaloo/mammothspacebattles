@@ -730,7 +730,16 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
   // 2b. The ship's fuel lines (MAS-037). An engine no longer welded to the ship, or destroyed, has
   // its line cut. What is left in the engine burns off at once, and then it is dead. Where the
   // line left its tank, the tank leaks.
-  if (!s.lost && world.bodies.some((b) => b.id === hullId)) changed = cutLines(world, game, hullId) || changed;
+  if (!s.lost && world.bodies.some((b) => b.id === hullId)) {
+    changed = cutLines(world, game, hullId) || changed;
+    // A gun knocked off the ship is dead too: the fire control no longer reaches it.
+    if (world.links.some((l) => l.kind === "control" && l.to === gunId) && !assemblyOf(world, hullId).includes(gunId)) {
+      const gone = world.links.filter((l) => l.kind === "control" && l.to === gunId);
+      for (const l of gone) world.events.push({ tick: world.tick, type: "link.break", data: { id: l.id, to: l.to } });
+      world.links = world.links.filter((l) => !gone.includes(l));
+      changed = true;
+    }
+  }
 
   // 3. Gold the ship is touching, if it can be seen (not inside a larger fragment whose seams don't show).
   if (!s.lost && s.gold.left.length && world.bodies.some((b) => b.id === hullId)) {
