@@ -10,6 +10,7 @@ import { camera, openScenario, overlays, playing, sandbox, screen, setFollow, ti
 import { View } from "./View.tsx";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
 import { arenaFor, shipStatus } from "./asteroidsHud.ts";
+import { DESTRUCT } from "../core/index.ts";
 
 export interface AsteroidsEntry extends BaseEntry {
   /** The level reached. */
@@ -78,6 +79,32 @@ function useArenaCamera(): void {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
+}
+
+/** How long the self-destruct button waits for its second press, ms. */
+const DESTRUCT_CONFIRM = 3000;
+
+/**
+ * Self-destruct (MAS-039), beside Pause: for a ship left with too few engines to fly usefully. Two
+ * presses, so one stray touch doesn't cost a ship: the first asks, the second (within 3 s) does it.
+ */
+function SelfDestruct() {
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    if (!asking) return;
+    const t = setTimeout(() => setAsking(false), DESTRUCT_CONFIRM);
+    return () => clearTimeout(t);
+  }, [asking]);
+  const press = () => {
+    if (!asking) return setAsking(true);
+    setAsking(false);
+    sendControl(DESTRUCT, 1, "Self-destruct", Math.floor(Math.random() * 1e9));
+  };
+  return (
+    <button class={`mas-btn small${asking ? " danger" : ""}`} onClick={press} data-testid="mas-destruct">
+      {asking ? "Confirm self-destruct" : "Self-destruct"}
+    </button>
+  );
 }
 
 /** The keys (MAS-052): each holds its channels on while it is down. ↑ is left and right together: forward. */
@@ -248,9 +275,12 @@ function Play() {
           DAMAGE <b>{(100 * ship.damage).toFixed(0)}</b>%
         </span>
         {!over && (
-          <button class="mas-btn small" onClick={() => (playing.value = !playing.value)} data-testid="mas-pause">
-            {playing.value ? "Pause" : "Resume"}
-          </button>
+          <span class="mas-hud-buttons">
+            {playing.value && s.phase === "playing" && !s.lost && <SelfDestruct />}
+            <button class="mas-btn small" onClick={() => (playing.value = !playing.value)} data-testid="mas-pause">
+              {playing.value ? "Pause" : "Resume"}
+            </button>
+          </span>
         )}
       </div>
       {s.phase === "clearing" && (
@@ -440,9 +470,14 @@ function HowToPlay() {
             <td>P or Esc</td>
             <td>Pause button</td>
           </tr>
+          <tr>
+            <td>Self-destruct</td>
+            <td></td>
+            <td>the button beside Pause, pressed twice</td>
+          </tr>
         </tbody>
       </table>
-      <p>The pause menu can swap left and right.</p>
+      <p>The pause menu can swap left and right. Self-destruct is for a ship left with too few engines to fly: it costs a life.</p>
       <p>The ship has five engines: a main thruster at the back, and two small thrusters on each wing, one facing back and one facing forward. Turning fires one back thruster and the opposite front one, so the ship turns where it is. Forward fires the main thruster and both back ones. Reverse fires both front ones: a seventh of the forward push, enough to brake.</p>
       <h3>Gold</h3>
       <p>Touch a gold piece with any part of the ship to collect it, whether it is loose or still in its rock. Gold can't be destroyed. Some of it is hidden inside larger fragments of rock and can't be collected until the fragment cracks open. GOLD on the top bar shows how many pieces are left. Collecting it doesn't knock or damage the ship, however fast you are going.</p>

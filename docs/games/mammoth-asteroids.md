@@ -252,6 +252,7 @@ date.
 | Both engines | both keys, or ↑ | both buttons |
 | Fire | Space or W (hold to repeat) | a fire button, bottom centre |
 | Pause | P or Esc | pause button |
+| Self-destruct | | a button beside Pause, pressed twice |
 
 As in Lander, the browser must not zoom the game (LND-030's rules).
 
@@ -359,6 +360,9 @@ Priority: **M** must, **S** should.
 - **MAS-036** `[M]` A destroyed magazine explodes violently: the ship is lost. A destroyed battery
   explodes too, and the ship flies on damaged.
 - **MAS-038** `[S]` The ship's cockpit is filled light blue, so the way the ship faces shows.
+- **MAS-039** `[S]` A self-destruct button beside Pause, for a ship left with too few engines to
+  fly usefully. A second press within 3 seconds confirms. The cockpit and every charge aboard go
+  off, and the ship is lost as any other is: it costs a life.
 - **MAS-037** `[M]` An engine no longer welded to the ship, or destroyed, has its fuel line cut.
   One that still exists burns what is left in it (under a second) and is then dead. A gun knocked
   off the ship no longer fires. Destroyed, it

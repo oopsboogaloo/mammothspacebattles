@@ -155,6 +155,28 @@ test("MAS-052 MAS-053 the fire button is beside the R button; the pause menu's o
   await page.keyboard.up("ArrowUp");
 });
 
+test("MAS-039 self-destruct, beside Pause: the first press asks, the second destroys the ship and costs a life", async ({ page }) => {
+  await start(page);
+  const button = page.getByTestId("mas-destruct");
+  await expect(button).toHaveText("Self-destruct");
+  // Beside the pause button.
+  const [d, p] = [(await button.boundingBox())!, (await page.getByTestId("mas-pause").boundingBox())!];
+  expect(d.x + d.width).toBeLessThanOrEqual(p.x);
+  expect(p.x - (d.x + d.width)).toBeLessThan(20);
+  // One press only asks: nothing happens, and it goes back after 3 s.
+  await button.click();
+  await expect(button).toHaveText("Confirm self-destruct");
+  expect(await hook(page, (m) => m.arcade()!.lives)).toBe(3);
+  await expect(button).toHaveText("Self-destruct", { timeout: 6000 });
+  expect(await hook(page, (m) => m.arcade()!.lives)).toBe(3);
+  // Two presses: the ship is lost.
+  await button.click();
+  await button.click();
+  await expect.poll(() => hook(page, (m) => m.arcade()!.lives), { timeout: 20_000 }).toBe(2);
+  // No button while no ship is flying.
+  await expect(page.getByTestId("mas-destruct")).toHaveCount(0);
+});
+
 test("MAS-004 P and Esc pause; the menu resumes, or quits to the title", async ({ page }) => {
   await start(page);
   await page.keyboard.press("p");

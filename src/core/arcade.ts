@@ -503,6 +503,8 @@ export function clearestSpot(world: World): Vec2 {
   return best;
 }
 
+/** The control that destroys the player's own ship (MAS-039). */
+export const DESTRUCT = "destruct";
 /** The side of a burst's charge, m: the size of a shell, so its gas comes out as a shell's does. */
 const BURST_SIZE = 0.24;
 /** How much of a tank's integrity a cut fuel line costs it: the leak's size (DMG-004). */
@@ -777,6 +779,19 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
       s.stats.gold += got.size;
       changed = true;
     }
+  }
+
+  // 3a. Self-destruct (MAS-039): the player gives up a ship that can no longer fly usefully. Its
+  // cockpit and everything on it that explodes when destroyed (magazines, tanks, battery, engines)
+  // go at once; the ship is then lost by the rule below, and costs a life as any other.
+  if ((world.controls[DESTRUCT] ?? 0) > 0) {
+    if (!s.lost && s.phase === "playing" && world.bodies.some((b) => b.id === hullId)) {
+      const ship = new Set(assemblyOf(world, hullId));
+      for (const b of world.bodies) if (ship.has(b.id) && (b.id === hullId || b.explosive?.whenDestroyed)) b.integrity = 0;
+      world.events.push({ tick: world.tick, type: "arcade.destruct", data: { n: s.n } });
+      changed = true;
+    }
+    world.controls = { ...world.controls, [DESTRUCT]: 0 };
   }
 
   // 4. The ship is lost when its hull is gone, or no working engine is still welded to it (the duel's rule).
