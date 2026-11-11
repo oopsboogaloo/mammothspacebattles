@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fitBounds, toScreen, toWorld, worldBounds, zoomAt } from "../../src/app/camera.ts";
 import { fmt, plain } from "../../src/app/format.ts";
-import { assemblyCentres, flameColour, GLOW_FROM, renderFrame, wrapImages, type Ctx } from "../../src/app/render.ts";
+import { assemblyCentres, flameColour, GLOW_FROM, renderFrame, starHash, wrapImages, type Ctx } from "../../src/app/render.ts";
 import { createWorld, getProfile, stepInPlace, setParcels } from "../../src/core/index.ts";
 import { box, disc } from "../helpers.ts";
 
@@ -171,6 +171,33 @@ describe("gas plume", () => {
     const { ctx, calls } = recorder();
     renderFrame(ctx, w, { x: 0, y: 0, zoom: 20 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null });
     expect(calls.filter((c) => c.startsWith("fillRect(")).length).toBe(1); // no stars unless asked
+  });
+
+  it("LND-033 the stars are scattered: a star's x tells nothing of its y, so they draw no lines", () => {
+    // As drawStars places them: x from an even key, y from the next odd one.
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (let tx = -6; tx < 6; tx++)
+      for (let ty = -6; ty < 6; ty++)
+        for (let l = 0; l < 3; l++)
+          for (let k = 0; k < 5; k++) {
+            xs.push(starHash(tx, ty, l * 16 + 2 * k));
+            ys.push(starHash(tx, ty, l * 16 + 2 * k + 1));
+          }
+    const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
+    const corr = (a: number[], b: number[]) => {
+      const ma = mean(a);
+      const mb = mean(b);
+      const cov = mean(a.map((x, i) => (x - ma) * (b[i] - mb)));
+      return cov / Math.sqrt(mean(a.map((x) => (x - ma) ** 2)) * mean(b.map((y) => (y - mb) ** 2)));
+    };
+    expect(Math.abs(corr(xs, ys))).toBeLessThan(0.08);
+    // Nor along either diagonal, nor from one star to the next in a tile.
+    const frac = (v: number) => v - Math.floor(v);
+    expect(Math.abs(corr(xs, xs.map((x, i) => frac(x + ys[i]))))).toBeLessThan(0.08);
+    expect(Math.abs(corr(xs.slice(1), xs.slice(0, -1)))).toBeLessThan(0.08);
+    expect(Math.abs(mean(xs) - 0.5)).toBeLessThan(0.03);
+    expect(Math.abs(mean(ys) - 0.5)).toBeLessThan(0.03);
   });
 
   it("LND-042 in the game, a ship just across a wrapped world's edge still draws in the copy, its ground as ground", () => {

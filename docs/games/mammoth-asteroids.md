@@ -203,6 +203,20 @@ not bend them.
 | A destroyed tank with fuel | 0.05 kg of TNT and its fuel, reaching 0.5 m | breaks about ten welds; the ship flies on |
 | A destroyed thruster | 5 g of TNT (12 g for the main one) | damages the tank beside it a little |
 
+**The ship's own shell, by distance** (measured; the full table is in `docs/reviews/M9.md`)
+
+| Burst distance from the muzzle | To the ship |
+|---|---|
+| under 2 m | lost: the blast |
+| 2 to 4 m | several parts damaged, sometimes lost: the blast's edge |
+| 4 to 15 m | no blast damage; the gas often tears a front thruster off, and its tank then leaks |
+| 20 m | a weld broken now and then |
+| 25 m and more | nothing |
+
+The front thrusters face forward, so their nozzles catch the gas. Their welds are left as they
+are: firing at a rock closer than about 15 m is a risk the player takes. A shell does not go off
+against a rock touching the nose, as it arms only once clear of the gun.
+
 ### Gunships
 
 - **From level 3:** a Gunship 3 beams in 20 s into the level, then another every minute after.
