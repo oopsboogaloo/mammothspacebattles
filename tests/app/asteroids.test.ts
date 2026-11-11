@@ -36,10 +36,10 @@ describe("Mammoth Asteroids' page", () => {
   it("MAS-051 the HUD reads the flying ship's fuel, slugs and worst-hit part", () => {
     const w = world();
     expect(shipStatus(w)).toEqual({ fuel: 1, slugs: 40, damage: 0 });
-    // Burn, fire, and a damaged wing.
+    // Burn, fire, and a damaged generator.
     const sandbox = getProfile("sandbox");
     for (let i = 0; i < 240; i++) stepInPlace(w, i === 0 ? [{ type: "control.set", channel: "left", value: 1 }, { type: "control.set", channel: "right", value: 1 }, { type: "control.set", channel: "fire", value: 1 }] : [], sandbox);
-    w.bodies.find((b) => b.id === "p1-wing")!.integrity = 0.6;
+    w.bodies.find((b) => b.id === "p1-gen-l")!.integrity = 0.6;
     const s = shipStatus(w);
     expect(s.fuel).toBeGreaterThan(0.9);
     expect(s.fuel).toBeLessThan(1);

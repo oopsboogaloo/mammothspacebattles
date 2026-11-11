@@ -5,50 +5,42 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
-import { landShip, material, WELD, YIELD } from "./landShip.ts";
+import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 
-/** Fuel economy (FLT-010): a tank lasts a level and more. To tune after play. */
-const ECONOMY = 15;
+/**
+ * The engines' propellant flow, kg/s (to tune after play). Chloe asked for three times the LAND
+ * ship's forward acceleration and twice its turning (11 November 2026). Measured in empty space,
+ * that ship (48 kg) made 4.29 m/s² with both engines and 1.74 rad/s² with one; this one (67 kg)
+ * makes 12.9 m/s² with the main and both back thrusters, 3.48 rad/s² turning, and 4.2 m/s² braking.
+ */
+const SMALL = 0.68;
+const MAIN = 2.8;
+/**
+ * Fuel economy (FLT-010): the two tanks (16.2 kg) last about two minutes of full thrust, as the LAND
+ * ship's one did. To tune after play.
+ */
+const ECONOMY = 30;
 /** The arena: 160 m high; the page sets the width from the screen's shape (this is 16:9). */
 const HEIGHT = 160;
 const WIDTH = 284;
 
 /**
- * The railgun: a small block on top of the hull, on the ship's centre line, so its recoil pushes the
- * ship straight back and doesn't turn it. Its slug is light and explosive: it bursts when it hits.
- * Times are game seconds: a reload of 0.25 is two shots a second on screen.
+ * The ship (scripts/asteroidShip.ts) with its railgun's magazine. Times are game seconds: a reload
+ * of 0.25 is two shots a second on screen.
  */
 function ship() {
-  const s = landShip("p{n}-", ECONOMY);
   // An explosive shell (asked for by Chloe after playing, 11 November 2026: a solid slug did nothing
   // to the rocks). It is the Mammoth scenario's, from the mining tuning (AST-008): 0.5 kg, 0.3 kg of
   // it charge, launched at 96 m/s. The blast's gas pushes the rock's pieces apart. No casing
   // fragments: they would fly round the arena. Chloe then asked for more power (11 November 2026):
   // the charge has three times TNT's energy (37.8 kJ in this profile) and a 3 m blast, where that
-  // tuning had TNT and 2 m. The shell's mass, and so the ship's weight and the recoil, are the same.
+  // tuning had TNT and 2 m.
   const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 3, heat: 1.26e7 } };
-  const gun = {
-    id: "p{n}-gun",
-    shape: { kind: "box", width: 0.5, height: 0.3 },
-    mass: 1,
-    position: { x: 0, y: 0.65 }, // on the hull's top face (the hull is 1 m high, centred on the origin)
-    velocity: { x: 0, y: 0 },
-    angle: 0,
-    angularVelocity: 0,
-    restitution: 0,
-    friction: 0.3,
-    material: material("gun"),
-    // The muzzle is just past the block's top; the bore is along +y.
-    magazine: { count: 40, reload: 0.25, at: { x: 0, y: 0.31 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } },
-  };
-  const weld = (side: string, x: number) => ({ id: `p{n}-gun-${side}`, a: "p{n}-hull", b: "p{n}-gun", anchorA: { x, y: 0.5 }, anchorB: { x, y: -0.15 }, limits: WELD, yield: YIELD });
-  return {
-    bodies: [...s.bodies, gun],
-    joints: [...s.joints, weld("l", -0.2), weld("r", 0.2)],
-    links: [...s.links, { id: "p{n}-ctl-fire", kind: "control", channel: "fire", to: "p{n}-gun" }],
-  };
+  // The muzzle is just past the gun's top (the gun is 0.7 m long, the shell 0.22 m); the bore is along +y.
+  const magazine = { count: 40, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } };
+  return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine });
 }
 
 /**
@@ -82,6 +74,7 @@ const scenario = {
     bodies: [],
     arcade: {
       ship: ship(),
+      mix: SHIP_MIX,
       hull: "p{n}-hull",
       gun: "p{n}-gun",
       lives: 3,
@@ -132,7 +125,7 @@ const scenario = {
   end: { steps: 240 }, // the game runs on until it is over; this is how far a headless run goes
   probes: [],
   assertions: [],
-  ui: { keys: { q: "left", e: "right", w: "fire" }, overlays: [], labels: false }, // the page adds Space, the arrows and Shifts
+  ui: { keys: { q: "left", e: "right", w: "fire", s: "reverse" }, overlays: [], labels: false }, // the page adds Space, the arrows and Shifts
 };
 
 parseScenario(scenario); // fails loudly if the scenario is malformed

@@ -508,6 +508,17 @@ function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
     }
   num(v, g.seed, `${path}.seed`, { int: true });
   if (g.demo !== undefined && typeof g.demo !== "boolean") err(v, `${path}.demo`, "must be true or false");
+  if (g.mix !== undefined) {
+    const names = (x: unknown) => Array.isArray(x) && x.every((c) => typeof c === "string" && c.length > 0);
+    if (!Array.isArray(g.mix)) err(v, `${path}.mix`, "must be a list");
+    else
+      g.mix.forEach((row: unknown, i: number) => {
+        const r = row as { channel?: unknown; any?: unknown };
+        if (typeof r?.channel !== "string" || !r.channel) err(v, `${path}.mix[${i}].channel`, "must be a channel's name");
+        if (!Array.isArray(r?.any) || !r.any.length || !r.any.every((a: { on?: unknown; off?: unknown }) => names(a?.on) && (a.on as string[]).length > 0 && (a.off === undefined || names(a.off))))
+          err(v, `${path}.mix[${i}].any`, "must be a list of { on: [channels], off?: [channels] }");
+      });
+  }
   if (g.lives !== undefined) num(v, g.lives, `${path}.lives`, { int: true, min: 1, max: 99 });
   for (const k of ["respawn", "grace", "clearPause"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
   for (const k of ["shellLife", "pace"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { positive: true });

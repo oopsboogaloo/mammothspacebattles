@@ -58,7 +58,7 @@ test("MAS-010 the arena is the whole view: the screen's shape, 160 m high, its c
     .toBeLessThan(1.5);
 });
 
-test("MAS-052 the keys: Space fires slugs, ↑ burns both engines, and letting go stops them", async ({ page }) => {
+test("MAS-052 the keys: Space fires shells, ↑ is forward (the main thruster), S is reverse (the front thrusters), and letting go stops them", async ({ page }) => {
   await start(page);
   await page.keyboard.down("Space");
   await expect.poll(() => hook(page, (m) => m.arcade()!.stats.shots), { timeout: 10_000 }).toBeGreaterThan(1);
@@ -67,18 +67,30 @@ test("MAS-052 the keys: Space fires slugs, ↑ burns both engines, and letting g
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.fire ?? 0)).toBe(0);
   await page.keyboard.down("ArrowUp");
   await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.left ?? 0, m.sandbox().world.controls.right ?? 0].join())).toBe("1,1");
-  // Q with ↑ still down, then Q up: the left engine stays on for ↑.
+  // Forward is the main thruster and both back ones, and no front one (MAS-035).
+  const engines = () => hook(page, (m) => ["main", "bl", "br", "fl", "fr"].map((c) => m.sandbox().world.controls[c] ?? 0).join(""));
+  await expect.poll(engines).toBe("11100");
+  // Q with ↑ still down, then Q up: left stays on for ↑.
   await page.keyboard.down("q");
   await page.keyboard.up("q");
   await page.waitForTimeout(300);
   expect(await hook(page, (m) => m.sandbox().world.controls.left)).toBe(1);
   await page.keyboard.up("ArrowUp");
   await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.left ?? 0, m.sandbox().world.controls.right ?? 0].join())).toBe("0,0");
-  // E and the right Shift are the right engine.
+  await expect.poll(engines).toBe("00000");
+  // E turns right: the back left thruster and the front right one.
   await page.keyboard.down("e");
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.right ?? 0)).toBe(1);
+  await expect.poll(engines).toBe("01001");
   await page.keyboard.up("e");
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.right ?? 0)).toBe(0);
+  // S and ↓ are reverse: both front thrusters.
+  for (const key of ["s", "ArrowDown"]) {
+    await page.keyboard.down(key);
+    await expect.poll(engines).toBe("00011");
+    await page.keyboard.up(key);
+    await expect.poll(engines).toBe("00000");
+  }
 });
 
 test("MAS-052 touch: the fire button fires while held, with a thrust button held at the same time", async ({ page }) => {
@@ -94,6 +106,13 @@ test("MAS-052 touch: the fire button fires while held, with a thrust button held
   expect(await hook(page, (m) => m.sandbox().world.controls.left)).toBe(1); // still held
   await left.dispatchEvent("pointerup", { pointerId: 1 });
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.left ?? 0)).toBe(0);
+  // The reverse button.
+  const reverse = page.getByTestId("thrust-reverse");
+  await expect(reverse).toHaveText("REV");
+  await reverse.dispatchEvent("pointerdown", { pointerId: 3 });
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.reverse ?? 0)).toBe(1);
+  await reverse.dispatchEvent("pointerup", { pointerId: 3 });
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.reverse ?? 0)).toBe(0);
 });
 
 test("MAS-004 P and Esc pause; the menu resumes, or quits to the title", async ({ page }) => {
@@ -178,7 +197,9 @@ test("MAS-001 MAS-060 behind the title an AI pilot plays the game for real; Play
       const w = m.sandbox()?.world;
       return w ? { demo: !!w.arcade.spec.demo, time: w.time, pilot: w.bodies.find((b) => b.pilot)?.pilot?.mode ?? null } : null;
     });
-  await expect.poll(async () => (await demo())?.time ?? 0, { timeout: 15_000 }).toBeGreaterThan(1);
+  // CI's WebKit ran this demo at about 16 steps a second (237 steps in 15 s), so the check is that
+  // it is running, not how far it has got.
+  await expect.poll(async () => (await demo())?.time ?? 0, { timeout: 30_000 }).toBeGreaterThan(0.25);
   expect(await demo()).toMatchObject({ demo: true, pilot: "clearing" });
   await expect(page.getByTestId("mas-hud")).toHaveCount(0);
   await expect(page.getByTestId("thrust-fire")).toHaveCount(0);
@@ -210,5 +231,5 @@ test("MAS-007 How to play and The physics open from the title, each with Back, a
   await page.getByTestId("mas-back").click();
   const time = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { time: number } } } }).__msb.sandbox().world.time);
   const t0 = await time();
-  await expect.poll(time, { timeout: 10_000 }).toBeGreaterThan(t0 + 0.5);
+  await expect.poll(time, { timeout: 30_000 }).toBeGreaterThan(t0 + 0.1);
 });
