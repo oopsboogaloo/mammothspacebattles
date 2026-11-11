@@ -115,6 +115,43 @@ test("MAS-052 touch: the fire button fires while held, with a thrust button held
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.reverse ?? 0)).toBe(0);
 });
 
+test("MAS-052 MAS-053 the fire button is beside the R button; the pause menu's option swaps left and right", async ({ page }) => {
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await start(page);
+  // FIRE sits just left of R, as REV sits just right of L.
+  const box = async (id: string) => (await page.getByTestId(id).boundingBox())!;
+  const [fire, right, left, rev] = [await box("thrust-fire"), await box("thrust-right"), await box("thrust-left"), await box("thrust-reverse")];
+  expect(fire.x + fire.width).toBeLessThanOrEqual(right.x);
+  expect(right.x - (fire.x + fire.width)).toBeLessThan(24);
+  expect(rev.x - (left.x + left.width)).toBeLessThan(24);
+  expect(Math.abs(fire.y + fire.height - (right.y + right.height))).toBeLessThan(2);
+  // Unswapped, E turns right: the back left thruster and the front right one.
+  const engines = () => hook(page, (m) => ["main", "bl", "br", "fl", "fr"].map((c) => m.sandbox().world.controls[c] ?? 0).join(""));
+  await page.keyboard.down("e");
+  await expect.poll(engines).toBe("01001");
+  await page.keyboard.up("e");
+  await expect.poll(engines).toBe("00000");
+  // Swapped in the pause menu: E, and the R button, turn left.
+  await page.getByTestId("mas-pause").click();
+  const swap = page.getByTestId("swap-sides");
+  await expect(swap).toHaveText("Swap left and right: off");
+  await swap.click();
+  await expect(swap).toHaveText("Swap left and right: on");
+  await page.getByTestId("mas-resume").click();
+  await page.keyboard.down("e");
+  await expect.poll(engines).toBe("00110");
+  await page.keyboard.up("e");
+  await expect.poll(engines).toBe("00000");
+  const r = page.getByTestId("thrust-right");
+  await r.dispatchEvent("pointerdown", { pointerId: 1 });
+  await expect.poll(engines).toBe("00110");
+  await r.dispatchEvent("pointerup", { pointerId: 1 });
+  // ↑ is still forward.
+  await page.keyboard.down("ArrowUp");
+  await expect.poll(engines).toBe("11100");
+  await page.keyboard.up("ArrowUp");
+});
+
 test("MAS-004 P and Esc pause; the menu resumes, or quits to the title", async ({ page }) => {
   await start(page);
   await page.keyboard.press("p");

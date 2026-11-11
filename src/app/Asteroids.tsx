@@ -8,7 +8,7 @@ import { scenarioFile } from "./scenarios.ts";
 import { scoreBoard, type BaseEntry } from "./scores.ts";
 import { camera, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
 import { View } from "./View.tsx";
-import { sendControl, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
+import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
 import { arenaFor, shipStatus } from "./asteroidsHud.ts";
 
 export interface AsteroidsEntry extends BaseEntry {
@@ -94,7 +94,8 @@ const KEYS: Record<string, string[]> = {
   Space: ["fire"],
   KeyW: ["fire"],
 };
-const down = new Set<string>();
+/** The keys held, each with the channels it went to: they are let go on the same ones. */
+const down = new Map<string, string[]>();
 const held: Record<string, number> = {};
 let group = 7_000_000;
 
@@ -111,8 +112,9 @@ export function asteroidsKeyDown(e: KeyboardEvent): void {
   if (channels) {
     e.preventDefault();
     if (down.has(e.code)) return;
-    down.add(e.code);
-    for (const c of channels) hold(c, 1);
+    const to = channels.map(asteroidsSide);
+    down.set(e.code, to);
+    for (const c of to) hold(c, 1);
     return;
   }
   if (e.code === "KeyP" || e.code === "Escape") {
@@ -122,9 +124,10 @@ export function asteroidsKeyDown(e: KeyboardEvent): void {
 }
 
 export function asteroidsKeyUp(e: KeyboardEvent): void {
-  const channels = KEYS[e.code];
-  if (!channels || !down.delete(e.code)) return;
-  if (sandbox.value) for (const c of channels) hold(c, -1);
+  const to = down.get(e.code);
+  if (!to) return;
+  down.delete(e.code);
+  if (sandbox.value) for (const c of to) hold(c, -1);
 }
 
 /** Lets go of every key (leaving play, or the window losing the keyboard). */
@@ -263,6 +266,7 @@ function Play() {
           <button class="mas-btn" disabled={zoomed.value} onClick={() => (playing.value = true)} data-testid="mas-resume">
             Resume
           </button>
+          <SwapSides className="mas-btn" />
           <button class="mas-btn" onClick={quit} data-testid="mas-quit">
             Quit to title
           </button>
@@ -271,10 +275,10 @@ function Play() {
       {over && <GameOver score={s.score} level={s.level} />}
       {!over && (
         <>
-          <Thrust channel="left" label="L" side="left" className="mas-thrust" />
+          <Thrust channel={asteroidsSide("left")} label="L" side="left" className="mas-thrust" />
           <Thrust channel="reverse" label="REV" side="reverse" className="mas-thrust" />
           <Thrust channel="fire" label="FIRE" side="fire" className="mas-thrust" />
-          <Thrust channel="right" label="R" side="right" className="mas-thrust" />
+          <Thrust channel={asteroidsSide("right")} label="R" side="right" className="mas-thrust" />
         </>
       )}
     </div>
@@ -438,6 +442,7 @@ function HowToPlay() {
           </tr>
         </tbody>
       </table>
+      <p>The pause menu can swap left and right.</p>
       <p>The ship has five engines: a main thruster at the back, and two small thrusters on each wing, one facing back and one facing forward. Turning fires one back thruster and the opposite front one, so the ship turns where it is. Forward fires the main thruster and both back ones. Reverse fires both front ones: a seventh of the forward push, enough to brake.</p>
       <h3>Gold</h3>
       <p>Touch a gold piece with any part of the ship to collect it, whether it is loose or still in its rock. Gold can't be destroyed. Some of it is hidden inside larger fragments of rock and can't be collected until the fragment cracks open. GOLD on the top bar shows how many pieces are left.</p>

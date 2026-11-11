@@ -364,7 +364,7 @@ button { cursor: pointer; }
 .mas-thrust.left { left: max(18px, env(safe-area-inset-left)); }
 .mas-thrust.right { right: max(18px, env(safe-area-inset-right)); }
 .mas-thrust.reverse { left: calc(max(18px, env(safe-area-inset-left)) + 104px); width: 76px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
-.mas-thrust.fire { left: 50%; transform: translateX(-50%); width: 120px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
+.mas-thrust.fire { right: calc(max(18px, env(safe-area-inset-right)) + 104px); width: 76px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
 .mas-thrust:active { background: #fff; color: #000; }
 .mas-title.over { background: transparent; pointer-events: none; }
 .mas-title.over h1 { text-shadow: 0 0 12px #000, 0 0 4px #000; }

@@ -12,6 +12,8 @@ export interface Prefs {
   lastExperiment?: { title: string; json: string };
   bindings?: Record<string, string>;
   prefabs?: import("./ports.ts").Prefab[];
+  /** The games' left and right controls the other way round (LND-035, MAS-053). */
+  swapSides?: boolean;
 }
 
 export function loadPrefs(): Prefs {

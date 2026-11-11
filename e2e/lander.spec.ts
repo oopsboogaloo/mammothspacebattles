@@ -104,8 +104,47 @@ test("LND-030 a thrust released while paused stays released on resume", async ({
   await left.dispatchEvent("pointerup", { pointerId: 1 });
   await page.getByRole("button", { name: "Resume" }).last().click();
   await page.waitForTimeout(500);
-  const left1 = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls.left ?? 0);
-  expect(left1).toBe(0);
+  // The L button is the right engine (LND-035): it must not be left on.
+  const held = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls);
+  expect(held.right ?? 0).toBe(0);
+  expect(held.left ?? 0).toBe(0);
+});
+
+test("LND-035 a left control turns the ship left, which is the right engine; the pause menu's option swaps them, and is kept", async ({ page }) => {
+  await page.goto("./?game=lander");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-hud")).toContainText("FUEL");
+  const controls = () => page.evaluate(() => { const c = (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls; return `${c.left ?? 0},${c.right ?? 0}`; });
+  const left = page.getByTestId("thrust-left");
+  // The L button, and the Q key: the right engine.
+  await left.dispatchEvent("pointerdown", { pointerId: 1 });
+  await expect.poll(controls).toBe("0,1");
+  await left.dispatchEvent("pointerup", { pointerId: 1 });
+  await expect.poll(controls).toBe("0,0");
+  await page.keyboard.down("q");
+  await expect.poll(controls).toBe("0,1");
+  await page.keyboard.up("q");
+  await expect.poll(controls).toBe("0,0");
+  // Swapped in the pause menu: the L button and Q are the left engine.
+  await page.getByTestId("lander-pause").click();
+  const swap = page.getByTestId("swap-sides");
+  await expect(swap).toHaveText("Swap left and right: off");
+  await swap.click();
+  await expect(swap).toHaveText("Swap left and right: on");
+  await page.getByRole("button", { name: "Resume" }).last().click();
+  await left.dispatchEvent("pointerdown", { pointerId: 1 });
+  await expect.poll(controls).toBe("1,0");
+  await left.dispatchEvent("pointerup", { pointerId: 1 });
+  await page.keyboard.down("e");
+  await expect.poll(controls).toBe("0,1");
+  await page.keyboard.up("e");
+  // Kept through a reload.
+  await page.reload();
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await page.getByTestId("lander-pause").click();
+  await expect(page.getByTestId("swap-sides")).toHaveText("Swap left and right: on");
 });
 
 test("LND-030 the game cancels the browser's pinch zoom, and gives it back to the sandbox", async ({ page }) => {

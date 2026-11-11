@@ -377,6 +377,9 @@ Priority: **M** must, **S** should.
 - **MAS-050** `[M]` Scoring as in §3.
 - **MAS-051** `[M]` The HUD shows score, level, lives, gold left, fuel, slugs and damage.
 - **MAS-052** `[M]` Touch: left, right, reverse and fire buttons, working together (multi-touch).
+  Reverse is beside the left button and fire beside the right one.
+- **MAS-053** `[S]` An option in the pause menu, kept with the browser and shared with Mammoth
+  Lander, swaps left and right: a left control then turns the ship right.
   Keyboard as in §4.
 
 **Demo**

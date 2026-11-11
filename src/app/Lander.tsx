@@ -5,7 +5,7 @@ import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { scenarioFile } from "./scenarios.ts";
 import { addScore, best, loadScores, qualifies, type ScoreTable } from "./landerScores.ts";
-import { bindings, camera, edit, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
+import { bindings, camera, edit, openScenario, overlays, playing, sandbox, screen, setFollow, setSwapSides, swapSides, timeScale, version, viewport } from "./state.ts";
 import { shown } from "./smooth.ts";
 import { diag, liveStats, summary } from "./diag.ts";
 import { sim, View } from "./View.tsx";
@@ -37,9 +37,29 @@ export const landerKey = signal<string>("lander-easy");
  */
 export const standalone = signal(false);
 
-/** In the game, the left and right Shift keys fly the left and right engines: hands apart, like the thumb pads. */
+/** In the game, the left and right Shift keys are the left and right controls: hands apart, like the thumb pads. */
 const GAME_KEYS: Record<string, string> = { ShiftLeft: "left", ShiftRight: "right" };
 const keyGroups: Record<string, number> = {};
+/** The channel each held key went to: it is let go on the same one, whatever the option says by then. */
+const keyChannels: Record<string, string> = {};
+
+const otherSide = (c: string): string => (c === "left" ? "right" : c === "right" ? "left" : c);
+/**
+ * Lander's left and right controls (LND-035): a left control turns the ship left, which is its
+ * right engine, as in Mammoth Asteroids. With the option on, a left control is the left engine.
+ */
+export const landerSide = (c: string): string => (swapSides.value ? c : otherSide(c));
+/** Mammoth Asteroids' (MAS-053): a left control turns the ship left; with the option on, right. */
+export const asteroidsSide = (c: string): string => (swapSides.value ? otherSide(c) : c);
+
+/** The option in both games' pause menus: left and right the other way round. */
+export function SwapSides({ className }: { className: string }) {
+  return (
+    <button class={className} role="switch" aria-checked={swapSides.value} onClick={() => setSwapSides(!swapSides.value)} data-testid="swap-sides">
+      Swap left and right: {swapSides.value ? "on" : "off"}
+    </button>
+  );
+}
 let keyCounter = 5_000_000;
 
 /**
@@ -48,15 +68,16 @@ let keyCounter = 5_000_000;
  */
 export function gameKeyDown(e: KeyboardEvent): void {
   const key = e.key.toLowerCase();
-  const channel = GAME_KEYS[e.code] || bindings.value[key];
-  if (channel && sandbox.value && !e.ctrlKey && !e.metaKey) {
+  const control = GAME_KEYS[e.code] || bindings.value[key];
+  if (control && sandbox.value && !e.ctrlKey && !e.metaKey) {
     e.preventDefault();
     if (!e.repeat) {
       // Both Shift keys are "shift": the game's are told apart by where they are.
       const pk = GAME_KEYS[e.code] ? e.code : key;
       keyGroups[pk] = ++keyCounter;
+      keyChannels[pk] = landerSide(control);
       // Keys go in as live input (no stall at each press).
-      sendControl(channel, 1, `Key ${key.toUpperCase()}`, keyGroups[pk]);
+      sendControl(keyChannels[pk], 1, `Key ${key.toUpperCase()}`, keyGroups[pk]);
     }
     return;
   }
@@ -68,11 +89,11 @@ export function gameKeyDown(e: KeyboardEvent): void {
 
 export function gameKeyUp(e: KeyboardEvent): void {
   const key = e.key.toLowerCase();
-  const channel = GAME_KEYS[e.code] || bindings.value[key];
   const pk = GAME_KEYS[e.code] ? e.code : key;
-  if (channel && sandbox.value && keyGroups[pk] !== undefined) {
-    sendControl(channel, 0, `Key ${key.toUpperCase()}`, keyGroups[pk]);
+  if (sandbox.value && keyGroups[pk] !== undefined) {
+    sendControl(keyChannels[pk], 0, `Key ${key.toUpperCase()}`, keyGroups[pk]);
     delete keyGroups[pk];
+    delete keyChannels[pk];
   }
 }
 
@@ -261,8 +282,8 @@ export function Thrust({ channel, label, side, className = "lander-thrust" }: { 
   return (
     <button
       class={`${className} ${side}`}
-      aria-label={channel === "fire" ? "Fire" : channel === "reverse" ? "Reverse" : `${label} engine`}
-      data-testid={`thrust-${channel}`}
+      aria-label={side === "fire" ? "Fire" : side === "reverse" ? "Reverse" : side === "left" ? "Left" : "Right"}
+      data-testid={`thrust-${side}`}
       onPointerDown={(e) => {
         try {
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -401,6 +422,7 @@ function Play() {
           <button class="lander-btn" disabled={zoomed.value} onClick={() => (playing.value = true)}>
             Resume
           </button>
+          <SwapSides className="lander-btn ghost" />
           <button class="lander-btn ghost" onClick={quit}>
             Quit to menu
           </button>
@@ -409,8 +431,8 @@ function Play() {
       {over && game && <GameOver score={game.state.score} landings={game.state.landings.length} cleared={game.state.ended === "cleared"} />}
       {!over && (
         <>
-          <Thrust channel="left" label="L" side="left" />
-          <Thrust channel="right" label="R" side="right" />
+          <Thrust channel={landerSide("left")} label="L" side="left" />
+          <Thrust channel={landerSide("right")} label="R" side="right" />
         </>
       )}
     </div>
@@ -498,12 +520,12 @@ function HowToPlay() {
               <th>Keyboard</th>
             </tr>
             <tr>
-              <td>Left engine</td>
+              <td>Turn left (the right engine)</td>
               <td>hold L</td>
               <td>Q, Left Shift or ←</td>
             </tr>
             <tr>
-              <td>Right engine</td>
+              <td>Turn right (the left engine)</td>
               <td>hold R</td>
               <td>E, Right Shift or →</td>
             </tr>
@@ -515,8 +537,8 @@ function HowToPlay() {
           </tbody>
         </table>
         <p>
-          Both engines together push you along the ship's axis. One engine alone turns you: the left engine turns the nose right, the right engine turns it left. To move sideways, tip over a
-          little and burn both.
+          Both engines together push you along the ship's axis. One engine alone turns you: the left control fires the right engine, which turns the nose left, and the right control the
+          left engine. The pause menu can swap them, so the left control fires the left engine. To move sideways, tip over a little and burn both.
         </p>
       </section>
       <section>

@@ -115,6 +115,16 @@ export function showToast(text: string): void {
   toastTimer = setTimeout(() => (toast.value = null), 2500);
 }
 
+/**
+ * The games' left and right controls the other way round (LND-035, MAS-053). Off: a left key or
+ * button turns the ship left, in both games. Kept with the browser's preferences.
+ */
+export const swapSides = signal<boolean>(prefs.swapSides ?? false);
+export function setSwapSides(on: boolean): void {
+  swapSides.value = on;
+  savePrefs({ swapSides: on });
+}
+
 export function persist(): void {
   savePrefs({ overlays: [...overlays.value], drawerOpen: drawerOpen.value, collapsed: collapsed.value, graphWindow: graphWindow.value, bindings: bindings.value, prefabs: prefabs.value });
   const sb = sandbox.value;
