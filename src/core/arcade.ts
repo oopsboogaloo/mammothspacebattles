@@ -513,8 +513,11 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
     const b = String(e.data.b);
     const piece = PLAYER_SLUG.test(a) && ROCK_PIECE.test(b) ? b : PLAYER_SLUG.test(b) && ROCK_PIECE.test(a) ? a : null;
     if (!piece) continue;
+    // The whole rock the piece came from, by its name: the shell's blast may have destroyed the
+    // piece it struck, and broken welds between its neighbours, in this same step.
+    const rock = piece.slice(0, piece.lastIndexOf("-") + 1);
+    for (const x of world.bodies) if (x.id.startsWith(rock) && ROCK_PIECE.test(x.id)) s.slugHits[x.id] = world.tick;
     s.slugHits[piece] = world.tick;
-    if (world.bodies.some((x) => x.id === piece)) for (const id of assemblyOf(world, piece)) if (ROCK_PIECE.test(id)) s.slugHits[id] = world.tick;
   }
   for (const e of recent) {
     if (e.type !== "joint.break") continue;

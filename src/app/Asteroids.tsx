@@ -438,7 +438,7 @@ function HowToPlay() {
           </tr>
         </tbody>
       </table>
-      <p>The ship has five engines: a main thruster at the back, and two small thrusters on each wing, one facing back and one facing forward. Turning fires one back thruster and the opposite front one, so the ship turns where it is. Forward fires the main thruster and both back ones. Reverse fires both front ones: a third of the forward push, enough to brake.</p>
+      <p>The ship has five engines: a main thruster at the back, and two small thrusters on each wing, one facing back and one facing forward. Turning fires one back thruster and the opposite front one, so the ship turns where it is. Forward fires the main thruster and both back ones. Reverse fires both front ones: a fifth of the forward push, enough to brake.</p>
       <h3>Gold</h3>
       <p>Touch a gold piece with any part of the ship to collect it, whether it is loose or still in its rock. Gold can't be destroyed. Some of it is hidden inside larger fragments of rock and can't be collected until the fragment cracks open. GOLD on the top bar shows how many pieces are left.</p>
       <h3>Ships and damage</h3>
@@ -488,13 +488,13 @@ function Physics() {
       <h3>Thrust is gas</h3>
       <p>There is no thrust force. The engines burn hydrogen and oxygen in their chambers, and the hot gas pushes on the engine's head and walls and leaves through the nozzle. The tanks drain as you burn, so the ship gets lighter.</p>
       <h3>The gun</h3>
-      <p>The gun is a railgun: it throws a half-kilogram shell at 96 m/s, and the ship is pushed back with the same momentum. Forty shells weigh 20 kg, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within three metres, and its gas pushes the rock's pieces apart.</p>
+      <p>The gun is a railgun: it throws a half-kilogram shell at 96 m/s, and the ship is pushed back with the same momentum. Forty shells weigh 20 kg, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within four metres, and its gas pushes the rock's pieces apart.</p>
       <h3>Welds bend and break</h3>
       <p>Every weld has limits in tension, compression, shear and torque. A load past its limit breaks it. On the ship, a load past 30% of the limit bends the weld and leaves it weaker. A rock breaks along its welds: a blast, or another rock, loads them until they go.</p>
       <h3>Damage</h3>
       <p>Impact and blast energy beyond a part's threshold costs it integrity. A part at zero is destroyed and leaves as dust. A damaged engine gives less thrust, and a damaged tank leaks; the leak pushes the ship.</p>
       <h3>Gravity</h3>
-      <p>Every rock, and every chunk broken off one, pulls by its mass: about 1 m/s² at a large rock's surface, a thirteenth of your forward thrust. Rocks pull each other and you; the ship pulls nothing.</p>
+      <p>Every rock, and every chunk broken off one, pulls by its mass: about 2 m/s² at a large rock's surface, a tenth of your forward thrust. Rocks pull each other and you; the ship pulls nothing.</p>
       <h3>The wrap</h3>
       <p>The arena has no edges. Collisions, gravity, blasts and the gunships' aim all work across them.</p>
       <h3>Nothing created, nothing lost</h3>

@@ -13,15 +13,17 @@ const root = new URL("..", import.meta.url).pathname;
  * The engines' propellant flow, kg/s (to tune after play). Chloe asked for three times the LAND
  * ship's forward acceleration and twice its turning (11 November 2026). Measured in empty space,
  * that ship (48 kg) made 4.29 m/s² with both engines and 1.74 rad/s² with one; this one (67 kg)
- * makes 12.9 m/s² with the main and both back thrusters, 3.48 rad/s² turning, and 4.2 m/s² braking.
+ * made 12.9 m/s² with the main and both back thrusters, 3.48 rad/s² turning, and 4.2 m/s² braking.
+ * After playing it she asked for a stronger forward engine (11 November 2026): the main thruster's
+ * flow went from 2.8 to 4.86 kg/s, which makes 19.3 m/s² forward, half as much again.
  */
 const SMALL = 0.68;
-const MAIN = 2.8;
+const MAIN = 4.86;
 /**
  * Fuel economy (FLT-010): the two tanks (16.2 kg) last about two minutes of full thrust, as the LAND
  * ship's one did. To tune after play.
  */
-const ECONOMY = 30;
+const ECONOMY = 45;
 /** The arena: 160 m high; the page sets the width from the screen's shape (this is 16:9). */
 const HEIGHT = 160;
 const WIDTH = 284;
@@ -35,9 +37,10 @@ function ship() {
   // to the rocks). It is the Mammoth scenario's, from the mining tuning (AST-008): 0.5 kg, 0.3 kg of
   // it charge, launched at 96 m/s. The blast's gas pushes the rock's pieces apart. No casing
   // fragments: they would fly round the arena. Chloe then asked for more power (11 November 2026):
-  // the charge has three times TNT's energy (37.8 kJ in this profile) and a 3 m blast, where that
-  // tuning had TNT and 2 m.
-  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 3, heat: 1.26e7 } };
+  // the charge had three times TNT's energy and a 3 m blast, where that tuning had TNT and 2 m.
+  // Then more damage again (11 November 2026, with the new ship): six times TNT's energy (75.6 kJ in
+  // this profile) and a 4 m blast. Nine shells leave a rock in 8 chunks with 11 of its 20 pieces destroyed.
+  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 4, heat: 2.52e7 } };
   // The muzzle is just past the gun's top (the gun is 0.7 m long, the shell 0.22 m); the bore is along +y.
   const magazine = { count: 40, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine });
@@ -89,10 +92,11 @@ const scenario = {
         density: 6,
         bond: 800,
         material: { name: "rock", threshold: 100, toughness: 20_000 },
-        // About 1 m/s² at a large rock's surface. The pieces welded together pull as one source
+        // About 2 m/s² at a large rock's surface (doubled on 11 November 2026: Chloe asked for
+        // stronger gravity). The pieces welded together pull as one source
         // (AST-011), softened by half the rock's reach, so at the surface the pull is about
         // G M / (1.4 R²), with M ≈ 0.8 π R² × density.
-        gravity: { G: 0.093, joined: true },
+        gravity: { G: 0.186, joined: true },
         gold: [2, 3],
         compounds: [1, 2],
         speed: [2, 6],

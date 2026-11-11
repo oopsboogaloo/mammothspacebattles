@@ -363,8 +363,8 @@
                 "explosive": {
                   "charge": 0.3,
                   "fragments": 0,
-                  "radius": 3,
-                  "heat": 12600000
+                  "radius": 4,
+                  "heat": 25200000
                 }
               },
               "railgun": {
@@ -402,17 +402,17 @@
               {
                 "resource": "h2",
                 "mass": 0,
-                "capacity": 0.006222
+                "capacity": 0.0108
               },
               {
                 "resource": "o2",
                 "mass": 0,
-                "capacity": 0.049778
+                "capacity": 0.0864
               }
             ],
             "injector": {
               "channel": "main",
-              "rate": 2.8,
+              "rate": 4.86,
               "mixture": {
                 "h2": 0.1111111111111111,
                 "o2": 0.8888888888888888
@@ -427,14 +427,14 @@
               },
               "width": 0.75,
               "speed": 10,
-              "parcelMass": 0.0056,
+              "parcelMass": 0.00972,
               "radius": 0.035,
               "igniter": true,
               "chamber": {
                 "width": 1.2,
                 "length": 1.35
               },
-              "economy": 30
+              "economy": 45
             }
           },
           {
@@ -582,7 +582,7 @@
                 "width": 0.8,
                 "length": 0.95
               },
-              "economy": 30
+              "economy": 45
             }
           },
           {
@@ -730,7 +730,7 @@
                 "width": 0.8,
                 "length": 0.95
               },
-              "economy": 30
+              "economy": 45
             }
           },
           {
@@ -878,7 +878,7 @@
                 "width": 0.8,
                 "length": 0.95
               },
-              "economy": 30
+              "economy": 45
             }
           },
           {
@@ -1026,7 +1026,7 @@
                 "width": 0.8,
                 "length": 0.95
               },
-              "economy": 30
+              "economy": 45
             }
           },
           {
@@ -1723,7 +1723,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-main",
             "resource": "h2",
-            "rate": 0.005393
+            "rate": 0.00624
           },
           {
             "id": "p{n}-feed-o2-main-0",
@@ -1731,7 +1731,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-main",
             "resource": "o2",
-            "rate": 0.043141
+            "rate": 0.04992
           },
           {
             "id": "p{n}-feed-h2-main-1",
@@ -1739,7 +1739,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-main",
             "resource": "h2",
-            "rate": 0.005393
+            "rate": 0.00624
           },
           {
             "id": "p{n}-feed-o2-main-1",
@@ -1747,7 +1747,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-main",
             "resource": "o2",
-            "rate": 0.043141
+            "rate": 0.04992
           },
           {
             "id": "p{n}-ctl-main",
@@ -1761,7 +1761,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-back-l",
             "resource": "h2",
-            "rate": 0.010074
+            "rate": 0.006716
           },
           {
             "id": "p{n}-feed-o2-back-l",
@@ -1769,7 +1769,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-back-l",
             "resource": "o2",
-            "rate": 0.080593
+            "rate": 0.053728
           },
           {
             "id": "p{n}-ctl-back-l",
@@ -1783,7 +1783,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-front-l",
             "resource": "h2",
-            "rate": 0.010074
+            "rate": 0.006716
           },
           {
             "id": "p{n}-feed-o2-front-l",
@@ -1791,7 +1791,7 @@
             "from": "p{n}-tank-l",
             "to": "p{n}-front-l",
             "resource": "o2",
-            "rate": 0.080593
+            "rate": 0.053728
           },
           {
             "id": "p{n}-ctl-front-l",
@@ -1805,7 +1805,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-back-r",
             "resource": "h2",
-            "rate": 0.010074
+            "rate": 0.006716
           },
           {
             "id": "p{n}-feed-o2-back-r",
@@ -1813,7 +1813,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-back-r",
             "resource": "o2",
-            "rate": 0.080593
+            "rate": 0.053728
           },
           {
             "id": "p{n}-ctl-back-r",
@@ -1827,7 +1827,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-front-r",
             "resource": "h2",
-            "rate": 0.010074
+            "rate": 0.006716
           },
           {
             "id": "p{n}-feed-o2-front-r",
@@ -1835,7 +1835,7 @@
             "from": "p{n}-tank-r",
             "to": "p{n}-front-r",
             "resource": "o2",
-            "rate": 0.080593
+            "rate": 0.053728
           },
           {
             "id": "p{n}-ctl-front-r",
@@ -1934,7 +1934,7 @@
           "toughness": 20000
         },
         "gravity": {
-          "G": 0.093,
+          "G": 0.186,
           "joined": true
         },
         "gold": [

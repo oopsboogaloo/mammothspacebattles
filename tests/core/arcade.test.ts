@@ -242,7 +242,7 @@ describe("Mammoth Asteroids", () => {
   it("MAS-021 MAS-030 the explosive shell breaks a rock up: its blast pushes pieces apart, so the rock splits within a few hits and few pieces are destroyed; a solid slug did none of that", () => {
     const mag = raw.world.arcade.ship.bodies.find((b: { id: string }) => b.id === "p{n}-gun").magazine;
     // The Mammoth scenario's shell, from the mining tuning (AST-008).
-    expect(mag).toMatchObject({ count: 40, reload: 0.25, shell: { mass: 0.5, explosive: { charge: 0.3, fragments: 0, radius: 3, heat: 1.26e7 } } });
+    expect(mag).toMatchObject({ count: 40, reload: 0.25, shell: { mass: 0.5, explosive: { charge: 0.3, fragments: 0, radius: 4, heat: 2.52e7 } } });
     expect(raw.world.arcade.rocks).toMatchObject({ density: 6, bond: 800, material: { threshold: 100, toughness: 20_000 } });
     const chunks = (w: World) => {
       const seen = new Set<string>();
@@ -271,8 +271,9 @@ describe("Mammoth Asteroids", () => {
     const now = fire();
     expect(now.shots).toBe(9);
     expect(now.bursts).toBeGreaterThanOrEqual(7); // nearly every shell reaches the rock and goes off
-    expect(now.chunks).toBeGreaterThanOrEqual(3);
-    expect(now.lost).toBeLessThanOrEqual(8); // most of the rock is pushed apart, not vaporised
+    expect(now.chunks).toBeGreaterThanOrEqual(5); // measured: 8 chunks, 11 of its 20 pieces destroyed
+    expect(now.lost).toBeGreaterThanOrEqual(6);
+    expect(now.lost).toBeLessThanOrEqual(14); // some of the rock is still pushed apart, not vaporised
     expect(st(now.w).stats.welds).toBeGreaterThan(3);
     expect(st(now.w).score).toBe(ARCADE_SCORES.weld * st(now.w).stats.welds);
     // Gold is untouched by the blasts, and the ship by its own shells.
@@ -443,7 +444,7 @@ describe("Mammoth Asteroids", () => {
     expect(prefixed(w, "p1-").some((b) => b.injector?.firing)).toBe(false);
   });
 
-  it("MAS-035 it accelerates at about 12.9 m/s² forward and 4.2 m/s² in reverse, and turns at about 3.5 rad/s² where it is, either way", () => {
+  it("MAS-035 it accelerates at about 19.3 m/s² forward and 4.2 m/s² in reverse, and turns at about 3.5 rad/s² where it is, either way", () => {
     const after = (held: string[]) => {
       const { w, step } = alone();
       step(2, held.map((c) => set(c, 1)));
@@ -452,10 +453,10 @@ describe("Mammoth Asteroids", () => {
       expect(w.ledger.violations).toBe(0);
       return { x: hull.velocity.x / 2, y: hull.velocity.y / 2, turn: hull.angularVelocity / 2 };
     };
-    // Three times the LAND ship's 4.29 m/s², and twice its 1.74 rad/s² (measured the same way).
+    // Four and a half times the LAND ship's 4.29 m/s², and twice its 1.74 rad/s² (measured the same way).
     const forward = after(["left", "right"]);
-    expect(forward.y).toBeGreaterThan(12.2);
-    expect(forward.y).toBeLessThan(13.6);
+    expect(forward.y).toBeGreaterThan(18.3);
+    expect(forward.y).toBeLessThan(20.3);
     expect(Math.abs(forward.turn)).toBeLessThan(0.02);
     const reverse = after(["reverse"]);
     expect(reverse.y).toBeLessThan(-3.8);
@@ -470,7 +471,7 @@ describe("Mammoth Asteroids", () => {
     const { w, step } = alone();
     step(5, [set("left", 1), set("right", 1)]);
     const hull = body(w, "p1-hull")!;
-    expect(hull.velocity.y).toBeGreaterThan(55); // it has crossed the edge (80 m up) at over 40 m/s
+    expect(hull.velocity.y).toBeGreaterThan(80); // it has crossed the edge (80 m up) at over 50 m/s
     expect(Math.abs(hull.angularVelocity)).toBeLessThan(0.05);
     expect(Math.abs(hull.angle)).toBeLessThan(0.1);
   });
