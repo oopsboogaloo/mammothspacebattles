@@ -269,6 +269,7 @@ Priority: **M** must, **S** should.
   both front ones. About 19.3 m/s² forward, 4.2 m/s² in reverse and 3.5 rad/s² turning.
 - **MAS-036** `[M]` A destroyed magazine explodes violently: the ship is lost. A destroyed battery
   explodes too, and the ship flies on damaged.
+- **MAS-038** `[S]` The ship's cockpit is filled light blue, so the way the ship faces shows.
 - **MAS-037** `[M]` An engine no longer welded to the ship, or destroyed, has its fuel line cut.
   One that still exists burns what is left in it (under a second) and is then dead. Destroyed, it
   goes up in a small explosion. The tank it was fed from leaks where the line left it, unless the
