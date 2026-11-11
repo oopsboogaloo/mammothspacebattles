@@ -344,7 +344,7 @@
               "toughness": 3000
             },
             "magazine": {
-              "count": 40,
+              "count": 120,
               "reload": 0.25,
               "at": {
                 "x": 0,
@@ -357,14 +357,15 @@
                   "width": 0.26,
                   "height": 0.22
                 },
-                "mass": 0.5,
+                "mass": 0.166667,
                 "restitution": 0,
                 "friction": 0.05,
                 "explosive": {
-                  "charge": 0.3,
+                  "charge": 0.1,
                   "fragments": 0,
                   "radius": 4,
-                  "heat": 25200000
+                  "heat": 151200000,
+                  "gas": 5.333333
                 }
               },
               "railgun": {
@@ -1930,13 +1931,14 @@
         "bond": 800,
         "material": {
           "name": "rock",
-          "threshold": 100,
-          "toughness": 20000
+          "threshold": 200,
+          "toughness": 40000
         },
         "gravity": {
           "G": 0.186,
           "joined": true
         },
+        "orbit": true,
         "gold": [
           2,
           3
@@ -2682,7 +2684,7 @@
                     "kind": "disc",
                     "radius": 0.1
                   },
-                  "mass": 0.15,
+                  "mass": 0.3,
                   "restitution": 0,
                   "friction": 0.3
                 },

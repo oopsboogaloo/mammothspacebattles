@@ -35,7 +35,7 @@ describe("Mammoth Asteroids' page", () => {
 
   it("MAS-051 the HUD reads the flying ship's fuel, slugs and worst-hit part", () => {
     const w = world();
-    expect(shipStatus(w)).toEqual({ fuel: 1, slugs: 40, damage: 0 });
+    expect(shipStatus(w)).toEqual({ fuel: 1, slugs: 120, damage: 0 });
     // Burn, fire, and a damaged generator.
     const sandbox = getProfile("sandbox");
     for (let i = 0; i < 240; i++) stepInPlace(w, i === 0 ? [{ type: "control.set", channel: "left", value: 1 }, { type: "control.set", channel: "right", value: 1 }, { type: "control.set", channel: "fire", value: 1 }] : [], sandbox);
@@ -43,8 +43,8 @@ describe("Mammoth Asteroids' page", () => {
     const s = shipStatus(w);
     expect(s.fuel).toBeGreaterThan(0.9);
     expect(s.fuel).toBeLessThan(1);
-    expect(s.slugs).toBe(40 - w.arcade!.state.stats.shots);
-    expect(s.slugs).toBeLessThan(40);
+    expect(s.slugs).toBe(120 - w.arcade!.state.stats.shots);
+    expect(s.slugs).toBeLessThan(120);
     expect(s.damage).toBeCloseTo(0.4, 9);
     // A bent weld counts too; a lost ship reads 100%.
     w.joints.find((j) => j.a.startsWith("p1-") && j.b.startsWith("p1-"))!.integrity = 0.3;

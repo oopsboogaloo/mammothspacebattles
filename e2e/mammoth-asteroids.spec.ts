@@ -31,7 +31,7 @@ test("MAS-001 MAS-002 MAS-008 Mammoth Asteroids on its own page: the title, then
   await expect(page.getByTestId("mas-level")).toHaveText("LEVEL 1");
   await expect(page.getByTestId("mas-lives")).toHaveText("▲▲▲");
   await expect(page.getByTestId("mas-gold")).toHaveText(/GOLD [23] \/ [23]/);
-  await expect(page.getByTestId("mas-slugs")).toHaveText("SHELLS 40");
+  await expect(page.getByTestId("mas-slugs")).toHaveText("SHELLS 120");
   await expect(page.getByTestId("mas-damage")).toHaveText("DAMAGE 0%");
   for (const b of ["thrust-left", "thrust-right", "thrust-fire", "mas-pause"]) await expect(page.getByTestId(b)).toBeVisible();
   // No sandbox panels or tools, and none of the view's own overlays.
@@ -63,7 +63,7 @@ test("MAS-052 the keys: Space fires shells, ↑ is forward (the main thruster), 
   await page.keyboard.down("Space");
   await expect.poll(() => hook(page, (m) => m.arcade()!.stats.shots), { timeout: 10_000 }).toBeGreaterThan(1);
   await page.keyboard.up("Space");
-  await expect(page.getByTestId("mas-slugs")).not.toHaveText("SHELLS 40");
+  await expect(page.getByTestId("mas-slugs")).not.toHaveText("SHELLS 120");
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.fire ?? 0)).toBe(0);
   await page.keyboard.down("ArrowUp");
   await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.left ?? 0, m.sandbox().world.controls.right ?? 0].join())).toBe("1,1");
@@ -225,7 +225,7 @@ test("MAS-007 How to play and The physics open from the title, each with Back, a
   await page.getByTestId("mas-open-physics").click();
   const physics = page.getByTestId("mas-physics");
   await expect(physics.getByRole("heading", { name: "THE PHYSICS" })).toBeVisible();
-  for (const text of ["There is no thrust force", "railgun", "Where the game cheats", "Gold can't be damaged", "fifteen times"]) await expect(physics).toContainText(text);
+  for (const text of ["There is no thrust force", "railgun", "Where the game cheats", "Gold can't be damaged", "forty-five times", "5.5 kg"]) await expect(physics).toContainText(text);
   // White on black, as the rest of the game.
   await expect(physics).toHaveCSS("color", "rgb(255, 255, 255)");
   await page.getByTestId("mas-back").click();

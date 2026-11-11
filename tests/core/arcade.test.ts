@@ -1,7 +1,7 @@
 // Mammoth Asteroids' game in the world (docs/games/mammoth-asteroids.md; src/core/arcade.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ARCADE_SCORES, bodyMass, clearestSpot, computeTotals, createWorld, getProfile, gunshipPlan, gunshipSpot, hashValue, initialWorld, parseScenario, stepInPlace, type Body, type Command, type World } from "../../src/core/index.ts";
+import { ARCADE_SCORES, bodyMass, clearestSpot, orbitVelocities, computeTotals, createWorld, getProfile, gunshipPlan, gunshipSpot, hashValue, initialWorld, parseScenario, stepInPlace, type Body, type Command, type World } from "../../src/core/index.ts";
 import { disc } from "../helpers.ts";
 
 const raw = JSON.parse(readFileSync(new URL("../../scenarios/asteroids.json", import.meta.url), "utf8"));
@@ -93,11 +93,11 @@ describe("Mammoth Asteroids", () => {
     expect(s.gold).toEqual({ total: gold.length, left: gold.map((b) => b.id).sort() });
     expect(gold.every((b) => b.material === undefined)).toBe(true);
     expect(pieces.every((b) => b.gravity?.feels && b.gravity.joined && b.gravity.mu > 0)).toBe(true);
-    // The ship: its cockpit at the centre, at rest, with 40 shells and full tanks.
+    // The ship: its cockpit at the centre, at rest, with 120 shells and full tanks.
     const hull = body(w, "p1-hull")!;
     expect(Math.hypot(hull.position.x, hull.position.y)).toBeLessThan(1e-5);
     expect(hull).toMatchObject({ velocity: { x: 0, y: 0 }, angle: 0 });
-    expect(body(w, "p1-gun")!.magazine).toMatchObject({ count: 40, railgun: { channel: "fire", speed: 96 } });
+    expect(body(w, "p1-gun")!.magazine).toMatchObject({ count: 120, railgun: { channel: "fire", speed: 96 } });
     expect(fuel(w, "p1-")).toBeCloseTo(16.2, 6);
     expect(w.ledger.violations).toBe(0);
   });
@@ -118,7 +118,7 @@ describe("Mammoth Asteroids", () => {
     step(0.1, [set("left", 0), set("right", 0), set("fire", 1)]);
     step(0.9, [set("fire", 0)]);
     body(w, "p1-gen-l")!.integrity = 0.5;
-    expect(body(w, "p1-gun")!.magazine!.count).toBeLessThan(40);
+    expect(body(w, "p1-gun")!.magazine!.count).toBeLessThan(120);
     st(w).gold.left = []; // as if the ship had collected it all
     step(1 / 240);
     // 2 game seconds are 4 of the player's: 1,000 × level 1 + 10 × (120 − 4).
@@ -141,11 +141,86 @@ describe("Mammoth Asteroids", () => {
     expect(hull.velocity.y).toBeCloseTo(old.velocity.y, 1);
     expect(hull.velocity.y).toBeGreaterThan(1); // still moving
     expect(prefixed(w, "p2-").every((b) => b.integrity === 1 && (b.material !== undefined || b.id.includes("-shell-")))).toBe(true);
-    expect(body(w, "p2-gun")!.magazine!.count).toBe(40);
+    expect(body(w, "p2-gun")!.magazine!.count).toBe(120);
     expect(fuel(w, "p2-")).toBeCloseTo(16.2, 6);
     // It flies by the same keys.
     step(0.5, [set("left", 1), set("right", 1)]);
     expect(body(w, "p2-hull")!.velocity.y).toBeGreaterThan(old.velocity.y + 1);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MAS-026 rocks pulling on each other are started in rough orbit: across the line to their centre, at the speed that holds a circle, with no momentum overall", () => {
+    // Two equal rocks 60 m apart: each circles the middle, 30 m out, at v² = (G m / d²) × 30.
+    const G = 0.186;
+    const pair = [
+      { at: { x: -30, y: 0 }, mass: 2000 },
+      { at: { x: 30, y: 0 }, mass: 2000 },
+    ];
+    const v = orbitVelocities(pair, G, 1);
+    const speed = Math.sqrt(((G * 2000) / 3600) * 30);
+    expect(v[0].x).toBeCloseTo(0, 9);
+    expect(v[0].y).toBeCloseTo(-speed, 9); // anticlockwise: the left one moves down
+    expect(v[1].y).toBeCloseTo(speed, 9);
+    expect(orbitVelocities(pair, G, -1)[0].y).toBeCloseTo(speed, 9);
+    // Unequal: the heavy one moves less, and their momentum cancels.
+    const u = orbitVelocities([pair[0], { at: { x: 30, y: 0 }, mass: 6000 }], G, 1);
+    expect(2000 * u[0].y + 6000 * u[1].y).toBeCloseTo(0, 6);
+    expect(Math.abs(u[0].y)).toBeGreaterThan(Math.abs(u[1].y));
+
+    // In the game: level 2's two rocks circle each other. After 20 game seconds they are whole and
+    // about as far apart as they started; drifting as before, they would have parted or met.
+    const { w, step } = game();
+    st(w).level = 1;
+    st(w).gold.left = [];
+    step(1.5 + 2 / 240);
+    expect(st(w).level).toBe(2);
+    const centre = (k: number) => {
+      const bs = prefixed(w, `a2-${k}-`);
+      const M = bs.reduce((m, b) => m + b.mass, 0);
+      return { x: bs.reduce((x, b) => x + b.mass * b.position.x, 0) / M, y: bs.reduce((y, b) => y + b.mass * b.position.y, 0) / M, vx: bs.reduce((x, b) => x + b.mass * b.velocity.x, 0) / M, vy: bs.reduce((y, b) => y + b.mass * b.velocity.y, 0) / M, M };
+    };
+    const apart = () => {
+      const [a, b] = [centre(0), centre(1)];
+      const W = w.bounds.max.x - w.bounds.min.x;
+      const H = w.bounds.max.y - w.bounds.min.y;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      return Math.hypot(dx - W * Math.round(dx / W), dy - H * Math.round(dy / H));
+    };
+    const [a, b] = [centre(0), centre(1)];
+    expect(Math.hypot(a.vx, a.vy)).toBeLessThan(2.5); // slower than the 2 to 6 m/s drift
+    expect(Math.hypot(a.M * a.vx + b.M * b.vx, a.M * a.vy + b.M * b.vy) / (a.M + b.M)).toBeLessThan(0.05);
+    const d0 = apart();
+    const welds = w.joints.filter((j) => j.a.startsWith("a2-")).length;
+    step(20);
+    expect(apart()).toBeGreaterThan(0.6 * d0);
+    expect(apart()).toBeLessThan(1.4 * d0);
+    expect(w.joints.filter((j) => j.a.startsWith("a2-")).length).toBe(welds);
+    // One rock has nothing to orbit: it drifts.
+    const one = game();
+    const rock = prefixed(one.w, "a1-0-");
+    const M = rock.reduce((m, x) => m + x.mass, 0);
+    const drift = Math.hypot(rock.reduce((x, r) => x + r.mass * r.velocity.x, 0) / M, rock.reduce((y, r) => y + r.mass * r.velocity.y, 0) / M);
+    expect(drift).toBeGreaterThan(1.9);
+    expect(drift).toBeLessThan(6.1);
+    expect(() => game((scn) => delete scn.world.arcade.rocks.gravity)).toThrow(/orbit/);
+  }, 120_000);
+
+  it("MAS-021 a shell's blast makes 5.5 kg of gas, 5.33 kg more than the shell weighs, to push the rock's pieces apart, and the ledger records it as supplied", () => {
+    const { w, step } = game();
+    rockAbove(w);
+    step(1 / 240, [set("fire", 1)]);
+    step(1 / 240, [set("fire", 0)]);
+    let burst: { gas: number } | undefined;
+    let supplied = 0;
+    for (let i = 0; i < 240 && !burst; i++) {
+      step(1 / 240);
+      burst = w.events.find((e) => e.type === "detonation")?.data as { gas: number } | undefined;
+      if (burst) supplied = w.ledger.last!.sources.supply.mass;
+    }
+    expect(burst!.gas).toBeCloseTo(5.5, 9);
+    expect(supplied).toBeCloseTo(5.333333, 9);
+    step(1);
     expect(w.ledger.violations).toBe(0);
   });
 
@@ -242,8 +317,8 @@ describe("Mammoth Asteroids", () => {
   it("MAS-021 MAS-030 the explosive shell breaks a rock up: its blast pushes pieces apart, so the rock splits within a few hits and few pieces are destroyed; a solid slug did none of that", () => {
     const mag = raw.world.arcade.ship.bodies.find((b: { id: string }) => b.id === "p{n}-gun").magazine;
     // The Mammoth scenario's shell, from the mining tuning (AST-008).
-    expect(mag).toMatchObject({ count: 40, reload: 0.25, shell: { mass: 0.5, explosive: { charge: 0.3, fragments: 0, radius: 4, heat: 2.52e7 } } });
-    expect(raw.world.arcade.rocks).toMatchObject({ density: 6, bond: 800, material: { threshold: 100, toughness: 20_000 } });
+    expect(mag).toMatchObject({ count: 120, reload: 0.25, shell: { mass: 0.166667, explosive: { charge: 0.1, fragments: 0, radius: 4, heat: 1.512e8, gas: 5.333333 } } });
+    expect(raw.world.arcade.rocks).toMatchObject({ density: 6, bond: 800, material: { threshold: 200, toughness: 40_000 } });
     const chunks = (w: World) => {
       const seen = new Set<string>();
       let n = 0;
@@ -270,10 +345,10 @@ describe("Mammoth Asteroids", () => {
     };
     const now = fire();
     expect(now.shots).toBe(9);
-    expect(now.bursts).toBeGreaterThanOrEqual(7); // nearly every shell reaches the rock and goes off
-    expect(now.chunks).toBeGreaterThanOrEqual(5); // measured: 8 chunks, 11 of its 20 pieces destroyed
-    expect(now.lost).toBeGreaterThanOrEqual(6);
-    expect(now.lost).toBeLessThanOrEqual(14); // some of the rock is still pushed apart, not vaporised
+    expect(now.bursts).toBeGreaterThanOrEqual(5); // measured 6: the first blasts push the pieces out of the later shells' way
+    expect(now.chunks).toBeGreaterThanOrEqual(8); // measured: 13 chunks, 7 of its 20 pieces destroyed
+    expect(now.lost).toBeGreaterThanOrEqual(3);
+    expect(now.lost).toBeLessThanOrEqual(12); // most of the rock is pushed apart, not vaporised
     expect(st(now.w).stats.welds).toBeGreaterThan(3);
     expect(st(now.w).score).toBe(ARCADE_SCORES.weld * st(now.w).stats.welds);
     // Gold is untouched by the blasts, and the ship by its own shells.
@@ -310,7 +385,7 @@ describe("Mammoth Asteroids", () => {
     // Protected: no part has a material, so nothing damages it (DMG-002). Full tank and magazine.
     expect(prefixed(w, "p2-").every((b) => b.material === undefined)).toBe(true);
     expect(st(w).graceUntil).toBeGreaterThan(w.time);
-    expect(body(w, "p2-gun")!.magazine!.count).toBe(40);
+    expect(body(w, "p2-gun")!.magazine!.count).toBe(120);
     expect(body(w, "p1-main")).toBeDefined(); // the wreck stays
     step(1);
     // Protection over: the materials are back, as the template's.
@@ -369,18 +444,18 @@ describe("Mammoth Asteroids", () => {
     expect(Object.keys(st(w).shells)).toEqual(["p1-gun-shell-1"]);
     const shell = body(w, "p1-gun-shell-1")!;
     expect(shell.velocity.y).toBeGreaterThan(94);
-    // The kick: 0.5 kg at 96 m/s against the ship's 67 kg (20 kg of it the 40 shells). The ship
+    // The kick: 0.167 kg at 96 m/s against the ship's 67 kg (20 kg of it the 120 shells). The ship
     // as a whole: its parts ring a little on their welds after a shot.
     const ship = prefixed(w, "p1-").filter((b) => !b.id.includes("-shell-"));
     const M = ship.reduce((m, b) => m + bodyMass(b), 0);
-    expect(M).toBeCloseTo(66.5, 0);
-    expect(ship.reduce((p, b) => p + bodyMass(b) * b.velocity.y, 0) / M).toBeCloseTo(-48 / M, 2);
+    expect(M).toBeCloseTo(66.9, 0);
+    expect(ship.reduce((p, b) => p + bodyMass(b) * b.velocity.y, 0) / M).toBeCloseTo(-16 / M, 2);
     let left: number | undefined;
     for (let i = 0; i < 480 && left === undefined; i++) {
       step(1 / 240);
       if (!body(w, "p1-gun-shell-1")) left = w.ledger.last!.sources.boundary.mass;
     }
-    expect(left).toBeCloseTo(-0.5, 9);
+    expect(left).toBeCloseTo(-0.166667, 9);
     expect(st(w).shells).toEqual({});
     expect(w.time).toBeGreaterThan(1.35);
     expect(w.time).toBeLessThan(1.4 + 0.1);
@@ -409,18 +484,23 @@ describe("Mammoth Asteroids", () => {
     expect(hashValue(run(700))).toBe(hashValue(a));
   }, 120_000);
 
-  it("MAS-030 the recoil of all 40 shells leaves the ship whole: no weld bends and no part is damaged, still, under thrust or turning", () => {
+  it("MAS-030 the recoil of all 120 shells leaves the ship whole: no weld bends and no part is damaged, still, under thrust, in reverse or turning", () => {
     for (const held of [[], ["left", "right"], ["left"], ["right"], ["reverse"]]) {
       const { w, step } = alone(); // empty space, so only its own gun can hurt it
       const welds = w.joints.length;
-      step(11, [set("fire", 1), ...held.map((c) => set(c, 1))]);
-      expect(body(w, "p1-gun")!.magazine!.count).toBe(0);
+      // Still: all 120 shells, 31 s of fire. Forward or in reverse: 11 s and 44 shells (held for
+      // longer, the ship flies at hundreds of metres a second through its own shells). Turning: 5 s
+      // and 20 shells. Spun for longer (past 30 rad/s) its shells cross paths and set each other
+      // off, and one such blast 5 m away broke a thruster off: not the recoil's doing.
+      const seconds = held.length === 0 ? 31 : held.length === 1 && held[0] !== "reverse" ? 5 : 11;
+      step(seconds, [set("fire", 1), ...held.map((c) => set(c, 1))]);
+      expect(body(w, "p1-gun")!.magazine!.count).toBe(120 - Math.min(120, 4 * seconds));
       expect(st(w).phase).toBe("playing");
       expect(w.joints.length).toBe(welds);
       expect(w.joints.filter((j) => j.integrity < 1).map((j) => j.id)).toEqual([]);
       expect(prefixed(w, "p1-").filter((b) => !b.id.includes("shell") && b.integrity < 1).map((b) => b.id)).toEqual([]);
     }
-  }, 120_000); // five 11 s flights: 11 s here, over the 20 s limit on CI
+  }, 300_000); // 63 s of flight in all
 
   it("MAS-035 the player's controls drive the five engines: a turn fires one back thruster and the opposite front one, both fire the main and both back ones, reverse both front ones", () => {
     const firing = (held: string[]) => {
@@ -687,7 +767,7 @@ describe("Mammoth Asteroids: gunships", () => {
 
   it("MAS-041 one hit from a gunship's shell on a tank, thruster or gun damages the player's ship, and no single hit destroys it, wherever it lands", () => {
     const shell = raw.world.arcade.gunship.template.bodies.find((b: { magazine?: unknown }) => b.magazine).magazine;
-    expect(shell.shell).toMatchObject({ mass: 0.15 });
+    expect(shell.shell).toMatchObject({ mass: 0.3 });
     expect(shell.shell.explosive).toBeUndefined();
     // From the left at a tank, from the left at a front thruster, from below into the main thruster,
     // from above at the gun, and from the right at the other front thruster (the cockpit's centre is the origin).
@@ -708,7 +788,8 @@ describe("Mammoth Asteroids: gunships", () => {
       // Damaged: a part or a weld has lost integrity. Not destroyed: the ship flies on.
       const ship = prefixed(w, "p1-");
       const worst = Math.max(...ship.map((b) => 1 - b.integrity), ...w.joints.filter((j) => j.a.startsWith("p1-")).map((j) => 1 - j.integrity));
-      // A square hit takes about 6% off a hull part, about 4% off a thruster's wall, and over half a tank.
+      // A square hit takes 15 to 18% off a hull part and 5 to 9% off a thruster. A tank is destroyed
+      // and explodes; the ship flies on without it.
       expect(worst).toBeGreaterThan(0.005);
       expect(st(w)).toMatchObject({ lost: false, lives: 3, phase: "playing" });
       expect(body(w, "p1-hull")!.integrity).toBeGreaterThan(0.5);

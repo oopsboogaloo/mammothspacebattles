@@ -39,10 +39,20 @@ function ship() {
   // fragments: they would fly round the arena. Chloe then asked for more power (11 November 2026):
   // the charge had three times TNT's energy and a 3 m blast, where that tuning had TNT and 2 m.
   // Then more damage again (11 November 2026, with the new ship): six times TNT's energy (75.6 kJ in
-  // this profile) and a 4 m blast. Nine shells leave a rock in 8 chunks with 11 of its 20 pieces destroyed.
-  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 4, heat: 2.52e7 } };
+  // this profile) and a 4 m blast. Nine shells left a rock in 8 chunks with 11 of its 20 pieces destroyed.
+  // Then more push from the blast's gas (11 November 2026). The shell's own 0.5 kg of gas can't move
+  // 100 kg pieces much however hot it is: with eight times the energy they still left at about
+  // 1 m/s. So the charge makes 5 kg more gas (`gas`, a cheat the ledger records) and has twice the
+  // energy, and the rock is twice as tough so the blast destroys no more of it. Measured on three
+  // rocks, nine shells each: the pieces leave at 1 to 3 m/s (the fastest at 4 to 5), where they
+  // left at 0.5 to 2; 8 to 13 chunks, 7 to 12 pieces destroyed.
+  // Then three times the shells at a third of the weight (asked for by Chloe, 11 November 2026):
+  // 120 shells of 0.167 kg, so the magazine still weighs 20 kg and a shot kicks a third as hard.
+  // Each blast is as it was: the same energy (0.1 kg of charge at three times the energy a kg) and
+  // the same 5.5 kg of gas (5.33 kg of it made from nothing).
+  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05, explosive: { charge: 0.1, fragments: 0, radius: 4, heat: 1.512e8, gas: 5.333333 } };
   // The muzzle is just past the gun's top (the gun is 0.7 m long, the shell 0.22 m); the bore is along +y.
-  const magazine = { count: 40, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } };
+  const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine });
 }
 
@@ -51,6 +61,8 @@ function ship() {
  * "enemy"), without its tractor. Its shell is a small solid slug, not Gunship 3's 1 kg explosive
  * one: sized so a hit damages the LAND ship without usually destroying it (MAS-041).
  */
+/** The gunship's solid shell, kg (0.15 until 11 November 2026, when Chloe asked for more damage). */
+const GUNSHIP_SHELL = 0.3;
 function gunship() {
   const stress = JSON.parse(readFileSync(join(root, "scenarios", "stress-test.json"), "utf8")) as { ui: { spawn: { bodies: Json[]; joints: Json[]; links: Json[] } } };
   const t = JSON.parse(JSON.stringify(stress.ui.spawn).replaceAll("s{n}", "g{n}")) as { bodies: Json[]; joints: Json[]; links: Json[] };
@@ -58,7 +70,7 @@ function gunship() {
     delete b.tractor;
     if (b.pilot) b.pilot = { ...(b.pilot as Json), side: "enemy" };
     const mag = b.magazine as (Json & { shell: Json }) | undefined;
-    if (mag) mag.shell = { shape: { kind: "disc", radius: 0.1 }, mass: 0.15, restitution: 0, friction: 0.3 };
+    if (mag) mag.shell = { shape: { kind: "disc", radius: 0.1 }, mass: GUNSHIP_SHELL, restitution: 0, friction: 0.3 };
   }
   return { bodies: t.bodies, joints: t.joints, links: t.links.filter((l) => l.channel !== "g{n}.tractor") };
 }
@@ -91,12 +103,14 @@ const scenario = {
         // 2–4 and is in 3–10 chunks by hit 8, with 1–3 of its 20 pieces destroyed (design §2.3a).
         density: 6,
         bond: 800,
-        material: { name: "rock", threshold: 100, toughness: 20_000 },
+        // Twice the mining tuning's toughness, with a shell of twice the energy: the same damage.
+        material: { name: "rock", threshold: 200, toughness: 40_000 },
         // About 2 m/s² at a large rock's surface (doubled on 11 November 2026: Chloe asked for
         // stronger gravity). The pieces welded together pull as one source
         // (AST-011), softened by half the rock's reach, so at the surface the pull is about
         // G M / (1.4 R²), with M ≈ 0.8 π R² × density.
         gravity: { G: 0.186, joined: true },
+        orbit: true,
         gold: [2, 3],
         compounds: [1, 2],
         speed: [2, 6],
