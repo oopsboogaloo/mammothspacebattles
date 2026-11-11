@@ -2508,6 +2508,7 @@
           "perLevel": 0.1,
           "max": 0.8
         },
+        "most": 3,
         "late": {
           "first": -1,
           "firstMin": 5,

@@ -493,6 +493,35 @@ describe("Mammoth Asteroids: gunships", () => {
     expect(w.ledger.violations).toBe(0);
   }, 120_000);
 
+  it("MAS-040 three gunships at the most fly at once: a fourth that is due waits until one is out, and the next is timed from when it came", () => {
+    // One every 2 game seconds, on a level with a protected ship that stays.
+    const { w, step } = at(3, (scn) => Object.assign(scn.world.arcade.gunship, { first: 0.5, every: 2 }));
+    const flying = () => st(w).gunships.filter((g) => !g.out).length;
+    step(6);
+    expect(flying()).toBe(3);
+    step(4); // two more were due by now
+    expect(flying()).toBe(3);
+    expect(st(w).gunshipCount).toBe(3);
+    expect(st(w).incoming).toBeUndefined();
+    expect(st(w).nextGunship).toBeLessThan(w.time); // one is waiting
+    // One is put out: the fourth's ring shows at once, and it comes half a second later.
+    body(w, "g2-hull")!.integrity = 0;
+    step(3 / 240);
+    expect(st(w).incoming).toBeDefined();
+    expect(st(w).nextGunship).toBeCloseTo(w.time + 2, 1); // the fifth is due 2 s after the fourth's ring, not at once
+    step(0.5 + 2 / 240);
+    expect(flying()).toBe(3);
+    expect(st(w).gunships.map((g) => `${g.n}${g.out ? " out" : ""}`)).toEqual(["1", "2 out", "3", "4"]);
+    step(4);
+    expect(st(w).gunshipCount).toBe(4); // and the fifth waits in its turn
+    // A scenario may set another limit.
+    const one = at(3, (scn) => Object.assign(scn.world.arcade.gunship, { first: 0.5, every: 2, most: 1 }));
+    one.step(8);
+    expect(st(one.w).gunshipCount).toBe(1);
+    expect(() => game((scn) => (scn.world.arcade.gunship.most = 0))).toThrow(/most/);
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
   it("MAS-041 one hit from a gunship's shell on the hull, wing or gun damages the player's ship, and no single hit destroys it, wherever it lands", () => {
     const shell = raw.world.arcade.gunship.template.bodies.find((b: { magazine?: unknown }) => b.magazine).magazine;
     expect(shell.shell).toMatchObject({ mass: 0.15 });

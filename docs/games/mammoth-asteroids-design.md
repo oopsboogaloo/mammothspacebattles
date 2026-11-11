@@ -238,11 +238,15 @@ cloud build machine, 11 November 2026; budget 6 ms a step):
 | 3 | 248 | 5.48 | 15.1 | 3.82 |
 | 4 | 268 | 6.28 | 22.2 | 4.29 |
 
-Each gunship costs about 0.9 ms a step, and nothing limits how many pile up: from level 12 one
-comes every 20 s on screen. Four at once are over the budget here, and an iPad is slower. About
-2 ms of the 6.3 ms is per-piece rock gravity (each of a gunship's 23 parts is pulled by all 160
-pieces), which the agreed fallback (§1.3: one source for each joined group) would mostly remove.
-**Open, for Chloe:** whether to limit how many gunships fly at once.
+Each gunship costs about 0.9 ms a step, and from level 12 one comes every 20 s on screen. Four at
+once are over the budget here, and an iPad is slower. **Decided (Chloe, 11 November 2026): three
+fly at the most** (`gunship.most`, default 3). One that is due waits until another is out of the
+fight, and the one after it is timed from when it came. With three flying, level 8 averages
+5.5 ms a step here.
+
+About 2 ms of four gunships' 6.3 ms is per-piece rock gravity (each of a gunship's 23 parts is
+pulled by all 160 pieces), which the agreed fallback (§1.3: one source for each joined group)
+would mostly remove. That is the next change.
 
 ## 3. The ship and scenarios, `scripts/asteroids.ts`
 

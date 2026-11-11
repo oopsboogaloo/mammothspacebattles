@@ -547,6 +547,7 @@ function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
       num(v, gs.fromLevel, `${p}.fromLevel`, { int: true, min: 1 });
       num(v, gs.first, `${p}.first`, { min: 0 });
       num(v, gs.every, `${p}.every`, { positive: true });
+      if (gs.most !== undefined) num(v, gs.most, `${p}.most`, { int: true, min: 1, max: 20 });
       if (!isObj(gs.skill)) err(v, `${p}.skill`, "must be {base, perLevel, max}");
       else for (const k of ["base", "perLevel", "max"]) num(v, gs.skill[k], `${p}.skill.${k}`, { min: 0, max: 1 });
       if (gs.late !== undefined) {

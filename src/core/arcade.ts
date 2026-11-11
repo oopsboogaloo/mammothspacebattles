@@ -62,6 +62,8 @@ export interface ArcadeSpec {
     first: number;
     every: number;
     skill: { base: number; perLevel: number; max: number };
+    /** The most flying at once (default 3): one that is due waits until another is out of the fight. */
+    most?: number;
     late?: { first: number; firstMin: number; every: number; everyMin: number; skill: number; skillMax: number };
   };
   /** Game seconds between losing a ship and the next (default 1.25). */
@@ -136,6 +138,8 @@ export const ARCADE_SCORES = { gold: 500, weld: 10, gunship: 1000 };
 /** A gunship's ring shows this long before it beams in, game s; and it comes in at least this far from the player, m. */
 const GUNSHIP_WARNING = 0.5;
 const GUNSHIP_CLEAR = 70;
+/** The most gunships flying at once, unless the scenario says. */
+export const GUNSHIPS_AT_ONCE = 3;
 /** A weld that breaks within this long of a player's slug touching its rock scores, game s. */
 const SLUG_CREDIT = 0.25;
 /** A rock keeps this far from the ship, and from the next rock's edge, when a level is laid out, m. */
@@ -557,12 +561,15 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
       s.incoming = undefined;
       if (plan) addGunship(world, game, ops, at, plan.skill);
       changed = true;
-    } else if (plan && !s.incoming && due(s.nextGunship)) {
+    } else if (plan && !s.incoming && due(s.nextGunship) && s.gunships.filter((g) => !g.out).length < (spec.gunship.most ?? GUNSHIPS_AT_ONCE)) {
+      // No more than `most` fly at once: one that is due waits here until another is out.
       const hull = world.bodies.find((b) => b.id === hullId);
       const at = gunshipSpot(world, hull ? hull.position : centre(world));
       s.incoming = { at: now + GUNSHIP_WARNING, x: at.x, y: at.y };
       s.beams.push({ at: world.tick, x: at.x, y: at.y, r: 6 });
-      s.nextGunship = (s.nextGunship ?? now) + plan.every;
+      // The next is `every` after this one was due; after this one came, if it had to wait.
+      const due0 = s.nextGunship ?? now;
+      s.nextGunship = (now - due0 > 2 * dt ? now : due0) + plan.every;
     }
   }
 

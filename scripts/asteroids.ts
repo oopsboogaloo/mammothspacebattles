@@ -103,6 +103,7 @@ const scenario = {
         first: 10,
         every: 30,
         skill: { base: 0.3, perLevel: 0.1, max: 0.8 },
+        most: 3, // flying at once: each costs about 0.9 ms a step (design §2.4)
         late: { first: -1, firstMin: 5, every: -2.5, everyMin: 10, skill: 0.05, skillMax: 1 },
       },
       respawn: 1.25,

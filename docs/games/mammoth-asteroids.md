@@ -27,7 +27,7 @@ requirement IDs (MAS-…) are this game's own. The engine changes the game needs
 | Lives | 3. The wreck stays as debris for the rest of the level. The next ship beams in at a safe spot after about 2.5 s, protected from damage for 2 s. |
 | Supplies | A full tank and magazine with every new ship and at every new level. |
 | Repair | At a level clear, the surviving ship is swapped for a fresh one where it is. |
-| Gunship | From level 3: the AI Gunship 3 beams in at 20 s, then once a minute. Gunships pile up if you don't kill them. They get more skilled with each level. One hit damages you; it doesn't kill you outright. From level 9 the rocks stay at 8, and the gunships come sooner, more often and more skilled instead. |
+| Gunship | From level 3: the AI Gunship 3 beams in at 20 s, then once a minute. Gunships pile up if you don't kill them, three flying at the most. They get more skilled with each level. One hit damages you; it doesn't kill you outright. From level 9 the rocks stay at 8, and the gunships come sooner, more often and more skilled instead. |
 | Speed | Lander's pace (1× = half real time), to be tuned after play. |
 | Name | **Mammoth Asteroids**, on its own page, `asteroids.html`. |
 | Look | Black, simple lines. Buttons: black rectangles with a white border and white sans-serif text (this game only; Lander keeps its own look). |
@@ -102,7 +102,9 @@ The pause menu (pause button, P or Esc) has **Resume** and **Quit to title**.
 ### Gunships
 
 - **From level 3:** a Gunship 3 beams in 20 s into the level, then another every minute after.
-  They pile up if not killed.
+  They pile up if not killed, up to three flying at once: a gunship that is due waits until one of
+  the three is destroyed, and the one after it is timed from when it came (decided by Chloe,
+  11 November 2026: each gunship costs step time).
 - **AI:** hunting you (AIP, Hunting mode), aiming across the edges. Its combat skill rises with
   each level.
 - **From level 9** (decided by Chloe, 10 November 2026): the rocks stay at 8 a level, and the
@@ -238,7 +240,8 @@ Priority: **M** must, **S** should.
 
 **Gunships**
 - **MAS-040** `[M]` From level 3, a Gunship 3 with a Hunting AI beams in at 20 s and every 60 s
-  after, at a clear spot away from the player, after a brief ring warning.
+  after, at a clear spot away from the player, after a brief ring warning. Three fly at the most:
+  one that is due waits until another is out of the fight.
 - **MAS-041** `[M]` Its combat skill rises with the level. Its shells damage the LAND ship without
   usually destroying it in one hit.
 - **MAS-043** `[M]` From level 9, where the rocks stop growing, each level brings the first gunship
@@ -313,7 +316,7 @@ for speed, goes back to Chloe before it is made.
 | Collecting gold | Any visible gold, by touch. |
 | Rocks per level | N rocks, 8 at most, 2–3 gold each. |
 | After a loss | The wreck stays; a safe spawn with 2 s of protection. |
-| Gunship | Gunship 3, AI, more skilled each level; they pile up. From level 9: sooner, more often, more skilled. |
+| Gunship | Gunship 3, AI, more skilled each level; they pile up, three at the most. From level 9: sooner, more often, more skilled. |
 | Speed | Lander's pace; tune after play. |
 | Scoring | Gold, rock welds, gunships, a clear bonus; top-10 table. |
 | Name and style | Mammoth Asteroids; black-and-white buttons in this game only. |
