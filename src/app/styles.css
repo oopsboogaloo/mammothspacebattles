@@ -323,3 +323,45 @@ button { cursor: pointer; }
 .lander-diag { position: absolute; top: 56px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: min(640px, 95vw); padding: 6px 8px; border-radius: 8px; background: #000b; font-size: 12px; z-index: 5; }
 .lander-diag textarea { width: 100%; height: 220px; font: 11px var(--mono); background: #0b1222; color: #e8ecf5; border: 1px solid #2a3550; }
 .lander-abandon { position: absolute; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 4; }
+
+/* ---------- Mammoth Asteroids (docs/games/mammoth-asteroids.md): black, white lines, square corners (MAS-006) ---------- */
+.mas { position: fixed; inset: 0; background: #000; color: #fff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none; }
+.mas-title { position: absolute; inset: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 24px; text-align: center; }
+.mas-title h1 { margin: 0; font-size: clamp(30px, 7.5vw, 84px); font-weight: 700; letter-spacing: 0.1em; }
+.mas-title h2 { margin: 0; font-size: clamp(22px, 4vw, 40px); letter-spacing: 0.1em; }
+.mas-credit { margin: 0; font-size: 13px; opacity: 0.6; }
+.mas-col { display: flex; flex-direction: column; gap: 12px; width: min(280px, 100%); }
+.mas-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.mas-btn { min-height: 48px; padding: 0 24px; border: 2px solid #fff; border-radius: 0; background: #000; color: #fff; font-family: inherit; font-size: 17px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; }
+.mas-btn:hover, .mas-btn:focus-visible { background: #fff; color: #000; outline: none; }
+.mas-btn:disabled { opacity: 0.4; cursor: default; }
+.mas-btn.small { min-height: 34px; padding: 0 12px; font-size: 13px; }
+.mas-play { position: absolute; inset: 0; }
+.mas-play .view, .mas-play > div:first-child { position: absolute; inset: 0; }
+.mas-play .view > :not(canvas) { display: none; }
+.mas-shield { position: absolute; inset: 0; }
+.mas-hud { position: absolute; top: 0; left: 0; right: 0; display: flex; gap: 6px 18px; align-items: center; flex-wrap: wrap; padding: 8px 12px; font-size: 13px; letter-spacing: 0.04em; pointer-events: none; }
+.mas-hud b { font-size: 15px; }
+.mas-hud .bad, .mas-hud .bad b { color: #ff6b6b; }
+.mas-hud button { pointer-events: auto; margin-left: auto; }
+.mas-ships { letter-spacing: 0.2em; }
+.mas-fuel { position: relative; display: inline-block; width: 120px; height: 16px; border: 1px solid #fff; }
+.mas-fuel i { position: absolute; inset: 0 auto 0 0; background: #fff; }
+.mas-fuel i.low { background: #ff6b6b; }
+.mas-fuel em { position: relative; padding-left: 6px; font-style: normal; font-size: 11px; line-height: 16px; mix-blend-mode: difference; }
+.mas-banner { position: absolute; top: 24%; left: 50%; transform: translateX(-50%); padding: 12px 22px; border: 2px solid #fff; background: #000; font-size: 26px; font-weight: 700; letter-spacing: 0.08em; text-align: center; pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
+.mas-banner small { font-size: 16px; font-weight: 400; }
+.mas-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 260px; max-width: 90vw; padding: 22px 26px; border: 2px solid #fff; background: #000; display: flex; flex-direction: column; align-items: stretch; gap: 12px; text-align: center; }
+.mas-modal h2 { margin: 0; letter-spacing: 0.1em; }
+.mas-modal p { margin: 0; }
+.mas-initials { display: flex; gap: 14px; justify-content: center; }
+.mas-initials .letter { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mas-initials .letter b { font-size: 34px; width: 1.2em; }
+.mas-scores table { border-collapse: collapse; font-size: 16px; }
+.mas-scores td { padding: 5px 12px; text-align: left; }
+.mas-scores tr.mine td { background: #fff; color: #000; }
+.mas-thrust { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); width: 92px; height: 92px; border: 2px solid #fff; border-radius: 0; background: #0008; color: #fff; font-family: inherit; font-size: 20px; font-weight: 700; touch-action: none; -webkit-tap-highlight-color: transparent; }
+.mas-thrust.left { left: max(18px, env(safe-area-inset-left)); }
+.mas-thrust.right { right: max(18px, env(safe-area-inset-right)); }
+.mas-thrust.fire { left: 50%; transform: translateX(-50%); width: 120px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
+.mas-thrust:active { background: #fff; color: #000; }

@@ -220,6 +220,22 @@ Wiring in `world.ts`: `world.arcade?`, set from the scenario at start (`startArc
 
 ## 4. The page, `asteroids.html`
 
+*Built (step 5 of the plan):* the title (static until the demo, step 7), play, the HUD, the keys
+and touch buttons, pause, game over with initials, and the high scores. How to play and The
+physics come with step 7. What the build settled:
+
+- **A new game has a new seed** (from the clock), so the levels differ from game to game.
+  `?seed=N` plays the same game again; the tests use it.
+- **Slugs are drawn as white dots, 2 px at least.** At the arena's scale (about 5 px a metre) a
+  6 cm slug would not show.
+- **Rocks are dark grey with light edges**; the ship keeps the normal body colours.
+- **Fuel on the HUD is the tank's share**, not the engines' small stores.
+- **Damage on the HUD** is the worst-hit part or weld of the ship flying; 100% once it is lost.
+- **Outside the arena is black** when the window is another shape than the arena was made for (a
+  window resized during a game): the arena is fitted inside the view.
+- **The page's pure parts** (the arena's shape, the HUD's readings) are in
+  `src/app/asteroidsHud.ts`, and the score table is `src/app/scores.ts`, which Lander's now uses.
+
 - `asteroids.html` → `src/app/asteroidsMain.tsx` → `src/app/Asteroids.tsx`, added to
   `vite.config.ts`. `standalone`, with no route back to the sandbox. The same sim worker and
   controller as Lander.

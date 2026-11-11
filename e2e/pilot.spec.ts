@@ -2,7 +2,10 @@
 import { expect, test } from "@playwright/test";
 import { openStarter, shot, waitForTick } from "./helpers.ts";
 
-test.describe.configure({ timeout: 120_000 });
+// These step the world by clicking, 144 to 168 clicks a test. In WebKit on CI that takes 90–100 s
+// (1.5–1.6 min on main, 10 November 2026), so a 120 s limit failed whenever the runner was a little
+// slower. Twice the time they take.
+test.describe.configure({ timeout: 240_000 });
 
 type Hook = { __msb: { sandbox: () => { world: { bodies: { id: string; position: { x: number; y: number }; pilot?: { intent: string } }[]; ledger: { violations: number } } } } };
 

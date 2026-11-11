@@ -315,7 +315,8 @@ export function View() {
         gasStyle: gasStyle.value,
         pad: sb.world.challenge?.goal.pad,
         groundLine: !!sb.world.lander,
-        stars: !!sb.world.lander,
+        stars: sb.world.arcade ? "still" : !!sb.world.lander,
+        arcade: !!sb.world.arcade,
         // In a challenge the parts' ids are clutter: the pad is marked instead.
         labels: !sb.world.challenge && sb.scenario.ui?.labels !== false,
       });

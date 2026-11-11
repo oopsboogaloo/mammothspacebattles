@@ -96,14 +96,14 @@ function startGame(key: string): void {
 }
 
 /** The page is zoomed in by the browser (a pinch on iPad): the game pauses until it's back. */
-const zoomed = signal(false);
+export const zoomed = signal(false);
 
 /**
  * Keeps the browser from zooming the game (LND-030). Two thumbs on the pads moving apart are a pinch,
  * and Safari zooms on a pinch whatever the page says (it ignores `user-scalable=no`), so the pinch
  * and double-tap gestures are cancelled here. If it zooms anyway, the game pauses until it's back.
  */
-function useNoZoom(): void {
+export function useNoZoom(): void {
   useEffect(() => {
     // Once zoomed, a pinch is let through: it's the way back out.
     const stop = (e: Event) => {
@@ -249,7 +249,7 @@ export function sendControl(channel: string, value: number, label: string, group
 }
 
 /** Holds a channel at full while pressed: mouse, touch or pen, several at once (LND-030). */
-function Thrust({ channel, label, side }: { channel: string; label: string; side: "left" | "right" }) {
+export function Thrust({ channel, label, side, className = "lander-thrust" }: { channel: string; label: string; side: string; className?: string }) {
   const group = useRef(0);
   const down = useRef(false);
   const set = (on: boolean) => {
@@ -260,8 +260,8 @@ function Thrust({ channel, label, side }: { channel: string; label: string; side
   };
   return (
     <button
-      class={`lander-thrust ${side}`}
-      aria-label={`${label} engine`}
+      class={`${className} ${side}`}
+      aria-label={channel === "fire" ? "Fire" : `${label} engine`}
       data-testid={`thrust-${channel}`}
       onPointerDown={(e) => {
         try {
