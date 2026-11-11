@@ -917,6 +917,42 @@ describe("Mammoth Asteroids: gunships", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("MAS-042 one of the ship's shells puts a gunship out of the fight and leaves most of it as wreckage, not dust", () => {
+    for (const aim of [0, 1.9]) {
+      // A gunship held still 30 m ahead of the ship: aimed at its hull, then at a wing tip.
+      const { w, step } = at(3, (scn) => (scn.world.arcade.gunship.first = 0.05));
+      w.bodies = w.bodies.filter((b) => !b.id.startsWith("a3-"));
+      w.joints = w.joints.filter((j) => !j.a.startsWith("a3-"));
+      settle(w);
+      for (let k = 0; k < 600 && !body(w, "g1-hull"); k++) step(1 / 240);
+      const ship = prefixed(w, "g1-");
+      const hull = body(w, "g1-hull")!;
+      const here = hullOf(w).position;
+      const d = { x: here.x + aim - hull.position.x, y: here.y + 30 - hull.position.y };
+      for (const b of ship) {
+        b.position = { x: b.position.x + d.x, y: b.position.y + d.y };
+        b.velocity = { x: 0, y: 0 };
+        b.angularVelocity = 0;
+        delete b.pilot;
+      }
+      settle(w);
+      const score = st(w).score;
+      step(2 / 240, [set("fire", 1)]);
+      step(2, [set("fire", 0)]);
+      expect(w.events.filter((e) => e.type === "detonation" && String(e.data.id).includes("-gun-shell-"))).toHaveLength(1);
+      // Out of the fight, scored once.
+      expect(st(w).gunships[0].out).toBe(true);
+      expect(st(w).score - score).toBeGreaterThanOrEqual(ARCADE_SCORES.gunship);
+      // Wreckage: most of its 22 parts are still there (taken whole, the blast left 0 to 2).
+      const left = prefixed(w, "g1-").filter((b) => !b.id.includes("-shell-"));
+      expect(ship.length).toBe(22);
+      expect(left.length).toBeGreaterThanOrEqual(15);
+      expect(left.some((b) => b.integrity < 1)).toBe(true);
+      expect(w.joints.filter((j) => j.a.startsWith("g1-")).length).toBeLessThan(21); // and it is in pieces
+      expect(w.ledger.violations).toBe(0);
+    }
+  }, 120_000);
+
   it("MAS-070 a level with a gunship hunting and firing replays exactly, its shells gone after their time", () => {
     const run = () => {
       // Seed 4: a level where no rock stays in its line of fire (on seed 1 its first shot is 56 s in).

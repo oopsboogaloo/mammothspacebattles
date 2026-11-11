@@ -147,8 +147,14 @@ they are what they are, are in the design notes (`mammoth-asteroids-design.md` Â
 |---|---|---|
 | The ship's parts, but for its tanks | 150 J | 3,000 J |
 | The ship's tanks | 60 J | 500 J |
+| A gunship's parts, but for its tank | 50 J | 600 J |
+| A gunship's tank | 20 J | 100 J |
 | Rock | 200 J | 40,000 J |
 | Gold | cannot be damaged | |
+
+A gunship's metal takes 1% of a blast's declared damage (`material.blast`). The ship's shell is
+sized to crack rock 67 times as tough: taken whole, one shell destroyed 20 to 22 of a gunship's
+22 parts and left nothing to see. The blast's gas, and the shell's own hit, act on it in full.
 
 The ship's welds are 3 times Lander's (the gun's mount 6 times), so its own recoil and thrust do
 not bend them.
@@ -186,7 +192,7 @@ not bend them.
 
 | | What it is | What a hit does |
 |---|---|---|
-| The ship's shell | 0.167 kg at 96 m/s; a charge of 151 kJ and 5.5 kg of gas; blast reaches 4 m | destroys rock pieces near the hit and pushes the rest apart; never goes off against its own ship |
+| The ship's shell | 0.167 kg at 96 m/s; a charge of 151 kJ and 5.5 kg of gas; blast reaches 4 m | destroys rock pieces near the hit and pushes the rest apart; one puts a gunship out of the fight, destroying its tank and a part or two and leaving the other 20 as wreckage in pieces; never goes off against its own ship |
 | A gunship's shell | a 0.3 kg solid slug | takes 15 to 18% off a hull part and 5 to 9% off a thruster; destroys a tank, which explodes; no single hit loses the ship |
 | A destroyed magazine | 1 kg of TNT, reaching 6 m | takes the cockpit, both tanks, the battery, a generator and the main thruster |
 | A destroyed battery | 0.05 kg of TNT, reaching 1 m | breaks four welds and damages four parts |

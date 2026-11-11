@@ -2021,7 +2021,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2047,7 +2048,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2073,7 +2075,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2099,7 +2102,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2163,7 +2167,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2227,7 +2232,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2253,7 +2259,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               },
               "pilot": {
                 "skill": {
@@ -2306,7 +2313,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2348,7 +2356,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2390,7 +2399,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2432,7 +2442,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2474,7 +2485,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2516,7 +2528,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2554,7 +2567,8 @@
               "material": {
                 "name": "tank",
                 "threshold": 20,
-                "toughness": 100
+                "toughness": 100,
+                "blast": 0.01
               }
             },
             {
@@ -2580,7 +2594,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2606,7 +2621,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2632,7 +2648,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2658,7 +2675,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2684,7 +2702,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2710,7 +2729,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               },
               "magazine": {
                 "count": 40,
@@ -2758,7 +2778,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             },
             {
@@ -2784,7 +2805,8 @@
               "material": {
                 "name": "hull",
                 "threshold": 50,
-                "toughness": 600
+                "toughness": 600,
+                "blast": 0.01
               }
             }
           ],

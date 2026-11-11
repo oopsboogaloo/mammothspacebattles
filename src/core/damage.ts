@@ -33,6 +33,12 @@ export interface Material {
   threshold: number;
   /** Energy beyond the threshold that takes all of the body's integrity, J. */
   toughness: number;
+  /**
+   * The share of a blast's declared damage (WPN-006) this material takes, 0 to 1 (default 1).
+   * Hits, fragments and the blast's gas act on it as on anything. For light parts near a blast
+   * sized to break something far tougher: without it they are all destroyed outright.
+   */
+  blast?: number;
 }
 
 /** Example materials: what the sandbox offers and RS-11 uses. */

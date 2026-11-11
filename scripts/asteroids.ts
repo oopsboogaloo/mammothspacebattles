@@ -65,12 +65,18 @@ function ship() {
  */
 /** The gunship's solid shell, kg (0.15 until 11 November 2026, when Chloe asked for more damage). */
 const GUNSHIP_SHELL = 0.3;
+const GUNSHIP_BLAST = 0.01;
 function gunship() {
   const stress = JSON.parse(readFileSync(join(root, "scenarios", "stress-test.json"), "utf8")) as { ui: { spawn: { bodies: Json[]; joints: Json[]; links: Json[] } } };
   const t = JSON.parse(JSON.stringify(stress.ui.spawn).replaceAll("s{n}", "g{n}")) as { bodies: Json[]; joints: Json[]; links: Json[] };
   for (const b of t.bodies) {
     delete b.tractor;
     if (b.pilot) b.pilot = { ...(b.pilot as Json), side: "enemy" };
+    // Its thin metal takes 1% of a blast's declared damage (the blast's gas, and hits, act in full).
+    // The ship's shell is sized to crack rock 67 times as tough: taken whole, one shell destroyed
+    // 20 to 22 of a gunship's 22 parts and left nothing to see. At 1% one shell still puts it out
+    // of the fight, and leaves 20 parts as wreckage with most of their welds broken.
+    if (b.material) b.material = { ...(b.material as Json), blast: GUNSHIP_BLAST };
     const mag = b.magazine as (Json & { shell: Json }) | undefined;
     if (mag) mag.shell = { shape: { kind: "disc", radius: 0.1 }, mass: GUNSHIP_SHELL, restitution: 0, friction: 0.3 };
   }
