@@ -1423,6 +1423,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
       after = computeTotals(world);
       sources.transfer.angularMomentum += after.angularMomentum - before.angularMomentum;
       sources.transfer.energy += after.energy.potential - before.energy.potential;
+      // A charge that makes more gas than its shell weighs (`gas`): what it made from nothing, recorded.
+      const d = diff(before, after);
+      if (d.mass > 1e-9) addDelta(sources.supply, { mass: d.mass, momentumX: d.momentumX, momentumY: d.momentumY, angularMomentum: 0, energy: d.energy - (after.energy.potential - before.energy.potential) });
     }
   }
   // Larger asteroid fragments that took enough damage show their seams (AST-007).

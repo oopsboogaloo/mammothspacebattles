@@ -444,7 +444,7 @@ function HowToPlay() {
       <h3>Ships and damage</h3>
       <p>You have three ships. A ship is lost when its hull is destroyed or it has no working engine left. Short of that you fly on with the damage: a damaged engine pushes less, a lost wing takes its tank and thrusters with it, and a holed tank leaks. A magazine that is destroyed explodes violently; the battery and the tanks explode too, less so. The wreck stays where it is. The next ship beams in after a moment and can't be damaged for two seconds, while it flashes. Each new ship, and each new level, has a full tank and 40 shells.</p>
       <h3>Gunships</h3>
-      <p>From level 3 a gunship beams in 20 seconds into the level, and another every minute, three at the most. A ring shows where it will appear. It hunts you and shoots; one hit damages you without destroying you. From level 9 they come sooner, more often and shoot better.</p>
+      <p>From level 3 a gunship beams in 20 seconds into the level, and another every minute, three at the most. A ring shows where it will appear. It hunts you and shoots; one hit damages you without destroying you, though a hit on a fuel tank blows the tank up. From level 9 they come sooner, more often and shoot better.</p>
       <h3>Scoring</h3>
       <table>
         <tbody>
@@ -471,6 +471,7 @@ function HowToPlay() {
         <li>Shoot the rock next to the gold to free it. A few shells split a rock.</li>
         <li>Mind the recoil: every shot pushes you back about a metre a second.</li>
         <li>Rocks pull you in. Left alone, you drift into the nearest one.</li>
+        <li>From level 2 the rocks start out circling each other. They don't keep it up for ever.</li>
         <li>Come up on gold slowly. A piece weighs several times what your ship does.</li>
         <li>What leaves one edge of the screen comes in at the other, your shells included, though they don't fly far enough to come back at you.</li>
       </ul>
@@ -501,7 +502,8 @@ function Physics() {
       <p>A ledger tracks mass, momentum, spin and energy every step, and flags anything the physics creates or loses that it can't account for.</p>
       <h3>Where the game cheats</h3>
       <ul>
-        <li>Fuel goes fifteen times further than it would for real, so a tank lasts.</li>
+        <li>Fuel goes forty-five times further than it would for real, so the tanks last.</li>
+        <li>A shell's blast makes eleven times the shell's weight in gas (5.5 kg from a 0.5 kg shell), so it can push the rock's pieces apart.</li>
         <li>Gold can't be damaged or destroyed.</li>
         <li>Space doesn't wrap round. This arena does, both ways.</li>
         <li>New ships, new levels and beamed-out rocks appear and vanish. The ledger records them as crossing the world's boundary.</li>

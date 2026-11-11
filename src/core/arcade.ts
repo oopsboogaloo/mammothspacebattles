@@ -43,6 +43,12 @@ export interface ArcadeSpec {
     speed: [number, number];
     /** The most a rock spins, either way, rad/s. */
     spin: number;
+    /**
+     * A level of two or more rocks starts with them in rough orbit round each other, not drifting
+     * (MAS-026): each moves across the line to the rocks' centre of mass, at the speed at which the
+     * others' pull would hold it on a circle, all turning the same way.
+     */
+    orbit?: boolean;
     /** The most rocks in a level (default 8): level N has N, up to this (MAS-020). */
     most?: number;
   };
@@ -281,6 +287,7 @@ function layout(world: World, game: ArcadeGame, ops: ArcadeOps, shipAt: Vec2): v
   let apart = 2 * rk.radius + ROCK_GAP;
   const placed: Vec2[] = [];
   const gold: string[] = [];
+  const rocks: { at: Vec2; drift: Vec2; rock: ReturnType<typeof generateAsteroid> }[] = [];
   for (let k = 0; k < count; k++) {
     let at: Vec2;
     for (let tries = 1; ; tries++) {
@@ -312,13 +319,27 @@ function layout(world: World, game: ArcadeGame, ops: ArcadeOps, shipAt: Vec2): v
       angle: between(0, 2 * Math.PI),
       angularVelocity: between(-rk.spin, rk.spin),
     });
+    rocks.push({ at, drift: { x: speed * heading.c, y: speed * heading.s }, rock });
+  }
+  // In rough orbit round each other (MAS-026), if the scenario says so: each rock's drift is
+  // replaced. Its spin stays.
+  // Each rock is taken where its copy nearest the first rock is: rocks pull each other the short
+  // way round the arena.
+  const nearest = (at: Vec2): Vec2 => {
+    const o = offset(world, rocks[0].at, at);
+    return { x: rocks[0].at.x + o.x, y: rocks[0].at.y + o.y };
+  };
+  const orbits = rk.orbit && rocks.length > 1 ? orbitVelocities(rocks.map((r) => ({ at: nearest(r.at), mass: r.rock.bodies.reduce((m, b) => m + b.mass, 0) })), rk.gravity?.G ?? 0, nextFloat(rng) < 0.5 ? -1 : 1) : null;
+  rocks.forEach(({ at, drift, rock }, k) => {
+    const dv = orbits ? { x: orbits[k].x - drift.x, y: orbits[k].y - drift.y } : null;
     for (const b of rock.bodies) {
+      if (dv) b.velocity = { x: b.velocity.x + dv.x, y: b.velocity.y + dv.y };
       ops.addBody(world, b);
       if (b.mineral === "gold") gold.push(b.id);
     }
     for (const j of rock.joints) ops.addJoint(world, j);
     state.beams.push({ at: world.tick, x: at.x, y: at.y, r: rk.radius });
-  }
+  });
   state.gold = { total: gold.length, left: gold.sort() };
   state.levelStart = world.time;
   // The level's gunships: none yet, the first due when the level's plan says.
@@ -327,6 +348,41 @@ function layout(world: World, game: ArcadeGame, ops: ArcadeOps, shipAt: Vec2): v
   state.incoming = undefined;
   state.nextGunship = plan ? world.time + plan.first : undefined;
   world.events.push({ tick: world.tick, type: "arcade.level", data: { level: state.level, rocks: count, gold: gold.length } });
+}
+
+/**
+ * The velocity that starts each of several masses in rough orbit round the others (MAS-026): across
+ * the line from the masses' centre to it, turning `sense` (1 anticlockwise, −1 clockwise), at the
+ * speed at which the others' pull toward that centre would hold it on a circle: v² = a r. Each
+ * pulls with G × its mass over the distance squared. A mass the others pull outward, or one at the
+ * centre, starts at rest. The whole has no momentum. Rough: the rocks' other copies round the wrapped
+ * arena, and the rocks' sizes, are left out, so the orbits drift from circles.
+ */
+export function orbitVelocities(masses: readonly { at: Vec2; mass: number }[], G: number, sense: number): Vec2[] {
+  const M = masses.reduce((m, r) => m + r.mass, 0);
+  if (!(M > 0)) return masses.map(() => ({ x: 0, y: 0 }));
+  const c = { x: masses.reduce((s, r) => s + r.mass * r.at.x, 0) / M, y: masses.reduce((s, r) => s + r.mass * r.at.y, 0) / M };
+  const out = masses.map((r, i) => {
+    const rx = r.at.x - c.x;
+    const ry = r.at.y - c.y;
+    const d = Math.sqrt(rx * rx + ry * ry);
+    if (!(d > 1e-9)) return { x: 0, y: 0 };
+    // The others' pull on it, along the line to the centre.
+    let inward = 0;
+    masses.forEach((o, j) => {
+      if (j === i) return;
+      const ox = o.at.x - r.at.x;
+      const oy = o.at.y - r.at.y;
+      const od = Math.sqrt(ox * ox + oy * oy);
+      if (od > 1e-9) inward += ((G * o.mass) / (od * od * od)) * -(ox * rx + oy * ry) / d;
+    });
+    const v = inward > 0 ? Math.sqrt(inward * d) : 0;
+    return { x: (-ry / d) * v * sense, y: (rx / d) * v * sense };
+  });
+  // No momentum overall: the rocks turn about their centre, which stays where it is.
+  const px = out.reduce((s, v, i) => s + masses[i].mass * v.x, 0) / M;
+  const py = out.reduce((s, v, i) => s + masses[i].mass * v.y, 0) / M;
+  return out.map((v) => ({ x: v.x - px, y: v.y - py }));
 }
 
 /** When a level's gunships come, and how well they fight (MAS-040, MAS-041, MAS-043); null if it has none. */

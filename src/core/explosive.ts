@@ -35,6 +35,13 @@ export interface Explosive {
    * blast gas are more than the gas step can follow. Default 6; 0 for none.
    */
   fragments?: number;
+  /**
+   * More blast gas than the shell weighs, kg, made from nothing when it bursts (a cheat, as an
+   * engine's economy is, FLT-010): a small shell's gas is too little to push heavy things, however
+   * hot. It comes out moving with the shell, and the ledger records it under `supply`. The charge's
+   * energy is the same: it is shared among more gas. Default 0.
+   */
+  gas?: number;
   /** Blast damage reaches this far, m. Default 2. */
   radius?: number;
   /** Strikes slower than this don't set it off, m/s. Default 5. */
@@ -243,7 +250,9 @@ function burst(world: World, s: Body, dt: number): void {
   const held = s.contents ?? [];
   const heldMass = held.reduce((m, st) => m + st.mass, 0);
   const heldEnergy = held.reduce((x, st) => x + storeThermal(st, gs) + storeChemical(st, gs), 0);
-  const gasMass = (made.length ? s.mass - M : s.mass) + heldMass;
+  // The shell's own gas, and any made from nothing (`gas`), which shares the same energy.
+  const ownGas = (made.length ? s.mass - M : s.mass) + heldMass;
+  const gasMass = ownGas + (e.gas ?? 0);
   // Fragments take GURNEY of E as outward motion. The gas step takes bodies as already moved this step
   // and rewinds them by their velocity (§9.4): put each fragment where it ends the step.
   const u = made.length ? Math.sqrt((2 * GURNEY * E) / M) : 0;
@@ -260,7 +269,7 @@ function burst(world: World, s: Body, dt: number): void {
     position: s.position,
     velocity: s.velocity,
     mass: gasMass,
-    energy: before + E + heldEnergy - fragmentKE - 0.5 * gasMass * dot(s.velocity, s.velocity),
+    energy: before + E + heldEnergy - fragmentKE - 0.5 * ownGas * dot(s.velocity, s.velocity),
     angle: s.angle,
     spots: corePoints(s, 2 * BLAST_PARCEL_RADIUS, 0.85),
   };

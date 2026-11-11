@@ -388,6 +388,21 @@ would mostly remove. That is the next change.
     rock's surface). Welds between a struck rock's pieces now score wherever in that rock they
     break: the stronger blast destroys the piece it strikes in the same step, and only the welds
     of that piece were being scored.
+  - **Tuned again (11 November 2026):** Chloe asked for more of a gas pressure effect from the
+    cannon, rocks that start in orbit round each other, and more damage from the gunships.
+    - *Gas.* More energy alone did nothing: at eight times the energy, with the rock as much
+      tougher, the pieces still left at about 1 m/s, because 0.5 kg of gas can't push 100 kg
+      pieces. A charge can now make more gas than its shell weighs (`explosive.gas`, a cheat like
+      FLT-010, recorded under the ledger's `supply`). The shell makes 5 kg more, has twelve times
+      TNT's energy, and the rock is twice as tough (200 J, 40 kJ). Three rocks, nine shells each:
+      8 to 13 chunks, 7 to 12 pieces destroyed, pieces leaving at 1 to 3 m/s (they left at 0.5 to 2).
+    - *Orbits (MAS-026).* `rocks.orbit`: each rock starts across the line to the rocks' centre of
+      mass at v² = a r, where a is the others' pull toward that centre, taking each rock's copy
+      nearest the first. Two rocks circle at about 1.5 to 2.5 m/s and stay whole for 40 s or
+      more; with three or more it is a looser swirl. A lone rock drifts as before. Level 8 over
+      80 s: 136 chunks and 5.7 ms a step (drifting: 154 and 6.0).
+    - *Gunship shells.* 0.3 kg, not 0.15: a hit takes 15 to 18% off a hull part (it took about
+      6%) and destroys a tank, which explodes; the ship flies on.
   - **Welds:** 3 times Lander's, the gun's mount 6 times, two welds between each tank and its
     generator. Nothing bends with all 40 shells fired still, forward, turning or reversing, nor
     spinning at 40 rad/s.
