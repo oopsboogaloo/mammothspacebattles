@@ -351,7 +351,8 @@ function shipsAround(world: World, own: Set<string>, image: Image): Ship[] {
     // and gun together. A gun or engine broken off on its own is debris.
     const works = (x: Body) => x.integrity > 0;
     const engine = bs.some((x) => works(x) && x.injector && !x.magazine);
-    const gun = bs.some((x) => works(x) && x.magazine && x.injector);
+    // A gun: a gas cannon (a magazine with its charge's injector) or a railgun.
+    const gun = bs.some((x) => works(x) && x.magazine && (x.injector || x.magazine.railgun));
     if (!bs.some((x) => works(x) && (x.pilot || x.tractor)) && !(engine && gun)) continue;
     // Named by its pilot's body, else its tractor's (Gunship 2's hull), else its heaviest part.
     const pilot = bs.find((b) => b.pilot);

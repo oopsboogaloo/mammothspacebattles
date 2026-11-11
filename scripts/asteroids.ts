@@ -2,7 +2,7 @@
 // (Lander's breakable LAND ship with a railgun on its nose) and the rocks' tuning. The game itself
 // lays out each level (src/core/arcade.ts).
 //   node scripts/asteroids.ts            writes scenarios/asteroids.json
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
 import { landShip, material, WELD, YIELD } from "./landShip.ts";
@@ -17,12 +17,16 @@ const WIDTH = 284;
 
 /**
  * The railgun: a small block on top of the hull, on the ship's centre line, so its recoil pushes the
- * ship straight back and doesn't turn it. Its slug is light and weak: it breaks up when it hits.
- * Times are game seconds: a reload of 0.125 is four shots a second on screen.
+ * ship straight back and doesn't turn it. Its slug is light and explosive: it bursts when it hits.
+ * Times are game seconds: a reload of 0.25 is two shots a second on screen.
  */
 function ship() {
   const s = landShip("p{n}-", ECONOMY);
-  const slug = { shape: { kind: "disc", radius: 0.06 }, mass: 0.1, restitution: 0, friction: 0.3, material: { name: "slug", threshold: 0, toughness: 50 } };
+  // An explosive shell (asked for by Chloe after playing, 11 November 2026: a solid slug did nothing
+  // to the rocks). It is the Mammoth scenario's, from the mining tuning (AST-008): 0.5 kg, 0.3 kg of
+  // it charge, a 2 m blast, launched at 96 m/s. The blast's gas pushes the rock's pieces apart. No
+  // casing fragments: they would fly round the arena.
+  const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.5, restitution: 0, friction: 0.05, explosive: { charge: 0.3, fragments: 0, radius: 2 } };
   const gun = {
     id: "p{n}-gun",
     shape: { kind: "box", width: 0.5, height: 0.3 },
@@ -35,7 +39,7 @@ function ship() {
     friction: 0.3,
     material: material("gun"),
     // The muzzle is just past the block's top; the bore is along +y.
-    magazine: { count: 60, reload: 0.125, at: { x: 0, y: 0.3 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 200 } },
+    magazine: { count: 40, reload: 0.25, at: { x: 0, y: 0.31 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 96 } },
   };
   const weld = (side: string, x: number) => ({ id: `p{n}-gun-${side}`, a: "p{n}-hull", b: "p{n}-gun", anchorA: { x, y: 0.5 }, anchorB: { x, y: -0.15 }, limits: WELD, yield: YIELD });
   return {
@@ -44,6 +48,24 @@ function ship() {
     links: [...s.links, { id: "p{n}-ctl-fire", kind: "control", channel: "fire", to: "p{n}-gun" }],
   };
 }
+
+/**
+ * The gunship: the stress test's Gunship 3 with its Hunting pilot (ids and channels `g{n}`, side
+ * "enemy"), without its tractor. Its shell is a small solid slug, not Gunship 3's 1 kg explosive
+ * one: sized so a hit damages the LAND ship without usually destroying it (MAS-041).
+ */
+function gunship() {
+  const stress = JSON.parse(readFileSync(join(root, "scenarios", "stress-test.json"), "utf8")) as { ui: { spawn: { bodies: Json[]; joints: Json[]; links: Json[] } } };
+  const t = JSON.parse(JSON.stringify(stress.ui.spawn).replaceAll("s{n}", "g{n}")) as { bodies: Json[]; joints: Json[]; links: Json[] };
+  for (const b of t.bodies) {
+    delete b.tractor;
+    if (b.pilot) b.pilot = { ...(b.pilot as Json), side: "enemy" };
+    const mag = b.magazine as (Json & { shell: Json }) | undefined;
+    if (mag) mag.shell = { shape: { kind: "disc", radius: 0.1 }, mass: 0.15, restitution: 0, friction: 0.3 };
+  }
+  return { bodies: t.bodies, joints: t.joints, links: t.links.filter((l) => l.channel !== "g{n}.tractor") };
+}
+type Json = Record<string, unknown>;
 
 const scenario = {
   schema: 1,
@@ -64,24 +86,40 @@ const scenario = {
       rocks: {
         radius: 12,
         pieces: 20,
-        density: 20,
-        // The mining tuning (tough pieces, weaker bonds), to retune for the slug (design §5 step 8).
-        bond: 20_000,
+        // The mining tuning (AST-008): light rock of tough pieces and weak bonds, so a shell's blast
+        // pushes pieces apart and few are destroyed. The bonds are 800 N/m, not that tuning's 3,500:
+        // a bond's strength goes with the length of its edge, and these pieces are about three times
+        // the size of the 4 m rocks it was tuned on. Measured on four shapes: a rock splits by hit
+        // 2–4 and is in 3–10 chunks by hit 8, with 1–3 of its 20 pieces destroyed (design §2.3a).
+        density: 6,
+        bond: 800,
         material: { name: "rock", threshold: 100, toughness: 20_000 },
         // About 1 m/s² at a large rock's surface: G ≈ R² / M, M ≈ 0.8 π R² × density.
-        gravity: { G: 0.02 },
+        gravity: { G: 0.067 },
         gold: [2, 3],
         compounds: [1, 2],
         speed: [2, 6],
         spin: 0.1,
         most: 8,
       },
+      // Game seconds: 20 s into the level and every minute after, on screen (MAS-040). From level 9,
+      // where the rocks stop growing, 2 s sooner and 5 s closer together a level, and more skilled (MAS-043).
+      gunship: {
+        template: gunship(),
+        hull: "g{n}-hull",
+        fromLevel: 3,
+        first: 10,
+        every: 30,
+        skill: { base: 0.3, perLevel: 0.1, max: 0.8 },
+        most: 3, // flying at once: each costs about 0.9 ms a step (design §2.4)
+        late: { first: -1, firstMin: 5, every: -2.5, everyMin: 10, skill: 0.05, skillMax: 1 },
+      },
       respawn: 1.25,
       grace: 1,
       clearPause: 1.5,
-      // A slug flies 140 m: less than the arena's height, so one fired straight up or down can't come
-      // round the arena and hit the ship that fired it (at 1.5 s it did, in under a second).
-      shellLife: 0.7,
+      // A shell flies 134 m: less than the arena's height, so one fired straight up or down can't come
+      // round the arena and hit the ship that fired it.
+      shellLife: 1.4,
       pace: 0.5,
       seed: 1,
     },

@@ -535,6 +535,32 @@ function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
     num(v, r.spin, `${p}.spin`, { min: 0 });
     if (r.most !== undefined) num(v, r.most, `${p}.most`, { int: true, min: 1, max: 20 });
   }
+  const gs = g.gunship;
+  if (gs !== undefined) {
+    const p = `${path}.gunship`;
+    if (!isObj(gs)) err(v, p, "must be an object {template, hull, fromLevel, first, every, skill}");
+    else {
+      if (!isObj(gs.template) || !Array.isArray(gs.template.bodies) || !gs.template.bodies.length) err(v, `${p}.template`, "must be {bodies, joints?, links?} with at least one body");
+      else if (typeof gs.hull !== "string" || !gs.hull.includes("{n}")) err(v, `${p}.hull`, 'must be an id with "{n}"');
+      else if (!gs.template.bodies.some((b) => isObj(b) && b.id === gs.hull)) err(v, `${p}.hull`, "must be the id of one of the gunship's bodies");
+      else if (!gs.template.bodies.some((b) => isObj(b) && isObj(b.pilot))) err(v, `${p}.template`, "needs a pilot on one of its bodies");
+      num(v, gs.fromLevel, `${p}.fromLevel`, { int: true, min: 1 });
+      num(v, gs.first, `${p}.first`, { min: 0 });
+      num(v, gs.every, `${p}.every`, { positive: true });
+      if (gs.most !== undefined) num(v, gs.most, `${p}.most`, { int: true, min: 1, max: 20 });
+      if (!isObj(gs.skill)) err(v, `${p}.skill`, "must be {base, perLevel, max}");
+      else for (const k of ["base", "perLevel", "max"]) num(v, gs.skill[k], `${p}.skill.${k}`, { min: 0, max: 1 });
+      if (gs.late !== undefined) {
+        if (!isObj(gs.late)) err(v, `${p}.late`, "must be {first, firstMin, every, everyMin, skill, skillMax}");
+        else {
+          for (const k of ["first", "every"]) num(v, gs.late[k], `${p}.late.${k}`, { max: 0 });
+          num(v, gs.late.firstMin, `${p}.late.firstMin`, { min: 0 });
+          num(v, gs.late.everyMin, `${p}.late.everyMin`, { positive: true });
+          for (const k of ["skill", "skillMax"]) num(v, gs.late[k], `${p}.late.${k}`, { min: 0, max: 1 });
+        }
+      }
+    }
+  }
   // The game lays its rocks out over the arena, and puts its ship at the middle of it.
   if (!isObj(bounds) || bounds.wrap !== true) err(v, path, "needs world.bounds with wrap: true (the arena)");
 }

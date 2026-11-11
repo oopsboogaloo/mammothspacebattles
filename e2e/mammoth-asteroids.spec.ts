@@ -31,7 +31,7 @@ test("MAS-001 MAS-002 MAS-008 Mammoth Asteroids on its own page: the title, then
   await expect(page.getByTestId("mas-level")).toHaveText("LEVEL 1");
   await expect(page.getByTestId("mas-lives")).toHaveText("▲▲▲");
   await expect(page.getByTestId("mas-gold")).toHaveText(/GOLD [23] \/ [23]/);
-  await expect(page.getByTestId("mas-slugs")).toHaveText("SLUGS 60");
+  await expect(page.getByTestId("mas-slugs")).toHaveText("SHELLS 40");
   await expect(page.getByTestId("mas-damage")).toHaveText("DAMAGE 0%");
   for (const b of ["thrust-left", "thrust-right", "thrust-fire", "mas-pause"]) await expect(page.getByTestId(b)).toBeVisible();
   // No sandbox panels or tools, and none of the view's own overlays.
@@ -63,7 +63,7 @@ test("MAS-052 the keys: Space fires slugs, ↑ burns both engines, and letting g
   await page.keyboard.down("Space");
   await expect.poll(() => hook(page, (m) => m.arcade()!.stats.shots), { timeout: 10_000 }).toBeGreaterThan(1);
   await page.keyboard.up("Space");
-  await expect(page.getByTestId("mas-slugs")).not.toHaveText("SLUGS 60");
+  await expect(page.getByTestId("mas-slugs")).not.toHaveText("SHELLS 40");
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.fire ?? 0)).toBe(0);
   await page.keyboard.down("ArrowUp");
   await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.left ?? 0, m.sandbox().world.controls.right ?? 0].join())).toBe("1,1");

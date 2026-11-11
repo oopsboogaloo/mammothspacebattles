@@ -112,7 +112,7 @@ It flies only through the ship's channels, like every pilot (AIP-001).
 *Built (step 4 of the plan), without the gunships (step 6).* What the build changed from the text
 below:
 
-- **A slug lasts 0.7 game s, not 1.5.** At 200 m/s a slug crosses the 160 m arena in 0.8 s, so at
+- **A slug lasts 0.7 game s, not 1.5** (now a shell at 96 m/s lasting 1.4 s, for the same reason: §2.3a). At 200 m/s a slug crosses the 160 m arena in 0.8 s, so at
   1.5 s one fired straight up came round and hit the ship that fired it: three of them wrecked the
   tank in the first trial. At 0.7 s it flies 140 m, less than the arena's height.
 - **The clearest spot prefers the centre.** Clearances past 40 m count the same, so the new ship
@@ -123,9 +123,9 @@ below:
   then the game is over.
 - **The gunship's settings** (`gunship`, and step 5 and 9 of the hook) are not in the spec type
   yet; they come with step 6.
-- **Rock tuning is provisional** (`bond` 20,000 N/m, material threshold 100 J, toughness 20,000 J):
+- **Rock tuning was provisional** (`bond` 20,000 N/m, material threshold 100 J, toughness 20,000 J):
   in a trial of 60 slugs into a still rock, each slug took about 4% off the piece it hit, a piece
-  was destroyed after about 30, and the first welds broke then. Retuned in step 8.
+  was destroyed after about 30, and the first welds broke then. Changed in §2.3a.
 - **Holding fire pushes the ship back hard**: each shot kicks it 0.59 m/s (20 N·s against 34 kg),
   so a full second of fire is 4.7 m/s. For the tuning after play.
 
@@ -203,6 +203,109 @@ welds, with `gravity` and `goldIndestructible` on.
 Wiring in `world.ts`: `world.arcade?`, set from the scenario at start (`startArcade`), and
 `runArcade` in the step next to the duel's hook. Validation in `scenario.ts`.
 
+### 2.3a The explosive shell and the rocks (11 November 2026, after Chloe first played)
+
+The light solid slug did nothing a player could see. Chloe asked for an explosive round, and to
+use what the earlier experiments had found. That is the mining tuning (AST-008, `docs/spec.md`):
+light rock of **tough pieces with weak bonds**, and a shell whose **blast gas pushes the pieces
+apart**, so a rock splits into chunks and few pieces are destroyed.
+
+**What is used now**
+
+- **The shell** is the Mammoth scenario's: a 0.26 × 0.22 m box of 0.5 kg, 0.3 kg of it charge, a
+  2 m blast, no casing fragments, launched at 96 m/s, two a second on screen (reload 0.25 game s),
+  40 in the magazine. A shell lasts 1.4 game s (134 m). The gunship's shell is still its solid slug.
+- **The rocks** are that tuning's rock (density 6 kg/m², threshold 100 J, toughness 20,000 J) with
+  bonds of **800 N/m, not 3,500**. `G` is 0.067, so a rock still pulls about 1 m/s² at its surface.
+
+**Why the bonds are weaker.** That tuning was made on 4 m rocks of 12 pieces. These are 12 m rocks
+of 20 pieces: each piece is about three times as long, so its bonds (strength × edge length) are
+three times as strong and the piece nine times as heavy, against the same blast. With 3,500 N/m
+(or the 20,000 used at first) no shell ever split a rock.
+
+**Measured** the mining test's way (`tests/core/mining.test.ts`): a rock alone at rest, one shell
+every 2.5 s at the middle of the biggest chunk, on four rock shapes; chunks and pieces destroyed
+after hits 1, 2, 4, 8 and 12.
+
+| Rock and shell | Hit 1 | Hit 2 | Hit 4 | Hit 8 | Hit 12 |
+|---|---|---|---|---|---|
+| The mining test's own rock (4 m, 12 pieces, 3,500 N/m), 1 kg shell with fragments | 1–3 chunks | 2–4 | 2–7 | 5–7, 0–2 lost | |
+| Game rock, 3,500 N/m, density 6 or 20 | 1 | 1 | 1 | 1, 1–2 lost | |
+| Game rock, 1,200 N/m, density 6 | 1–2 | 1–3 | 1–4 | 1–6 | 2–7 |
+| **Game rock, 800 N/m, density 6 (now)** | **1–2** | **1–3** | **2–5** | **3–10, 1–2 lost** | **6–14, 1–3 lost** |
+| Game rock, 600 N/m, density 6 | 1–4 | 1–7 | 2–10 | 1–15 | 3–18 |
+| Game rock, 400 N/m, density 2 | 1–4 | 1–8 | 9–14 | 14–19 | 15–20 |
+| Game rock, 800 N/m, a lighter shell (0.2 kg, 0.15 kg charge of twice the energy) | 1 | 1–2 | 1–2 | 1–3 | 1–4 |
+
+The push comes from the mass of blast gas, so a lighter shell with a richer charge did much less.
+A small charge on the light slug (2 g to 20 g) changed nothing at all. An earlier attempt the same
+day made the pieces a tenth as tough instead (toughness 2,000 J): that destroys pieces where they
+are hit (six in sixteen slugs) and is not what the experiments had found, so it was replaced.
+
+**What it changes for the ship.** Forty 0.5 kg shells are 20 kg, so a full ship is 48 kg, not 34:
+it accelerates about 4.3 m/s² on both engines with a full magazine, against 6.3 before, and gets
+lighter as it fires. A shot kicks it about 1 m/s (0.6 before) at half the rate of fire.
+
+**Rocks break each other up, with these settings and with the old ones.** Level 8, nobody
+shooting (eight rocks at 2–6 m/s, pulling each other together):
+
+| Settings | Chunks after 20 s | After 40 s | Step, ms, at 40 s |
+|---|---|---|---|
+| As first released (density 20, 20,000 N/m, toughness 20,000) | 77 | 109 | 4.2 |
+| **Now (density 6, 800 N/m)** | 97 | 135 | 5.1 |
+| Now, with rocks at 0.5–2 m/s | 8 | 103 | 3.6 |
+
+Bonds that a 100 N·s blast can break can't hold when two rocks of a few tonnes meet, and nor could
+the stronger ones. Level 1's single rock stays whole until it is shot. Chloe has set the debris
+aside for now (11 November 2026); it is the main thing to look at in the tuning step, with the
+step time it costs.
+
+### 2.4 Gunships (step 6 of the plan, built)
+
+- **The spec's `gunship`**: the template (Gunship 3 from the stress test, ids and channels `g{n}`,
+  side "enemy", no tractor), its hull, `fromLevel` 3, `first` 10 and `every` 30 game s, the skill
+  (0.3 at level 3, 0.1 more a level, to 0.8), and `late` for the levels past `rocks.most`
+  (MAS-043). `gunshipPlan(spec, level)` gives a level's times and skill.
+- **Coming in.** When one is due, a ring shows at its spot for 0.5 game s, then it beams in there
+  at rest. The spot (`gunshipSpot`) is the clearest of a 9 × 5 grid over the whole arena that is
+  at least 70 m from the player the short way round; the furthest from the player wins a tie.
+- **Out of the fight** by the duel's rule (hull gone, or no working engine welded to it): 1,000,
+  once, whatever destroyed it. Its pilot is removed, its control links are cut, its wreck stays.
+- **At a level clear** they beam out with everything else. Gunship numbers go on counting through
+  the game, so no id is used twice.
+- **Its shell** is a 0.15 kg solid disc at 96 m/s (691 J), not Gunship 3's 1 kg explosive shell. A
+  square hit takes about 6% off a hull part of the LAND ship and over half the tank; a glancing
+  one about 1%; one on a light chamber wall, nothing. In a trial against a ship that didn't move,
+  a gunship at skill 0.3 needed five hits in 1.3 s to put it out. Its shells last as long as the
+  player's (1.4 game s, 134 m), well past its stand-off distance of 35–55 m.
+- **The pilot sees the player's ship** because a ship is now a working engine and a gun of either
+  kind: a railgun counts as a gun (before, only a gas cannon did). No existing scenario changes
+  (the same hashes).
+- **The player's shell against a gunship:** Gunship 3's parts are thin (threshold 50 J, toughness
+  600 J), and a shell carries 2,300 J of motion and its blast, so one destroys the part it hits.
+  To tune in step 8.
+
+**What gunships cost** (level 8, the ship idle and protected so it stays; 2,400 steps; Node on the
+cloud build machine, 11 November 2026; budget 6 ms a step):
+
+| Gunships flying | Bodies | Mean step, ms | Worst step, ms | Mean with no rock gravity, ms |
+|---|---|---|---|---|
+| 0 | 179 | 2.84 | 9.9 | 1.91 |
+| 1 | 202 | 4.06 | 9.8 | 2.70 |
+| 2 | 225 | 4.56 | 12.2 | 3.26 |
+| 3 | 248 | 5.48 | 15.1 | 3.82 |
+| 4 | 268 | 6.28 | 22.2 | 4.29 |
+
+Each gunship costs about 0.9 ms a step, and from level 12 one comes every 20 s on screen. Four at
+once are over the budget here, and an iPad is slower. **Decided (Chloe, 11 November 2026): three
+fly at the most** (`gunship.most`, default 3). One that is due waits until another is out of the
+fight, and the one after it is timed from when it came. With three flying, level 8 averages
+5.5 ms a step here.
+
+About 2 ms of four gunships' 6.3 ms is per-piece rock gravity (each of a gunship's 23 parts is
+pulled by all 160 pieces), which the agreed fallback (§1.3: one source for each joined group)
+would mostly remove. That is the next change.
+
 ## 3. The ship and scenarios, `scripts/asteroids.ts`
 
 - **Ship:** Lander's breakable LAND ship (its materials, welds and yield are factored out of
@@ -226,8 +329,8 @@ physics come with step 7. What the build settled:
 
 - **A new game has a new seed** (from the clock), so the levels differ from game to game.
   `?seed=N` plays the same game again; the tests use it.
-- **Slugs are drawn as white dots, 2 px at least.** At the arena's scale (about 5 px a metre) a
-  6 cm slug would not show.
+- **Shells are drawn as dots, 2 px at least** (the player's white, a gunship's red). At the
+  arena's scale (about 5 px a metre) they would hardly show.
 - **Rocks are dark grey with light edges**; the ship keeps the normal body colours.
 - **Fuel on the HUD is the tank's share**, not the engines' small stores.
 - **Damage on the HUD** is the worst-hit part or weld of the ship flying; 100% once it is lost.

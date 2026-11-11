@@ -1,7 +1,7 @@
 // Mammoth Asteroids' game in the world (docs/games/mammoth-asteroids.md; src/core/arcade.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ARCADE_SCORES, clearestSpot, computeTotals, createWorld, getProfile, hashValue, initialWorld, parseScenario, stepInPlace, type Body, type Command, type World } from "../../src/core/index.ts";
+import { ARCADE_SCORES, clearestSpot, computeTotals, createWorld, getProfile, gunshipPlan, gunshipSpot, hashValue, initialWorld, parseScenario, stepInPlace, type Body, type Command, type World } from "../../src/core/index.ts";
 import { disc } from "../helpers.ts";
 
 const raw = JSON.parse(readFileSync(new URL("../../scenarios/asteroids.json", import.meta.url), "utf8"));
@@ -83,9 +83,9 @@ describe("Mammoth Asteroids", () => {
     expect(s.gold).toEqual({ total: gold.length, left: gold.map((b) => b.id).sort() });
     expect(gold.every((b) => b.material === undefined)).toBe(true);
     expect(pieces.every((b) => b.gravity?.feels && b.gravity.mu > 0)).toBe(true);
-    // The ship: the LAND ship at the centre, at rest, with 60 slugs and a full tank.
+    // The ship: the LAND ship at the centre, at rest, with 40 shells and a full tank.
     expect(body(w, "p1-hull")).toMatchObject({ position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0 });
-    expect(body(w, "p1-gun")!.magazine).toMatchObject({ count: 60, railgun: { channel: "fire", speed: 200 } });
+    expect(body(w, "p1-gun")!.magazine).toMatchObject({ count: 40, railgun: { channel: "fire", speed: 96 } });
     expect(body(w, "p1-tank")!.contents!.reduce((m, c) => m + c.mass, 0)).toBeCloseTo(8.1, 6);
     expect(w.ledger.violations).toBe(0);
   });
@@ -101,11 +101,12 @@ describe("Mammoth Asteroids", () => {
 
   it("MAS-025 MAS-033 when the last gold is collected: the bonus, a pause, then level 2 with two rocks and a fresh ship where the old one was", () => {
     const { w, step } = game();
-    // Fly for a second, with a damaged wing, some fuel burnt and some slugs fired.
-    step(1, [set("left", 1), set("right", 1), set("fire", 1)]);
-    step(1, [set("left", 0), set("right", 0), set("fire", 0)]);
+    // Fly for a second, with a damaged wing, some fuel burnt and a shell fired.
+    step(1, [set("left", 1), set("right", 1)]);
+    step(0.1, [set("left", 0), set("right", 0), set("fire", 1)]);
+    step(0.9, [set("fire", 0)]);
     body(w, "p1-wing")!.integrity = 0.5;
-    expect(body(w, "p1-gun")!.magazine!.count).toBeLessThan(60);
+    expect(body(w, "p1-gun")!.magazine!.count).toBeLessThan(40);
     st(w).gold.left = []; // as if the ship had collected it all
     step(1 / 240);
     // 2 game seconds are 4 of the player's: 1,000 × level 1 + 10 × (120 − 4).
@@ -128,7 +129,7 @@ describe("Mammoth Asteroids", () => {
     expect(hull.velocity.y).toBeCloseTo(old.velocity.y, 1);
     expect(hull.velocity.y).toBeGreaterThan(1); // still moving
     expect(prefixed(w, "p2-").every((b) => b.integrity === 1 && (b.material !== undefined || b.id.includes("-shell-")))).toBe(true);
-    expect(body(w, "p2-gun")!.magazine!.count).toBe(60);
+    expect(body(w, "p2-gun")!.magazine!.count).toBe(40);
     expect(body(w, "p2-tank")!.contents!.reduce((m, c) => m + c.mass, 0)).toBeCloseTo(8.1, 6);
     // It flies by the same keys.
     step(0.5, [set("left", 1), set("right", 1)]);
@@ -215,7 +216,7 @@ describe("Mammoth Asteroids", () => {
     expect(breaks).toBeGreaterThan(0);
     expect(st(w).stats.welds).toBe(breaks);
     expect(st(w).score).toBe(ARCADE_SCORES.weld * breaks);
-    expect(st(w).stats.shots).toBeGreaterThan(10);
+    expect(st(w).stats.shots).toBeGreaterThan(0);
 
     // No slugs: a piece wrecked some other way takes its welds with it, and scores nothing.
     const quiet = game();
@@ -224,6 +225,55 @@ describe("Mammoth Asteroids", () => {
     quiet.step(0.1);
     expect(quiet.w.events.some((e) => e.type === "joint.break" && (e.data.a === piece.id || e.data.b === piece.id))).toBe(true);
     expect(st(quiet.w).score).toBe(0);
+  }, 120_000);
+
+  it("MAS-021 MAS-030 the explosive shell breaks a rock up: its blast pushes pieces apart, so the rock splits within a few hits and few pieces are destroyed; a solid slug did none of that", () => {
+    const mag = raw.world.arcade.ship.bodies.find((b: { id: string }) => b.id === "p{n}-gun").magazine;
+    // The Mammoth scenario's shell, from the mining tuning (AST-008).
+    expect(mag).toMatchObject({ count: 40, reload: 0.25, shell: { mass: 0.5, explosive: { charge: 0.3, fragments: 0, radius: 2 } } });
+    expect(raw.world.arcade.rocks).toMatchObject({ density: 6, bond: 800, material: { threshold: 100, toughness: 20_000 } });
+    const chunks = (w: World) => {
+      const seen = new Set<string>();
+      let n = 0;
+      for (const b of prefixed(w, "a1-0-")) {
+        if (seen.has(b.id)) continue;
+        n++;
+        const stack = [b.id];
+        while (stack.length) {
+          const id = stack.pop()!;
+          if (seen.has(id)) continue;
+          seen.add(id);
+          for (const j of w.joints) if (j.a === id) stack.push(j.b); else if (j.b === id) stack.push(j.a);
+        }
+      }
+      return n;
+    };
+    const fire = (edit?: (scn: typeof raw) => void) => {
+      const { w, step } = game(edit);
+      rockAbove(w);
+      const pieces = prefixed(w, "a1-0-").length;
+      step(2.05, [set("fire", 1)]); // 9 shells
+      step(2, [set("fire", 0)]);
+      return { w, shots: st(w).stats.shots, bursts: w.events.filter((e) => e.type === "detonation").length, chunks: chunks(w), lost: pieces - prefixed(w, "a1-0-").length };
+    };
+    const now = fire();
+    expect(now.shots).toBe(9);
+    expect(now.bursts).toBeGreaterThanOrEqual(7); // nearly every shell reaches the rock and goes off
+    expect(now.chunks).toBeGreaterThanOrEqual(3);
+    expect(now.lost).toBeLessThanOrEqual(3); // pushed apart, not vaporised
+    expect(st(now.w).stats.welds).toBeGreaterThan(3);
+    expect(st(now.w).score).toBe(ARCADE_SCORES.weld * st(now.w).stats.welds);
+    // Gold is untouched by the blasts, and the ship by its own shells.
+    expect(prefixed(now.w, "a1-0-").filter((b) => b.mineral === "gold")).toHaveLength(st(now.w).gold.total);
+    expect(st(now.w)).toMatchObject({ lost: false, lives: 3 });
+    expect(now.w.ledger.violations).toBe(0);
+    // As it first was: a light solid slug. Nine of them break nothing.
+    const before = fire((scn) => {
+      const gun = scn.world.arcade.ship.bodies.find((b: { id: string }) => b.id === "p{n}-gun");
+      gun.magazine.shell = { shape: { kind: "disc", radius: 0.06 }, mass: 0.1, restitution: 0, friction: 0.3 };
+      Object.assign(scn.world.arcade.rocks, { density: 20, bond: 20_000 });
+    });
+    expect(before).toMatchObject({ shots: 9, bursts: 0, chunks: 1, lost: 0 });
   }, 120_000);
 
   it("MAS-031 MAS-032 MAS-033 a lost ship stays as a wreck the keys no longer fly; the next comes after the wait at a clear spot, at rest, protected for a while", () => {
@@ -247,7 +297,7 @@ describe("Mammoth Asteroids", () => {
     // Protected: no part has a material, so nothing damages it (DMG-002). Full tank and magazine.
     expect(prefixed(w, "p2-").every((b) => b.material === undefined)).toBe(true);
     expect(st(w).graceUntil).toBeGreaterThan(w.time);
-    expect(body(w, "p2-gun")!.magazine!.count).toBe(60);
+    expect(body(w, "p2-gun")!.magazine!.count).toBe(40);
     expect(body(w, "p1-engine-l")).toBeDefined(); // the wreck stays
     step(1);
     // Protection over: the materials are back, as the template's.
@@ -296,25 +346,29 @@ describe("Mammoth Asteroids", () => {
     expect(st(w)).toMatchObject({ phase: "over", level: 1 });
   });
 
-  it("MAS-030 a slug lasts 0.7 game seconds, then leaves through the boundary; fired straight up from rest it never comes round to hit its own ship", () => {
+  it("MAS-030 a shell lasts 1.4 game seconds, then leaves through the boundary; fired straight up from rest it never comes round to hit its own ship", () => {
     const { w, step } = game();
-    step(0.05, [set("fire", 1)]); // one shot: the next would come 0.125 s later
+    for (const b of prefixed(w, "a1-")) b.position = { x: b.position.x, y: b.position.y - 30 }; // the rock out of the line of fire
+    settle(w);
+    step(0.05, [set("fire", 1)]); // one shot: the next would come 0.25 s later
     step(1 / 240, [set("fire", 0)]);
     expect(st(w).stats.shots).toBe(1);
     expect(Object.keys(st(w).shells)).toEqual(["p1-gun-shell-1"]);
-    const slug = body(w, "p1-gun-shell-1")!;
-    expect(slug.velocity.y).toBeGreaterThan(195);
-    // The kick: 0.1 kg at 200 m/s against the ship's 34 kg.
-    expect(body(w, "p1-hull")!.velocity.y).toBeCloseTo(-20 / 34.2, 1);
+    const shell = body(w, "p1-gun-shell-1")!;
+    expect(shell.velocity.y).toBeGreaterThan(94);
+    // The kick: 0.5 kg at 96 m/s against the ship's 48 kg (20 kg of it the other 39 shells).
+    expect(body(w, "p1-hull")!.velocity.y).toBeCloseTo(-48 / 47.8, 1);
     let left: number | undefined;
-    for (let i = 0; i < 240 && left === undefined; i++) {
+    for (let i = 0; i < 480 && left === undefined; i++) {
       step(1 / 240);
       if (!body(w, "p1-gun-shell-1")) left = w.ledger.last!.sources.boundary.mass;
     }
-    expect(left).toBeCloseTo(-0.1, 9);
+    expect(left).toBeCloseTo(-0.5, 9);
     expect(st(w).shells).toEqual({});
-    expect(w.time).toBeLessThan(0.7 + 0.05);
+    expect(w.time).toBeGreaterThan(1.35);
+    expect(w.time).toBeLessThan(1.4 + 0.1);
     expect(w.events.some((e) => e.type === "collision" && [e.data.a, e.data.b].some((id) => String(id).includes("-shell-")))).toBe(false);
+    expect(w.events.some((e) => e.type === "detonation")).toBe(false);
     expect(w.ledger.violations).toBe(0);
   });
 
@@ -332,7 +386,7 @@ describe("Mammoth Asteroids", () => {
     };
     const a = run();
     expect(st(a)).toMatchObject({ n: 2, lives: 2, phase: "playing" });
-    expect(st(a).stats.shots).toBeGreaterThan(10);
+    expect(st(a).stats.shots).toBeGreaterThan(5);
     expect(a.ledger.violations).toBe(0);
     expect(hashValue(run())).toBe(hashValue(a));
     expect(hashValue(run(700))).toBe(hashValue(a));
@@ -363,3 +417,246 @@ describe("Mammoth Asteroids", () => {
     expect(bad((s) => delete s.world.arcade.seed)).toThrow(/seed/);
   });
 });
+
+describe("Mammoth Asteroids: gunships", () => {
+  /** A game taken straight to `level`, the ship at rest at the centre. */
+  function at(level: number, edit?: (scn: typeof raw) => void) {
+    const g = game(edit);
+    st(g.w).level = level - 1;
+    st(g.w).gold.left = [];
+    g.step(1.5 + 2 / 240);
+    expect(st(g.w).level).toBe(level);
+    return g;
+  }
+  const hullOf = (w: World) => body(w, `p${st(w).n}-hull`)!;
+  const short = (w: World, a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const W = w.bounds.max.x - w.bounds.min.x;
+    const H = w.bounds.max.y - w.bounds.min.y;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    return Math.hypot(dx - W * Math.round(dx / W), dy - H * Math.round(dy / H));
+  };
+
+  it("MAS-040 MAS-041 MAS-043 when they come and how well they fight: from level 3; from level 9 sooner, more often and more skilled, to their limits", () => {
+    const spec = parseScenario(structuredClone(raw)).world.arcade!;
+    expect(gunshipPlan(spec, 1)).toBeNull();
+    expect(gunshipPlan(spec, 2)).toBeNull();
+    // Game seconds: 10 and 30 are 20 s and a minute on screen.
+    expect(gunshipPlan(spec, 3)).toEqual({ first: 10, every: 30, skill: 0.3 });
+    expect(gunshipPlan(spec, 5)!.skill).toBeCloseTo(0.5, 12);
+    expect(gunshipPlan(spec, 8)).toEqual({ first: 10, every: 30, skill: 0.8 });
+    // Past level 8: 2 s sooner and 5 s closer together a level on screen, and 0.05 more skilled.
+    const nine = gunshipPlan(spec, 9)!;
+    expect([nine.first, nine.every]).toEqual([9, 27.5]);
+    expect(nine.skill).toBeCloseTo(0.85, 12);
+    const twelve = gunshipPlan(spec, 12)!;
+    expect([twelve.first, twelve.every]).toEqual([6, 20]);
+    expect(twelve.skill).toBeCloseTo(1, 12);
+    // Their limits: 10 s into the level, every 20 s on screen, skill 1.
+    for (const level of [16, 30]) expect(gunshipPlan(spec, level)).toEqual({ first: 5, every: 10, skill: 1 });
+    expect(gunshipPlan(spec, 13)).toEqual({ first: 5, every: 17.5, skill: 1 });
+    // Without the late rules, level 9 is as level 8.
+    const plain = structuredClone(spec);
+    delete plain.gunship!.late;
+    expect(gunshipPlan(plain, 20)).toEqual({ first: 10, every: 30, skill: 0.8 });
+  });
+
+  it("MAS-040 no gunship on levels 1 and 2", () => {
+    const { w, step } = game();
+    expect(st(w).nextGunship).toBeUndefined();
+    step(11);
+    expect(prefixed(w, "g")).toHaveLength(0);
+    expect(st(w).gunships).toEqual([]);
+    const two = at(2);
+    expect(st(two.w).nextGunship).toBeUndefined();
+  });
+
+  it("MAS-040 MAS-041 on level 3 a ring shows 10 s in, and half a second later a Gunship 3 beams in there, clear and away from the player, hunting the player's ship", () => {
+    const { w, step } = at(3);
+    const start = st(w).levelStart;
+    expect(st(w).nextGunship).toBeCloseTo(start + 10, 9);
+    step(start + 10 - w.time - 2 / 240);
+    expect(st(w).incoming).toBeUndefined();
+    step(3 / 240);
+    // The ring: where it will come, a beam there, no gunship yet; the next is due 30 s after this one.
+    const ring = st(w).incoming!;
+    expect(ring.at).toBeCloseTo(w.time + 0.5, 1);
+    expect(st(w).beams.some((b) => b.x === ring.x && b.y === ring.y && b.r === 6)).toBe(true);
+    expect(prefixed(w, "g1-")).toHaveLength(0);
+    expect(st(w).nextGunship).toBeCloseTo(start + 40, 9);
+    expect(short(w, hullOf(w).position, ring)).toBeGreaterThanOrEqual(70);
+    step(0.5 + 2 / 240);
+    expect(st(w).incoming).toBeUndefined();
+    expect(st(w).gunships).toEqual([{ n: 1, hull: "g1-hull", out: false }]);
+    const hull = body(w, "g1-hull")!;
+    expect(Math.hypot(hull.position.x - ring.x, hull.position.y - ring.y)).toBeLessThan(0.5);
+    expect(short(w, hullOf(w).position, hull.position)).toBeGreaterThanOrEqual(69);
+    // Clear of everything: nothing of it touches a rock as it arrives.
+    expect(w.contacts.some((c) => (c.a.startsWith("g1-") && c.b.startsWith("a3-")) || (c.b.startsWith("g1-") && c.a.startsWith("a3-")))).toBe(false);
+    // Its pilot: hunting, on the enemy side, with the level's skill; its channels its own.
+    expect(hull.pilot).toMatchObject({ mode: "hunting", side: "enemy", skill: { combat: 0.3 } });
+    expect(w.links.filter((l) => l.kind === "control" && l.to.startsWith("g1-")).map((l) => (l.kind === "control" ? l.channel : "")).sort()).toEqual(["g1.fire", "g1.left", "g1.right"]);
+    expect(prefixed(w, "g1-").some((b) => b.tractor)).toBe(false);
+    // Within a second it has picked the player's ship (a ship with a railgun and no pilot is the player's).
+    step(1);
+    expect(body(w, "g1-hull")!.pilot!.combat!.target).toMatch(/^p\d+-/);
+    expect(w.events.some((e) => e.type === "arcade.gunship" && e.data.n === 1 && e.data.skill === 0.3)).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+  }, 120_000);
+
+  it("MAS-040 a gunship's spot is at least 70 m from the player the short way round, and off the path of what is coming", () => {
+    const bounds = { min: { x: -142, y: -80 }, max: { x: 142, y: 80 }, wrap: true };
+    const empty = createWorld(1, [], { x: 0, y: 0 }, { bounds });
+    for (const player of [{ x: 0, y: 0 }, { x: 130, y: 70 }, { x: -100, y: 10 }]) {
+      const spot = gunshipSpot(empty, player);
+      const dx = spot.x - player.x - 284 * Math.round((spot.x - player.x) / 284);
+      const dy = spot.y - player.y - 160 * Math.round((spot.y - player.y) / 160);
+      expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(70);
+    }
+    // A big rock sitting on the spot an empty arena gives: the gunship comes in somewhere else.
+    const first = gunshipSpot(empty, { x: 0, y: 0 });
+    const blocked = createWorld(1, [disc("rock", { shape: { kind: "disc", radius: 12 }, position: first })], { x: 0, y: 0 }, { bounds });
+    const other = gunshipSpot(blocked, { x: 0, y: 0 });
+    expect(Math.hypot(other.x - first.x, other.y - first.y)).toBeGreaterThan(20);
+  });
+
+  it("MAS-042 a gunship out of the fight scores 1,000 once: its pilot lets go, its controls are cut, and its wreck stays", () => {
+    const { w, step } = at(3);
+    st(w).nextGunship = w.time; // now, not in 10 s
+    step(0.5 + 4 / 240);
+    expect(body(w, "g1-hull")).toBeDefined();
+    const before = st(w).score;
+    body(w, "g1-hull")!.integrity = 0; // its hull destroyed
+    step(2 / 240);
+    expect(st(w).score).toBe(before + ARCADE_SCORES.gunship);
+    expect(st(w).gunships).toEqual([{ n: 1, hull: "g1-hull", out: true }]);
+    expect(st(w).stats.gunships).toBe(1);
+    expect(w.events.filter((e) => e.type === "arcade.gunship.out")).toHaveLength(1);
+    expect(prefixed(w, "g1-").length).toBeGreaterThan(10); // the wreck
+    expect(prefixed(w, "g1-").some((b) => b.pilot)).toBe(false);
+    expect(w.links.some((l) => l.kind === "control" && l.to.startsWith("g1-"))).toBe(false);
+    step(2);
+    expect(st(w).score).toBe(before + ARCADE_SCORES.gunship);
+    // No engine left is out too: the second gunship, with both its engines wrecked.
+    st(w).nextGunship = w.time;
+    step(0.5 + 4 / 240);
+    for (const id of ["g2-engine-l", "g2-engine-r"]) body(w, id)!.integrity = 0;
+    step(2 / 240);
+    expect(st(w).score).toBe(before + 2 * ARCADE_SCORES.gunship);
+    expect(body(w, "g2-hull")).toBeDefined();
+    expect(w.ledger.violations).toBe(0);
+  }, 120_000);
+
+  it("MAS-040 three gunships at the most fly at once: a fourth that is due waits until one is out, and the next is timed from when it came", () => {
+    // One every 2 game seconds, on a level with a protected ship that stays.
+    const { w, step } = at(3, (scn) => Object.assign(scn.world.arcade.gunship, { first: 0.5, every: 2 }));
+    const flying = () => st(w).gunships.filter((g) => !g.out).length;
+    step(6);
+    expect(flying()).toBe(3);
+    step(4); // two more were due by now
+    expect(flying()).toBe(3);
+    expect(st(w).gunshipCount).toBe(3);
+    expect(st(w).incoming).toBeUndefined();
+    expect(st(w).nextGunship).toBeLessThan(w.time); // one is waiting
+    // One is put out: the fourth's ring shows at once, and it comes half a second later.
+    body(w, "g2-hull")!.integrity = 0;
+    step(3 / 240);
+    expect(st(w).incoming).toBeDefined();
+    expect(st(w).nextGunship).toBeCloseTo(w.time + 2, 1); // the fifth is due 2 s after the fourth's ring, not at once
+    step(0.5 + 2 / 240);
+    expect(flying()).toBe(3);
+    expect(st(w).gunships.map((g) => `${g.n}${g.out ? " out" : ""}`)).toEqual(["1", "2 out", "3", "4"]);
+    step(4);
+    expect(st(w).gunshipCount).toBe(4); // and the fifth waits in its turn
+    // A scenario may set another limit.
+    const one = at(3, (scn) => Object.assign(scn.world.arcade.gunship, { first: 0.5, every: 2, most: 1 }));
+    one.step(8);
+    expect(st(one.w).gunshipCount).toBe(1);
+    expect(() => game((scn) => (scn.world.arcade.gunship.most = 0))).toThrow(/most/);
+    expect(w.ledger.violations).toBe(0);
+  }, 300_000);
+
+  it("MAS-041 one hit from a gunship's shell on the hull, wing or gun damages the player's ship, and no single hit destroys it, wherever it lands", () => {
+    const shell = raw.world.arcade.gunship.template.bodies.find((b: { magazine?: unknown }) => b.magazine).magazine;
+    expect(shell.shell).toMatchObject({ mass: 0.15 });
+    expect(shell.shell.explosive).toBeUndefined();
+    // From the left at the hull, from the left at the tank's height, from below, from above, and from the right at an engine.
+    const shots: [{ x: number; y: number }, { x: number; y: number }][] = [
+      [{ x: -5, y: 0 }, { x: 96, y: 0 }],
+      [{ x: -5, y: -0.75 }, { x: 96, y: 0 }],
+      [{ x: 0, y: -6 }, { x: 0, y: 96 }],
+      [{ x: 0, y: 5 }, { x: 0, y: -96 }],
+      [{ x: 5, y: -1.3 }, { x: -96, y: 0 }],
+    ];
+    const parts = new Set<string>();
+    for (const [position, velocity] of shots) {
+      const { w, step } = game();
+      step(0.3, [{ type: "body.add", body: { ...shell.shell, id: "g9-breech-shell-1", position, velocity, angle: 0, angularVelocity: 0 } }]);
+      const hit = w.events.filter((e) => e.type === "collision" && [e.data.a, e.data.b].includes("g9-breech-shell-1")).map((e) => String(e.data.a === "g9-breech-shell-1" ? e.data.b : e.data.a));
+      expect(hit[0]).toMatch(/^p1-/);
+      parts.add(hit[0]);
+      // Damaged: a part or a weld has lost integrity. Not destroyed: the ship flies on.
+      const ship = prefixed(w, "p1-");
+      const worst = Math.max(...ship.map((b) => 1 - b.integrity), ...w.joints.filter((j) => j.a.startsWith("p1-")).map((j) => 1 - j.integrity));
+      // A square hit takes about 6% off a hull part, a glancing one about 1%. The last shot lands on a
+      // chamber wall: a 0.5 kg part is knocked aside and takes too little of the blow to be damaged.
+      if (position.x < 5) expect(worst).toBeGreaterThan(0.005);
+      else expect(worst).toBe(0);
+      expect(st(w)).toMatchObject({ lost: false, lives: 3, phase: "playing" });
+      expect(body(w, "p1-hull")!.integrity).toBeGreaterThan(0.5);
+      expect(w.ledger.violations).toBe(0);
+    }
+    expect(parts.size).toBeGreaterThanOrEqual(4); // the shots landed on different parts
+  });
+
+  it("MAS-025 MAS-040 at a level clear the gunships beam out with the rocks, and the next level's first is due again", () => {
+    const { w, step } = at(3);
+    st(w).nextGunship = w.time;
+    step(0.5 + 4 / 240);
+    expect(prefixed(w, "g1-").length).toBeGreaterThan(10);
+    st(w).gold.left = [];
+    step(1.5 + 2 / 240);
+    expect(st(w).level).toBe(4);
+    expect(prefixed(w, "g")).toHaveLength(0);
+    expect(st(w).gunships).toEqual([]);
+    expect(st(w).incoming).toBeUndefined();
+    expect(st(w).nextGunship).toBeCloseTo(st(w).levelStart + 10, 9);
+    expect(st(w).gunshipCount).toBe(1); // the next is g2: no id is used twice
+    expect(w.controls["g1.left"] ?? 0).toBe(0);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MAS-070 a level with a gunship hunting and firing replays exactly, its shells gone after their time", () => {
+    const run = () => {
+      const { w, step } = at(3, (scn) => (scn.world.arcade.gunship.first = 0.25));
+      // It closes to its stand-off distance, lines up and fires: until its first shot, then a second more.
+      const fired = () => w.events.some((e) => e.type === "railgun.fired" && String(e.data.id).startsWith("g1-"));
+      for (let k = 0; k < 80 && !fired(); k++) step(0.5);
+      step(1);
+      return w;
+    };
+    const a = run();
+    const fired = a.events.filter((e) => e.type === "railgun.fired" && String(e.data.id).startsWith("g1-")).length;
+    expect(fired).toBeGreaterThan(0);
+    // None of its shells is older than their 1.4 s.
+    for (const b of a.bodies) if (b.id.startsWith("g1-breech-shell-")) expect(a.tick - st(a).shells[b.id]).toBeLessThanOrEqual(1.4 * 240);
+    expect(a.ledger.violations).toBe(0);
+    expect(hashValue(run())).toBe(hashValue(a));
+  }, 300_000);
+
+  it("MAS-070 a scenario's gunship is checked", () => {
+    const bad = (edit: (scn: typeof raw) => void) => () => game(edit);
+    expect(bad((s) => (s.world.arcade.gunship.hull = "g{n}-nothing"))).toThrow(/gunship.hull/);
+    expect(bad((s) => s.world.arcade.gunship.template.bodies.forEach((b: { pilot?: unknown }) => delete b.pilot))).toThrow(/pilot/);
+    expect(bad((s) => (s.world.arcade.gunship.every = 0))).toThrow(/every/);
+    expect(bad((s) => (s.world.arcade.gunship.skill.max = 2))).toThrow(/skill/);
+    expect(bad((s) => (s.world.arcade.gunship.late.first = 1))).toThrow(/late.first/);
+    // Without one, the game has no gunships.
+    const none = game((s) => delete s.world.arcade.gunship);
+    st(none.w).level = 4;
+    st(none.w).gold.left = [];
+    none.step(1.5 + 2 / 240);
+    expect(st(none.w).nextGunship).toBeUndefined();
+  });
+});
+

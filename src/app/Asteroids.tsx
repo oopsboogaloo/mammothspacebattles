@@ -185,7 +185,7 @@ function Play() {
           <em>FUEL</em>
         </span>
         <span class={ship.slugs === 0 ? "bad" : ""} data-testid="mas-slugs">
-          SLUGS <b>{ship.slugs}</b>
+          SHELLS <b>{ship.slugs}</b>
         </span>
         <span class={ship.damage > 0.005 ? "bad" : ""} data-testid="mas-damage">
           DAMAGE <b>{(100 * ship.damage).toFixed(0)}</b>%
