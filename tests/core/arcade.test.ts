@@ -97,7 +97,7 @@ describe("Mammoth Asteroids", () => {
     const hull = body(w, "p1-hull")!;
     expect(Math.hypot(hull.position.x, hull.position.y)).toBeLessThan(1e-5);
     expect(hull).toMatchObject({ velocity: { x: 0, y: 0 }, angle: 0 });
-    expect(body(w, "p1-gun")!.magazine).toMatchObject({ count: 120, railgun: { channel: "fire", speed: 96 } });
+    expect(body(w, "p1-gun")!.magazine).toMatchObject({ count: 120, railgun: { channel: "fire", speed: 144 } });
     expect(fuel(w, "p1-")).toBeCloseTo(16.2, 6);
     expect(w.ledger.violations).toBe(0);
   });
@@ -137,7 +137,8 @@ describe("Mammoth Asteroids", () => {
     expect(st(w).gold.total).toBe(prefixed(w, "a2-").filter((b) => b.mineral === "gold").length);
     // The fresh ship: where the old one was a step ago, moving as it was, whole, full.
     const hull = body(w, "p2-hull")!;
-    expect(Math.hypot(hull.position.x - old.position.x, hull.position.y - old.position.y)).toBeLessThan(0.1);
+    // (A step on from there: at its 28 m/s that is 0.12 m.)
+    expect(Math.hypot(hull.position.x - old.position.x, hull.position.y - old.position.y)).toBeLessThan(0.2);
     expect(hull.velocity.y).toBeCloseTo(old.velocity.y, 1);
     expect(hull.velocity.y).toBeGreaterThan(1); // still moving
     expect(prefixed(w, "p2-").every((b) => b.integrity === 1 && (b.material !== undefined || b.id.includes("-shell-")))).toBe(true);
@@ -436,7 +437,7 @@ describe("Mammoth Asteroids", () => {
     expect(st(w)).toMatchObject({ phase: "over", level: 1 });
   });
 
-  it("MAS-030 a shell lasts 1.4 game seconds, then leaves through the boundary; fired straight up from rest it never comes round to hit its own ship", () => {
+  it("MAS-030 a shell lasts 1 game second, then leaves through the boundary; fired straight up from rest it never comes round to hit its own ship", () => {
     const { w, step } = game();
     for (const b of prefixed(w, "a1-")) b.position = { x: b.position.x, y: b.position.y - 30 }; // the rock out of the line of fire
     settle(w);
@@ -445,13 +446,13 @@ describe("Mammoth Asteroids", () => {
     expect(st(w).stats.shots).toBe(1);
     expect(Object.keys(st(w).shells)).toEqual(["p1-gun-shell-1"]);
     const shell = body(w, "p1-gun-shell-1")!;
-    expect(shell.velocity.y).toBeGreaterThan(94);
-    // The kick: 0.167 kg at 96 m/s against the ship's 67 kg (20 kg of it the 120 shells). The ship
+    expect(shell.velocity.y).toBeGreaterThan(141);
+    // The kick: 0.167 kg at 144 m/s against the ship's 67 kg (20 kg of it the 120 shells). The ship
     // as a whole: its parts ring a little on their welds after a shot.
     const ship = prefixed(w, "p1-").filter((b) => !b.id.includes("-shell-"));
     const M = ship.reduce((m, b) => m + bodyMass(b), 0);
     expect(M).toBeCloseTo(66.9, 0);
-    expect(ship.reduce((p, b) => p + bodyMass(b) * b.velocity.y, 0) / M).toBeCloseTo(-16 / M, 2);
+    expect(ship.reduce((p, b) => p + bodyMass(b) * b.velocity.y, 0) / M).toBeCloseTo(-24 / M, 2);
     let left: number | undefined;
     for (let i = 0; i < 480 && left === undefined; i++) {
       step(1 / 240);
@@ -459,8 +460,8 @@ describe("Mammoth Asteroids", () => {
     }
     expect(left).toBeCloseTo(-0.166667, 9);
     expect(st(w).shells).toEqual({});
-    expect(w.time).toBeGreaterThan(1.35);
-    expect(w.time).toBeLessThan(1.4 + 0.1);
+    expect(w.time).toBeGreaterThan(0.95);
+    expect(w.time).toBeLessThan(1 + 0.1);
     expect(w.events.some((e) => e.type === "collision" && [e.data.a, e.data.b].some((id) => String(id).includes("-shell-")))).toBe(false);
     expect(w.events.some((e) => e.type === "detonation")).toBe(false);
     expect(w.ledger.violations).toBe(0);
@@ -526,7 +527,7 @@ describe("Mammoth Asteroids", () => {
     expect(prefixed(w, "p1-").some((b) => b.injector?.firing)).toBe(false);
   });
 
-  it("MAS-035 it accelerates at about 19.3 m/s² forward and 4.2 m/s² in reverse, and turns at about 3.5 rad/s² where it is, either way", () => {
+  it("MAS-035 it accelerates at about 28.3 m/s² forward and 4.2 m/s² in reverse, and turns at about 3.5 rad/s² where it is, either way", () => {
     const after = (held: string[]) => {
       const { w, step } = alone();
       step(2, held.map((c) => set(c, 1)));
@@ -537,8 +538,8 @@ describe("Mammoth Asteroids", () => {
     };
     // Four and a half times the LAND ship's 4.29 m/s², and twice its 1.74 rad/s² (measured the same way).
     const forward = after(["left", "right"]);
-    expect(forward.y).toBeGreaterThan(18.3);
-    expect(forward.y).toBeLessThan(20.3);
+    expect(forward.y).toBeGreaterThan(26.8);
+    expect(forward.y).toBeLessThan(29.8);
     expect(Math.abs(forward.turn)).toBeLessThan(0.02);
     const reverse = after(["reverse"]);
     expect(reverse.y).toBeLessThan(-3.8);
@@ -553,7 +554,7 @@ describe("Mammoth Asteroids", () => {
     const { w, step } = alone();
     step(5, [set("left", 1), set("right", 1)]);
     const hull = body(w, "p1-hull")!;
-    expect(hull.velocity.y).toBeGreaterThan(80); // it has crossed the edge (80 m up) at over 50 m/s
+    expect(hull.velocity.y).toBeGreaterThan(120); // it has crossed the edge (80 m up) at over 65 m/s
     expect(Math.abs(hull.angularVelocity)).toBeLessThan(0.05);
     expect(Math.abs(hull.angle)).toBeLessThan(0.1);
   });
@@ -968,8 +969,8 @@ describe("Mammoth Asteroids: gunships", () => {
     const a = run();
     const fired = a.events.filter((e) => e.type === "railgun.fired" && String(e.data.id).startsWith("g1-")).length;
     expect(fired).toBeGreaterThan(0);
-    // None of its shells is older than their 1.4 s.
-    for (const b of a.bodies) if (b.id.startsWith("g1-breech-shell-")) expect(a.tick - st(a).shells[b.id]).toBeLessThanOrEqual(1.4 * 240);
+    // None of its shells is older than their 1 s.
+    for (const b of a.bodies) if (b.id.startsWith("g1-breech-shell-")) expect(a.tick - st(a).shells[b.id]).toBeLessThanOrEqual(1 * 240);
     expect(a.ledger.violations).toBe(0);
     expect(hashValue(run())).toBe(hashValue(a));
   }, 300_000);

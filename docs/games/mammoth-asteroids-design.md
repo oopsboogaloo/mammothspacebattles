@@ -454,6 +454,12 @@ would mostly remove. That is the next change.
     | solid | 5 to 18% | none | 1 of 7 | never |
     | 3 kJ, 1.5 m | 14 to 42% | up to 48% | 3 of 7 | never |
     | 6 kJ, 2 m (chosen) | 37 to 74% | 5 to 25% | 4 of 7 | never |
+  - **Tuned again (11 November 2026, later):** Chloe asked for half the gravity, 60% more power
+    from the main thruster and shells half as fast again. G is 0.093 again (about 1 m/s² at a
+    large rock's surface). The main thruster's flow is 7.776 kg/s: 28.3 m/s² forward, economy 66
+    for the same two minutes. Shells leave at 144 m/s and kick 0.36 m/s. A shell now lasts 1 game
+    second, not 1.4: the ship's flies 144 m from it, still less than the arena's height, and a
+    gunship's (96 m/s) flies 96 m, where it flew 134.
   - **Welds:** 3 times Lander's, the gun's mount 6 times, two welds between each tank and its
     generator. Nothing bends with all 40 shells fired still, forward, turning or reversing, nor
     spinning at 40 rad/s.

@@ -225,7 +225,7 @@ test("MAS-007 How to play and The physics open from the title, each with Back, a
   await page.getByTestId("mas-open-physics").click();
   const physics = page.getByTestId("mas-physics");
   await expect(physics.getByRole("heading", { name: "THE PHYSICS" })).toBeVisible();
-  for (const text of ["There is no thrust force", "railgun", "Where the game cheats", "Gold can't be damaged", "forty-five times", "5.5 kg"]) await expect(physics).toContainText(text);
+  for (const text of ["There is no thrust force", "railgun", "Where the game cheats", "Gold can't be damaged", "sixty-six times", "5.5 kg"]) await expect(physics).toContainText(text);
   // White on black, as the rest of the game.
   await expect(physics).toHaveCSS("color", "rgb(255, 255, 255)");
   await page.getByTestId("mas-back").click();
