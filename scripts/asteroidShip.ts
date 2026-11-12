@@ -29,6 +29,12 @@ export interface ShipTuning {
   economy: number;
   /** The railgun's magazine, as scenarios write it. */
   magazine: Json;
+  /**
+   * Mammoth Thrust's two units (docs/games/mammoth-thrust-design.md §4.2): a tractor unit under the
+   * left generator and a tether unit under the right one, either side of the main engine. This is the
+   * tractor as scenarios write it, less its origin, direction and tether generator, which are set here.
+   */
+  tractor?: Json;
 }
 
 const rot = (v: Vec, a: number): Vec => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
@@ -195,6 +201,18 @@ export function asteroidShip(t: ShipTuning) {
     engine(`front-${s}`, `f${s}`, `tank-${s}`, { x, y: 0.65 }, Math.PI, 0.8, 0.7, 0.12, t.small, 1.2, [`tank-${s}`]);
   }
   links.push({ id: id("ctl-fire"), kind: "control", channel: "fire", to: id("gun") });
+  if (t.tractor) {
+    // The beam starts on the centre line under the ship and points down its tail: the unit is off to
+    // the left, so the origin is given from the unit's own centre (-1.025, -0.7).
+    box("tractor", -1.3, -0.75, -0.9, -0.5, 1, { tractor: { ...t.tractor, origin: { x: 1.025, y: -0.2 }, direction: { x: 0, y: -1 }, tetherFrom: id("tether") } });
+    box("tether", 0.75, 1.3, -0.9, -0.5, 1);
+    // Two welds each, apart: the tether pulls on the tractor unit, and one weld alone twists off.
+    for (const [x, n] of [[-1.25, "a"], [-0.8, "b"]] as const) {
+      weld(`tractor-gen-${n}`, "tractor", "gen-l", { x, y: -0.5 });
+      weld(`tether-gen-${n}`, "tether", "gen-r", { x: -x, y: -0.5 });
+    }
+    links.push({ id: id("ctl-tractor"), kind: "control", channel: String(t.tractor.channel), to: id("tractor") });
+  }
   // The game places a ship by its hull: the parts are laid out round the cockpit's centre.
   const o = at.get("hull")!.position;
   for (const b of bodies) b.position = rv(sub(b.position as Vec, o));

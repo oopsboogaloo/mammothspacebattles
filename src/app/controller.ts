@@ -134,6 +134,7 @@ function undecided(world: World): boolean {
   // Mammoth Lander plays on through each ship's verdict: the game itself decides when it's over.
   if (world.lander) return world.lander.state.phase !== "over";
   if (world.arcade) return world.arcade.state.phase !== "over";
+  if (world.thrust) return world.thrust.state.phase === "flying" || world.thrust.state.phase === "between";
   return world.challenge?.status.phase === "flying" || world.duel?.status.phase === "fighting";
 }
 
@@ -149,7 +150,7 @@ function afterStep(run: StepRun, plan: StepPlan, flying: boolean, opts: { deadli
   run.steps++;
   const t = world.tick;
   // Snapshots are for scrubbing back through a run; the game has no scrubbing (each one is a whole world).
-  if (t % SNAPSHOT_EVERY === 0 && !world.lander && !world.arcade) run.snapshots.push([t, structuredClone(world)]);
+  if (t % SNAPSHOT_EVERY === 0 && !world.lander && !world.arcade && !world.thrust) run.snapshots.push([t, structuredClone(world)]);
   const pending = plan.edits.filter((e) => e.tick === t).flatMap((e) => e.commands);
   if (pending.length) applyCommands(world, pending, plan.profile);
   for (const s of plan.series) {
