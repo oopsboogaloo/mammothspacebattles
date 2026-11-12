@@ -34,6 +34,14 @@ const overPod = (page: Page) =>
     return m.edit(w.bodies.filter((b) => b.id.startsWith(`p${n}-`)).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
   });
 
+/**
+ * Switches every turret off. A turret fires at random bearings, so whether a bolt knocks a ship the
+ * test is flying depends on how the browser's timing falls: tests that are about something else
+ * fly with the turrets quiet.
+ */
+const quiet = (page: Page) =>
+  hook(page, (m) => m.edit(m.sandbox().world.bodies.filter((b) => b.turret).map((b) => ({ type: "body.set", id: b.id, patch: { turret: { ...b.turret, enabled: false } } }))));
+
 test("MTH-001 MTH-002 Mammoth Thrust on its own page: the title over a still map, then play with only the level, the HUD and the buttons", async ({ page }) => {
   await page.goto("./thrust.html");
   await expect(page).toHaveTitle("Mammoth Thrust");
@@ -112,6 +120,7 @@ test("MTH-021 touch: the beam button works the tractor while held, with a thrust
 test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the top, the level is complete, and level 2 opens with the score and ships carried over", async ({ page }) => {
   test.setTimeout(120_000);
   await start(page);
+  expect(await quiet(page)).toBe(true);
   expect(await overPod(page)).toBe(true);
   await page.keyboard.down("z");
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON THE TETHER", { timeout: 15_000 });
