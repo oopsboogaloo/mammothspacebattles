@@ -32,7 +32,7 @@ other sources in §12):
 | Ship | The Mammoth Asteroids ship (67 kg), with a **tractor unit** under the belly and a **tether unit** beside it (two new parts, each can be knocked off). About twice the turning power (3.5 → about 7 rad/s²). |
 | Gun | The same cannon, firing **solid slugs with no charge**: no blast, so a shot at a wall beside you does nothing to you. Turrets, the factory and fuel tanks are damaged by the impact alone. Speed, mass, rate and magazine to be tuned. |
 | Gravity | Uniform, **4 m/s²** down (Lander: 1.6), for the first tuning pass. |
-| Landscape | Lander's kind: a polyline (later Chloe's hand-drawn outlines, as Cave 2), fixed rock that can't be damaged. First level: lunar mountains on the surface, and one cave that twists back and forth a little and mostly goes down. |
+| Landscape | Lander's kind: a polyline (later Chloe's hand-drawn outlines, as Cave 2), fixed rock that can't be damaged. The levels grow as the original's do: an open surface first, then one chamber, then twisting caves. All layouts are our own. |
 | On the surface | A small **factory** (the reactor) and a couple of other buildings. |
 | Pod | A sphere of about **half the ship's mass (33 kg)** on a stand at the bottom of the cave. Taken with the tractor beam and held on the tether. |
 | Tether | The existing springy tether (TRC-004), retuned: a damped spring between the centres of mass that breaks over its tension limit (TRC-006). Not the original's rigid rod. |
@@ -80,10 +80,24 @@ other sources in §12):
   buildings, the turrets, the fuel tanks, and the height of the level's top.
 - The ground is fixed and can't be damaged. Buildings are fixed bodies with a material, so they
   can be damaged and destroyed.
-- The first level: mountains across about 600 m; the factory and two buildings on a flat between
-  them; one cave mouth, a cave that turns four or five times on its way about 300 m down, never
-  narrower than about 25 m (the tether is 15 m, and the pod must swing through); two turrets on the
-  surface and three or four in the cave; two fuel tanks; the pod in a chamber at the bottom.
+- **How the levels grow** (from the map of the original's six missions Chloe supplied, 12 November
+  2026). The original starts very small and adds one thing at a time: an open surface with the pod
+  in plain sight; then a short shaft into a single chamber; then stepped caves that get longer,
+  with more turrets and fuel; doors from the fourth mission. Ours follow that progression.
+- **Our own layouts.** We take the scale and the order of difficulty, not the shapes: no level is
+  traced or copied from the original's.
+- **Level 1 (MVP): the surface.** No cave. Lunar mountains across about 300 m, with a hollow
+  between them. The pod stands in the hollow, in plain sight. The factory and two buildings on a
+  flat to one side, one fuel tank, one turret. It teaches flying, the beam, the tether and the
+  climb out.
+- **Level 2 (MVP): one chamber.** The factory, a building and a turret on the surface. One shaft,
+  about 30 m wide and 80 m deep, opens into a single chamber about 120 m across. Two turrets on
+  the chamber's walls, the pod and a fuel tank on its floor. It teaches flying the pod up a shaft.
+- **Level 3 (after the MVP): the twisting cave.** Mountains across about 600 m; a cave that turns
+  four or five times on its way about 300 m down; two turrets on the surface and three or four in
+  the cave; two fuel tanks; the pod in a chamber at the bottom.
+- No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
+  through).
 - The level doesn't wrap. Its sides are high rock walls beyond the mountains.
 
 ### The ship
@@ -219,8 +233,9 @@ Priority: **M** must, **S** should.
 **Level**
 - **MTH-010** `[M]` A level is a generated scenario with fixed, undamageable ground from an
   outline, uniform gravity of 4 m/s², and no wrap.
-- **MTH-011** `[M]` The first level has surface mountains, a factory, two other buildings, a cave
-  to a pod chamber, turrets and fuel tanks, as §3.
+- **MTH-011** `[M]` The first version has two levels of our own design, as §3: an open surface
+  with the pod in sight, and a shaft into one chamber. Each has a factory, a turret or more, and a
+  fuel tank.
 - **MTH-012** `[M]` The generator fails if the cave is anywhere narrower than its declared
   least width.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
@@ -293,13 +308,13 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 
 ## 9. Milestones
 
-1. **Playable cave:** the level generator and first level, the ship with tractor, tether and slug
+1. **Playable levels:** the level generator and levels 1 and 2, the ship with tractor, tether and slug
    cannon, the pod, gravity, win and life-lost rules, the page and HUD. No enemies.
 2. **Turrets and the factory:** fixed turrets, concussive bolts, stopping the turrets, critical
    and countdown.
 3. **Fuel and shield.**
 4. **Title (a still map), How to play, The physics, high scores.**
-5. **Tuning after play;** Chloe's hand-drawn levels.
+5. **Tuning after play;** level 3 and Chloe's hand-drawn levels.
 6. **Later:** doors opened by shooting a panel.
 
 ## 10. Answered (12 November 2026)
