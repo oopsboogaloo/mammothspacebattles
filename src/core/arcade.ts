@@ -108,9 +108,14 @@ export interface ArcadeSpec {
 export function arcadeMix(world: World): void {
   const spec = world.arcade?.spec;
   if (!spec?.mix || spec.demo) return;
+  mixControls(world, spec.mix);
+}
+
+/** Sets each row's channel from the controls held: a mix as Mammoth Asteroids' and Mammoth Thrust's ships use. */
+export function mixControls(world: World, mix: NonNullable<ArcadeSpec["mix"]>): void {
   const held = (c: string) => (world.controls[c] ?? 0) > 0;
   let next: Record<string, number> | null = null;
-  for (const row of spec.mix) {
+  for (const row of mix) {
     const value = row.any.some((r) => r.on.every(held) && !(r.off ?? []).some(held)) ? 1 : 0;
     if ((world.controls[row.channel] ?? 0) !== value) (next ??= { ...world.controls })[row.channel] = value;
   }

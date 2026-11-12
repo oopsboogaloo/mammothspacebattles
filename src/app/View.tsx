@@ -317,6 +317,7 @@ export function View() {
         groundLine: !!sb.world.lander,
         stars: sb.world.arcade ? "still" : !!sb.world.lander,
         arcade: !!sb.world.arcade,
+        thrust: sb.world.thrust?.spec.view,
         // In a challenge the parts' ids are clutter: the pad is marked instead.
         labels: !sb.world.challenge && sb.scenario.ui?.labels !== false,
       });

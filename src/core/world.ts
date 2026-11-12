@@ -18,7 +18,8 @@ import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
-import { arcadeMix, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
+import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
+import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { boundingRadiusOf, massProps, normalizePolygon, type Shape } from "./shapes.ts";
@@ -341,6 +342,8 @@ export interface World {
   duel?: Duel;
   /** Mammoth Asteroids' game: levels, gold, lives and the score (docs/games/mammoth-asteroids.md). */
   arcade?: ArcadeGame;
+  /** Mammoth Thrust's game: ships, the pod and the level's top (docs/games/mammoth-thrust.md). */
+  thrust?: ThrustGame;
   /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
   blasts?: Blast[];
   /** The plume's tail: gas gone from the gas model, fading out (GAS-011): see wisps.ts. */
@@ -402,7 +405,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -432,6 +435,8 @@ export function createWorld(
   world.events = [];
   // Mammoth Asteroids starts with its first ship and level in the world.
   if (extra.arcade) world.arcade = startArcade(world, extra.arcade, ARCADE_OPS);
+  // Mammoth Thrust starts with its first ship in the world.
+  if (extra.thrust) world.thrust = startThrust(world, extra.thrust, ARCADE_OPS);
   world.ledger.totals = computeTotals(world);
   if (extra.challenge) world.challenge = startLanding(world, structuredClone(extra.challenge));
   if (extra.lander) world.lander = startLander(extra.lander);
@@ -1262,6 +1267,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   if (world.lander) landerStartJudge(world);
   // Mammoth Asteroids' ship: the player's controls drive its engines (MAS-035).
   if (world.arcade?.spec.mix) arcadeMix(world);
+  if (world.thrust?.spec.mix) mixControls(world, world.thrust.spec.mix);
   // AI pilots decide and set their own channels, as a player's keys would (AIP-001, AIP-002).
   if (world.bodies.some((b) => b.pilot)) runPilots(world, profile.timestep);
   mark("commands");
@@ -1587,6 +1593,16 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   if (world.arcade) {
     const t0 = computeTotals(world);
     if (runArcade(world, dt, ARCADE_OPS)) {
+      after = computeTotals(world);
+      addDelta(sources.boundary, diff(t0, after));
+    }
+  }
+
+  // Mammoth Thrust (MTH-023, MTH-026): each new ship comes in, and a ship beamed back from the
+  // level's top is moved, through the boundary.
+  if (world.thrust) {
+    const t0 = computeTotals(world);
+    if (runThrust(world, dt, ARCADE_OPS)) {
       after = computeTotals(world);
       addDelta(sources.boundary, diff(t0, after));
     }

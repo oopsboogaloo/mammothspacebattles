@@ -11,6 +11,7 @@ import { generateAsteroid, type AsteroidSpec } from "./asteroid.ts";
 import type { LandingGoal } from "./landing.ts";
 import type { DuelGoal } from "./duel.ts";
 import type { ArcadeSpec } from "./arcade.ts";
+import type { ThrustSpec } from "./thrust.ts";
 import { PROFILES, getProfile, type Profile } from "./profile.ts";
 import type { ShipTemplate } from "./spawn.ts";
 import { polygonProblem } from "./shapes.ts";
@@ -68,7 +69,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; asteroids?: AsteroidSpec[] };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; asteroids?: AsteroidSpec[] };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -355,6 +356,7 @@ function validateTractor(v: V, t: unknown, path: string): void {
     if (!isObj(t.tether)) return err(v, `${path}.tether`, "must be {length?, stiffness?, damping?, maxTension?}");
     for (const k of ["length", "stiffness", "maxTension"]) if (t.tether[k] !== undefined) num(v, t.tether[k], `${path}.tether.${k}`, { positive: true });
     if (t.tether.damping !== undefined) num(v, t.tether.damping, `${path}.tether.damping`, { min: 0 });
+    if (t.tether.payOut !== undefined) num(v, t.tether.payOut, `${path}.tether.payOut`, { positive: true });
   }
 }
 
@@ -498,6 +500,54 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
     err(v, `${path}.lines`, "must be a list of lines, each of two or more points {x, y}");
   if (g.solid !== undefined && (!Array.isArray(g.solid) || !g.solid.every((x) => x === "below" || x === "above" || x === "outside")))
     err(v, `${path}.solid`, 'must be a list of "below", "above" or "outside", one for each line');
+}
+
+function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
+  if (!isObj(g)) return err(v, path, "must be an object {ship, hull, tractor, start, top, pod}");
+  if (!isObj(g.ship) || !Array.isArray(g.ship.bodies) || !g.ship.bodies.length) err(v, `${path}.ship`, "must be {bodies, joints?, links?} with at least one body");
+  else
+    for (const k of ["hull", "tractor"]) {
+      const id = g[k];
+      if (typeof id !== "string" || !id.includes("{n}")) err(v, `${path}.${k}`, 'must be an id with "{n}"');
+      else if (!g.ship.bodies.some((b) => isObj(b) && b.id === id)) err(v, `${path}.${k}`, "must be the id of one of the ship's bodies");
+    }
+  const point = (p: unknown, at: string) => {
+    if (!isObj(p)) return err(v, at, "must be a point {x, y}");
+    num(v, p.x, `${at}.x`, {});
+    num(v, p.y, `${at}.y`, {});
+  };
+  point(g.start, `${path}.start`);
+  num(v, g.top, `${path}.top`, {});
+  if (isObj(g.start) && typeof g.start.y === "number" && typeof g.top === "number" && g.start.y >= g.top) err(v, `${path}.start`, "must be below the level's top");
+  if (typeof g.pod !== "string" || !Array.isArray(bodies) || !bodies.some((b) => isObj(b) && b.id === g.pod)) err(v, `${path}.pod`, "must be the id of one of the world's bodies");
+  if (g.lives !== undefined) num(v, g.lives, `${path}.lives`, { int: true, min: 1, max: 99 });
+  if (g.level !== undefined) num(v, g.level, `${path}.level`, { int: true, min: 1 });
+  for (const k of ["respawn", "grace"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
+  if (g.scores !== undefined) {
+    if (!isObj(g.scores)) err(v, `${path}.scores`, "must be an object {pod?, fuel?}");
+    else for (const k of ["pod", "fuel"]) if (g.scores[k] !== undefined) num(v, g.scores[k], `${path}.scores.${k}`, { min: 0 });
+  }
+  if (g.carry !== undefined) {
+    if (!isObj(g.carry)) err(v, `${path}.carry`, "must be an object {score, lives}");
+    else {
+      num(v, g.carry.score, `${path}.carry.score`, { min: 0 });
+      num(v, g.carry.lives, `${path}.carry.lives`, { int: true, min: 1, max: 99 });
+    }
+  }
+  if (g.view !== undefined) {
+    const outline = (l: unknown, at: string) => {
+      if (!Array.isArray(l) || l.length < 3) return err(v, at, "must be a closed outline of at least 3 points");
+      l.forEach((p, i) => point(p, `${at}[${i}]`));
+    };
+    if (!isObj(g.view)) err(v, `${path}.view`, "must be an object {colour, pitch, sky, caves}");
+    else {
+      if (typeof g.view.colour !== "string" || !g.view.colour) err(v, `${path}.view.colour`, "must be a colour");
+      num(v, g.view.pitch, `${path}.view.pitch`, { positive: true });
+      outline(g.view.sky, `${path}.view.sky`);
+      if (!Array.isArray(g.view.caves)) err(v, `${path}.view.caves`, "must be a list of outlines");
+      else g.view.caves.forEach((c: unknown, i: number) => outline(c, `${path}.view.caves[${i}]`));
+    }
+  }
 }
 
 function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
@@ -847,6 +897,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     if (data.world.duel !== undefined) validateDuel(v, data.world.duel, data.world.bodies, "$.world.duel");
     if (data.world.lander !== undefined) validateLander(v, data.world.lander, data.world.bodies, "$.world.lander");
     if (data.world.arcade !== undefined) validateArcade(v, data.world.arcade, data.world.bounds, "$.world.arcade");
+    if (data.world.thrust !== undefined) validateThrust(v, data.world.thrust, data.world.bodies, "$.world.thrust");
   }
 
   let endSteps = Infinity;
@@ -970,7 +1021,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust },
     getProfile(scn.profile),
   );
 }

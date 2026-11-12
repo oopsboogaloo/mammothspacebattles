@@ -210,4 +210,32 @@ describe("tractor beam", () => {
     expect(() => parseScenario(raw)).toThrow(/tetherFrom/);
     expect(() => parseScenario(raw)).toThrow(ScenarioError);
   });
+
+  it("TRC-010 a tether that pays out starts at the distance its cargo was taken at and lengthens to its length, so the two aren't thrown apart", () => {
+    // Taken at 9 m on a 15 m tether. At its full length at once, the spring pushes the two apart hard.
+    const at9 = () => [ball("ball", 1, 50, 0, -9)];
+    const hard = world(at9());
+    engage(hard);
+    run(hard, 24);
+    const thrown = Math.abs(at(hard, "ball").velocity.y - at(hard, "ship").velocity.y);
+    const soft = world(at9(), { tether: { payOut: 4 } });
+    engage(soft);
+    expect(at(soft, "ship").tractor!.paid).toBeCloseTo(9, 1);
+    run(soft, 24);
+    const eased = Math.abs(at(soft, "ball").velocity.y - at(soft, "ship").velocity.y);
+    expect(thrown).toBeGreaterThan(8);
+    expect(eased).toBeLessThan(4.5); // no faster than it pays out
+    run(soft, 600);
+    expect(at(soft, "ship").tractor!.paid).toBeUndefined(); // paid out: its full length from now on
+    expect(reach(soft, "ball")).toBeGreaterThan(14);
+    expect(reach(soft, "ball")).toBeLessThan(16);
+    expect(soft.ledger.violations).toBe(0);
+    // Letting go forgets how far it had paid out.
+    const again = world(at9(), { tether: { payOut: 4 } });
+    engage(again);
+    run(again, 1, () => set(1));
+    expect(at(again, "ship").tractor).toMatchObject({ mode: "off" });
+    expect(at(again, "ship").tractor!.paid).toBeUndefined();
+    expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ tether: { payOut: 0 } })] } })).toThrow(ScenarioError);
+  });
 });

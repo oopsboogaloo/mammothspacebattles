@@ -32,6 +32,12 @@ export interface Tether {
   damping: number;
   /** Largest force it carries, pulling or pushing, before it breaks, N. */
   maxTension: number;
+  /**
+   * How fast it lengthens after taking cargo nearer than its length, m/s (TRC-010). It then starts
+   * at the distance the cargo was taken at and pays out to its length, so the two aren't thrown
+   * apart. Without it the tether is its full length at once.
+   */
+  payOut?: number;
 }
 
 export interface Tractor {
@@ -63,6 +69,8 @@ export interface Tractor {
   latched: boolean;
   /** State: the tethered body. */
   cargo?: string;
+  /** State: the tether's length now, m, while it is paying out (TRC-010). */
+  paid?: number;
   /** State: last step's tether force, N (positive pulling), and the beam's targets. */
   tension: number;
   targets: string[];
@@ -160,6 +168,7 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
         ev("tether.release", { id: b.id, cargo: t.cargo ?? "" });
         t.mode = "off";
         t.cargo = undefined;
+        t.paid = undefined;
         t.latched = pressed;
         continue;
       }
@@ -219,6 +228,7 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
   if (best) {
     t.mode = "tether";
     t.cargo = best.r.body.id;
+    if (t.tether.payOut !== undefined) t.paid = Math.min(t.tether.length, best.dist);
     ev("tractor.off", { id: ship.body.id });
     ev("tether.engage", { id: ship.body.id, cargo: t.cargo, distance: best.dist });
     return;
@@ -259,7 +269,10 @@ function tether(world: World, ship: RB, cargo: RB, roots: ReadonlyMap<string, st
   // Through both centres of mass: each end's effective mass is its whole mass.
   const invMu = 1 / a.mass + 1 / c.mass;
   const mu = 1 / invMu;
-  const { stiffness: k, damping: zeta, length: L, maxTension } = t.tether;
+  const { stiffness: k, damping: zeta, maxTension } = t.tether;
+  // A tether that pays out (TRC-010) is as long as it has got so far.
+  const L = t.paid ?? t.tether.length;
+  if (t.paid !== undefined) t.paid = t.paid + (t.tether.payOut ?? 0) * dt >= t.tether.length ? undefined : t.paid + (t.tether.payOut ?? 0) * dt;
   const damp = 2 * zeta * Math.sqrt(k * mu);
   const v = dot(sub(groupVelocity(c), groupVelocity(a)), n);
   const x = dist - L;
@@ -277,6 +290,7 @@ function tether(world: World, ship: RB, cargo: RB, roots: ReadonlyMap<string, st
     ev("tether.break", { id: ship.body.id, cargo: t.cargo ?? "", tension: Math.abs(J) / dt, limit: maxTension });
     t.mode = "off";
     t.cargo = undefined;
+    t.paid = undefined;
   }
   void world;
 }

@@ -361,6 +361,7 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **ASM-005** `[M · M2 · P]` When broken joints split an assembly, each part shall become its own assembly, and the total momentum and angular momentum of the parts shall be conserved.
 - **ASM-006** `[M · M2 · U]` Links shall have zero mass. Control links carry command values on channels. Feed links carry named resources up to a flow rate.
 - **ASM-007** `[S · M2 · S]` Where gravity is enabled, the system shall apply point-mass gravity between bodies above a mass threshold, and from fixed background sources (ORC-005).
+- **ASM-008** `[M · M10 · S]` A joint may be turned (`turn: {rate, min, max, target}`): its rest angle shall move toward the target at the rate, inside the limits, and the joint shall hold its bodies at that angle as a weld does, carry load and break as one (ASM-003, ASM-004). The work of turning is booked under `power`. *For Mammoth Thrust's turret mount; agreed with Chloe, 12 November 2026.*
 
 ### 9.4 Gas parcels (M3)
 
@@ -480,6 +481,8 @@ Ships built from the M4 parts, flown by hand. Steering here comes from throttlin
 - **WPN-006** `[M · M6 · P]` Explosions shall damage through represented gas, fragments and contacts, plus one declared blast term: every damageable body within a small blast radius takes a share of the charge's energy that falls off with distance and with the part of the view it fills. *(Amended 2026-11 by decision: it was gas, fragments and contacts only, with no radial damage formula.)*
 - **WPN-007** `[S · M6 · S]` Stored shells shall be able to detonate in a chain reaction from neighbouring explosions.
 - **WPN-008** `[M · M8 · S]` A railgun (`magazine.railgun`: channel, launch speed) shall launch its next shell from the muzzle along the bore, the step its channel is on and its reload has passed, with no propellant gas: the gun gives the shell its launch speed relative to the muzzle and takes the equal and opposite push, so momentum and angular momentum are exact; the shell's mass leaves the magazine as when a cannon loads. The energy comes from the ship's power, recorded in the ledger under `power`. *Added November 2026 as a stand-in for the gas cannon on Gunship 3: firing the gas cannon while thrusting hard pressed the 1 kg shell back against the breech, crushing its propellant, and a single step then took 5–18 s (the duel froze). The gas cannon stays for Gunship 2 and the cannon tests, to come back to.*
+- **WPN-009** `[M · M10 · S]` A turret (`turret`: a turned joint, a railgun, a side, range, wait, hold, aim, spread) shall, while a body of the other side is in range with a clear line, pick a bearing inside its joint's arc, turn to it, and fire its railgun only once the joint is on that bearing; then hold, and pick again. Aim `random` takes the bearing from the turret's own seeded generator; aim `ship` takes the target's present bearing with a random error within the spread. Its first shot comes no sooner than its wait after first sight. It is not a pilot.
+- **WPN-010** `[M · M10 · U]` A turret may name a battery (`charge: {shots, capacity}`). Each shot shall take one from it, and with none the turret shall not fire. A generator (`generator: {battery, burn}`) that is whole and has fuel shall burn it and refill the battery to its capacity. The turret fires only while its gun, carriage, mount and battery are joined by unbroken joints. Burnt fuel is booked under `boundary`. *A first, simple rule: there is no power model yet.*
 
 *Model as built so far (M6, first look).*
 - **A gas cannon test (GUN).** A free-floating 100 kg cannon sits 20 m from the FT-B ship and is aimed at it. It is a breech block holding a charge of hydrogen and oxygen, welded to two barrel walls, with a solid 0.3 × 0.36 m shell in the 0.4 m bore. At 0.5 s (or on F) the breech injects the whole charge in 0.05 s and lights it. The hot gas drives the shell, and the cannon recoils. With the defaults (0.1 kg charge, 5 kg shell, 3 m barrel), the shell leaves at 28.7 m/s and the cannon recoils at 1.46 m/s. Without the asteroids' gravity, the momenta of shell, cannon and gas sum to zero within 10⁻⁶ (ORC-009). The shell can't be damaged; the ship's strengths are FT-B's sliders.
@@ -601,6 +604,9 @@ Salvage: a ship pulls loose objects in with a beam and tows them home on a tethe
 - **TRC-005** `[M · M7 · U]` Pressing the control again shall let the cargo go. The beam shall not return until the control has been released and pressed afresh.
 - **TRC-006** `[M · M7 · U]` A tether whose force passes its declared maximum shall break, raising `tether.break`.
 - **TRC-007** `[S · M7 · U]` A tractor may name a separate body as its tether generator. While that body is gone, wrecked or no longer on the ship, the beam still pulls but no tether is made, and a tether already made lets go (`tether.release`).
+- **TRC-008** `[M · M10 · U]` A tractor may siphon (`siphon: {rate, into}`): while its beam is on and a body in the wedge that is marked `siphon` holds propellant, it shall move that propellant to the named tanks at the rate, until the source is empty or the tanks are full, conserving mass (booked under `transfer`).
+- **TRC-009** `[M · M10 · U]` A body marked `capture: false` shall be pulled by a beam but never taken by a tether.
+- **TRC-010** `[M · M10 · S]` A tether may pay out (`tether.payOut`, m/s): taking cargo nearer than its length, it shall start at the distance the cargo was taken at and lengthen at that rate to its length, so the two are not thrown apart. Without it the tether is its full length at once (TRC-004). *Added 12 November 2026 while building Mammoth Thrust: a 34 kg pod taken at 9 m on a 12 m tether was pushed off with 6,000 N, which tore the tractor unit from the ship.*
 
 *Model as built (first look).*
 - **Where it acts.** Tractors run once per step, after gravity and before contacts, as velocity changes on both ends. Each pull is a pair along the line between its two points, so momentum and angular momentum are exact. The ship and the cargo are assemblies; the welds share each pull in the contact solve, so a hard yank loads them.
@@ -786,6 +792,16 @@ Your Gunship 3 against an AI Gunship 3 among the asteroids: the first playable f
   - *Measured:* against a player who does nothing it closes in, holds off and fires; the first explosive shell that hits knocks the player out, at about 11 s, with the ledger clean. About 5.5 ms a step with the railgun (WPN-008); with the gas cannon, firing while thrusting could take 5–18 s a step.
 - **Next:** balance (one hit is often enough: armour, more welds, or smaller blasts), several enemies, and Cautious or Evading ships as bystanders.
 
+### 9.12 Shield (M10)
+
+A field round a ship that turns away shells and gas while it is held, for Mammoth Thrust (`docs/games/mammoth-thrust-design.md` §2.5). Agreed with Chloe, 12 November 2026. It is a declared cheat: the momentum it takes goes nowhere, and the ledger records how much.
+
+- **SHD-001** `[M · M10 · U]` A shield (`shield: {channel, radius, burn, from}`) shall be up while its channel is on and its tanks hold fuel, and shall draw fuel at its burn rate while up.
+- **SHD-002** `[M · M10 · S]` While a shield is up, a shell of another assembly that enters its radius closing on the ship shall have its velocity relative to the ship reflected about the line from the ship's centre of mass, without bursting, and the ship's velocity shall not change.
+- **SHD-003** `[M · M10 · S]` While a shield is up, gas shall meet it as a wall of its radius moving with the ship, and shall give the ship no impulse; and the declared blast term (WPN-006) of a blast centred outside the field shall not damage the ship's bodies.
+- **SHD-004** `[M · M10 · P]` The momentum and energy a shield takes from shells and gas shall be booked under `boundary`, so the ledger closes.
+- **SHD-005** `[M · M10 · U]` A shield shall do nothing to contacts: rock, buildings and other bodies collide with the ship as if it were down.
+
 ## 10. Performance Requirements
 
 - **NFR-001** `[M · M1 · B]` A benchmark command shall report steps per second for each reference scenario, and CI shall record results per commit.
@@ -960,7 +976,7 @@ Logged November 2026. The work builds towards a few playable mini games, each a 
 | **Mini game 1: Lander** | Land a ship on a pad under gravity (FLT-005). | Done (LAND). |
 | **Mini game 2: Asteroids** | Clear waves of asteroids. | In progress (M9): **Mammoth Asteroids**, `docs/games/mammoth-asteroids.md` (spec) and `mammoth-asteroids-design.md` (design and plan). |
 | **Mini game 3: Combat duel** | A duel with an AI ship among the asteroids. | First version built (AI-3, §9.11), on AI pilots phases 1–3 (§9.10). |
-| **Mini game 4: Thrust** | Fly a cave past turrets, take a pod on the tether and carry it out. | Draft spec (12 November 2026): **Mammoth Thrust**, `docs/games/mammoth-thrust.md` (spec) and `mammoth-thrust-design.md` (design and plan). Nothing built. |
+| **Mini game 4: Thrust** | Fly a cave past turrets, take a pod on the tether and carry it out. | Draft spec (12 November 2026): **Mammoth Thrust**, `docs/games/mammoth-thrust.md` (spec) and `mammoth-thrust-design.md` (design and plan). The engine changes are agreed (12 November 2026): ASM-008, WPN-009, WPN-010, TRC-008, TRC-009, SHD-001…005 (M10). **The MVP is built** (12 November 2026): two levels, the ship, the pod, lives, the level's top, and the page `thrust.html`, with TRC-010. Turrets, the factory, fuel through the beam and the shield are still to build. |
 | **Main game MVP** | A small economy with a tech and crafting tree; the home base (§9.8c); some kind of sector selection; mining in each sector, with combat threats in the more dangerous sectors. | Needs the rest: Mining and Mad pilots, sectors with exits (ships come and go), spending what is delivered (recipes, buildings, ship upgrades), and the cockpit with its mammoth pilot (§9.9). |
 
 *AI pilot plan (M8), one PR per phase.* 1: foundations (pilots in the step, per-ship channels, learning the ship from its design and correcting in flight, thrust allocation, attitude). 2: navigation and Ignoring (fly to a point, routes, station keeping, collision avoidance, inspector and overlay). 3: combat (detection, sides, leading the target, fire control; Hunting, Cautious, Evading). 4: Mining and Mad (tractor control, a minimal sector exit). 5: skill model and tuning (a delayed view of the world and unsteady hands first; deliberate mistakes later), against the speed budget.
@@ -982,6 +998,7 @@ Each milestone ends with: all its `M` requirements passing their stated verifica
 | **M7 Asteroids** | Aggregate asteroid generator and fracture | RS-14 passes. |
 | **M8 AI pilots** | Pilots that fly any ship through its controls: calibration, thrust allocation, flying, aiming, firing, tractor; skills; modes Ignoring, Evading, Mining, Cautious, Hunting, Mad (§9.10) | Every AIP scenario test passes. A Hunting Gunship 2 fights the player in the sandbox. |
 | **M9 Mammoth Asteroids** | Collisions across wrap edges, wrap-aware blasts and AI, rocks whose every piece pulls (or that pull as one), indestructible gold, the clearing pilot, and the game (`docs/games/mammoth-asteroids.md`) | FLT-015, FLT-016, AST-009, AST-010, AST-011, AIP-020 tests pass; the game's MAS tests pass; review `docs/reviews/M9.md`. |
+| **M10 Mammoth Thrust** | A joint that turns, turrets with a simple power rule, fuel through the tractor beam, a shield, and the game (`docs/games/mammoth-thrust.md`, `mammoth-thrust-design.md`). | The game's MTH requirements and ASM-008, WPN-009, WPN-010, TRC-008, TRC-009, TRC-010 and SHD-001…005 pass; `docs/reviews/M10.md`; Chloe has played it. |
 
 ## 13. Deferred: Game Layer
 

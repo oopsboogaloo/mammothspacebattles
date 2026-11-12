@@ -15,12 +15,12 @@ interface Req {
 const root = new URL("..", import.meta.url).pathname;
 const spec = readFileSync(join(root, "docs/spec.md"), "utf8");
 const reqs: Req[] = [];
-// Milestones are M0…M8; a letter suffix is an intermediate milestone (M4b sits between M4 and M5).
+// Milestones are M0…M10; a letter suffix is an intermediate milestone (M4b sits between M4 and M5).
 const milestoneNumber = (s: string) => {
-  const m = /^M?(\d)([a-z])?$/.exec(s);
+  const m = /^M?(\d+)([a-z])?$/.exec(s);
   return m ? Number(m[1]) + (m[2] ? 0.5 : 0) : NaN;
 };
-for (const m of spec.matchAll(/^- \*\*([A-Z]+-\d+)\*\* `\[([MSC]) · (M\d[a-z]?)\+? · ([A-Z])\]`/gm)) {
+for (const m of spec.matchAll(/^- \*\*([A-Z]+-\d+)\*\* `\[([MSC]) · (M\d+[a-z]?)\+? · ([A-Z])\]`/gm)) {
   reqs.push({ id: m[1], priority: m[2], milestone: milestoneNumber(m[3]), verification: m[4] });
 }
 

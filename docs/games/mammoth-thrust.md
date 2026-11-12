@@ -6,8 +6,11 @@ with a tractor beam and a tether, down a twisting cave under lunar mountains, pa
 an energy pod. You take the pod on the tether and carry it up to the height where the level ends. The landscape,
 levels, look and sound are our own; only the idea and the rules of play follow the original.
 
-Status: **draft, 12 November 2026**, from Chloe's brief and two rounds of questions (§10). Open
-questions are in §11. Nothing is built. The requirement IDs (MTH-…) are this game's own. The
+Status: agreed 12 November 2026, from Chloe's brief and several rounds of questions (§10). **The
+MVP is built** (milestones 1 and the playable part of 4, §9): two levels, the ship, the pod, lives,
+the level's top and the page. Turrets, the factory, fuel and the shield are not built yet, so the
+rules for them below are still plans. What the build measured and changed is in
+`mammoth-thrust-design.md` §8. The requirement IDs (MTH-…) are this game's own. The
 engine changes the game needs (§8) become requirements in `docs/spec.md` once agreed. Design and plan:
 `mammoth-thrust-design.md`.
 
@@ -340,7 +343,7 @@ Priority: **M** must, **S** should.
 - **MTH-052** `[M]` The HUD shows score, lives, fuel, shells, the pod's state, the turrets' stop
   time and the factory's countdown.
 
-## 8. Engine changes (to agree, then into `docs/spec.md`)
+## 8. Engine changes (agreed 12 November 2026; in `docs/spec.md` as milestone M10)
 
 New, shared physics or world logic:
 
