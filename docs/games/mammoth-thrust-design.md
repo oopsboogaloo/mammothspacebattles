@@ -469,6 +469,27 @@ text above.
 - A direct hit destroys the part it strikes, often a thruster's nozzle wall. The HUD's DAMAGE reads
   the worst part still on the ship, so a part knocked clean off can leave it at 0%.
 
+## 10. Tuning after Chloe first played (12 November 2026)
+
+She found it fun and very hard, and asked for the pod to be easier to pick up and keep.
+
+| Asked for | Done |
+|---|---|
+| A stronger beam | 400 N to 1,200 N. |
+| The tether to attach from further off and bring the pod in to its length, heavily damped | `tether.reach` 22 m (the length is 12 m). The tether starts at the distance the pod was taken at and reels in at 6 m/s (TRC-010, now both ways). Damping 0.7 to 1.5 of critical. Measured from 20 m while hovering on short burns: at 12 m in 1.5 game s, the pull never over 800 N. |
+| The beam and tether to take only the pod | `only: ["pod"]` on the ship's tractor (TRC-011, new). Wreckage in the beam is not pulled. |
+| A few seconds to watch a self-destruct | The page says "ship lost" 3 s (1.5 game s) after a self-destruct, and the next ship comes the usual 2.5 s after that. After a crash it says so at once, as before. |
+| A stronger tether: it let go under thrust | See below: it wasn't the tether's strength. The limit is up five times all the same, to 100,000 N. |
+
+**Why the tether let go.** It never reached its limit: the most it carried in hard flying was about
+2,100 N of 20,000. The tether's pull is applied at the ship's centre of mass, on the body that
+carries the tractor, which was the 1 kg tractor unit a metre away. That twisted the unit's welds
+with about 2,300 N·m at each burn. A weld bends at 30% of its limit (1,650 N·m here) and is left
+weaker each time, so after enough burns the unit came off, and the pod went with it. The cockpit
+now carries the tractor, through the two units: the tractor unit is its beam's generator (TRC-012,
+new) and the tether unit its tether's (TRC-007), so losing either still stops it. Measured after:
+six seconds of full thrust and a hard turn with the pod on, no weld of the ship below 100%.
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |

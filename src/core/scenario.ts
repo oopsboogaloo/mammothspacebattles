@@ -368,11 +368,14 @@ function validateTractor(v: V, t: unknown, path: string): void {
   if (t.force !== undefined) num(v, t.force, `${path}.force`, { min: 0 });
   if (t.capture !== undefined) num(v, t.capture, `${path}.capture`, { min: 0 });
   if (t.tetherFrom !== undefined) str(v, t.tetherFrom, `${path}.tetherFrom`);
+  if (t.beamFrom !== undefined) str(v, t.beamFrom, `${path}.beamFrom`);
+  if (t.only !== undefined && !(Array.isArray(t.only) && t.only.every((id: unknown) => typeof id === "string" && id.length > 0))) err(v, `${path}.only`, "must be a list of body ids");
   if (t.tether !== undefined) {
     if (!isObj(t.tether)) return err(v, `${path}.tether`, "must be {length?, stiffness?, damping?, maxTension?}");
     for (const k of ["length", "stiffness", "maxTension"]) if (t.tether[k] !== undefined) num(v, t.tether[k], `${path}.tether.${k}`, { positive: true });
     if (t.tether.damping !== undefined) num(v, t.tether.damping, `${path}.tether.damping`, { min: 0 });
     if (t.tether.payOut !== undefined) num(v, t.tether.payOut, `${path}.tether.payOut`, { positive: true });
+    if (t.tether.reach !== undefined) num(v, t.tether.reach, `${path}.tether.reach`, { positive: true });
   }
 }
 
@@ -556,7 +559,7 @@ function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
   if (typeof g.pod !== "string" || !Array.isArray(bodies) || !bodies.some((b) => isObj(b) && b.id === g.pod)) err(v, `${path}.pod`, "must be the id of one of the world's bodies");
   if (g.lives !== undefined) num(v, g.lives, `${path}.lives`, { int: true, min: 1, max: 99 });
   if (g.level !== undefined) num(v, g.level, `${path}.level`, { int: true, min: 1 });
-  for (const k of ["respawn", "grace"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
+  for (const k of ["respawn", "grace", "destructWait"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
   if (g.scores !== undefined) {
     if (!isObj(g.scores)) err(v, `${path}.scores`, "must be an object {pod?, fuel?}");
     else for (const k of ["pod", "fuel", "turret"]) if (g.scores[k] !== undefined) num(v, g.scores[k], `${path}.scores.${k}`, { min: 0 });

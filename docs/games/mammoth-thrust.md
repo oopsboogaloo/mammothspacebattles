@@ -54,6 +54,10 @@ other sources in §12):
 | Out of fuel | The ship falls and crashes: a life lost in the usual way, and a new ship. |
 | Turrets' build | Welded pieces with materials, like a ship, and damaged by the same model: nothing is forced. One good hit mostly blows a turret to bits, above all a hit on its fuel; a poor one may leave it working, or working worse. |
 | Doors | Doors opened by shooting a panel, in a later phase. |
+| After playing (12 November 2026) | It is already fun, and very hard: leave it that hard. The ship turning with real inertia is a lot to fly, balanced by a ship that survives grazing the walls: keep Asteroids' generous damage tolerance for now. Landing for a rest is possible until the pod is taken. Picking the pod up was too hard, so: |
+| Beam | Three times the pull (1,200 N). It pulls the pod and nothing else. |
+| Tether | Takes the pod from up to 22 m off, further than its 12 m length, and reels it in to that length and holds it there, heavily damped. It takes the pod and nothing else: not the wreckage of earlier ships. (Later games will want the tether as a general tool.) It holds five times the pull it did, and no longer lets go under thrust. |
+| Self-destruct | The ship goes up at once; the page then leaves 3 seconds to watch it before it says the ship is lost and the next one comes. |
 | Shells | A magazine of 120, full with each new ship. |
 | Win | The ship, with the pod on its tether, climbs above the level's top. There is no air anywhere: the top is only a height. |
 | Levels | The missions we draw, in order. No reversed gravity, no invisible walls. |
@@ -302,6 +306,7 @@ Priority: **M** must, **S** should.
   a bolt and a slug each leave it whole.
 - **MTH-026** `[M]` A ship above the level's top without the pod on its tether is beamed back to the
   start as it is, with no life lost.
+- **MTH-027** `[M]` The beam pulls, and the tether takes, the pod and nothing else.
 - **MTH-024** `[M]` The level is complete when the ship is above the level's top with the pod
   on its tether.
 

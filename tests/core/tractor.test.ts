@@ -238,4 +238,50 @@ describe("tractor beam", () => {
     expect(at(again, "ship").tractor!.paid).toBeUndefined();
     expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ tether: { payOut: 0 } })] } })).toThrow(ScenarioError);
   });
+
+  it("TRC-010 a tether with a reach takes cargo from further off than its length and reels it in, without snatching it", () => {
+    const w = world([ball("ball", 1, 20, 0, -24)], { tether: { reach: 25, payOut: 5, damping: 1.5 } });
+    engage(w, 5);
+    expect(at(w, "ship").tractor).toMatchObject({ mode: "tether", cargo: "ball" });
+    expect(at(w, "ship").tractor!.paid).toBeGreaterThan(23);
+    let worst = 0;
+    run(w, 720, () => {
+      worst = Math.max(worst, Math.abs(at(w, "ship").tractor!.tension));
+      return [];
+    });
+    expect(at(w, "ship").tractor!.paid).toBeUndefined();
+    expect(reach(w, "ball")).toBeGreaterThan(14);
+    expect(reach(w, "ball")).toBeLessThan(16);
+    expect(worst).toBeLessThan(300); // a 9 m stretch on the bare spring would be 18,000 N
+    expect(w.ledger.violations).toBe(0);
+    // Past its reach, the beam only pulls.
+    const far = world([ball("ball", 1, 20, 0, -30)], { tether: { reach: 25, payOut: 5 } });
+    run(far, 2, () => set(1));
+    expect(at(far, "ship").tractor!.mode).toBe("beam");
+  });
+
+  it("TRC-011 a tractor that names its cargo pulls and takes nothing else", () => {
+    const w = world([ball("junk", 0.5, 5, 0, -6), ball("prize", 0.5, 5, 1, -12)], { only: ["prize"] });
+    run(w, 2, () => set(1));
+    expect(at(w, "junk").velocity).toEqual({ x: 0, y: 0 });
+    expect(at(w, "ship").tractor).toMatchObject({ mode: "tether", cargo: "prize" });
+    expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ only: "prize" })] } })).toThrow(ScenarioError);
+  });
+
+  it("TRC-012 a tractor that names its beam's generator has no beam, and holds nothing, once that part is off the ship", () => {
+    const gen = { ...box("gen", 1, 1, { mass: 2, position: { x: 0, y: 2.5 } }) } as BodyInput;
+    const make = () =>
+      createWorld(1, [ship({ beamFrom: "gen" }), gen, ball("ball", 1, 20, 0, -10)], { x: 0, y: 0 }, { links: [{ id: "c", kind: "control", channel: "tractor", to: "ship" }], joints: [{ id: "w", a: "ship", b: "gen", anchorA: { x: 0, y: 2 }, anchorB: { x: 0, y: -0.5 } }] });
+    const w = make();
+    engage(w, 5);
+    expect(at(w, "ship").tractor!.mode).toBe("tether");
+    w.joints = [];
+    run(w, 2);
+    expect(at(w, "ship").tractor!.mode).toBe("off");
+    expect(w.events.some((e) => e.type === "tether.release")).toBe(true);
+    const none = make();
+    none.joints = [];
+    run(none, 3, () => set(1));
+    expect(none.events.some((e) => e.type === "tractor.on")).toBe(false);
+  });
 });

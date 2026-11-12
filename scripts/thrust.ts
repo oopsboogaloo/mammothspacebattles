@@ -34,11 +34,14 @@ function ship() {
   // A solid slug: no blast, so a shot at a wall beside the ship does nothing to it (MTH-020).
   const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05 };
   const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
-  // The beam is a 30° wedge down the ship's tail. The tether is the TRC spring between the two
-  // centres of mass (TRC-004), 12 m long. Taken nearer than that, it starts at the distance it was
-  // taken at and pays out at 4 m/s (TRC-010): at its full length at once, it threw ship and pod
-  // apart with 6,000 N and tore the tractor unit off.
-  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 400, capture: 1.2, tether: { length: 12, stiffness: 2000, damping: 0.7, maxTension: 20000, payOut: 4 } };
+  // The beam is a 30° wedge down the ship's tail, and pulls only the pod (TRC-011): not the wreckage
+  // of the ships before. Its pull is three times the engine's default (asked for by Chloe after
+  // playing, 12 November 2026: picking the pod up was too hard).
+  // The tether is the TRC spring between the two centres of mass (TRC-004), 12 m long. It takes the
+  // pod from up to 22 m off, starts at the distance it took it at, and reels it in (or pays out) to
+  // 12 m at 6 m/s (TRC-010), heavily damped, so nothing is snatched or thrown. It holds five times
+  // the pull it did: Chloe had it let go under thrust.
+  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, capture: 1.2, only: ["pod"], tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor });
 }
 
@@ -133,7 +136,7 @@ function write(l: Level) {
         ship: ship(),
         mix: SHIP_MIX,
         hull: "p{n}-hull",
-        tractor: "p{n}-tractor",
+        tractor: "p{n}-hull",
         start: l.start,
         top: l.top,
         pod: "pod",

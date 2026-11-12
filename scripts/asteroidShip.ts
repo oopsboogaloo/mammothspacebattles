@@ -202,16 +202,22 @@ export function asteroidShip(t: ShipTuning) {
   }
   links.push({ id: id("ctl-fire"), kind: "control", channel: "fire", to: id("gun") });
   if (t.tractor) {
-    // The beam starts on the centre line under the ship and points down its tail: the unit is off to
-    // the left, so the origin is given from the unit's own centre (-1.025, -0.7).
-    box("tractor", -1.3, -0.75, -0.9, -0.5, 1, { tractor: { ...t.tractor, origin: { x: 1.025, y: -0.2 }, direction: { x: 0, y: -1 }, tetherFrom: id("tether") } });
+    // The cockpit works the beam and holds the tether, through the two units (TRC-007, TRC-012): lose
+    // either and it stops. The tether pulls at the ship's centre of mass, which is in or beside the
+    // cockpit. On the 1 kg tractor unit, a metre off, the same pull twisted the unit's welds past
+    // where they bend (2,100 N at 1.1 m against 1,650 N·m), weakened them with every burn, and in
+    // the end tore the unit off, dropping the pod. The beam starts under the ship on its centre
+    // line and points down its tail: the cockpit's centre is 0.58 m up from the ship's own origin.
+    const hull = bodies.find((b) => b.id === id("hull"))!;
+    hull.tractor = { ...t.tractor, origin: { x: 0, y: -1.5 }, direction: { x: 0, y: -1 }, beamFrom: id("tractor"), tetherFrom: id("tether") };
+    box("tractor", -1.3, -0.75, -0.9, -0.5, 1);
     box("tether", 0.75, 1.3, -0.9, -0.5, 1);
     // Two welds each, apart: the tether pulls on the tractor unit, and one weld alone twists off.
     for (const [x, n] of [[-1.25, "a"], [-0.8, "b"]] as const) {
       weld(`tractor-gen-${n}`, "tractor", "gen-l", { x, y: -0.5 });
       weld(`tether-gen-${n}`, "tether", "gen-r", { x: -x, y: -0.5 });
     }
-    links.push({ id: id("ctl-tractor"), kind: "control", channel: String(t.tractor.channel), to: id("tractor") });
+    links.push({ id: id("ctl-tractor"), kind: "control", channel: String(t.tractor.channel), to: id("hull") });
   }
   // The game places a ship by its hull: the parts are laid out round the cockpit's centre.
   const o = at.get("hull")!.position;

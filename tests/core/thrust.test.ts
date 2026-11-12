@@ -100,7 +100,9 @@ describe("Mammoth Thrust", () => {
 
   it("MTH-020 the ship is Mammoth Asteroids' with a tractor unit and a tether unit, turns at about 7 rad/s², and fires slugs with no charge", () => {
     const { w, step } = game(1, (s) => (s.world.gravity = { x: 0, y: 0 }));
-    expect(body(w, "p1-tractor")!.tractor).toMatchObject({ channel: "tractor", tetherFrom: "p1-tether", mode: "off" });
+    // The cockpit works the beam and holds the tether, through the two units.
+    expect(hull(w).tractor).toMatchObject({ channel: "tractor", beamFrom: "p1-tractor", tetherFrom: "p1-tether", only: ["pod"], mode: "off" });
+    expect(body(w, "p1-tractor")).toBeDefined();
     expect(body(w, "p1-tether")).toBeDefined();
     expect(body(w, "p1-gun")!.magazine!.count).toBe(120);
     expect(body(w, "p1-gun")!.magazine!.shell.explosive).toBeUndefined();
@@ -115,7 +117,7 @@ describe("Mammoth Thrust", () => {
   it("MTH-021 holding the tractor on the pod within the tether's length takes it on the tether, gently; pressing again lets it go", () => {
     const { w, step } = withPod();
     expect(st(w).pod).toBe("tether");
-    expect(body(w, "p1-tractor")!.tractor).toMatchObject({ mode: "tether", cargo: "pod" });
+    expect(hull(w).tractor).toMatchObject({ mode: "tether", cargo: "pod" });
     // Taken at 9 m on a 12 m tether that pays out (TRC-010): nothing is thrown or broken.
     expect(types(w).has("joint.break")).toBe(false);
     expect(Math.hypot(hull(w).velocity.x, hull(w).velocity.y)).toBeLessThan(3);
@@ -127,6 +129,72 @@ describe("Mammoth Thrust", () => {
     expect(types(w).has("tether.release")).toBe(true);
     expect(st(w).pod).toBe("loose");
     expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MTH-021 the tether takes the pod from up to 22 m off and reels it in to 12 m, gently; hard thrust and a turn don't make it let go", () => {
+    const { w } = game(1, (s) => Object.assign(s.world.thrust, { top: 100000, turrets: [] }));
+    moveShip(w, { x: pod(w).position.x + 3, y: pod(w).position.y + 20 });
+    const far = game();
+    moveShip(far.w, { x: pod(far.w).position.x, y: pod(far.w).position.y + 24 });
+    far.step(0.1, [set("tractor", 1)]);
+    expect(st(far.w).pod).not.toBe("tether"); // 24 m is past its reach
+    let worst = 0;
+    const fly = (seconds: number, commands: Command[]) => {
+      const n = Math.round(seconds * 240);
+      for (let i = 0; i < n; i++) {
+        stepInPlace(w, i === 0 ? commands : [], sandbox);
+        worst = Math.max(worst, Math.abs(hull(w).tractor!.tension));
+      }
+    };
+    const apart = () => Math.hypot(pod(w).position.x - hull(w).position.x, pod(w).position.y - hull(w).position.y);
+    fly(0.1, [set("tractor", 1)]);
+    expect(st(w).pod).toBe("tether");
+    expect(Number(w.events.find((e) => e.type === "tether.engage")!.data.distance)).toBeGreaterThan(19);
+    fly(0.05, [set("tractor", 0)]);
+    // Hovering on short burns while it reels in at 6 m/s.
+    for (let k = 0; k < 6; k++) {
+      fly(0.08, [set("left", 1), set("right", 1)]);
+      fly(0.3, [set("left", 0), set("right", 0)]);
+    }
+    expect(hull(w).tractor!.paid).toBeUndefined(); // reeled in
+    expect(apart()).toBeGreaterThan(11);
+    expect(apart()).toBeLessThan(13.5);
+    expect(worst).toBeLessThan(2000); // nothing snatched: the pod weighs 136 N
+    fly(3, [set("left", 1), set("right", 1)]);
+    fly(0.4, [set("right", 0)]);
+    fly(1.5, [set("right", 1)]);
+    expect(st(w).pod).toBe("tether");
+    expect(types(w).has("tether.break")).toBe(false);
+    expect(types(w).has("tether.release")).toBe(false);
+    expect(types(w).has("joint.break")).toBe(false);
+    // No weld of the ship has been bent by towing it.
+    expect(Math.min(...w.joints.filter((j) => j.a.startsWith("p1-")).map((j) => j.integrity))).toBe(1);
+    expect(hull(w).tractor!.tether.maxTension).toBe(100000);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MTH-027 the beam and the tether work on the pod alone: wreckage in the beam, nearer than the pod, is left where it is", () => {
+    const { w, step } = game(1, (s) => {
+      s.world.gravity = { x: 0, y: 0 };
+      s.world.thrust.turrets = [];
+      // A loose piece of an earlier ship, 6 m under where the ship will be.
+      s.world.bodies.push({ id: "p0-wreck", shape: { kind: "box", width: 0.6, height: 0.6 }, mass: 2, position: { x: 12, y: 7 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
+    });
+    moveShip(w, { x: 12, y: 13 });
+    step(0.3, [set("tractor", 1)]);
+    expect(body(w, "p0-wreck")!.velocity).toEqual({ x: 0, y: 0 });
+    expect(hull(w).tractor!.targets).not.toContain("p0-wreck");
+    expect(hull(w).tractor).toMatchObject({ mode: "tether", cargo: "pod" }); // the pod, 20 m off, past the wreck
+  });
+
+  it("MTH-022 with the tractor unit lost there is no beam at all", () => {
+    const { w, step } = game();
+    w.bodies = w.bodies.filter((b) => b.id !== "p1-tractor");
+    w.joints = w.joints.filter((j) => j.a !== "p1-tractor" && j.b !== "p1-tractor");
+    moveShip(w, { x: pod(w).position.x, y: pod(w).position.y + 9 });
+    step(0.4, [set("tractor", 1)]);
+    expect(types(w).has("tractor.on")).toBe(false);
+    expect(st(w).pod).toBe("stand");
   });
 
   it("MTH-022 with the tether unit lost the beam still pulls, but the pod can't be held", () => {
@@ -144,18 +212,32 @@ describe("Mammoth Thrust", () => {
   it("MTH-023 MTH-050 a lost ship costs a life and nothing on the level is reset: the wreck and the pod stay, and a new ship beams in at the start, protected for a moment", () => {
     const { w, step } = withPod();
     step(0.6, [set("left", 1), set("right", 1)]);
-    step(2 / 240, [set("left", 0), set("right", 0), set("destruct", 1)]);
+    step(0.05, [set("left", 0), set("right", 0), set("tractor", 1)]); // let the pod go
+    step(0.05, [set("tractor", 0)]);
+    // The pod set down off its stand, on the hollow's floor.
+    pod(w).position = { x: 17, y: -7 };
+    pod(w).velocity = { x: 0, y: 0 };
+    settle(w);
+    step(2 / 240, [set("destruct", 1)]);
     expect(types(w).has("thrust.destruct")).toBe(true);
     expect(w.controls.destruct).toBe(0);
     step(0.1);
     expect(st(w)).toMatchObject({ phase: "between", lives: 2, n: 1 });
     expect(w.links.some((l) => l.kind === "control" && l.to.startsWith("p1-"))).toBe(false); // the keys fly only the next ship
+    // After a self-destruct there are 3 s on screen (1.5 game s) to watch it go before the page says
+    // the ship is lost, and then the usual wait for the next one.
+    expect(st(w).noteAt! - w.time).toBeGreaterThan(1.3);
+    expect(st(w).next! - st(w).noteAt!).toBeCloseTo(1.25, 6);
+    step(1.5);
+    expect(st(w).phase).toBe("between");
     step(1.2);
     expect(st(w)).toMatchObject({ phase: "flying", lives: 2, n: 2, pod: "loose" });
     expect(hull(w).position.x).toBeCloseTo(w.thrust!.spec.start.x, 6);
     expect(parts(w, 1).length).toBeGreaterThan(5); // the wreck is still there
     expect(pod(w).integrity).toBe(1);
-    expect(Math.hypot(pod(w).position.x - st(w).stand.x, pod(w).position.y - st(w).stand.y)).toBeGreaterThan(0.5); // the pod lies where it fell
+    // The pod lies about where it was left (the ship's explosion overhead rolled it a little): not back on its stand.
+    expect(Math.hypot(pod(w).position.x - 17, pod(w).position.y + 7)).toBeLessThan(6);
+    expect(Math.hypot(pod(w).position.x - st(w).stand.x, pod(w).position.y - st(w).stand.y)).toBeGreaterThan(2);
     // Protected: its parts carry no material until the grace is over.
     expect(st(w).graceUntil).toBeDefined();
     expect(parts(w, 2).every((b) => !b.material)).toBe(true);
@@ -169,7 +251,7 @@ describe("Mammoth Thrust", () => {
     const { w, step } = game();
     for (let k = 0; k < 3; k++) {
       step(2 / 240, [set("destruct", 1)]);
-      step(1.4);
+      step(2.9);
     }
     expect(st(w)).toMatchObject({ phase: "over", reason: "ships", lives: 0, n: 3 });
     expect(w.events.filter((e) => e.type === "thrust.ship")).toHaveLength(3);
@@ -257,10 +339,13 @@ describe("Mammoth Thrust", () => {
     settle(w);
     step(0.5);
     expect(st(w).phase).toBe("flying"); // not at once
-    step(2.5);
+    for (let k = 0; k < 25 && st(w).phase === "flying"; k++) step(0.1);
     expect(hull(w)).toBeDefined(); // it set down in one piece
     expect(w.events.filter((e) => e.type === "thrust.lost")).toHaveLength(1);
     expect(st(w).lives).toBe(2);
+    // A ship lost any other way than by its pilot's own hand is said to be lost at once.
+    expect(st(w).noteAt).toBeLessThanOrEqual(w.time);
+    expect(st(w).next! - st(w).noteAt!).toBeCloseTo(1.25, 6);
   });
 
 it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its gun to a bearing in its arc and fires; with no ship flying it watches for nothing", () => {

@@ -3985,6 +3985,34 @@
               "name": "hull",
               "threshold": 150,
               "toughness": 3000
+            },
+            "tractor": {
+              "channel": "tractor",
+              "range": 40,
+              "arc": 0.5235987755982988,
+              "force": 1200,
+              "capture": 1.2,
+              "only": [
+                "pod"
+              ],
+              "tether": {
+                "length": 12,
+                "reach": 22,
+                "stiffness": 2000,
+                "damping": 1.5,
+                "maxTension": 100000,
+                "payOut": 6
+              },
+              "origin": {
+                "x": 0,
+                "y": -1.5
+              },
+              "direction": {
+                "x": 0,
+                "y": -1
+              },
+              "beamFrom": "p{n}-tractor",
+              "tetherFrom": "p{n}-tether"
             }
           },
           {
@@ -4835,29 +4863,6 @@
               "name": "hull",
               "threshold": 150,
               "toughness": 3000
-            },
-            "tractor": {
-              "channel": "tractor",
-              "range": 40,
-              "arc": 0.5235987755982988,
-              "force": 400,
-              "capture": 1.2,
-              "tether": {
-                "length": 12,
-                "stiffness": 2000,
-                "damping": 0.7,
-                "maxTension": 20000,
-                "payOut": 4
-              },
-              "origin": {
-                "x": 1.025,
-                "y": -0.2
-              },
-              "direction": {
-                "x": 0,
-                "y": -1
-              },
-              "tetherFrom": "p{n}-tether"
             }
           },
           {
@@ -5706,7 +5711,7 @@
             "id": "p{n}-ctl-tractor",
             "kind": "control",
             "channel": "tractor",
-            "to": "p{n}-tractor"
+            "to": "p{n}-hull"
           }
         ]
       },
@@ -5780,7 +5785,7 @@
         }
       ],
       "hull": "p{n}-hull",
-      "tractor": "p{n}-tractor",
+      "tractor": "p{n}-hull",
       "start": {
         "x": -83,
         "y": 80

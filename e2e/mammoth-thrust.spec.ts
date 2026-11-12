@@ -91,9 +91,9 @@ test("MTH-021 the keys: ↑ is forward, Space fires slugs, and Z or / works the 
   await page.keyboard.up("Space");
   for (const key of ["z", "/"]) {
     await page.keyboard.down(key);
-    await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-tractor")?.tractor?.mode)).toBe("beam");
+    await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("beam");
     await page.keyboard.up(key);
-    await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-tractor")?.tractor?.mode)).toBe("off");
+    await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("off");
   }
 });
 
@@ -184,7 +184,10 @@ test("MTH-050 self-destruct costs a ship, and three ships lost is game over, wit
     await page.getByTestId("mth-destruct").click();
     await expect(page.getByTestId("mth-destruct")).toHaveText("Confirm self-destruct");
     await page.getByTestId("mth-destruct").click();
-    if (k > 1) await expect(page.getByTestId("mth-lost")).toBeVisible({ timeout: 20_000 });
+    // The ship goes up at once; the page leaves 3 s to watch it before it says so.
+    await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("between");
+    if (k === 3) await expect(page.getByTestId("mth-lost")).toBeHidden();
+    if (k > 1) await expect(page.getByTestId("mth-lost")).toBeVisible({ timeout: 30_000 });
   }
   await expect(page.getByTestId("mth-over")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("mth-over")).toContainText("No ships left");

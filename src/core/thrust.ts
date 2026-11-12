@@ -34,6 +34,8 @@ export interface ThrustSpec {
   respawn?: number;
   /** Game seconds a new ship takes no damage after a loss (default 1). */
   grace?: number;
+  /** Game seconds more before the next ship when the last was destroyed by its own pilot (default 1.5): time to watch it go. */
+  destructWait?: number;
   /** The level's number, for the page. */
   level?: number;
   /** The level's turrets (MTH-030): the bodies that carry their fire control. They watch for the ship flying. */
@@ -65,6 +67,10 @@ export interface ThrustState {
   stand: Vec2;
   /** When the next ship comes, s. */
   next?: number;
+  /** When the page may say the ship is lost, s: at once after a crash, later after a self-destruct. */
+  noteAt?: number;
+  /** The ship flying was destroyed by its own pilot. */
+  destructed?: boolean;
   /** When the new ship's protection ends, s. */
   graceUntil?: number;
   /** Why the game is over: no ships left, or the pod destroyed. */
@@ -95,7 +101,7 @@ export interface ThrustOps {
   addLink(world: World, link: LinkInput): void;
 }
 
-export const THRUST_DEFAULTS = { lives: 3, respawn: 1.25, grace: 1 };
+export const THRUST_DEFAULTS = { lives: 3, respawn: 1.25, grace: 1, destructWait: 1.5 };
 export const THRUST_SCORES = { pod: 2000, fuel: 100, turret: 750 };
 /** The control that destroys the player's own ship, as Mammoth Asteroids' (MAS-039). */
 export const THRUST_DESTRUCT = "destruct";
@@ -240,6 +246,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
         const ship = new Set(assemblyOf(world, hullId));
         for (const b of world.bodies) if (ship.has(b.id) && (b.id === hullId || b.explosive?.whenDestroyed)) b.integrity = 0;
         world.events.push({ tick: world.tick, type: "thrust.destruct", data: { n: s.n } });
+        s.destructed = true;
         changed = true;
       }
       world.controls = { ...world.controls, [THRUST_DESTRUCT]: 0 };
@@ -265,7 +272,10 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       world.links = world.links.filter((l) => !(l.kind === "control" && l.to.startsWith(prefix)));
       world.events.push({ tick: world.tick, type: "thrust.lost", data: { n: s.n, lives: s.lives } });
       s.phase = "between";
-      s.next = now + o.respawn;
+      // After a self-destruct the player gets a few seconds to watch it before anything is said.
+      s.noteAt = now + (s.destructed ? o.destructWait : 0);
+      s.next = s.noteAt + o.respawn;
+      s.destructed = undefined;
       return true;
     }
 
@@ -315,6 +325,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
   // 7. The wait after a loss is over: the game, or the next ship at the start.
   if (s.phase === "between" && due(s.next)) {
     s.next = undefined;
+    s.noteAt = undefined;
     if (s.lives <= 0) {
       s.phase = "over";
       s.reason = "ships";

@@ -273,7 +273,7 @@ function Play() {
           </span>
         )}
       </div>
-      {s.phase === "between" && (
+      {s.phase === "between" && sb.world.time >= (s.noteAt ?? 0) && (
         <div class="mth-note" data-testid="mth-lost">
           SHIP LOST
           <small>{s.lives > 0 ? "The next one is beaming in. Nothing else has changed." : ""}</small>
