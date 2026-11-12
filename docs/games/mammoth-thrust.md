@@ -8,7 +8,8 @@ levels, look and sound are our own; only the idea and the rules of play follow t
 
 Status: **draft, 12 November 2026**, from Chloe's brief and two rounds of questions (§10). Open
 questions are in §11. Nothing is built. The requirement IDs (MTH-…) are this game's own. The
-engine changes the game needs (§8) become requirements in `docs/spec.md` once agreed.
+engine changes the game needs (§8) become requirements in `docs/spec.md` once agreed. Design and plan:
+`mammoth-thrust-design.md`.
 
 What the original does, for reference (Wikipedia's article, pasted by Chloe on 12 November 2026;
 other sources in §12):
