@@ -149,6 +149,7 @@ function write(l: Level) {
         mix: SHIP_MIX,
         hull: "p{n}-hull",
         tractor: "p{n}-hull",
+        gun: "p{n}-gun",
         start: l.start,
         top: l.top,
         pod: "pod",

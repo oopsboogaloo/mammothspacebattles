@@ -568,6 +568,25 @@ bigger craters. The reach is what each charge is declared to damage.
 - Between two craters that nearly touch, the sliver of rock left is cased in both their crusts
   but may be hollow inside. Nothing can get in.
 
+## 12. Engines that had come off still answered the controls (12 November 2026)
+
+Found by Chloe in play: the controls still worked engines that were no longer on the ship.
+
+- **Cause.** Mammoth Asteroids has a rule for this (MAS-037, `cutLines` in `arcade.ts`): an engine
+  no longer welded to the ship has its fuel line cut, burns off what it holds on a channel of its
+  own, and is then dead; a gun knocked off loses its control link. Mammoth Thrust uses the same
+  ship but its game (`thrust.ts`) never called that rule. §8 said the MVP left it out; it should
+  not have. A link has no mass and no weld: when a part breaks off, nothing in the physics cuts it.
+- **Fix.** The rule is now one function both games call (`cutShipLines`, `cutControl`), and
+  Mammoth Thrust's requirement is MTH-062.
+- **Checked.** A test knocks the left back thruster off, then holds the control that fires it on
+  a whole ship: no fuel reaches it and nothing lights in it, while the thrusters still on the ship
+  fire. It failed before the fix. Mammoth Asteroids' own tests for the rule pass unchanged.
+- **What else was looked at.** The tractor unit and the tether unit: losing either stops the beam
+  or drops the pod (TRC-007, TRC-012, tested). A lost ship: all its control links go, so a wreck
+  answers nothing (tested). A turret: without its barrel, carriage joint or battery it doesn't fire
+  (tested).
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |

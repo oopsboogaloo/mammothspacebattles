@@ -345,6 +345,10 @@ Priority: **M** must, **S** should.
   the blast's reach, none under 1 m. A slug leaves none and is spent in the rock.
 - **MTH-061** `[S]` What stands on the ground stays where it is when the rock under it is cut away.
   (Version 1. Later it should fall.)
+- **MTH-062** `[M]` What has come off the ship no longer answers its controls, as in Mammoth
+  Asteroids (MAS-037). An engine no longer welded to the ship has its fuel line cut, burns off what
+  it holds and is dead, and its tank leaks where the line left it. A wing lost whole burns on until
+  its tank is empty. A gun knocked off doesn't fire.
 - **MTH-050** `[M]` A life is lost when the cockpit is destroyed or no working engine is welded to
   it. Three lives. Running out of fuel costs nothing by itself.
 - **MTH-051** `[M]` Scoring as §3.

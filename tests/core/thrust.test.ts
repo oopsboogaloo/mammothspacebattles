@@ -490,6 +490,49 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(pod(w).position.y).toBeCloseTo(st(w).stand.y, 1);
   });
 
+it("MTH-062 an engine knocked off the ship no longer answers the controls: it burns out what it holds and is dead, and its tank leaks; a gun knocked off doesn't fire", () => {
+    const { w, step } = game(1, (s) => {
+      s.world.gravity = { x: 0, y: 0 };
+      s.world.thrust.turrets = [];
+    });
+    step(0.2);
+    // The left back thruster comes off its wing (its weld to the tank is cut), and drifts clear.
+    const loose = new Set(["p1-back-l", "p1-back-l-wall-a", "p1-back-l-wall-b"]);
+    w.joints = w.joints.filter((j) => loose.has(j.a) === loose.has(j.b));
+    for (const b of w.bodies) if (loose.has(b.id)) b.velocity = { x: -3, y: -3 };
+    settle(w);
+    step(0.1);
+    const engine = body(w, "p1-back-l")!;
+    // Its fuel line is cut and its control is no longer the pilot's.
+    expect(w.links.some((l) => l.kind === "feed" && l.to === "p1-back-l")).toBe(false);
+    expect(w.links.some((l) => l.kind === "control" && l.to === "p1-back-l" && l.channel === "bl")).toBe(false);
+    expect(w.events.some((e) => e.type === "thrust.line")).toBe(true);
+    expect(body(w, "p1-tank-l")!.integrity).toBeLessThan(1); // the tank leaks where the line left it
+    // It burns off what is left in it, on a channel of its own, and is then dead: holding "right"
+    // (which fires that thruster on a whole ship) feeds it nothing and lights nothing in it.
+    expect(engine.injector!.channel).toBe("p1-back-l.residual");
+    step(1.5);
+    const held = () => engine.contents!.reduce((m, c) => m + c.mass, 0);
+    expect(held()).toBeLessThan(1e-6);
+    const lit = () => w.events.filter((e) => e.type === "ignition" && e.data.id === "p1-back-l").length;
+    const before = lit();
+    step(1, [set("right", 1)]);
+    expect(w.controls.bl).toBe(1); // the pilot is asking for it
+    expect(held()).toBeLessThan(1e-6);
+    expect(lit()).toBe(before);
+    expect(body(w, "p1-front-r")!.contents!.reduce((m, c) => m + c.mass, 0)).toBeGreaterThan(0); // the thrusters still on the ship do fire
+    step(0.02, [set("right", 0)]);
+    // The gun knocked off: the fire control no longer reaches it.
+    w.joints = w.joints.filter((j) => j.a !== "p1-gun" && j.b !== "p1-gun");
+    body(w, "p1-gun")!.velocity = { x: 0, y: 4 };
+    settle(w);
+    step(0.1);
+    const fired = w.events.filter((e) => e.type === "railgun.fired").length;
+    step(0.6, [set("fire", 1)]);
+    expect(w.events.filter((e) => e.type === "railgun.fired")).toHaveLength(fired);
+    expect(st(w).phase).toBe("flying"); // the ship itself flies on
+  });
+
   it("the score and ships left carry over from the level before", () => {
     const { w } = game(2, (s) => (s.world.thrust.carry = { score: 3530, lives: 2 }));
     expect(st(w)).toMatchObject({ score: 3530, lives: 2, phase: "flying" });

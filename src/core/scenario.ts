@@ -557,7 +557,7 @@ function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
   if (!isObj(g)) return err(v, path, "must be an object {ship, hull, tractor, start, top, pod}");
   if (!isObj(g.ship) || !Array.isArray(g.ship.bodies) || !g.ship.bodies.length) err(v, `${path}.ship`, "must be {bodies, joints?, links?} with at least one body");
   else
-    for (const k of ["hull", "tractor"]) {
+    for (const k of g.gun !== undefined ? ["hull", "tractor", "gun"] : ["hull", "tractor"]) {
       const id = g[k];
       if (typeof id !== "string" || !id.includes("{n}")) err(v, `${path}.${k}`, 'must be an id with "{n}"');
       else if (!g.ship.bodies.some((b) => isObj(b) && b.id === id)) err(v, `${path}.${k}`, "must be the id of one of the ship's bodies");

@@ -4180,6 +4180,7 @@
       ],
       "hull": "p{n}-hull",
       "tractor": "p{n}-hull",
+      "gun": "p{n}-gun",
       "start": {
         "x": -83,
         "y": 80

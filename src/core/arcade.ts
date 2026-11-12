@@ -534,8 +534,23 @@ const WING_ECONOMY = 3;
  *   - An empty tank has nothing to go up with: it loses its charge.
  */
 function cutLines(world: World, game: ArcadeGame, hullId: string): boolean {
-  const { spec, state: s } = game;
-  const id = (x: string) => x.replaceAll("{n}", String(s.n));
+  return cutShipLines(world, game.spec, game.state.n, game.state, hullId, "arcade.line");
+}
+
+/**
+ * The fuel lines of ship number `n` of a design (MAS-037, MTH-062), as above: shared by Mammoth
+ * Asteroids and Mammoth Thrust, whose ships are the same. `s` keeps which lines are cut and which
+ * burn on; `event` names the event raised for a tank that starts to leak.
+ */
+export function cutShipLines(
+  world: World,
+  spec: { ship: { bodies: BodyInput[]; links?: LinkInput[] }; hull: string },
+  n: number,
+  s: { cut?: string[]; burning?: string[] },
+  hullId: string,
+  event: string,
+): boolean {
+  const id = (x: string) => x.replaceAll("{n}", String(n));
   const lines = new Map<string, { tank: string; engine: string }>();
   for (const l of spec.ship.links ?? []) if (l.kind === "feed" && l.from !== undefined) lines.set(`${id(l.from)}>${id(l.to)}`, { tank: id(l.from), engine: id(l.to) });
   const cut = new Set(s.cut ?? []);
@@ -602,7 +617,7 @@ function cutLines(world: World, game: ArcadeGame, hullId: string): boolean {
     }
     tank.breach = { point, normal, credit: tank.breach?.credit ?? 0, count: tank.breach?.count ?? 0 };
     tank.integrity = Math.max(0.05, tank.integrity - LINE_LEAK);
-    world.events.push({ tick: world.tick, type: "arcade.line", data: { tank: tank.id, engine: line.engine } });
+    world.events.push({ tick: world.tick, type: event, data: { tank: tank.id, engine: line.engine } });
   }
   // An empty tank doesn't explode when it is destroyed.
   for (const t of tanks) {
@@ -617,6 +632,18 @@ function cutLines(world: World, game: ArcadeGame, hullId: string): boolean {
     s.burning = [...burning].sort();
   }
   return changed;
+}
+
+/**
+ * A part knocked off its ship no longer answers the controls (MAS-038, MTH-062): once it is not
+ * welded to the hull, its control links go. Returns whether any did.
+ */
+export function cutControl(world: World, hullId: string, partId: string): boolean {
+  if (!world.links.some((l) => l.kind === "control" && l.to === partId) || assemblyOf(world, hullId).includes(partId)) return false;
+  const gone = world.links.filter((l) => l.kind === "control" && l.to === partId);
+  for (const l of gone) world.events.push({ tick: world.tick, type: "link.break", data: { id: l.id, to: l.to } });
+  world.links = world.links.filter((l) => !gone.includes(l));
+  return true;
 }
 
 /** A new game: ship 1 at the centre, pointing up, and level 1 round it. */
@@ -742,12 +769,7 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
   if (!s.lost && world.bodies.some((b) => b.id === hullId)) {
     changed = cutLines(world, game, hullId) || changed;
     // A gun knocked off the ship is dead too: the fire control no longer reaches it.
-    if (world.links.some((l) => l.kind === "control" && l.to === gunId) && !assemblyOf(world, hullId).includes(gunId)) {
-      const gone = world.links.filter((l) => l.kind === "control" && l.to === gunId);
-      for (const l of gone) world.events.push({ tick: world.tick, type: "link.break", data: { id: l.id, to: l.to } });
-      world.links = world.links.filter((l) => !gone.includes(l));
-      changed = true;
-    }
+    changed = cutControl(world, hullId, gunId) || changed;
   }
 
   // 3. Gold the ship is touching, if it can be seen (not inside a larger fragment whose seams don't
