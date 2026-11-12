@@ -181,8 +181,20 @@ beam, the factory's link to the turrets).
 
 ## 6. Look and sound
 
-Asteroids' look: black, simple lines, the black-and-white buttons. The pod glows. The shield is a
-thin circle. Sound: to decide with the build.
+From Chloe, 12 November 2026, to give the feel of Thrust. Written from her description: the
+screenshot sites were not reachable from the session, so this is to be checked against a
+screenshot before it is built.
+
+- **Rock** is drawn as a pattern of horizontal coloured lines, inside the outline of the ground.
+  The lines are fixed to the world, so they scroll with the ground. Each level has its own colour.
+- **Sky.** A star field behind everything above the ground.
+- **Caves.** The star field stops where the cave begins. From the cave mouth down, the open space
+  is a plain block colour (black, first choice) with no stars, so the cave reads as a hole in the
+  striped rock and not as more sky.
+- **Everything else** is our own modelled objects, drawn as the other games draw them: the ship,
+  the pod, the factory, the buildings, the turrets, the fuel tanks, wreckage, gas.
+- The pod glows. The shield is a thin circle. Buttons are Asteroids' black-and-white ones.
+- Sound: to decide with the build.
 
 ## 7. Requirements
 
@@ -244,6 +256,8 @@ Priority: **M** must, **S** should.
 - **MTH-050** `[M]` A life is lost when the cockpit is destroyed or no working engine is welded to
   it. Three lives. Running out of fuel costs nothing by itself.
 - **MTH-051** `[M]` Scoring as §3.
+- **MTH-053** `[M]` The ground is filled with horizontal coloured lines fixed to the world. Stars
+  show only in the sky; open space inside the cave is a plain block colour.
 - **MTH-052** `[M]` The HUD shows score, lives, fuel, shells, the pod's state, the turrets' stop
   time and the factory's countdown.
 
