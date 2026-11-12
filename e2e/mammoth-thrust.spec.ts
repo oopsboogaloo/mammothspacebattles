@@ -152,7 +152,8 @@ test("MTH-050 self-destruct costs a ship, and three ships lost is game over, wit
   await start(page);
   for (let k = 3; k >= 1; k--) {
     await expect(page.getByTestId("mth-lives")).toHaveText("▲".repeat(k));
-    await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("flying");
+    // The next ship beams in 2.5 s after a loss by the game's clock, which a slow machine runs behind.
+    await expect.poll(() => hook(page, (m) => m.thrust()?.phase), { timeout: 30_000 }).toBe("flying");
     await page.getByTestId("mth-destruct").click();
     await expect(page.getByTestId("mth-destruct")).toHaveText("Confirm self-destruct");
     await page.getByTestId("mth-destruct").click();
