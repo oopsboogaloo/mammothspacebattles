@@ -3,7 +3,7 @@
 A cave-flying mini game built on the Mammoth Space Battles physics (mini game 4 of the roadmap,
 `docs/spec.md` §12.1), after the 1986 BBC Micro game Thrust. You fly the Asteroids ship, fitted
 with a tractor beam and a tether, down a twisting cave under lunar mountains, past gun turrets, to
-an energy pod. You take the pod on the tether and carry it up out of the atmosphere. The landscape,
+an energy pod. You take the pod on the tether and carry it up to the height where the level ends. The landscape,
 levels, look and sound are our own; only the idea and the rules of play follow the original.
 
 Status: **draft, 12 November 2026**, from Chloe's brief and two rounds of questions (§10). Open
@@ -38,36 +38,42 @@ other sources in §12):
 | Tether | The existing springy tether (TRC-004), retuned: a damped spring between the centres of mass that breaks over its tension limit (TRC-006). Not the original's rigid rod. |
 | Turrets | Fixed hemispheres on the rock. A turret starts firing a few seconds after it first sees the ship, slowly, at where the ship is now (no lead) with some spread. Can be shot and destroyed. |
 | Turret bolts | Concussive: a small charge that makes gas. Mostly they push the ship off course; they do a little damage and may knock parts off. One hit doesn't kill. Chloe tunes the damage. |
-| Factory (reactor) | Powers the turrets. Each hit stops every turret for a time, longer with each hit. Enough damage and it goes critical: a countdown, then a very large explosion. Escaping with the pod before it blows earns a bonus; without the pod the mission has failed. |
+| Factory (reactor) | Powers the turrets. Each hit stops every turret for a time, longer with each hit. Enough damage and it goes critical: a countdown, then a very large explosion. Escaping with the pod before it blows earns a bonus. If it blows with the pod still on the planet, the **game is over**: nothing is replayed. |
 | Shield | A round field about the ship while its button is held. It turns away bolts and blast gas, so they neither damage nor push the ship. It burns fuel; engines and gun are off while it is up; it doesn't protect against rock. A separate button from the tractor. |
 | Fuel | Limited. Fuel tanks stand on the ground; holding the tractor beam on one refills the ship. A tank that is shot explodes. |
 | Crashes | Physical, as in Lander and Asteroids: gentle scrapes are survived, hard hits break parts off. The pod is damaged the same way. |
-| Life lost | The cockpit destroyed, or no working engine still welded to it (the duel's rule, DUEL-001); or the pod destroyed. The pod goes back to its stand. |
+| Life lost | The cockpit destroyed, or no working engine still welded to it (the duel's rule, DUEL-001). |
+| Nothing resets | When a life is lost the level stays exactly as it is: the wreck, the pod wherever it lies, destroyed turrets, emptied tanks, the factory's damage. Only a new ship comes in. |
 | Lives | 3. |
-| Win | The ship, with the pod on its tether, climbs above the top of the atmosphere. |
+| Game over | The third ship lost, or the factory blowing while the pod is still on the planet. (The pod destroyed: proposed game over too, §11.) |
+| Shells | A magazine of 120, full with each new ship. |
+| Win | The ship, with the pod on its tether, climbs above the level's top. There is no air anywhere: the top is only a height. |
+| Levels | The missions we draw, in order. No reversed gravity, no invisible walls. |
+| Title | One of the maps, still, with nothing happening, under the name and buttons. No demo. |
 | Name | **Mammoth Thrust**, on its own page, `thrust.html`. |
 
 ## 2. Flow
 
-1. **Title screen:** **MAMMOTH THRUST**, with Play, How to play, The physics and High scores.
+1. **Title screen:** **MAMMOTH THRUST** over a still view of one of the maps, with Play, How to
+   play, The physics and High scores.
 2. **Play.** The ship starts in the sky above the mountains, with a full tank and magazine.
 3. **Down.** Past the surface turrets and into the cave. Shoot the turrets or the factory, or
    shield through.
 4. **The pod.** Hold the tractor beam on the pod until the tether takes it.
-5. **Up and out** with the pod swinging below. Level complete at the top of the atmosphere, with
-   the bonuses.
-6. **Life lost.** The wreck stays. The next ship beams in at the start after a short wait; the pod
-   is back on its stand; destroyed turrets stay destroyed.
-7. **Mission failed** if the factory blows while the pod is still on the planet, or the ship
-   leaves without it. The level is replayed at the cost of a life (to confirm, §11).
-8. **Game over** when the third ship is lost; score, initials if it makes the top 10.
+5. **Up and out** with the pod swinging below. Level complete at the level's top, with the
+   bonuses.
+6. **Life lost.** Nothing on the level resets. After a short wait the next ship beams in at the
+   start, with a full tank and magazine. The wreck, the pod, the turrets, the tanks and the
+   factory are as they were left.
+7. **Game over** when the third ship is lost, or when the factory blows with the pod still on the
+   planet. Score, and initials if it makes the top 10.
 
 ## 3. Rules
 
 ### The level
 
 - A level is a scenario: the outline of the ground, the start, the pod's stand, the factory, the
-  buildings, the turrets, the fuel tanks, and the height of the atmosphere's top.
+  buildings, the turrets, the fuel tanks, and the height of the level's top.
 - The ground is fixed and can't be damaged. Buildings are fixed bodies with a material, so they
   can be damaged and destroyed.
 - The first level: mountains across about 600 m; the factory and two buildings on a flat between
@@ -112,9 +118,9 @@ other sources in §12):
   one after (first values).
 - The factory has a damage total. Past it (about 10 hits), it goes critical: a 10 s countdown on
   the HUD, then a blast that destroys everything on the surface and in the upper cave.
-- Critical with the pod on the tether: get above the atmosphere before the blast for the bonus.
+- Critical with the pod on the tether: get above the level's top before the blast for the bonus.
   Caught in the blast: the life is lost.
-- Critical without the pod: mission failed when it blows.
+- If it blows while the pod is still on the planet, the game is over, whatever lives are left.
 
 ### Shield
 
@@ -124,7 +130,7 @@ other sources in §12):
 - It burns fuel at a fixed rate (first value: as much as the main engine at half thrust).
 - While it is up the engines and the gun don't work, and the tractor beam lets go of nothing but
   takes nothing new.
-- It doesn't cover the pod, and it does nothing against rock or buildings.
+- It never covers the pod, however close, and it does nothing against rock or buildings.
 
 ### Fuel
 
@@ -149,8 +155,8 @@ First values, to tune. Top 10 with initials, as Asteroids (`scores.ts`).
 ## 4. Controls, HUD and view
 
 - **Controls.** Turn left and right, thrust, fire, as Asteroids (Q/E, Space, and the option to
-  swap). New: **tractor** and **shield**, each a key and a touch button. Keys to choose (§11).
-- **HUD.** Score, lives, fuel, shells, a pod light (on the stand / on the tether / lost), the
+  swap). New: **tractor** on **Z** and **shield** on **X** (beside the left Shift), or **/** and **.** (beside the right Shift), and a touch button each.
+- **HUD.** Score, lives, fuel, shells, a pod light (on the stand / loose / on the tether), the
   factory's countdown when critical, and "turrets stopped" with its time left.
 - **View.** The camera follows the ship, as Lander's cave levels do, and widens a little to keep
   the pod in view when it is on the tether. Lander's pace (1× = half real time).
@@ -171,8 +177,8 @@ thin circle. Sound: to decide with the build.
 Priority: **M** must, **S** should.
 
 **Game shell**
-- **MTH-001** `[M]` A title screen with the game's name and buttons Play, How to play, The
-  physics and High scores.
+- **MTH-001** `[M]` A title screen with the game's name over a still view of one of the maps, and
+  buttons Play, How to play, The physics and High scores. No demo.
 - **MTH-002** `[M]` Play at the fixed game pace, with a pause menu (Resume, Quit to title).
 - **MTH-003** `[M]` Game over, initials and a top-10 table kept on the device.
 
@@ -191,9 +197,9 @@ Priority: **M** must, **S** should.
 - **MTH-021** `[M]` Holding the tractor on the pod within the tether's length puts the pod on the
   tether; pressing it again lets go.
 - **MTH-022** `[M]` With the tether unit lost, the pod can't be held.
-- **MTH-023** `[M]` When the pod is destroyed a life is lost and a new pod is on the stand for the
-  next ship.
-- **MTH-024** `[M]` The level is complete when the ship is above the atmosphere's top with the pod
+- **MTH-023** `[M]` When a life is lost nothing on the level is reset: the pod, the wreck, the
+  turrets, the tanks and the factory stay as they are, and a new ship beams in at the start.
+- **MTH-024** `[M]` The level is complete when the ship is above the level's top with the pod
   on its tether.
 
 **Turrets and factory**
@@ -205,12 +211,12 @@ Priority: **M** must, **S** should.
   measurable amount and destroys no part of an undamaged ship. (Values tuned by Chloe.)
 - **MTH-033** `[M]` A slug hitting the factory stops every turret for a time that grows with each
   hit.
-- **MTH-034** `[M]` Past its damage total the factory counts down 10 s and explodes; the outcome
-  follows §3 by where the ship and pod are.
+- **MTH-034** `[M]` Past its damage total the factory counts down 10 s and explodes. If the pod is
+  still on the planet then, the game is over.
 
 **Shield and fuel**
 - **MTH-040** `[M]` While the shield is held, a bolt bursting at the field neither damages the
-  ship nor changes its velocity; fuel falls at the shield's rate; engines and gun don't work.
+  ship (the pod is not covered) nor changes its velocity; fuel falls at the shield's rate; engines and gun don't work.
 - **MTH-041** `[M]` With no fuel the shield doesn't come up.
 - **MTH-042** `[M]` Holding the tractor on a fuel tank in range moves fuel to the ship until the
   tank is empty or the ship is full.
@@ -250,7 +256,7 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 2. **Turrets and the factory:** fixed turrets, concussive bolts, stopping the turrets, critical
    and countdown.
 3. **Fuel and shield.**
-4. **Title, How to play, The physics, high scores.**
+4. **Title (a still map), How to play, The physics, high scores.**
 5. **Tuning after play;** Chloe's hand-drawn levels.
 
 ## 10. Answered (12 November 2026)
@@ -266,24 +272,29 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 | Gravity | About 4 m/s². |
 | Ship | Faster turning; slugs with no charge; tractor and tether units added. |
 
+## 10b. Answered (12 November 2026, second round)
+
+| Question | Answer |
+|---|---|
+| The factory blows without the pod | Game over. There is no replay. |
+| After a life is lost | Nothing on the level resets: the pod and the wreck stay where they are, turrets stay destroyed. A new ship comes in. |
+| Later levels | Only the missions we have. No reversed gravity, no invisible walls. |
+| Keys | Near the Shift keys, Claude to pick: Z tractor, X shield (and / and . on the right). |
+| Shells | A magazine of 120 to start with. |
+| Shield and pod | The shield never covers the pod. |
+| Title | No demo. A still map behind the title for now. |
+| Atmosphere | None. All vacuum; the top is only a height to reach. |
+
 ## 11. Open questions
 
-1. **Leaving without the pod.** In the original, escaping a critical reactor without the pod
-   still counts, for fewer points. This draft calls it mission failed (§2 step 7, §3). Follow the
-   original (level done, no pod bonus), lose a life and replay, or game over?
-2. **More levels.** After the first: Chloe's drawn layouts in order? The original's later twists
-   (reversed gravity, walls seen only with the shield up): wanted, or not?
-3. **Keys and buttons** for tractor and shield.
-4. **Shells:** a limited magazine (120, refilled with each ship), or unlimited?
-5. **Does the shield cover the pod** when it is close, or never?
-6. **Turrets after a life is lost:** stay destroyed (as written), or come back?
-7. **A demo pilot** behind the title, as Asteroids has? It would need an AI that can fly a cave
-   with a pod, which is a lot of work; a recorded flight would be cheaper.
-8. **Out of fuel:** the original ends the whole game. Here the ship just falls and the life is
+1. **The pod destroyed.** With nothing reset, there is no new pod, so the level can't be won.
+   Proposed: game over, as for the factory. Or make the pod impossible to destroy?
+2. **Above the top without the pod** (factory not critical): proposed that nothing happens, and
+   the ship can fly back down.
+3. **Out of fuel:** the original ends the whole game. Here the ship just falls and the life is
    lost in the crash. Keep ours?
-9. **Turret toughness:** one slug destroys a turret, as the original, or several?
-10. **Doors** opened by shooting a panel (the original's later levels): wanted for later levels?
-11. **Atmosphere:** is it only a height to reach, or should there be air (drag) below it?
+4. **Turret toughness:** one slug destroys a turret, as the original, or several?
+5. **Doors** opened by shooting a panel (the original's later levels): wanted in our missions?
 
 ## 12. Sources
 
