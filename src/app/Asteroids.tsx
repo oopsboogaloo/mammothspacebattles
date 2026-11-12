@@ -135,6 +135,7 @@ function hold(channel: string, by: number): void {
 
 export function asteroidsKeyDown(e: KeyboardEvent): void {
   if (asteroidsScreen.value !== "play" || !sandbox.value || e.ctrlKey || e.metaKey) return;
+  if (!e.code.startsWith("Shift")) dropShifts(e);
   const channels = KEYS[e.code];
   if (channels) {
     e.preventDefault();
@@ -150,11 +151,27 @@ export function asteroidsKeyDown(e: KeyboardEvent): void {
   }
 }
 
-export function asteroidsKeyUp(e: KeyboardEvent): void {
-  const to = down.get(e.code);
+/** Lets go of one key, if it was held. */
+function release(code: string): void {
+  const to = down.get(code);
   if (!to) return;
-  down.delete(e.code);
+  down.delete(code);
   if (sandbox.value) for (const c of to) hold(c, -1);
+}
+
+/**
+ * Windows sends no release for a Shift let go while the other Shift is still down. So when an
+ * event says no Shift is held, neither is: both are let go.
+ */
+function dropShifts(e: KeyboardEvent): void {
+  if (e.shiftKey) return;
+  release("ShiftLeft");
+  release("ShiftRight");
+}
+
+export function asteroidsKeyUp(e: KeyboardEvent): void {
+  release(e.code);
+  dropShifts(e);
 }
 
 /** Lets go of every key (leaving play, or the window losing the keyboard). */

@@ -308,3 +308,22 @@ test("TST-010 screenshots of Mammoth Thrust: the title, play over the surface, t
     await shot(page, info, `thrust-tether-${name}`);
   }
 });
+
+test("MTH-021 a Shift let go while the other is still down doesn't stick, though Windows sends no release for it", async ({ page }) => {
+  await start(page);
+  const engines = () => hook(page, (m) => ["main", "bl", "br", "fl", "fr"].map((c) => m.sandbox().world.controls[c] ?? 0).join(""));
+  const key = (type: string, code: string, shiftKey: boolean) => page.evaluate(([t, c, s]) => void window.dispatchEvent(new KeyboardEvent(t as string, { code: c as string, key: "Shift", shiftKey: s as boolean, bubbles: true })), [type, code, shiftKey] as const);
+  await key("keydown", "ShiftLeft", true);
+  await expect.poll(engines).not.toBe("00000");
+  await key("keydown", "ShiftRight", true);
+  // The left one is let go first: nothing arrives. Then the right one: no Shift is held now.
+  await key("keyup", "ShiftRight", false);
+  await expect.poll(engines).toBe("00000");
+  // One Shift let go with the other truly held still turns.
+  await key("keydown", "ShiftLeft", true);
+  await key("keydown", "ShiftRight", true);
+  await key("keyup", "ShiftRight", true);
+  await expect.poll(engines).not.toBe("00000");
+  await key("keyup", "ShiftLeft", false);
+  await expect.poll(engines).toBe("00000");
+});

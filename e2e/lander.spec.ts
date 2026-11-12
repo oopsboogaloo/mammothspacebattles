@@ -162,3 +162,25 @@ test("LND-030 the game cancels the browser's pinch zoom, and gives it back to th
   expect(await viewport()).toBe("width=device-width, initial-scale=1.0");
   expect(await pinchCancelled()).toBe(false);
 });
+
+test("LND-035 a Shift let go while the other is still down doesn't stick, though Windows sends no release for it", async ({ page }) => {
+  await page.goto("./?game=lander");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-hud")).toBeVisible();
+  const controls = () => page.evaluate(() => { const c = (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls; return `${c.left ?? 0},${c.right ?? 0}`; });
+  const key = (type: string, code: string, shiftKey: boolean) => page.evaluate(([t, c, s]) => void window.dispatchEvent(new KeyboardEvent(t as string, { code: c as string, key: "Shift", shiftKey: s as boolean, bubbles: true })), [type, code, shiftKey] as const);
+  await key("keydown", "ShiftLeft", true);
+  await key("keydown", "ShiftRight", true);
+  await expect.poll(controls).toBe("1,1");
+  // The left one is let go first: nothing arrives. Then the right one: no Shift is held now.
+  await key("keyup", "ShiftRight", false);
+  await expect.poll(controls).toBe("0,0");
+  // One Shift let go with the other truly held keeps that engine on.
+  await key("keydown", "ShiftLeft", true);
+  await key("keydown", "ShiftRight", true);
+  await key("keyup", "ShiftRight", true);
+  await expect.poll(controls).not.toBe("0,0");
+  await key("keyup", "ShiftLeft", false);
+  await expect.poll(controls).toBe("0,0");
+});
