@@ -22,12 +22,14 @@ const button = (page: Page, i: number, on: boolean) =>
     b.value = v ? 1 : 0;
   }, [i, on] as const);
 const stick = (page: Page, x: number) => page.evaluate((v) => void ((window as unknown as { __pad: { axes: number[] } }).__pad.axes[0] = v), x);
-/** A press and release, each seen by at least one frame. */
+/** Waits until the page has drawn two more frames: the pad has been read at least once since. */
+const frames = (page: Page) => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+/** A press and release, each seen by at least one frame however slow the browser is. */
 const tap = async (page: Page, i: number) => {
   await button(page, i, true);
-  await page.waitForTimeout(80);
+  await frames(page);
   await button(page, i, false);
-  await page.waitForTimeout(80);
+  await frames(page);
 };
 const engines = (page: Page) => world(page, (w) => ["main", "bl", "br", "fl", "fr"].map((c) => w.controls[c] ?? 0).join(""));
 
@@ -38,10 +40,11 @@ test("PAD-002 Mammoth Thrust with a controller: A starts, then flies; the stick 
   // A on the title is Play. Still held as the game starts, it does nothing until let go.
   await button(page, A, true);
   await expect(page.getByTestId("mth-hud")).toBeVisible();
-  await page.waitForTimeout(200);
+  await frames(page);
+  await frames(page);
   expect(await engines(page)).toBe("00000");
   await button(page, A, false);
-  await page.waitForTimeout(80);
+  await frames(page);
   await button(page, A, true);
   await expect.poll(() => engines(page)).toBe("11100");
   await button(page, A, false);
@@ -83,7 +86,7 @@ test("PAD-002 Mammoth Thrust with a controller: A starts, then flies; the stick 
   // Still held from before the pause, the trigger does nothing until it is let go and pulled again.
   await expect.poll(() => engines(page)).toBe("00000");
   await button(page, RT, false);
-  await page.waitForTimeout(80);
+  await frames(page);
   await button(page, RT, true);
   await expect.poll(() => engines(page)).toBe("11100");
   await button(page, RT, false);
