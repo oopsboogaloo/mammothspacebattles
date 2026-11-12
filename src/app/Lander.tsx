@@ -68,6 +68,7 @@ let keyCounter = 5_000_000;
  */
 export function gameKeyDown(e: KeyboardEvent): void {
   const key = e.key.toLowerCase();
+  if (!GAME_KEYS[e.code]) dropShifts(e);
   const control = GAME_KEYS[e.code] || bindings.value[key];
   if (control && sandbox.value && !e.ctrlKey && !e.metaKey) {
     e.preventDefault();
@@ -87,14 +88,27 @@ export function gameKeyDown(e: KeyboardEvent): void {
   }
 }
 
+/** Lets go of one held key, if it was held. */
+function releaseKey(pk: string, name: string): void {
+  if (!sandbox.value || keyGroups[pk] === undefined) return;
+  sendControl(keyChannels[pk], 0, `Key ${name.toUpperCase()}`, keyGroups[pk]);
+  delete keyGroups[pk];
+  delete keyChannels[pk];
+}
+
+/**
+ * Windows sends no release for a Shift let go while the other Shift is still down. So when an
+ * event says no Shift is held, neither is: both are let go.
+ */
+function dropShifts(e: KeyboardEvent): void {
+  if (e.shiftKey) return;
+  for (const code of Object.keys(GAME_KEYS)) releaseKey(code, "shift");
+}
+
 export function gameKeyUp(e: KeyboardEvent): void {
   const key = e.key.toLowerCase();
-  const pk = GAME_KEYS[e.code] ? e.code : key;
-  if (sandbox.value && keyGroups[pk] !== undefined) {
-    sendControl(keyChannels[pk], 0, `Key ${key.toUpperCase()}`, keyGroups[pk]);
-    delete keyGroups[pk];
-    delete keyChannels[pk];
-  }
+  releaseKey(GAME_KEYS[e.code] ? e.code : key, key);
+  dropShifts(e);
 }
 
 /** Opens the game's title screen. */
