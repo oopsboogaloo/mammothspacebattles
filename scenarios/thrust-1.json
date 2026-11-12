@@ -137,8 +137,8 @@
       "prefix": "rock-",
       "craters": {
         "blast": 0.6,
-        "bullet": 0.8,
-        "least": 0.8,
+        "bullet": 0,
+        "least": 1,
         "most": 8,
         "limit": 250,
         "small": 150

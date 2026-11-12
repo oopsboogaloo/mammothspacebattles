@@ -62,11 +62,13 @@ const TURRET: TurretTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", 
 
 /**
  * Craters (TER-002, TER-003; asked for by Chloe, 12 November 2026). An explosion leaves one of 0.6
- * of its blast's reach: a fuel tank 2.4 m, one of the ship's magazines 3.6 m, a battery 0.6 m, a
- * turret's bolt 0.8 m (the least). A slug leaves one of 0.8 m and is spent in the rock. At most 250
- * are kept, 150 of them small ones: each costs a few fixed bodies, and so step time. First values.
+ * of its blast's reach: a turret's fuel tank 2.4 m, one of the ship's magazines 3.6 m. One that
+ * would be under 1 m leaves none: a turret's bolt, the ship's battery, tanks and engines. Bullets
+ * leave none either (the slug is still spent in the rock): with a crater for every slug and bolt
+ * the ground's bodies grew past what a step can afford, and Chloe chose to keep craters for
+ * explosions. So the limits are rarely near: 250 craters at most. First values.
  */
-const CRATERS = { blast: 0.6, bullet: 0.8, least: 0.8, most: 8, limit: 250, small: 150 };
+const CRATERS = { blast: 0.6, bullet: 0, least: 1, most: 8, limit: 250, small: 150 };
 
 const fixed = (id: string, shape: Json, position: Vec): Json => ({ id, fixed: true, mass: 1, friction: 0.9, position, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape });
 

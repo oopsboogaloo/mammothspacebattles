@@ -447,13 +447,12 @@ it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its 
     expect(w.ledger.violations).toBe(0);
   });
 
-it("MTH-060 the level's rock can be cratered: a slug leaves a small crater in the ground and is spent, and an explosion on the ground a bigger one", () => {
+it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on the ground leaves craters; a slug leaves none, and is spent in the rock", () => {
     const { w, step } = game(1, (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];
     });
-    expect(w.terrain!.craters).toMatchObject({ blast: 0.6, bullet: 0.8, limit: 250, small: 150 });
-    expect(w.terrain!.holes).toHaveLength(0);
+    expect(w.terrain!.craters).toMatchObject({ blast: 0.6, bullet: 0, least: 1, limit: 250 });
     // The ship upside down 12 m over the flat ground at the start (the ground there is at y = 10).
     const h = hull(w);
     const from = { ...h.position };
@@ -464,18 +463,18 @@ it("MTH-060 the level's rock can be cratered: a slug leaves a small crater in th
     settle(w);
     step(0.02, [set("fire", 1)]);
     step(0.5, [set("fire", 0)]);
-    expect(w.terrain!.holes).toHaveLength(1);
-    expect(w.terrain!.holes[0].r).toBe(0.8);
-    expect(Math.abs(w.terrain!.holes[0].y - 10)).toBeLessThan(0.3); // in the ground's surface
-    expect(w.bodies.some((b) => b.id.includes("-shell-"))).toBe(false); // the slug is spent in the rock
-    // The ship set down there and destroyed by its pilot: its magazines' blasts (6 m) leave 3.6 m craters.
+    expect(w.events.some((e) => e.type === "railgun.fired")).toBe(true);
+    expect(w.terrain!.holes).toHaveLength(0); // no crater for a bullet
+    expect(w.bodies.some((b) => b.id.includes("-shell-"))).toBe(false); // but the slug is spent in the rock
+    // The ship set down there and destroyed by its pilot: its magazines' blasts (6 m) leave 3.6 m
+    // craters. Its tanks', engines' and battery's blasts are too small to leave any.
     for (const b of parts(w, 1)) b.position = { x: b.position.x, y: b.position.y - 9.5 };
     settle(w);
     step(0.1, [set("destruct", 1)]);
-    const big = w.terrain!.holes.filter((c) => c.r > 3);
-    expect(big.length).toBeGreaterThanOrEqual(1);
-    expect(big[0].r).toBeCloseTo(3.6, 6);
-    expect(w.events.filter((e) => e.type === "terrain.crater").length).toBe(w.terrain!.holes.length);
+    expect(w.events.filter((e) => e.type === "detonation").length).toBeGreaterThan(5);
+    expect(w.terrain!.holes.length).toBeGreaterThanOrEqual(1);
+    expect(w.terrain!.holes.length).toBeLessThanOrEqual(2);
+    for (const c of w.terrain!.holes) expect(c.r).toBeCloseTo(3.6, 6);
     expect(w.ledger.violations).toBe(0);
   });
 

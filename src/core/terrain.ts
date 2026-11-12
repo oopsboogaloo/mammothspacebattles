@@ -22,10 +22,11 @@ export interface TerrainSpec {
   prefix?: string;
   /**
    * What leaves a crater, and how big (TER-002, TER-003). An explosion leaves one of radius `blast`
-   * × the reach of its blast (the charge's declared `radius`), within `least` and `most`, m. A shell
-   * that strikes the rock leaves one of radius `bullet` and is spent. No more than `limit` craters
-   * are kept, and of those no more than `small` under 1 m (the ground's bodies cost step time).
-   * Absent: the ground can't be cratered.
+   * × the reach of its blast (the charge's declared `radius`), no bigger than `most`, m; one that
+   * would be smaller than `least` leaves none. A shell with no charge that strikes the rock is
+   * spent, and leaves a crater of radius `bullet`, or none if that is 0. No more than `limit`
+   * craters are kept, and of those no more than `small` under 1 m (the ground's bodies cost step
+   * time). Absent: the ground can't be cratered.
    */
   craters?: { blast?: number; bullet?: number; least?: number; most?: number; limit?: number; small?: number };
 }
@@ -326,11 +327,12 @@ export function cutCrater(world: World, at: Vec2, r: number, addBody: (w: World,
   return true;
 }
 
-/** The radius of the crater an explosion leaves, m, from how far its blast reaches. */
+/** The radius of the crater an explosion leaves, m, from how far its blast reaches: 0 if it is too small to leave one. */
 export function craterRadius(t: Terrain, reach: number): number {
   const c = t.craters;
   if (!c || !(reach > 0)) return 0;
-  return Math.min(c.most, Math.max(c.least, c.blast * reach));
+  const r = c.blast * reach;
+  return r < c.least ? 0 : Math.min(c.most, r);
 }
 
 /**

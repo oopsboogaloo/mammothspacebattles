@@ -528,6 +528,14 @@ version 1, `src/core/terrain.ts` (TER-001…005 in `docs/spec.md` §9.13).
   could hardly be seen.)
 - At most 250 craters, 150 of them under 1 m.
 
+**Bullet craters dropped (12 November 2026, the same day).** Chloe asked what craters cost. Each
+adds two or three fixed bodies for good, and a step pays for every body: 250 craters took a step
+from 1.3 to 1.9 ms falling and from 1.9 to 3.7 ms thrusting, and 351 put it over the 6 ms allowed.
+Slugs and bolts were where the numbers came from (three turrets, a bolt each every 2 s). She chose
+craters for explosions only: `bullet` is 0 and `least` 1 m, so a slug, a bolt, and the ship's
+battery, tanks and engines leave none; the ship's magazines and a turret's fuel tank do. A slug is
+still spent in the rock. The first values and the slug measurements above are from before this.
+
 **Sized from the blast's reach, not its energy.** Energy was tried first (0.9 × ∛kJ). A turret's
 bolt carries more energy than a fuel tank, because it is made to push with gas, so bolts left the
 bigger craters. The reach is what each charge is declared to damage.

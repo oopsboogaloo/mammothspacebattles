@@ -547,7 +547,8 @@ function validateTerrain(v: V, t: unknown, path: string): void {
   if (t.prefix !== undefined) str(v, t.prefix, `${path}.prefix`);
   if (t.craters !== undefined) {
     if (!isObj(t.craters)) return err(v, `${path}.craters`, "must be an object {blast?, bullet?, least?, most?, limit?, small?}");
-    for (const k of ["blast", "bullet", "least", "most"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { positive: true });
+    for (const k of ["blast", "least", "most"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { positive: true });
+    if (t.craters.bullet !== undefined) num(v, t.craters.bullet, `${path}.craters.bullet`, { min: 0 });
     for (const k of ["limit", "small"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { int: true, min: 0, max: 5000 });
   }
 }

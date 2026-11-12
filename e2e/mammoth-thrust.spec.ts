@@ -184,25 +184,27 @@ test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires
   expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id.startsWith("t1-carriage-shell-")))).toBe(true);
 });
 
-test("MTH-060 slugs fired into the ground leave small craters in it, and the slugs are spent", async ({ page }) => {
-  test.setTimeout(60_000);
+test("MTH-060 a ship destroyed on the ground leaves a crater there, and the view stays on it", async ({ page }) => {
+  test.setTimeout(90_000);
   await start(page);
+  expect(await quiet(page)).toBe(true);
   expect(await hook(page, (m) => m.sandbox().world.terrain.holes.length)).toBe(0);
-  // The ship turned over above the flat ground under the start, its gun pointing down.
+  // The ship set down on the flat ground under the start (the ground there is at y = 10).
   await hook(page, (m) => {
     const w = m.sandbox().world;
     const hull = w.bodies.find((b) => b.id === "p1-hull")!;
-    return m.edit(
-      w.bodies
-        .filter((b) => b.id.startsWith("p1-"))
-        .map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: -70 - (b.position.x - hull.position.x), y: 26 - (b.position.y - hull.position.y) }, angle: (b as unknown as { angle: number }).angle + Math.PI, velocity: { x: 4, y: 2 } } })),
-    );
+    const d = 12.6 - hull.position.y;
+    return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x, y: b.position.y + d }, velocity: { x: 0, y: 0 } } })));
   });
-  await page.keyboard.down("Space");
-  await expect.poll(() => hook(page, (m) => m.sandbox().world.terrain.holes.length), { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
-  await page.keyboard.up("Space");
+  await page.getByTestId("mth-destruct").click();
+  await page.getByTestId("mth-destruct").click();
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.terrain.holes.length), { timeout: 30_000 }).toBeGreaterThanOrEqual(1);
   const holes = await hook(page, (m) => m.sandbox().world.terrain.holes);
-  for (const h of holes) expect(h.r).toBe(0.8);
+  for (const h of holes) expect(h.r).toBeCloseTo(3.6, 6);
+  // The cockpit is gone, and the view is still where it was: on the crater, not back at the start 60 m up.
+  await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("between");
+  expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id === "p1-hull"))).toBe(false);
+  expect(Math.abs((await hook(page, (m) => m.camera().y)) - 12)).toBeLessThan(6);
 });
 
 test("MTH-026 a ship that reaches the top without the pod is put back at the start, and told so; no life is lost", async ({ page }) => {

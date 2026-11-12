@@ -108,16 +108,17 @@ describe("terrain", () => {
     }
   });
 
-  it("TER-002 an explosion on the ground leaves a crater 0.6 of its blast's reach across; one in the air leaves none", () => {
+  it("TER-002 an explosion on the ground leaves a crater 0.6 of its blast's reach across; one too small for the least crater, or in the air, leaves none", () => {
     const charge = (id: string, x: number, y: number, radius: number): BodyInput =>
       ball(id, x, y, { velocity: { x: 0, y: -20 }, explosive: { charge: 0.2, fragments: 0, radius, armed: true } });
     const w = world({}, [charge("a", -20, 2, 4), charge("b", 20, 2, 0.5)]);
     run(w, 0.5);
     expect(w.events.filter((e) => e.type === "detonation")).toHaveLength(2);
     const holes = [...w.terrain!.holes].sort((p, q) => p.x - q.x);
-    expect(holes).toHaveLength(2);
+    expect(holes).toHaveLength(1); // the 0.5 m blast would leave 0.3 m, under the least (0.5 m): none
     expect(holes[0].r).toBeCloseTo(2.4, 6); // 0.6 × 4 m
-    expect(holes[1].r).toBe(0.5); // no smaller than the least
+    expect(craterRadius(w.terrain!, 0.5)).toBe(0);
+    expect(craterRadius(w.terrain!, 1)).toBeCloseTo(0.6, 6);
     expect(craterRadius(w.terrain!, 100)).toBe(8); // no bigger than the most
     expect(craterRadius(w.terrain!, 0)).toBe(0);
     expect(Math.abs(holes[0].x + 20)).toBeLessThan(0.5);
@@ -142,6 +143,12 @@ describe("terrain", () => {
     run(live, 0.3);
     expect(live.terrain!.holes).toHaveLength(1);
     expect(live.terrain!.holes[0].r).toBeCloseTo(3, 6); // its explosion's crater, not a bullet's
+    // With `bullet` 0 a shell leaves no crater, and is spent all the same.
+    const none = world({ bullet: 0 }, [ball("gun-shell-1", 0, 5, { velocity: { x: 0, y: -60 } })]);
+    run(none, 0.3);
+    expect(at(none, "gun-shell-1")).toBeUndefined();
+    expect(none.terrain!.holes).toHaveLength(0);
+    expect(none.ledger.violations).toBe(0);
   });
 
   it("TER-005 no more craters are kept than the limit, and no more small ones than their share", () => {
