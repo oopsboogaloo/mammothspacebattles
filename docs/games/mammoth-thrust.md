@@ -181,18 +181,28 @@ beam, the factory's link to the turrets).
 
 ## 6. Look and sound
 
-From Chloe, 12 November 2026, to give the feel of Thrust. Written from her description: the
-screenshot sites were not reachable from the session, so this is to be checked against a
-screenshot before it is built.
+From Chloe, 12 November 2026, to give the feel of Thrust, and checked against three screenshots
+of the original she supplied (two surface views with red rock, one cave with green rock).
 
-- **Rock** is drawn as a pattern of horizontal coloured lines, inside the outline of the ground.
-  The lines are fixed to the world, so they scroll with the ground. Each level has its own colour.
-- **Sky.** A star field behind everything above the ground.
+What the screenshots show: the rock is nothing but thin horizontal lines of one colour on black,
+a line and a gap of about the same height, with no outline, so a slope is the stepped ends of the
+lines. The colour changes with the level (red, green). Open space is plain black, in the sky and
+in the cave alike; the cave is a black shape cut out of the striped rock. Objects are thin
+coloured outlines.
+
+Ours:
+
+- **Rock** is filled with thin horizontal lines of one colour on black, a line and a gap of equal
+  height, fixed to the world so they scroll with the ground. No outline is drawn: the rock's edge
+  is where the lines end. Each level has its own colour.
+- **Sky.** A star field behind everything above the ground. (Ours; the screenshots have a plain
+  black sky.)
 - **Caves.** The star field stops where the cave begins. From the cave mouth down, the open space
-  is a plain block colour (black, first choice) with no stars, so the cave reads as a hole in the
-  striped rock and not as more sky.
+  is plain black with no stars, so the cave reads as a hole in the striped rock and not as more
+  sky.
 - **Everything else** is our own modelled objects, drawn as the other games draw them: the ship,
-  the pod, the factory, the buildings, the turrets, the fuel tanks, wreckage, gas.
+  the pod, the factory, the buildings, the turrets, the fuel tanks, wreckage, gas. The HUD is
+  ours too (Asteroids' style), not the original's framed bar.
 - The pod glows. The shield is a thin circle. Buttons are Asteroids' black-and-white ones.
 - Sound: to decide with the build.
 
