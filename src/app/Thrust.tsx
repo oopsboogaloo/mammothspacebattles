@@ -127,6 +127,8 @@ const KEYS: Record<string, string[]> = {
   KeyE: ["right"],
   ArrowRight: ["right"],
   ShiftRight: ["right"],
+  ControlLeft: ["left"],
+  ControlRight: ["right"],
   ArrowUp: ["left", "right"],
   KeyS: ["reverse"],
   ArrowDown: ["reverse"],
@@ -153,8 +155,9 @@ const ended = (): boolean => {
 };
 
 export function thrustKeyDown(e: KeyboardEvent): void {
-  if (thrustScreen.value !== "play" || !sandbox.value || e.ctrlKey || e.metaKey) return;
-  if (!e.code.startsWith("Shift")) dropShifts(e);
+  // A game key works with Ctrl held too: Ctrl is itself a control.
+  if (thrustScreen.value !== "play" || !sandbox.value || e.metaKey) return;
+  if (!e.code.startsWith("Shift") && !e.code.startsWith("Control")) dropShifts(e);
   const channels = KEYS[e.code];
   if (channels) {
     e.preventDefault();
@@ -179,13 +182,12 @@ function release(code: string): void {
 }
 
 /**
- * Windows sends no release for a Shift let go while the other Shift is still down. So when an
- * event says no Shift is held, neither is: both are let go.
+ * Windows sends no release for a Shift let go while the other Shift is still down (and the same
+ * for Ctrl). So when an event says no Shift is held, neither is: both are let go.
  */
 function dropShifts(e: KeyboardEvent): void {
-  if (e.shiftKey) return;
-  release("ShiftLeft");
-  release("ShiftRight");
+  if (!e.shiftKey) for (const code of ["ShiftLeft", "ShiftRight"]) release(code);
+  if (!e.ctrlKey) for (const code of ["ControlLeft", "ControlRight"]) release(code);
 }
 
 export function thrustKeyUp(e: KeyboardEvent): void {

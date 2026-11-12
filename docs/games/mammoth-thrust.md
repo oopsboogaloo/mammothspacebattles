@@ -238,7 +238,7 @@ First values, to tune. Top 10 with initials, as Asteroids (`scores.ts`).
 
 ## 4. Controls, HUD and view
 
-- **Controls.** Turn left and right, thrust, fire, as Asteroids (Q/E, Space, and the option to
+- **Controls.** Turn left and right, thrust, fire, as Asteroids (Q/E, either Shift or Ctrl, Space, and the option to
   swap). New: **tractor** on **Z** and **shield** on **X** (beside the left Shift), or **/** and **.** (beside the right Shift), and a touch button each.
 - **Controller.** As PAD-002 in `docs/spec.md`: stick or D-pad turns, A or right trigger forward,
   B or left trigger reverse, X or right bumper fires, Y or left bumper the tractor, Start pauses.

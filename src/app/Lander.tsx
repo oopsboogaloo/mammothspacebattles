@@ -9,7 +9,7 @@ import { bindings, camera, edit, openScenario, overlays, playing, sandbox, scree
 import { shown } from "./smooth.ts";
 import { diag, liveStats, summary } from "./diag.ts";
 import { sim, View } from "./View.tsx";
-import { ABANDON, canonicalStringify } from "../core/index.ts";
+import { ABANDON, canonicalStringify, LANDER_DESTRUCT } from "../core/index.ts";
 import { levelPreview } from "./levelPreview.ts";
 import { usePad, type PadGame } from "./gamepad.ts";
 
@@ -39,7 +39,9 @@ export const landerKey = signal<string>("lander-easy");
 export const standalone = signal(false);
 
 /** In the game, the left and right Shift keys are the left and right controls: hands apart, like the thumb pads. */
-const GAME_KEYS: Record<string, string> = { ShiftLeft: "left", ShiftRight: "right" };
+const GAME_KEYS: Record<string, string> = { ShiftLeft: "left", ShiftRight: "right", ControlLeft: "left", ControlRight: "right" };
+/** ↑ is both engines, as in Mammoth Asteroids. */
+const BOTH = "ArrowUp";
 const keyGroups: Record<string, number> = {};
 /** The channel each held key went to: it is let go on the same one, whatever the option says by then. */
 const keyChannels: Record<string, string> = {};
@@ -70,8 +72,20 @@ let keyCounter = 5_000_000;
 export function gameKeyDown(e: KeyboardEvent): void {
   const key = e.key.toLowerCase();
   if (!GAME_KEYS[e.code]) dropShifts(e);
+  if (e.code === BOTH && sandbox.value && !e.metaKey) {
+    e.preventDefault();
+    for (const side of ["left", "right"]) {
+      const pk = `${BOTH}:${side}`;
+      if (keyGroups[pk] !== undefined) continue;
+      keyGroups[pk] = ++keyCounter;
+      keyChannels[pk] = side;
+      sendControl(side, 1, "Key ↑", keyGroups[pk]);
+    }
+    return;
+  }
   const control = GAME_KEYS[e.code] || bindings.value[key];
-  if (control && sandbox.value && !e.ctrlKey && !e.metaKey) {
+  // A game key works with Ctrl held too: Ctrl is itself a control.
+  if (control && sandbox.value && !e.metaKey) {
     e.preventDefault();
     if (!e.repeat) {
       // Both Shift keys are "shift": the game's are told apart by where they are.
@@ -92,22 +106,27 @@ export function gameKeyDown(e: KeyboardEvent): void {
 /** Lets go of one held key, if it was held. */
 function releaseKey(pk: string, name: string): void {
   if (!sandbox.value || keyGroups[pk] === undefined) return;
-  sendControl(keyChannels[pk], 0, `Key ${name.toUpperCase()}`, keyGroups[pk]);
+  const channel = keyChannels[pk];
+  const group = keyGroups[pk];
   delete keyGroups[pk];
   delete keyChannels[pk];
+  // Another key still holding the same engine keeps it on.
+  if (Object.values(keyChannels).includes(channel)) return;
+  sendControl(channel, 0, `Key ${name.toUpperCase()}`, group);
 }
 
 /**
- * Windows sends no release for a Shift let go while the other Shift is still down. So when an
- * event says no Shift is held, neither is: both are let go.
+ * Windows sends no release for a Shift let go while the other Shift is still down (and the same
+ * for Ctrl). So when an event says no Shift is held, neither is: both are let go.
  */
 function dropShifts(e: KeyboardEvent): void {
-  if (e.shiftKey) return;
-  for (const code of Object.keys(GAME_KEYS)) releaseKey(code, "shift");
+  if (!e.shiftKey) for (const code of ["ShiftLeft", "ShiftRight"]) releaseKey(code, "shift");
+  if (!e.ctrlKey) for (const code of ["ControlLeft", "ControlRight"]) releaseKey(code, "ctrl");
 }
 
 export function gameKeyUp(e: KeyboardEvent): void {
   const key = e.key.toLowerCase();
+  if (e.code === BOTH) for (const side of ["left", "right"]) releaseKey(`${BOTH}:${side}`, "↑");
   releaseKey(GAME_KEYS[e.code] ? e.code : key, key);
   dropShifts(e);
 }
@@ -343,6 +362,32 @@ export function Thrust({ channel, label, side, className = "lander-thrust" }: { 
   );
 }
 
+/** How long the self-destruct button waits for its second press, ms. */
+const DESTRUCT_CONFIRM = 3000;
+
+/**
+ * Self-destruct (LND-036), beside Pause, as in Mammoth Asteroids: two presses, so one stray touch
+ * doesn't cost a ship. The first asks, the second (within 3 s) does it.
+ */
+function SelfDestruct() {
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    if (!asking) return;
+    const t = setTimeout(() => setAsking(false), DESTRUCT_CONFIRM);
+    return () => clearTimeout(t);
+  }, [asking]);
+  const press = () => {
+    if (!asking) return setAsking(true);
+    setAsking(false);
+    sendControl(LANDER_DESTRUCT, 1, "Self-destruct", Math.floor(Math.random() * 1e9));
+  };
+  return (
+    <button class={`lander-btn small${asking ? " danger" : ""}`} onClick={press} data-testid="lander-destruct">
+      {asking ? "Confirm self-destruct" : "Self-destruct"}
+    </button>
+  );
+}
+
 /** Seconds of game time a ship must stay at rest before it can be abandoned. */
 const ABANDON_AFTER = 4;
 
@@ -433,6 +478,7 @@ function Play() {
             SHIPS <b>{Math.max(0, lives)}</b>
           </span>
         </div>
+        {game?.state.phase === "flying" && playing.value && <SelfDestruct />}
         <button class="lander-btn small" onClick={() => (playing.value = !playing.value)} data-testid="lander-pause">
           {playing.value ? "Pause" : "Resume"}
         </button>
@@ -562,19 +608,19 @@ function HowToPlay() {
             <tr>
               <td>Turn left (the right engine)</td>
               <td>hold L</td>
-              <td>Q, Left Shift or ←</td>
+              <td>Q, ←, Left Shift or Left Ctrl</td>
               <td>left bumper or trigger, or stick left</td>
             </tr>
             <tr>
               <td>Turn right (the left engine)</td>
               <td>hold R</td>
-              <td>E, Right Shift or →</td>
+              <td>E, →, Right Shift or Right Ctrl</td>
               <td>right bumper or trigger, or stick right</td>
             </tr>
             <tr>
               <td>Both engines</td>
               <td>hold L and R</td>
-              <td>both keys</td>
+              <td>both keys, or ↑</td>
               <td>A, or both sides</td>
             </tr>
             <tr>
@@ -582,6 +628,12 @@ function HowToPlay() {
               <td>Pause button</td>
               <td>P or Esc</td>
               <td>Start</td>
+            </tr>
+            <tr>
+              <td>Self-destruct</td>
+              <td>the button beside Pause, pressed twice</td>
+              <td></td>
+              <td></td>
             </tr>
           </tbody>
         </table>

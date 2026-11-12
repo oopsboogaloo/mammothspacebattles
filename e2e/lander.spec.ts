@@ -70,7 +70,7 @@ test("LND-061 How to play and The physics open from mission select and come back
   await page.getByTestId("lander-howto").click();
   const how = page.getByTestId("lander-howto-screen");
   await expect(how).toContainText("Controls");
-  await expect(how).toContainText("Q, Left Shift or ←");
+  await expect(how).toContainText("Q, ←, Left Shift or Left Ctrl");
   await page.getByTestId("lander-info-back").click();
   await page.getByTestId("lander-physics").click();
   await expect(page.getByTestId("lander-physics-screen")).toContainText("Thrust is gas");
@@ -183,4 +183,47 @@ test("LND-035 a Shift let go while the other is still down doesn't stick, though
   await expect.poll(controls).not.toBe("0,0");
   await key("keyup", "ShiftLeft", false);
   await expect.poll(controls).toBe("0,0");
+});
+
+test("LND-035 the Ctrl keys are the left and right controls too, and ↑ is both engines", async ({ page }) => {
+  await page.goto("./?game=lander");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-hud")).toBeVisible();
+  const controls = () => page.evaluate(() => { const c = (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } } }).__msb.sandbox().world.controls; return `${c.left ?? 0},${c.right ?? 0}`; });
+  // A left control is the right engine (LND-035).
+  await page.keyboard.down("ControlLeft");
+  await expect.poll(controls).toBe("0,1");
+  await page.keyboard.down("ControlRight");
+  await expect.poll(controls).toBe("1,1");
+  await page.keyboard.up("ControlLeft");
+  await page.keyboard.up("ControlRight");
+  await expect.poll(controls).toBe("0,0");
+  await page.keyboard.down("ArrowUp");
+  await expect.poll(controls).toBe("1,1");
+  await page.keyboard.up("ArrowUp");
+  await expect.poll(controls).toBe("0,0");
+  // ↑ with one side already held lets go only of its own.
+  await page.keyboard.down("q");
+  await page.keyboard.down("ArrowUp");
+  await expect.poll(controls).toBe("1,1");
+  await page.keyboard.up("ArrowUp");
+  await expect.poll(controls).toBe("0,1");
+  await page.keyboard.up("q");
+  await expect.poll(controls).toBe("0,0");
+});
+
+test("LND-036 Self-destruct beside Pause: the first press asks, the second destroys the ship, which counts as a crash", async ({ page }) => {
+  await page.goto("./?game=lander");
+  await page.getByTestId("lander-title").click();
+  await page.getByTestId("lander-pick-lander-easy").click();
+  await expect(page.getByTestId("lander-hud")).toBeVisible();
+  const button = page.getByTestId("lander-destruct");
+  await expect(button).toHaveText("Self-destruct");
+  await button.click();
+  await expect(button).toHaveText("Confirm self-destruct");
+  await expect(page.getByTestId("lander-verdict")).toHaveCount(0);
+  await button.click();
+  await expect(page.getByTestId("lander-verdict")).toContainText("CRASHED", { timeout: 30_000 });
+  await expect(page.getByTestId("lander-lives")).toContainText("2", { timeout: 30_000 });
 });

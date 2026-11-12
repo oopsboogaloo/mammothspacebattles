@@ -261,8 +261,8 @@ date.
 
 | | Keyboard | Touch |
 |---|---|---|
-| Left engine | Q, ←, Left Shift | bottom-left button |
-| Right engine | E, →, Right Shift | bottom-right button |
+| Left engine | Q, ←, Left Shift, Left Ctrl | bottom-left button |
+| Right engine | E, →, Right Shift, Right Ctrl | bottom-right button |
 | Both engines | both keys, or ↑ | both buttons |
 | Fire | Space or W (hold to repeat) | a fire button, bottom centre |
 | Pause | P or Esc | pause button |

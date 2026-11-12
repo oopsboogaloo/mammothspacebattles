@@ -250,6 +250,8 @@ test("MTH-060 a ship destroyed on the ground leaves a crater there, and the view
     const d = 12.6 - hull.position.y;
     return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x, y: b.position.y + d }, velocity: { x: 0, y: 0 } } })));
   });
+  // The view has followed the ship down before it is destroyed (it stays where it last saw a ship).
+  await expect.poll(() => hook(page, (m) => Math.abs(m.camera().y - 12.6))).toBeLessThan(3);
   await page.getByTestId("mth-destruct").click();
   await page.getByTestId("mth-destruct").click();
   await expect.poll(() => hook(page, (m) => m.sandbox().world.terrain.holes.length), { timeout: 30_000 }).toBeGreaterThanOrEqual(1);
@@ -354,5 +356,34 @@ test("MTH-021 a Shift let go while the other is still down doesn't stick, though
   await key("keyup", "ShiftRight", true);
   await expect.poll(engines).not.toBe("00000");
   await key("keyup", "ShiftLeft", false);
+  await expect.poll(engines).toBe("00000");
+});
+
+test("MTH-021 the Ctrl keys turn as the Shift keys do, the other keys still work while one is held, and a Ctrl let go unseen doesn't stick", async ({ page }) => {
+  await start(page);
+  const engines = () => hook(page, (m) => ["main", "bl", "br", "fl", "fr"].map((c) => m.sandbox().world.controls[c] ?? 0).join(""));
+  await page.keyboard.down("ShiftLeft");
+  await expect.poll(engines).not.toBe("00000");
+  const left = await engines();
+  await page.keyboard.up("ShiftLeft");
+  await expect.poll(engines).toBe("00000");
+  await page.keyboard.down("ControlLeft");
+  await expect.poll(engines).toBe(left);
+  // Space fires with Ctrl held.
+  await page.keyboard.down("Space");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.fire ?? 0)).toBe(1);
+  await page.keyboard.up("Space");
+  await page.keyboard.up("ControlLeft");
+  await expect.poll(engines).toBe("00000");
+  await page.keyboard.down("ControlRight");
+  await expect.poll(engines).not.toBe("00000");
+  expect(await engines()).not.toBe(left);
+  await page.keyboard.up("ControlRight");
+  await expect.poll(engines).toBe("00000");
+  // Both down, the left one let go with no release sent, then the right one: neither is held.
+  const key = (type: string, code: string, ctrlKey: boolean) => page.evaluate(([t, c, s]) => void window.dispatchEvent(new KeyboardEvent(t as string, { code: c as string, key: "Control", ctrlKey: s as boolean, bubbles: true })), [type, code, ctrlKey] as const);
+  await key("keydown", "ControlLeft", true);
+  await key("keydown", "ControlRight", true);
+  await key("keyup", "ControlRight", false);
   await expect.poll(engines).toBe("00000");
 });
