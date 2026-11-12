@@ -1,7 +1,7 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { addBody, computeTotals, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { TERRAIN_OPS, computeTotals, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -478,19 +478,51 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("MTH-061 what stands on the ground stays where it is when the rock under it is cut away (for now): a turret's base, the pod's stand", () => {
+  it("MTH-061 a turret whose ground is cut away comes loose: half undermined it tips into the hole, still whole and still watching for the ship; one on a roof falls and breaks", () => {
     const { w, step } = game();
-    const base = { ...body(w, "t1-base")!.position };
-    expect(cutCrater(w, { x: 38, y: 4 }, 3, addBody)).toBe(true); // under the turret on its ledge
-    expect(cutCrater(w, { x: 12, y: -9 }, 2, addBody)).toBe(true); // under the pod's stand
-    step(1);
-    expect(body(w, "t1-base")!.position).toEqual(base);
+    step(0.2);
+    expect(body(w, "t1-base")).toMatchObject({ fixed: true });
+    expect(cutCrater(w, { x: 40, y: 3.5 }, 3, TERRAIN_OPS)).toBe(true); // under the right half of the turret on its ledge
+    settle(w);
+    expect(body(w, "t1-base")).toMatchObject({ fixed: false, mass: 100 });
+    step(3);
+    expect(body(w, "t1-base")!.position.y).toBeLessThan(4.5); // it was at 5.15
+    expect(Math.abs(body(w, "t1-base")!.angle)).toBeGreaterThan(0.5); // tipped into the hole
+    expect(w.joints.filter((j) => j.id.startsWith("t1-"))).toHaveLength(12); // nothing broke
     expect(turretWorks(w, body(w, "t1-carriage")!)).toBe(true);
-    expect(st(w).pod).toBe("stand");
-    expect(pod(w).position.y).toBeCloseTo(st(w).stand.y, 1);
+    expect(body(w, "t1-carriage")!.turret!.target).toBe("p1-hull");
+    expect(st(w).turretsOut).toEqual([]);
+    expect(w.ledger.violations).toBe(0);
+
+    // Level 2's third turret hangs from the chamber's roof, 50 m over the floor.
+    const roof = game(2);
+    roof.step(0.2);
+    expect(cutCrater(roof.w, { x: -30, y: -60.5 }, 2.5, TERRAIN_OPS)).toBe(true);
+    settle(roof.w);
+    roof.step(1);
+    expect(body(roof.w, "t3-base")!.velocity.y).toBeLessThan(-3); // falling
+    roof.step(5);
+    expect(body(roof.w, "t3-base")!.position.y).toBeLessThan(-105); // on the floor
+    expect(st(roof.w).turretsOut).toEqual(["t3-carriage"]); // broken by the fall: out of action
+    expect(st(roof.w).score).toBe(750);
+    expect(pod(roof.w).integrity).toBe(1); // it came down on the pod, which is very hard to destroy
   });
 
-it("MTH-062 an engine knocked off the ship no longer answers the controls: it burns out what it holds and is dead, and its tank leaks; a gun knocked off doesn't fire", () => {
+  it("MTH-061 the pod's stand comes loose with its ground, and the pod with it: loose, not lost", () => {
+    const { w, step } = game();
+    step(0.2);
+    expect(cutCrater(w, { x: 12, y: -10 }, 2.5, TERRAIN_OPS)).toBe(true); // under the stand
+    settle(w);
+    for (const id of ["stand", "stand-l", "stand-r"]) expect(body(w, id)!.fixed).toBe(false);
+    step(3);
+    expect(body(w, "stand")!.position.y).toBeLessThan(-9); // down in the crater (it was at -7.85)
+    expect(pod(w).position.y).toBeLessThan(st(w).stand.y - 1);
+    expect(st(w)).toMatchObject({ pod: "loose", phase: "flying" });
+    expect(pod(w).integrity).toBe(1);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MTH-062 an engine knocked off the ship no longer answers the controls: it burns out what it holds and is dead, and its tank leaks; a gun knocked off doesn't fire", () => {
     const { w, step } = game(1, (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];

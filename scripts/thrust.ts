@@ -77,10 +77,13 @@ const fixed = (id: string, shape: Json, position: Vec): Json => ({ id, fixed: tr
  * very hard to destroy (MTH-025), in a shallow cup so it doesn't roll off.
  */
 function pod(at: Vec): Json[] {
+  // The stand is anchored to the rock (TER-006): cut the rock at its foot and its three parts come
+  // loose as one, 30 kg, and the pod goes with it.
+  const part = (id: string, shape: Json, position: Vec, mass: number): Json => ({ ...fixed(id, shape, position), anchored: { mass, group: "stand" } });
   return [
-    fixed("stand", { kind: "box", width: 2.3, height: 0.3 }, { x: at.x, y: at.y + 0.15 }),
-    fixed("stand-l", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x - 1, y: at.y + 0.475 }),
-    fixed("stand-r", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x + 1, y: at.y + 0.475 }),
+    part("stand", { kind: "box", width: 2.3, height: 0.3 }, { x: at.x, y: at.y + 0.15 }, 20),
+    part("stand-l", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x - 1, y: at.y + 0.475 }, 5),
+    part("stand-r", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x + 1, y: at.y + 0.475 }, 5),
     {
       id: "pod",
       shape: { kind: "disc", radius: 1 },

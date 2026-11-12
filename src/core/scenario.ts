@@ -234,6 +234,14 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
   if (b.turret !== undefined) validateTurret(v, b.turret, `${path}.turret`);
+  if (b.anchored !== undefined) {
+    if (!isObj(b.anchored)) err(v, `${path}.anchored`, "must be {mass, group?}");
+    else {
+      num(v, b.anchored.mass, `${path}.anchored.mass`, { positive: true });
+      if (b.anchored.group !== undefined) str(v, b.anchored.group, `${path}.anchored.group`);
+      if (b.fixed !== true) err(v, `${path}.anchored`, "is for a fixed body");
+    }
+  }
   if (b.charge !== undefined) {
     if (!isObj(b.charge)) err(v, `${path}.charge`, "must be {shots, capacity}");
     else {

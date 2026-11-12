@@ -587,6 +587,45 @@ Found by Chloe in play: the controls still worked engines that were no longer on
   answers nothing (tested). A turret: without its barrel, carriage joint or battery it doesn't fire
   (tested).
 
+## 13. Turrets and the pod's stand come loose (12 November 2026)
+
+Version 1 of the craters left what stood on the ground floating. Chloe's answers for version 2:
+let the physics rule (it comes loose as soon as any of its rock is cut); a turret that has fallen
+keeps firing; the pod's stand too.
+
+**How** (`loosen` in `src/core/terrain.ts`, TER-006)
+
+- A fixed body may be `anchored: {mass, group?}`. A turret's base is (100 kg); so are the three
+  parts of the pod's stand (30 kg together, one group).
+- When a crater is cut, every anchored body whose outline it reaches (within 0.1 m) comes loose,
+  and the rest of its group with it. Each is taken out of the world and put back as a free body
+  of its mass, at rest where it was. Its welds are untouched, so the turret's pieces go with the
+  base. The parts of a group are welded to the first of them.
+- It is replaced, not changed in place, because the step keeps what it knows of fixed bodies by
+  the body itself.
+- Nothing decides whether it falls. A base with rock left under one end is a free plate resting
+  on that rock, and tips or not as its weight falls.
+- The mass that comes loose enters the ledger through the boundary.
+
+**Measured**
+
+| What | Result |
+|---|---|
+| Level 1's turret, a 3 m crater under its right half | tips 1.2 rad into the hole and comes to rest; all 12 welds whole; still works, and fired 3 bolts in the next 4 s with the ship in sight |
+| Level 2's roof turret, a 2.5 m crater in the roof beside it | falls 46 m in 5 s, lands by the pod, loses a piece and 5 welds: out of action (750) |
+| The pod's stand, a 2.5 m crater under it | stand and pod 3 to 4 m down in the crater; the pod loose, whole |
+| A plate with 3.1 m of its 6 m still on rock | stays where it is: its weight is over the rock |
+| Step time, level 1, with the turret loose | 0.8 ms |
+| The ledger | clean in every case |
+
+**Things to know**
+
+- A turret's own fuel tank, exploding, leaves a 2.4 m crater that reaches its base: what is left
+  of the turret comes loose and drops into it.
+- The roof turret hangs straight over the pod. It lands on it. The pod takes it.
+- A turret that has come loose is pushed by blasts and by its own gun. Its base is heavy so that
+  the gun's kick barely moves it.
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |

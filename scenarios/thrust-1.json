@@ -164,6 +164,10 @@
           "kind": "box",
           "width": 2.3,
           "height": 0.3
+        },
+        "anchored": {
+          "mass": 20,
+          "group": "stand"
         }
       },
       {
@@ -185,6 +189,10 @@
           "kind": "box",
           "width": 0.3,
           "height": 0.35
+        },
+        "anchored": {
+          "mass": 5,
+          "group": "stand"
         }
       },
       {
@@ -206,6 +214,10 @@
           "kind": "box",
           "width": 0.3,
           "height": 0.35
+        },
+        "anchored": {
+          "mass": 5,
+          "group": "stand"
         }
       },
       {
@@ -259,7 +271,10 @@
         },
         "angle": 0,
         "angularVelocity": 0,
-        "friction": 0.9
+        "friction": 0.9,
+        "anchored": {
+          "mass": 100
+        }
       },
       {
         "id": "t1-tank",

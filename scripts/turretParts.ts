@@ -75,9 +75,11 @@ export function turret(name: string, at: Vec, angle: number, t: TurretTuning, se
     { resource: "o2", mass: round((8 * mass) / 9), capacity: round((8 * mass) / 9) },
   ];
 
-  // The base: a fixed plate on the rock. It is never removed; its pieces are.
+  // The base: a fixed plate on the rock, anchored to it (TER-006): when a crater cuts the rock at its
+  // foot it comes loose, a 100 kg plate from then on, and the turret goes where the physics takes it.
+  // (Heavy, so that its own gun's kick, 12 N·s a shot, barely moves a turret that has come loose.)
   centre.set("base", { x: 0, y: 0.15 });
-  bodies.push({ id: id("base"), fixed: true, shape: { kind: "box", width: 6.4, height: 0.3 }, mass: 1, position: place({ x: 0, y: 0.15 }), velocity: { x: 0, y: 0 }, angle: round(angle), angularVelocity: 0, friction: 0.9 });
+  bodies.push({ id: id("base"), fixed: true, shape: { kind: "box", width: 6.4, height: 0.3 }, mass: 1, position: place({ x: 0, y: 0.15 }), velocity: { x: 0, y: 0 }, angle: round(angle), angularVelocity: 0, friction: 0.9, anchored: { mass: 100 } });
 
   // The fuel tank: a standard one. What it holds goes up with it when it is destroyed.
   box("tank", -3.1, -1.7, 0.3, 1.3, 2, { material: TANK, contents: stores(t.fuel), explosive: { charge: 0.3, arm: 1e6, fragments: 6, radius: 4, whenDestroyed: true } });
