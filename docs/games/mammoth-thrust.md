@@ -152,7 +152,7 @@ other sources in §12):
     joined to it by a pipe that can be seen. The ship can take its fuel with the beam.
   - Each piece has a material and is welded to the base (the gun to its carriage, the carriage
     held by the mount), with weld limits.
-- **Power, simply** (there is no power model in the engine yet; proposed, §11):
+- **Power, simply** (there is no power model in the engine yet; a first step, §11):
   - The gun fires only while it, its carriage, the battery and the wiring between them are whole
     and joined.
   - The battery holds a few shots (first value 5). The generator refills it while the generator is
@@ -178,7 +178,8 @@ other sources in §12):
 - **Waking.** It sees the ship when the ship is within its range and the line to it is clear of
   rock. From first sight it waits (first value 3 s) before its first shot, and goes on while it
   sees the ship. Out of sight, the gun stops where it is.
-- It doesn't fire while the factory has stopped it (see the question in §11).
+- It doesn't fire while the factory has stopped it (how the factory fits with the turret's own
+  power is parked, §11).
 - A bolt is a slow shell (first value 40 m/s) that bursts on what it strikes, or after its time.
   Its charge gives mostly gas and little damage: the Asteroids gunship shell made weaker and
   gassier. Bolts don't damage turrets, the factory or the pod's stand.
@@ -415,12 +416,14 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 
 ## 11. Open questions
 
-1. **The factory and the turrets.** Each turret now has its own generator, battery and fuel, so
-   "the factory powers the turrets" no longer fits. Proposed: the factory is their fire control.
-   It finds the ship and tells the turrets where to look; hit, it drops out for a time and the
-   turrets stop. Or should shooting the factory no longer stop them at all?
-2. **Power, simply** (§3): is the battery-and-generator rule the right first step, or should a
-   turret just work while its pieces are joined?
+Parked by Chloe (12 November 2026): build the turret as laid out in §3, fuel tank and all, and
+keep the factory's rule as it is (a hit stops the turrets). To come back to:
+
+1. **The factory and the turrets.** Each turret has its own generator, battery and fuel, and the
+   factory (the reactor) is also said to power them. How the two fit together is undecided. One
+   idea: the factory is their fire control.
+2. **Power, simply** (§3): the battery-and-generator rule is the first step as written; whether
+   it is the right one is to be seen in play.
 
 To settle in the build: the turret's sizes, weld limits and what a damaged mount does; the 30 m/s
 in MTH-025 and the other first values.
