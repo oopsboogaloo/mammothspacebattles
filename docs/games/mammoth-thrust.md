@@ -45,7 +45,11 @@ other sources in §12):
 | Life lost | The cockpit destroyed, or no working engine still welded to it (the duel's rule, DUEL-001). |
 | Nothing resets | When a life is lost the level stays exactly as it is: the wreck, the pod wherever it lies, destroyed turrets, emptied tanks, the factory's damage. Only a new ship comes in. |
 | Lives | 3. |
-| Game over | The third ship lost, or the factory blowing while the pod is still on the planet. (The pod destroyed: proposed game over too, §11.) |
+| Game over | The third ship lost, the factory blowing while the pod is still on the planet, or the pod destroyed. The pod is made very, very hard to destroy. |
+| The top without the pod | The ship is beamed back to the start, as it is, to finish the mission. No life is lost. |
+| Out of fuel | The ship falls and crashes: a life lost in the usual way, and a new ship. |
+| Turrets' build | Made of welded pieces with materials, like a ship, and damaged by the same model. One good hit mostly blows a turret to bits; a poor one may leave it working, or working worse. |
+| Doors | Doors opened by shooting a panel, in a later phase. |
 | Shells | A magazine of 120, full with each new ship. |
 | Win | The ship, with the pod on its tether, climbs above the level's top. There is no air anywhere: the top is only a height. |
 | Levels | The missions we draw, in order. No reversed gravity, no invisible walls. |
@@ -98,16 +102,23 @@ other sources in §12):
   breaking tension as tuning values. If it breaks, the pod falls; it can be taken again if it
   survives.
 - Pressing the tractor again lets the pod go (TRC-005).
-- The pod is a disc with a material tougher than the ship's tanks. Destroyed, it bursts (a small
-  charge) and a life is lost.
+- The pod is a disc with a material so tough that ordinary crashes, bolts and slugs don't destroy
+  it; the factory's blast may. Destroyed, it bursts (a small charge) and the game is over.
+- The ship reaching the level's top without the pod on its tether is beamed back to the start,
+  with its damage, fuel and shells as they are.
 
 ### Turrets and bolts
 
-- A turret is a fixed half-disc with a material, on the ground, the cave wall or the roof.
+- A turret is built like a ship: a fixed base on the ground, the cave wall or the roof, with a
+  dome, a gun and a power unit welded to it, each with a material. It is damaged by the Asteroids
+  damage model. To be designed piece by piece.
+- One good hit should mostly blow it to bits. Less than that can leave it working or working
+  worse: the gun knocked off (it can't fire), the power unit lost (it can't fire), the dome
+  damaged (first value: its aim spreads wider).
 - It sees the ship when the ship is within its range and the line to it is clear of rock.
 - From first sight it waits (first value 3 s), then fires one bolt every 2 s while it still sees
   the ship, at the ship's present position, with a random error of up to about 8°.
-- It doesn't fire while the factory is stopped, or once destroyed.
+- It doesn't fire while the factory is stopped, or without its gun or its power unit.
 - A bolt is a slow shell (first value 40 m/s) that bursts on what it strikes, or after its time.
   Its charge gives mostly gas and little damage: the Asteroids gunship shell made weaker and
   gassier. Bolts don't damage turrets, the factory or the pod's stand.
@@ -144,7 +155,7 @@ other sources in §12):
 
 | For | Points |
 |---|---|
-| A turret destroyed | 750 |
+| A turret put out of action | 750 |
 | A fuel tank emptied | 300 |
 | The pod carried out | 2000 |
 | The factory critical, and out with the pod | 2000 more |
@@ -199,6 +210,10 @@ Priority: **M** must, **S** should.
 - **MTH-022** `[M]` With the tether unit lost, the pod can't be held.
 - **MTH-023** `[M]` When a life is lost nothing on the level is reset: the pod, the wreck, the
   turrets, the tanks and the factory stay as they are, and a new ship beams in at the start.
+- **MTH-025** `[M]` When the pod is destroyed the game is over. A crash of the pod into rock at 30 m/s,
+  a bolt and a slug each leave it whole.
+- **MTH-026** `[M]` A ship above the level's top without the pod on its tether is beamed back to the
+  start as it is, with no life lost.
 - **MTH-024** `[M]` The level is complete when the ship is above the level's top with the pod
   on its tether.
 
@@ -206,7 +221,9 @@ Priority: **M** must, **S** should.
 - **MTH-030** `[M]` A turret fires only with a clear line to the ship inside its range, first
   after its wait from first sight, then at its rate, at the ship's present position with its
   spread.
-- **MTH-031** `[M]` A destroyed turret doesn't fire, and stays destroyed for the level.
+- **MTH-031** `[M]` A turret is welded pieces with materials, damaged by the shared damage model. One
+  that has lost its gun or its power unit doesn't fire, and stays so for the level.
+- **MTH-035** `[M]` A slug from the ship's cannon square on a turret's dome puts it out of action.
 - **MTH-032** `[M]` A bolt that bursts 2 m from the ship changes the ship's velocity by a
   measurable amount and destroys no part of an undamaged ship. (Values tuned by Chloe.)
 - **MTH-033** `[M]` A slug hitting the factory stops every turret for a time that grows with each
@@ -224,7 +241,7 @@ Priority: **M** must, **S** should.
 
 **Lives and score**
 - **MTH-050** `[M]` A life is lost when the cockpit is destroyed or no working engine is welded to
-  it. Three lives.
+  it. Three lives. Running out of fuel costs nothing by itself.
 - **MTH-051** `[M]` Scoring as §3.
 - **MTH-052** `[M]` The HUD shows score, lives, fuel, shells, the pod's state, the turrets' stop
   time and the factory's countdown.
@@ -258,6 +275,7 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 3. **Fuel and shield.**
 4. **Title (a still map), How to play, The physics, high scores.**
 5. **Tuning after play;** Chloe's hand-drawn levels.
+6. **Later:** doors opened by shooting a panel.
 
 ## 10. Answered (12 November 2026)
 
@@ -285,16 +303,21 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 | Title | No demo. A still map behind the title for now. |
 | Atmosphere | None. All vacuum; the top is only a height to reach. |
 
+## 10c. Answered (12 November 2026, third round)
+
+| Question | Answer |
+|---|---|
+| The pod destroyed | Game over. But the pod is very, very hard to destroy. |
+| The top without the pod | Beamed back to the start to finish the mission. |
+| Out of fuel | You crash, lose the life, and get a new ship. |
+| Turret toughness | Built of pieces and damaged like anything else. One good hit mostly destroys one; partial damage can leave it working or working worse. |
+| Doors | Yes, in a later phase. |
+
 ## 11. Open questions
 
-1. **The pod destroyed.** With nothing reset, there is no new pod, so the level can't be won.
-   Proposed: game over, as for the factory. Or make the pod impossible to destroy?
-2. **Above the top without the pod** (factory not critical): proposed that nothing happens, and
-   the ship can fly back down.
-3. **Out of fuel:** the original ends the whole game. Here the ship just falls and the life is
-   lost in the crash. Keep ours?
-4. **Turret toughness:** one slug destroys a turret, as the original, or several?
-5. **Doors** opened by shooting a panel (the original's later levels): wanted in our missions?
+None from the rules. To settle in the build: the turret's pieces and what each one's loss does; the
+30 m/s in MTH-025 and the other first values; whether a level could let the ship reach the top too
+fast for the beam back to make sense.
 
 ## 12. Sources
 
