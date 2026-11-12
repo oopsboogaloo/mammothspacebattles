@@ -11,6 +11,7 @@ import { diag, liveStats, summary } from "./diag.ts";
 import { sim, View } from "./View.tsx";
 import { ABANDON, canonicalStringify } from "../core/index.ts";
 import { levelPreview } from "./levelPreview.ts";
+import { usePad, type PadGame } from "./gamepad.ts";
 
 /** The scenarios, in order; those without a file yet are shown as coming soon. */
 export const LANDER_SCENARIOS: { key: string; title: string; blurb: string }[] = [
@@ -111,6 +112,28 @@ export function gameKeyUp(e: KeyboardEvent): void {
   dropShifts(e);
 }
 
+/**
+ * A game controller (gamepad.ts): the stick, D-pad, bumpers or triggers are left and right, and A
+ * is both engines together.
+ */
+const PAD: PadGame = {
+  flying: () => landerScreen.value === "play" && !!sandbox.value && playing.value,
+  controls: (p) => [...(p.left || p.lb || p.lt || p.a ? ["left"] : []), ...(p.right || p.rb || p.rt || p.a ? ["right"] : [])],
+  set: (control, on) => {
+    const pk = `pad-${control}`;
+    if (!on) return releaseKey(pk, "pad");
+    if (!sandbox.value || keyGroups[pk] !== undefined) return;
+    keyGroups[pk] = ++keyCounter;
+    keyChannels[pk] = landerSide(control);
+    sendControl(keyChannels[pk], 1, "Pad", keyGroups[pk]);
+  },
+  pause: () => {
+    if (landerScreen.value !== "play" || !sandbox.value || sandbox.value.world.lander?.state.phase === "over") return false;
+    playing.value = !playing.value;
+    return true;
+  },
+};
+
 /** Opens the game's title screen. */
 export function openLander(): void {
   landerScreen.value = "title";
@@ -190,6 +213,7 @@ export function useNoZoom(): void {
 
 export function LanderApp() {
   useNoZoom();
+  usePad(PAD);
   return (
     <main class="lander" data-testid="lander">
       {landerScreen.value === "title" && <Title />}
@@ -298,6 +322,7 @@ export function Thrust({ channel, label, side, className = "lander-thrust" }: { 
       class={`${className} ${side}`}
       aria-label={side === "fire" ? "Fire" : side === "reverse" ? "Reverse" : side === "tractor" ? "Tractor" : side === "left" ? "Left" : "Right"}
       data-testid={`thrust-${side}`}
+      data-hold
       onPointerDown={(e) => {
         try {
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -532,21 +557,31 @@ function HowToPlay() {
               <th></th>
               <th>Touch</th>
               <th>Keyboard</th>
+              <th>Controller</th>
             </tr>
             <tr>
               <td>Turn left (the right engine)</td>
               <td>hold L</td>
               <td>Q, Left Shift or ←</td>
+              <td>left bumper or trigger, or stick left</td>
             </tr>
             <tr>
               <td>Turn right (the left engine)</td>
               <td>hold R</td>
               <td>E, Right Shift or →</td>
+              <td>right bumper or trigger, or stick right</td>
+            </tr>
+            <tr>
+              <td>Both engines</td>
+              <td>hold L and R</td>
+              <td>both keys</td>
+              <td>A, or both sides</td>
             </tr>
             <tr>
               <td>Pause</td>
               <td>Pause button</td>
               <td>P or Esc</td>
+              <td>Start</td>
             </tr>
           </tbody>
         </table>

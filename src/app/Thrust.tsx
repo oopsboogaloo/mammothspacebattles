@@ -8,6 +8,7 @@ import { scenarioFile } from "./scenarios.ts";
 import { camera, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
 import { shown } from "./smooth.ts";
 import { View } from "./View.tsx";
+import { usePad, type PadGame, type PadState } from "./gamepad.ts";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
 import { LEVELS, lookAt, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
 import { THRUST_DESTRUCT } from "../core/index.ts";
@@ -183,6 +184,38 @@ export function thrustKeyUp(e: KeyboardEvent): void {
   dropShifts(e);
 }
 
+/**
+ * A game controller (gamepad.ts), by the keys it stands for: the stick or D-pad turns, A or the
+ * right trigger is forward, B or the left trigger reverse, X or the right bumper fires, Y or the left bumper is the tractor.
+ */
+function padControls(p: PadState): string[] {
+  const out: string[] = [];
+  if (p.left) out.push("ArrowLeft");
+  if (p.right) out.push("ArrowRight");
+  if (p.a || p.rt || p.up) out.push("ArrowUp");
+  if (p.b || p.lt || p.down) out.push("ArrowDown");
+  if (p.x || p.rb) out.push("Space");
+  if (p.y || p.lb) out.push("KeyZ");
+  return out;
+}
+const PAD: PadGame = {
+  flying: () => thrustScreen.value === "play" && !!sandbox.value && playing.value && !(ended()),
+  controls: padControls,
+  set: (code, on) => {
+    const pk = `Pad:${code}`;
+    if (!on) return release(pk);
+    if (down.has(pk) || !sandbox.value) return;
+    const to = KEYS[code].map(asteroidsSide);
+    down.set(pk, to);
+    for (const c of to) hold(c, 1);
+  },
+  pause: () => {
+    if (thrustScreen.value !== "play" || !sandbox.value || ended()) return false;
+    playing.value = !playing.value;
+    return true;
+  },
+};
+
 /** Lets go of every key (leaving play, or the window losing the keyboard). */
 function releaseKeys(): void {
   down.clear();
@@ -194,6 +227,7 @@ function releaseKeys(): void {
 
 export function ThrustApp() {
   useNoZoom();
+  usePad(PAD);
   return (
     <main class="mas" data-testid="mth">
       {thrustScreen.value === "title" && <Title />}

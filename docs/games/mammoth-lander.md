@@ -314,6 +314,8 @@ Priority: **M** must, **S** should.
   fires its right engine; a right control the left engine: the same way round as Mammoth
   Asteroids. An option in the pause menu, kept with the browser and shared with Mammoth
   Asteroids, swaps them, so a left control fires the left engine (as it did until 11 November 2026).
+  A game controller works too (PAD-002 in `docs/spec.md`): the stick, D-pad, bumpers or triggers
+  are the left and right controls, A is both engines, and Start pauses.
 - **LND-031** `[S]` The camera follows the ship and zooms in near the ground.
 - **LND-032** `[S]` After a crash, the verdict shows only once the wreck has played out (about
   2.5 s), and the next ship waits that long too.

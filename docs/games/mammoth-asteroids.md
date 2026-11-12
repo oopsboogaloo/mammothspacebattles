@@ -268,6 +268,9 @@ date.
 | Pause | P or Esc | pause button |
 | Self-destruct | | a button beside Pause, pressed twice |
 
+A game controller works too (PAD-002 in `docs/spec.md`): stick or D-pad turns, A or right trigger
+forward, B or left trigger reverse, X or right bumper fires, Start pauses.
+
 As in Lander, the browser must not zoom the game (LND-030's rules).
 
 ### HUD
