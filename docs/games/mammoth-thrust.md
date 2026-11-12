@@ -46,7 +46,7 @@ other sources in §12):
 | Nothing resets | When a life is lost the level stays exactly as it is: the wreck, the pod wherever it lies, destroyed turrets, emptied tanks, the factory's damage. Only a new ship comes in. |
 | Lives | 3. |
 | Game over | The third ship lost, the factory blowing while the pod is still on the planet, or the pod destroyed. The pod is made very, very hard to destroy. |
-| The top without the pod | The ship is beamed back to the start, as it is, to finish the mission. No life is lost. |
+| The top without the pod | The ship is beamed back to the start, as it is, to finish the mission. No life is lost. No exception: with the factory counting down it is beamed back too, and the game is lost when the factory blows. |
 | Out of fuel | The ship falls and crashes: a life lost in the usual way, and a new ship. |
 | Turrets' build | Made of welded pieces with materials, like a ship, and damaged by the same model. One good hit mostly blows a turret to bits; a poor one may leave it working, or working worse. |
 | Doors | Doors opened by shooting a panel, in a later phase. |
@@ -105,7 +105,8 @@ other sources in §12):
 - The pod is a disc with a material so tough that ordinary crashes, bolts and slugs don't destroy
   it; the factory's blast may. Destroyed, it bursts (a small charge) and the game is over.
 - The ship reaching the level's top without the pod on its tether is beamed back to the start,
-  with its damage, fuel and shells as they are.
+  with its damage, fuel and shells as they are. This holds while the factory is critical too:
+  there is no leaving without the pod.
 
 ### Turrets and bolts
 
@@ -312,12 +313,12 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 | Out of fuel | You crash, lose the life, and get a new ship. |
 | Turret toughness | Built of pieces and damaged like anything else. One good hit mostly destroys one; partial damage can leave it working or working worse. |
 | Doors | Yes, in a later phase. |
+| The beam back | Always, with no exception, the factory critical or not. Gravity is uniform, so there is no escape velocity to worry about. |
 
 ## 11. Open questions
 
 None from the rules. To settle in the build: the turret's pieces and what each one's loss does; the
-30 m/s in MTH-025 and the other first values; whether a level could let the ship reach the top too
-fast for the beam back to make sense.
+30 m/s in MTH-025 and the other first values.
 
 ## 12. Sources
 
