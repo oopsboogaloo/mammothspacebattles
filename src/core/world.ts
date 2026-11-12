@@ -1627,8 +1627,8 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Craters (TER-002, TER-003): the rock is fixed, so cutting it changes no total; a shell spent in
   // the rock leaves through the boundary.
   if (world.terrain?.craters) {
-    const t0 = computeTotals(world);
-    if (runTerrain(world, addBody)) {
+    let t0: ReturnType<typeof computeTotals> | undefined;
+    if (runTerrain(world, addBody, () => (t0 = computeTotals(world))) && t0) {
       after = computeTotals(world);
       addDelta(sources.boundary, diff(t0, after));
     }

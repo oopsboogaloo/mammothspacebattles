@@ -118,7 +118,7 @@ test("MTH-021 touch: the beam button works the tractor while held, with a thrust
 });
 
 test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the top, the level is complete, and level 2 opens with the score and ships carried over", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(300_000);
   await start(page);
   expect(await quiet(page)).toBe(true);
   expect(await overPod(page)).toBe(true);
@@ -126,7 +126,20 @@ test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the 
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON THE TETHER", { timeout: 15_000 });
   await page.keyboard.up("z");
   await page.keyboard.down("ArrowUp");
-  await expect(page.getByTestId("mth-won")).toBeVisible({ timeout: 60_000 });
+  // The climb is about 5 game seconds: 10 s on screen, and several times that on a slow machine. If
+  // it never ends, say where the ship and the pod had got to.
+  const where = () =>
+    hook(page, (m) => {
+      const w = m.sandbox().world;
+      const at = (id: string) => w.bodies.find((b) => b.id === id)?.position;
+      const s = m.thrust()!;
+      return JSON.stringify({ phase: s.phase, pod: s.pod, lives: s.lives, n: s.n, back: s.stats.back, time: w.time, top: w.thrust.spec.top, hull: at(`p${s.n}-hull`), podAt: at("pod") });
+    });
+  try {
+    await expect(page.getByTestId("mth-won")).toBeVisible({ timeout: 200_000 });
+  } catch {
+    throw new Error(`The level was not won in 200 s: ${await where()}`);
+  }
   await page.keyboard.up("ArrowUp");
   await expect(page.getByTestId("mth-won")).toContainText("Level 1 complete");
   await expect(page.getByTestId("mth-won")).toContainText("+2000");

@@ -336,9 +336,11 @@ export function craterRadius(t: Terrain, reach: number): number {
 /**
  * Runs the ground for one step, after everything has moved (TER-002, TER-003): a crater where each
  * of this step's explosions went off, and a small one where each solid shell struck the rock. The
- * shell is spent: it is taken out of the world. Returns whether a shell was (for the ledger).
+ * shell is spent: it is taken out of the world. Returns whether a shell was (for the ledger);
+ * `beforeSpent` is called once, just before the first is, so the ledger's totals need working out
+ * only on the steps a shell leaves.
  */
-export function runTerrain(world: World, addBody: (w: World, b: BodyInput) => void): boolean {
+export function runTerrain(world: World, addBody: (w: World, b: BodyInput) => void, beforeSpent?: () => void): boolean {
   const t = world.terrain;
   if (!t?.craters) return false;
   let spent = false;
@@ -357,6 +359,7 @@ export function runTerrain(world: World, addBody: (w: World, b: BodyInput) => vo
       // Where it touched the rock: the crater is a bowl in the surface there.
       const touch = world.contacts.find((c) => (c.a === a && c.b === b) || (c.a === b && c.b === a));
       cutCrater(world, touch ? touch.point : shell.position, t.craters.bullet, addBody);
+      if (!spent) beforeSpent?.();
       world.bodies = world.bodies.filter((x) => x !== shell);
       world.contacts = world.contacts.filter((c) => c.a !== shell.id && c.b !== shell.id);
       spent = true;
