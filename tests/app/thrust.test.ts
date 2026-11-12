@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { insideOutline, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
-import { LEVELS, lookAt, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
+import { easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
 import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -57,6 +57,27 @@ describe("Mammoth Thrust's page", () => {
     expect(lookAt(w, 0)!.x).toBeCloseTo(start.x + 0.35 * (pod.position.x - start.x), 6);
     w.bodies = w.bodies.filter((b) => b.id !== "p1-hull");
     expect(lookAt(w, 0)).toBeNull();
+  });
+
+  it("MTH-052 the view leans toward the pod on the tether by easing, never a jump, and eases back when the pod is let go", () => {
+    const w = world();
+    expect(lookParts(w, 0)!.lean).toEqual({ x: 0, y: 0 });
+    w.thrust!.state.pod = "tether";
+    const to = lookParts(w, 0)!.lean;
+    expect(Math.abs(to.x) + Math.abs(to.y)).toBeGreaterThan(5);
+    // One frame moves it a little; the time constant closes 63% of the gap; in the end it is there.
+    let lean = easeLean({ x: 0, y: 0 }, to, 1 / 60);
+    expect(lean.x / to.x).toBeCloseTo(1 - Math.exp(-1 / 60 / LEAN_TIME), 6);
+    expect(lean.x / to.x).toBeLessThan(0.05);
+    lean = { x: 0, y: 0 };
+    for (let i = 0; i < Math.round(LEAN_TIME * 60); i++) lean = easeLean(lean, to, 1 / 60);
+    expect(lean.x / to.x).toBeCloseTo(1 - Math.exp(-1), 2);
+    for (let i = 0; i < 600; i++) lean = easeLean(lean, to, 1 / 60);
+    expect(lean.x).toBeCloseTo(to.x, 6);
+    // A long frame (a stall) is still a small step.
+    expect(easeLean({ x: 0, y: 0 }, to, 5).x / to.x).toBeLessThan(0.25);
+    // Back again.
+    expect(Math.abs(easeLean(to, { x: 0, y: 0 }, 1 / 60).x)).toBeLessThan(Math.abs(to.x));
   });
 
   it("MTH-053 the rock is horizontal lines of the level's colour, a line and a gap of equal height, fixed to the world, with no outline", () => {

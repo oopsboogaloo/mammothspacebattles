@@ -245,7 +245,8 @@ First values, to tune. Top 10 with initials, as Asteroids (`scores.ts`).
 - **HUD.** Score, lives, fuel, shells, a pod light (on the stand / loose / on the tether), the
   factory's countdown when critical, and "turrets stopped" with its time left.
 - **View.** The camera follows the ship, as Lander's cave levels do, and widens a little to keep
-  the pod in view when it is on the tether. Lander's pace (1× = half real time).
+  the pod in view when it is on the tether: it leans 35% of the way to the pod, easing there and
+  back over about 0.4 s so that taking or dropping the pod never jumps the view. Lander's pace (1× = half real time).
 
 ## 5. How to play and The physics
 

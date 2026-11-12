@@ -10,7 +10,7 @@ import { shown } from "./smooth.ts";
 import { View } from "./View.tsx";
 import { usePad, type PadGame, type PadState } from "./gamepad.ts";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
-import { LEVELS, lookAt, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
+import { easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
 import { THRUST_DESTRUCT } from "../core/index.ts";
 
 export const thrustScreen = signal<"title" | "play">("title");
@@ -45,12 +45,21 @@ function useFollowCamera(): void {
     // Where the view last looked at a ship: with the ship gone it stays there, on the explosion and
     // what it leaves, until the next ship beams in.
     let last: { x: number; y: number } | null = null;
+    // The view's lean toward the pod on the tether: eased in and out, so taking or dropping the pod never jumps it.
+    let lean = { x: 0, y: 0 };
+    let then = performance.now();
     const tick = () => {
       raf = requestAnimationFrame(tick);
+      const now = performance.now();
+      const dt = (now - then) / 1000;
+      then = now;
       const w = sandbox.value?.world;
       const vp = viewport.value;
       if (!w?.thrust || !vp.width || !vp.height) return;
-      const ship = lookAt(w, shown.time - w.time);
+      const look = lookParts(w, shown.time - w.time);
+      if (look) lean = easeLean(lean, look.lean, dt);
+      else lean = { x: 0, y: 0 };
+      const ship = look && { x: look.ship.x + lean.x, y: look.ship.y + lean.y };
       if (ship) last = ship;
       else if (w.time < 0.05) last = null; // a new level
       const at = ship ?? last ?? w.thrust.spec.start;
