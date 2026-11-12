@@ -41,15 +41,32 @@ export function shipStatus(world: World): { fuel: number; slugs: number; damage:
  * toward the pod while the pod is on its tether, so both stay in view. With no ship, at the start.
  */
 export function lookAt(world: World, ahead: number): Vec2 | null {
+  const look = lookParts(world, ahead);
+  return look && { x: look.ship.x + look.lean.x, y: look.ship.y + look.lean.y };
+}
+
+/** How far toward the pod the view leans while the pod is on the tether, of the way from the ship. */
+export const POD_LEAN = 0.35;
+/** The time the view takes to lean toward the pod, or back, s on screen (it closes 63% of the gap in this time). */
+export const LEAN_TIME = 0.4;
+
+/** The view's two parts: the ship, which it follows at once, and its lean toward the pod, which it eases into. */
+export function lookParts(world: World, ahead: number): { ship: Vec2; lean: Vec2 } | null {
   const game = world.thrust;
   if (!game) return null;
   const hull = world.bodies.find((b) => b.id === game.spec.hull.replaceAll("{n}", String(game.state.n)));
   if (!hull) return null;
   const ship = { x: hull.position.x + hull.velocity.x * ahead, y: hull.position.y + hull.velocity.y * ahead };
   const pod = game.state.pod === "tether" ? world.bodies.find((b) => b.id === game.spec.pod) : undefined;
-  if (!pod) return ship;
+  if (!pod) return { ship, lean: { x: 0, y: 0 } };
   const p = { x: pod.position.x + pod.velocity.x * ahead, y: pod.position.y + pod.velocity.y * ahead };
-  return { x: ship.x + 0.35 * (p.x - ship.x), y: ship.y + 0.35 * (p.y - ship.y) };
+  return { ship, lean: { x: POD_LEAN * (p.x - ship.x), y: POD_LEAN * (p.y - ship.y) } };
+}
+
+/** Moves a lean toward where it should be, over `dt` s: never a jump, however long the frame. */
+export function easeLean(from: Vec2, to: Vec2, dt: number): Vec2 {
+  const k = 1 - Math.exp(-Math.min(dt, 0.1) / LEAN_TIME);
+  return { x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k };
 }
 
 /** What the HUD calls the pod's state. */

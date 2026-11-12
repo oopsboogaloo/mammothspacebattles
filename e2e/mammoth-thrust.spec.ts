@@ -183,6 +183,35 @@ test("MTH-042 holding the beam over a fuel tank draws its fuel into the ship, an
   await expect(page.getByTestId("mth-refuel")).toHaveCount(0, { timeout: 15_000 });
 });
 
+test("MTH-052 the view doesn't jump when the tether takes the pod: it eases toward it", async ({ page }) => {
+  await start(page);
+  expect(await quiet(page)).toBe(true);
+  expect(await overPod(page)).toBe(true);
+  // Each frame: how far the view's centre is from the ship.
+  await page.evaluate(() => {
+    const m = (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; position: { x: number; y: number } }[] } }; camera: () => { x: number; y: number } } }).__msb;
+    const out: number[] = [];
+    (window as unknown as { __lean: number[] }).__lean = out;
+    const tick = () => {
+      const hull = m.sandbox().world.bodies.find((b) => b.id === "p1-hull");
+      if (hull) out.push(Math.hypot(m.camera().x - hull.position.x, m.camera().y - hull.position.y));
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await page.keyboard.down("z");
+  await expect(page.getByTestId("mth-pod")).toHaveText("POD ON THE TETHER", { timeout: 15_000 });
+  await page.keyboard.up("z");
+  // It ends up leaning toward the pod...
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __lean: number[] }).__lean.at(-1)!), { timeout: 15_000 }).toBeGreaterThan(2);
+  // ...and got there with no frame moving it far (a jump was about 3 m at once).
+  const steps = await page.evaluate(() => {
+    const v = (window as unknown as { __lean: number[] }).__lean;
+    return Math.max(...v.slice(1).map((x, i) => Math.abs(x - v[i])));
+  });
+  expect(steps).toBeLessThan(1.5);
+});
+
 test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires bolts; they show in flight", async ({ page }) => {
   test.setTimeout(90_000);
   await start(page);
