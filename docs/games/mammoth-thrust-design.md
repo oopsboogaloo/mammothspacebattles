@@ -38,7 +38,7 @@ These facts shape the design. Each was read in the source.
 *Agreed, 12 November 2026:* Chloe approved every engine addition in this section. Changes to what
 Lander or Asteroids themselves do are a separate matter, to be talked through with her first; none
 is proposed here. The requirements are in `docs/spec.md` under milestone M10: ASM-008 (§2.1),
-WPN-009 (§2.2), WPN-010 (§2.3), TRC-008 and TRC-009 (§2.4), SHD-001…005 (§2.5). None
+WPN-009 (§2.2), WPN-010 (§2.3), TRC-008 (§2.4; TRC-009 is withdrawn, §14), SHD-001…005 (§2.5). None
 changes what the sandbox, Lander or Asteroids do today: every one is a new, optional component, off
 unless a scenario declares it (determinism hashes unchanged, checked in each PR).
 
@@ -337,7 +337,7 @@ measurements in the PR and the spec. Chloe plays after steps 4, 6 and 8.
      time → bonus; pod still down at the blast → over; a ship at the top without the pod during
      the countdown is beamed back.
    - **Chloe plays.**
-7. **Fuel through the beam** (§2.4).
+7. **Fuel through the beam** (§2.4). **Built: §14.**
    - Tests: fuel moves at the rate and stops when full or empty; mass conserved; the tank's weld
      holds against the beam; a shot tank explodes by what it holds; a turret whose tank is drained
      falls quiet after its battery's shots.
@@ -625,6 +625,32 @@ keeps firing; the pod's stand too.
 - The roof turret hangs straight over the pod. It lands on it. The pod takes it.
 - A turret that has come loose is pushed by blasts and by its own gun. Its base is heavy so that
   the gun's kick barely moves it.
+
+## 14. Fuel through the beam as built (step 7, 12 November 2026)
+
+- **The siphon (TRC-008)** is on the tractor: `siphon: { rate, into }`. While the beam is on, the
+  nearest body in its wedge marked `siphon: true` that still holds something is joined to the
+  ship's tanks by feed links (ids `siphon:…`), and `runFeeds` moves the fuel on the next step as
+  it does any feed. The links go when the beam is off, the source is out of the wedge, or it is
+  empty. So nothing new moves mass: the ledger books it as any transfer.
+- **Differences from §2.4.** The siphon doesn't pull the tank, and it isn't limited by `only`
+  (the ship's beam takes only the pod, TRC-011). So the weld needn't hold against the beam, and
+  `capture: false` isn't needed: TRC-009 is withdrawn.
+- **The ship**: 2 kg a game second, shared between its two wing tanks. A wing tank that has come
+  off takes nothing.
+- **Fuel tanks** (`fuelTank` in `scripts/thrust.ts`): a 2 kg thin box holding 8.1 kg, welded to
+  a pad that is anchored to the rock (so a crater under it lets it fall, TER-006). One on level 1,
+  on the flat to the right; two on level 2, on the surface beside the start and on the chamber's
+  floor at the foot of the shaft. Each turret's tank is marked too.
+- **The game** (`thrust.tanks`, `runThrust`): a listed tank the ship has drawn from scores 300
+  when empty, once. A tank's charge follows what it holds (charge for each kg, from the level as
+  built), and an empty tank has none; the change is booked through the boundary, as the charge
+  stands for the fuel.
+- **The page**: REFUELLING while fuel is coming.
+- **Measured:** the ship burns about 0.14 kg a game second while its battery charges, so a full
+  ship held over a tank still draws that.
+- **Not done:** a tank looks like a plain box. A turret drained by the ship falls quiet only when
+  its battery is flat (5 shots), as before.
 
 ## 7. To decide or measure, in order of when it bites
 

@@ -209,7 +209,9 @@ export function asteroidShip(t: ShipTuning) {
     // the end tore the unit off, dropping the pod. The beam starts under the ship on its centre
     // line and points down its tail: the cockpit's centre is 0.58 m up from the ship's own origin.
     const hull = bodies.find((b) => b.id === id("hull"))!;
-    hull.tractor = { ...t.tractor, origin: { x: 0, y: -1.5 }, direction: { x: 0, y: -1 }, beamFrom: id("tractor"), tetherFrom: id("tether") };
+    // If it can draw fuel through its beam (TRC-008), the fuel goes to the two wing tanks.
+    const siphon = t.tractor.siphon ? { siphon: { ...(t.tractor.siphon as Json), into: [id("tank-l"), id("tank-r")] } } : {};
+    hull.tractor = { ...t.tractor, ...siphon, origin: { x: 0, y: -1.5 }, direction: { x: 0, y: -1 }, beamFrom: id("tractor"), tetherFrom: id("tether") };
     box("tractor", -1.3, -0.75, -0.9, -0.5, 1);
     box("tether", 0.75, 1.3, -0.9, -0.5, 1);
     // Two welds each, apart: the tether pulls on the tractor unit, and one weld alone twists off.

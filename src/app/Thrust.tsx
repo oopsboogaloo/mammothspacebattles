@@ -285,6 +285,11 @@ function Play() {
           <small>{s.lives > 0 ? "The next one is beaming in. Nothing else has changed." : ""}</small>
         </div>
       )}
+      {s.phase === "flying" && !back && sb.world.bodies.some((b) => b.id === game.spec.tractor.replaceAll("{n}", String(s.n)) && b.tractor?.siphoning) && (
+        <div class="mth-note" data-testid="mth-refuel">
+          REFUELLING
+        </div>
+      )}
       {s.phase === "flying" && back && (
         <div class="mth-note" data-testid="mth-back">
           BACK YOU GO

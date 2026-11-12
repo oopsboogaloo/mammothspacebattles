@@ -43,8 +43,10 @@ export interface ThrustSpec {
   level?: number;
   /** The level's turrets (MTH-030): the bodies that carry their fire control. They watch for the ship flying. */
   turrets?: string[];
-  /** Points: for the pod carried out, for each kg of fuel left then, and for a turret put out of action. */
-  scores?: { pod?: number; fuel?: number; turret?: number };
+  /** The level's fuel tanks (MTH-042): bodies the ship's beam can draw fuel from. */
+  tanks?: string[];
+  /** Points: for the pod carried out, for each kg of fuel left then, for a turret put out of action, and for a fuel tank the ship has emptied. */
+  scores?: { pod?: number; fuel?: number; turret?: number; tank?: number };
   /** The score and ships brought from the level before. */
   carry?: { score: number; lives: number };
   /**
@@ -83,6 +85,11 @@ export interface ThrustState {
   /** The flying ship's fuel lines that have been cut, as "tank>engine", and those of a wing lost whole, whose engines burn on from its tank (MTH-062). */
   cut?: string[];
   burning?: string[];
+  /** The fuel tanks the ship has drawn from, and those it has emptied (each scored once). */
+  tanksDrawn: string[];
+  tanksEmptied: string[];
+  /** Each tank's explosive charge for each kg it holds, from the level as built (MTH-043). */
+  tankCharge: Record<string, number>;
   /** The turrets that can no longer fire: each scored once. */
   turretsOut: string[];
   /** For the end screens. */
@@ -106,7 +113,7 @@ export interface ThrustOps {
 }
 
 export const THRUST_DEFAULTS = { lives: 3, respawn: 1.25, grace: 1, watch: 1.5 };
-export const THRUST_SCORES = { pod: 2000, fuel: 100, turret: 750 };
+export const THRUST_SCORES = { pod: 2000, fuel: 100, turret: 750, tank: 300 };
 /** The control that destroys the player's own ship, as Mammoth Asteroids' (MAS-039). */
 export const THRUST_DESTRUCT = "destruct";
 /** How long a beam ring shows, game s. */
@@ -153,6 +160,17 @@ function endGrace(world: World, game: ThrustGame): void {
 }
 
 /** The fuel in the flying ship's tanks, kg. */
+/** For each of the level's tanks that can explode: its charge for each kg it holds. */
+function tankCharges(world: World, spec: ThrustSpec): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const id of spec.tanks ?? []) {
+    const tank = world.bodies.find((b) => b.id === id);
+    const held = (tank?.contents ?? []).reduce((m, c) => m + c.mass, 0);
+    if (tank?.explosive && held > 0) out[id] = tank.explosive.charge / held;
+  }
+  return out;
+}
+
 export function thrustFuel(world: World): { mass: number; capacity: number } {
   const game = world.thrust;
   let mass = 0;
@@ -192,6 +210,9 @@ export function startThrust(world: World, spec: ThrustSpec, ops: ThrustOps): Thr
       pod: "stand",
       stand: pod ? { ...pod.position } : { x: 0, y: 0 },
       beams: [],
+      tanksDrawn: [],
+      tanksEmptied: [],
+      tankCharge: tankCharges(world, spec),
       turretsOut: [],
       stats: { ships: 0, back: 0 },
     },
@@ -228,6 +249,33 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
     s.turretsOut = [...s.turretsOut, id];
     s.score += spec.scores?.turret ?? THRUST_SCORES.turret;
     world.events.push({ tick: world.tick, type: "thrust.turret", data: { id } });
+  }
+
+  // 0a. Fuel tanks (MTH-042, MTH-043). One the ship is drawing from is noted; emptied by the ship,
+  // it scores once. A tank's charge follows what it holds.
+  if (spec.tanks?.length) {
+    const from = world.bodies.find((b) => b.id === idOf(spec.tractor, s.n))?.tractor?.siphoning;
+    if (from !== undefined && spec.tanks.includes(from) && !s.tanksDrawn.includes(from)) s.tanksDrawn = [...s.tanksDrawn, from];
+    for (const id of spec.tanks) {
+      const tank = world.bodies.find((b) => b.id === id);
+      if (!tank) continue;
+      const held = (tank.contents ?? []).reduce((m, c) => m + c.mass, 0);
+      // Destroyed, it goes up with what it still holds; empty, with nothing.
+      // The charge stands for the fuel: what leaves with the fuel is booked through the boundary.
+      if (tank.explosive && s.tankCharge[id] !== undefined) {
+        const charge = s.tankCharge[id] * held;
+        if (!(held > 1e-6)) delete tank.explosive;
+        else if (charge !== tank.explosive.charge) tank.explosive.charge = charge;
+        else continue;
+        changed = true;
+      }
+      if (held > 1e-6) continue;
+      if (s.tanksDrawn.includes(id) && !s.tanksEmptied.includes(id)) {
+        s.tanksEmptied = [...s.tanksEmptied, id];
+        s.score += spec.scores?.tank ?? THRUST_SCORES.tank;
+        world.events.push({ tick: world.tick, type: "thrust.tank", data: { id } });
+      }
+    }
   }
 
   // 1. The pod (MTH-025): destroyed, the game is over.

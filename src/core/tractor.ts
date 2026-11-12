@@ -76,6 +76,14 @@ export interface Tractor {
    * in the wedge.
    */
   only?: string[];
+  /**
+   * It can draw propellant through its beam (TRC-008): while the beam is on and a body marked
+   * `siphon` is in its wedge, that body's propellant moves to the bodies named in `into` (the
+   * ship's tanks), `rate` kg/s in all. The source is not pulled, whatever `only` says.
+   */
+  siphon?: { rate: number; into: string[] };
+  /** State: the body it is drawing propellant from now. */
+  siphoning?: string;
   /** State: what it is doing now. */
   mode: "off" | "beam" | "tether";
   /** State: the control was on last step (to see a fresh press). */
@@ -160,13 +168,21 @@ export function invMassAlong(g: Group, p: Vec2, n: Vec2): number {
  */
 export function applyTractors(world: World, rbs: RB[], dt: number): void {
   const users = rbs.filter((r) => r.body.tractor && r.invMass > 0);
-  if (!users.length) return;
+  // The feeds a siphon set up last step are for this step's tractors to renew: whatever isn't
+  // renewed (the beam off, the source out of the wedge, the ship gone) is taken away.
+  const fed = new Set<string>();
+  const settle = (): void => {
+    if (world.links.some((l) => l.id.startsWith(SIPHON) && !fed.has(l.id))) world.links = world.links.filter((l) => !l.id.startsWith(SIPHON) || fed.has(l.id));
+  };
+  if (!users.length) return settle();
   const roots = assemblyRoots(world);
   const byId = new Map(rbs.map((r) => [r.body.id, r]));
   const ev = (type: string, data: Record<string, number | string | boolean>) => world.events.push({ tick: world.tick, type, data });
   for (const ship of users) {
     const b = ship.body;
     const t = b.tractor!;
+    const drawing = t.siphoning;
+    t.siphoning = undefined;
     const linked = world.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === t.channel && l.integrity > 0);
     const on = linked && b.integrity > 0 && (world.controls[t.channel] ?? 0) > 0 && partWorks(b, t.beamFrom, byId, roots);
     const pressed = on && !t.held;
@@ -196,9 +212,60 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
     const want = on && !t.latched;
     if (want !== (t.mode === "beam")) ev(want ? "tractor.on" : "tractor.off", { id: b.id });
     t.mode = want ? "beam" : "off";
-    if (!want) continue;
+    if (!want) {
+      if (drawing) ev("siphon.off", { id: b.id, from: drawing });
+      continue;
+    }
+    if (t.siphon) siphon(world, ship, roots, rbs, fed);
+    if (drawing !== t.siphoning) {
+      if (drawing) ev("siphon.off", { id: b.id, from: drawing });
+      if (t.siphoning) ev("siphon.on", { id: b.id, from: t.siphoning });
+    }
     beam(world, ship, roots, rbs, dt, ev, tetherWorks(b, byId, roots));
   }
+  settle();
+}
+
+/** The ids of the feed links a siphon keeps start with this. */
+const SIPHON = "siphon:";
+
+/**
+ * A tractor's siphon (TRC-008): the nearest body in the beam's wedge that is marked `siphon` and
+ * still holds propellant is joined to the ship's tanks by feed links, which move the propellant on
+ * the next step as any feed does (mass and momentum exact, the rest recorded as a transfer). The
+ * rate is shared between the resources as the source holds them, and equally between the tanks.
+ */
+function siphon(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: RB[], fed: Set<string>): void {
+  const t = ship.body.tractor!;
+  const { origin, axis } = tractorFrame(ship.body);
+  const half = sinCos(t.arc / 2).c;
+  const own = roots.get(ship.body.id);
+  let best: { r: RB; dist: number; held: number } | null = null;
+  for (const r of rbs) {
+    if (!r.body.siphon || roots.get(r.body.id) === own) continue;
+    const held = (r.body.contents ?? []).reduce((m, s) => m + s.mass, 0);
+    if (!(held > 1e-9)) continue;
+    const d = sub(r.body.position, origin);
+    const dist = length(d);
+    if (dist > t.range || dist < 1e-6 || dot(d, axis) < dist * half) continue;
+    if (!best || dist < best.dist) best = { r, dist, held };
+  }
+  if (!best) return;
+  const src = best.r.body;
+  const tanks = t.siphon!.into.filter((id) => rbs.some((r) => r.body.id === id && roots.get(id) === own));
+  if (!tanks.length) return;
+  t.siphoning = src.id;
+  const links = world.links.filter((l) => !l.id.startsWith(`${SIPHON}${ship.body.id}:`));
+  for (const s of src.contents ?? []) {
+    if (!(s.mass > 0)) continue;
+    for (const tank of tanks) {
+      if (!rbs.some((r) => r.body.id === tank && r.body.contents?.some((c) => c.resource === s.resource))) continue;
+      const id = `${SIPHON}${ship.body.id}:${src.id}:${tank}:${s.resource}`;
+      fed.add(id);
+      links.push({ id, kind: "feed", from: src.id, to: tank, resource: s.resource, rate: (t.siphon!.rate * (s.mass / best.held)) / tanks.length, integrity: 1 });
+    }
+  }
+  world.links = links.sort((p, q) => (p.id < q.id ? -1 : p.id > q.id ? 1 : 0));
 }
 
 /** A separate part the tractor needs, if it names one, is there, working, and on the tractor's ship. */

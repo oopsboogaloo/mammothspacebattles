@@ -313,6 +313,7 @@
           "threshold": 60,
           "toughness": 500
         },
+        "siphon": true,
         "contents": [
           {
             "resource": "h2",
@@ -654,6 +655,7 @@
           "threshold": 60,
           "toughness": 500
         },
+        "siphon": true,
         "contents": [
           {
             "resource": "h2",
@@ -995,6 +997,7 @@
           "threshold": 60,
           "toughness": 500
         },
+        "siphon": true,
         "contents": [
           {
             "resource": "h2",
@@ -1285,6 +1288,146 @@
           "name": "hull",
           "threshold": 150,
           "toughness": 1000
+        }
+      },
+      {
+        "id": "fuel-1-pad",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": -91,
+          "y": 20.15
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 2,
+          "height": 0.3
+        },
+        "anchored": {
+          "mass": 30
+        }
+      },
+      {
+        "id": "fuel-1",
+        "shape": {
+          "kind": "box",
+          "width": 1.4,
+          "height": 1.6
+        },
+        "mass": 2,
+        "position": {
+          "x": -91,
+          "y": 21.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "tank",
+          "threshold": 60,
+          "toughness": 500
+        },
+        "siphon": true,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "explosive": {
+          "charge": 0.3,
+          "arm": 1000000,
+          "fragments": 6,
+          "radius": 4,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "fuel-2-pad",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 5,
+          "y": -111.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 2,
+          "height": 0.3
+        },
+        "anchored": {
+          "mass": 30
+        }
+      },
+      {
+        "id": "fuel-2",
+        "shape": {
+          "kind": "box",
+          "width": 1.4,
+          "height": 1.6
+        },
+        "mass": 2,
+        "position": {
+          "x": 5,
+          "y": -110.9
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "tank",
+          "threshold": 60,
+          "toughness": 500
+        },
+        "siphon": true,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "explosive": {
+          "charge": 0.3,
+          "arm": 1000000,
+          "fragments": 6,
+          "radius": 4,
+          "whenDestroyed": true
         }
       }
     ],
@@ -1990,6 +2133,82 @@
           "shear": 32100,
           "torque": 11040
         }
+      },
+      {
+        "id": "fuel-1-w-0",
+        "a": "fuel-1-pad",
+        "b": "fuel-1",
+        "anchorA": {
+          "x": -0.5,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": -0.8
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "fuel-1-w-1",
+        "a": "fuel-1-pad",
+        "b": "fuel-1",
+        "anchorA": {
+          "x": 0.5,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.5,
+          "y": -0.8
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "fuel-2-w-0",
+        "a": "fuel-2-pad",
+        "b": "fuel-2",
+        "anchorA": {
+          "x": -0.5,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": -0.8
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "fuel-2-w-1",
+        "a": "fuel-2-pad",
+        "b": "fuel-2",
+        "anchorA": {
+          "x": 0.5,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.5,
+          "y": -0.8
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
       }
     ],
     "links": [
@@ -2410,6 +2629,13 @@
               "only": [
                 "pod"
               ],
+              "siphon": {
+                "rate": 2,
+                "into": [
+                  "p{n}-tank-l",
+                  "p{n}-tank-r"
+                ]
+              },
               "tether": {
                 "length": 12,
                 "reach": 22,
@@ -4212,6 +4438,13 @@
         "t1-carriage",
         "t2-carriage",
         "t3-carriage"
+      ],
+      "tanks": [
+        "fuel-1",
+        "fuel-2",
+        "t1-tank",
+        "t2-tank",
+        "t3-tank"
       ],
       "lives": 3,
       "respawn": 1.25,

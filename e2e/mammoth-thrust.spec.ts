@@ -6,7 +6,8 @@ interface Body {
   position: { x: number; y: number };
   velocity: { x: number; y: number };
   integrity: number;
-  tractor?: { mode: string };
+  tractor?: { mode: string; siphoning?: string };
+  contents?: { mass: number }[];
   turret?: { shots: number; sees: boolean; target?: string };
 }
 interface Hook {
@@ -156,6 +157,30 @@ test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the 
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON ITS STAND");
   await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("flying");
   expect(await hook(page, (m) => m.level())).toBe(2);
+});
+
+test("MTH-042 holding the beam over a fuel tank draws its fuel into the ship, and says so", async ({ page }) => {
+  await start(page);
+  expect(await quiet(page)).toBe(true);
+  const held = () => hook(page, (m) => (m.sandbox().world.bodies.find((b) => b.id === "fuel-1")?.contents ?? []).reduce((k, c) => k + c.mass, 0));
+  const full = await held();
+  expect(full).toBeGreaterThan(8);
+  await expect(page.getByTestId("mth-refuel")).toHaveCount(0);
+  // The ship 30 m over the tank, at rest: it falls slowly enough to draw for a while.
+  expect(
+    await hook(page, (m) => {
+      const w = m.sandbox().world;
+      const hull = w.bodies.find((b) => b.id === "p1-hull")!;
+      const tank = w.bodies.find((b) => b.id === "fuel-1")!;
+      const d = { x: tank.position.x - hull.position.x, y: tank.position.y + 30 - hull.position.y };
+      return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
+    }),
+  ).toBe(true);
+  await page.keyboard.down("z");
+  await expect(page.getByTestId("mth-refuel")).toHaveText("REFUELLING", { timeout: 15_000 });
+  await expect.poll(held, { timeout: 30_000 }).toBeLessThan(full);
+  await page.keyboard.up("z");
+  await expect(page.getByTestId("mth-refuel")).toHaveCount(0, { timeout: 15_000 });
 });
 
 test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires bolts; they show in flight", async ({ page }) => {

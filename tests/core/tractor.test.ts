@@ -284,4 +284,47 @@ describe("tractor beam", () => {
     run(none, 3, () => set(1));
     expect(none.events.some((e) => e.type === "tractor.on")).toBe(false);
   });
+  it("TRC-008 a siphon draws a marked body's propellant through the beam into the ship's tanks at its rate, without pulling it, until the beam is off, the source is empty or the tanks are full", () => {
+    const store = (mass: number, capacity: number) => [{ resource: "h2", mass, capacity }];
+    const make = (room: number) => {
+      const w = world([{ ...ball("tank", 0.5, 5, 0, -20), siphon: true, contents: store(3, 3) } as never, { ...ball("plain", 0.5, 5, 2, -12), contents: store(3, 3) } as never], { only: [], siphon: { rate: 1, into: ["ship"] } });
+      at(w, "ship").contents = store(0, room);
+      w.ledger.totals = computeTotals(w);
+      return w;
+    };
+    const held = (w: World, id: string) => at(w, id).contents![0]!.mass;
+    const w = make(5);
+    const mass = computeTotals(w).mass;
+    run(w, 480, (i) => (i === 0 ? set(1) : []));
+    // 1 kg/s for 2 s, from the marked body only, which the beam doesn't move.
+    expect(held(w, "ship")).toBeCloseTo(2, 2);
+    expect(held(w, "tank")).toBeCloseTo(1, 2);
+    expect(held(w, "plain")).toBe(3);
+    expect(at(w, "tank").velocity).toEqual({ x: 0, y: 0 });
+    expect(at(w, "ship").tractor!.siphoning).toBe("tank");
+    expect(computeTotals(w).mass).toBeCloseTo(mass, 9);
+    expect(w.events.filter((e) => e.type === "siphon.on")).toHaveLength(1);
+    // The beam off: nothing more moves, and no feed is left behind.
+    run(w, 240, (i) => (i === 0 ? set(0) : []));
+    expect(held(w, "tank")).toBeCloseTo(1, 2);
+    expect(at(w, "ship").tractor!.siphoning).toBeUndefined();
+    expect(w.links.some((l) => l.id.startsWith("siphon:"))).toBe(false);
+    expect(w.events.filter((e) => e.type === "siphon.off")).toHaveLength(1);
+    // On again, to the end: the source empty.
+    run(w, 480, (i) => (i === 0 ? set(1) : []));
+    expect(held(w, "tank")).toBeCloseTo(0, 6);
+    expect(held(w, "ship")).toBeCloseTo(3, 6);
+    expect(at(w, "ship").tractor!.siphoning).toBeUndefined();
+    // Tanks with room for 2 kg take 2 kg.
+    const small = make(2);
+    run(small, 960, (i) => (i === 0 ? set(1) : []));
+    expect(held(small, "ship")).toBeCloseTo(2, 6);
+    expect(held(small, "tank")).toBeCloseTo(1, 6);
+    // Out of the wedge, nothing is drawn.
+    const off = make(5);
+    at(off, "tank").position = { x: 30, y: -20 };
+    run(off, 240, (i) => (i === 0 ? set(1) : []));
+    expect(held(off, "tank")).toBe(3);
+    expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ siphon: { rate: 0, into: "ship" } })] } })).toThrow(ScenarioError);
+  });
 });

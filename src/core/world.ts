@@ -93,6 +93,8 @@ export interface Body {
    * `group` come loose together, welded to each other.
    */
   anchored?: { mass: number; group?: string };
+  /** A tractor's siphon may draw this body's propellant through its beam (TRC-008): see tractor.ts. */
+  siphon?: boolean;
   /** A base's cargo collector, on a fixed body (BAS): see collector.ts. */
   collector?: Collector;
   /** An AI pilot flying this body's assembly (AIP): for now a computer built into the ship. See pilot.ts. */
