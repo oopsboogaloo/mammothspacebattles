@@ -36,7 +36,7 @@ other sources in §12):
 | On the surface | A small **factory** (the reactor) and a couple of other buildings. |
 | Pod | A sphere of about **half the ship's mass (33 kg)** on a stand at the bottom of the cave. Taken with the tractor beam and held on the tether. |
 | Tether | The existing springy tether (TRC-004), retuned: a damped spring between the centres of mass that breaks over its tension limit (TRC-006). Not the original's rigid rod. |
-| Turrets | Fixed hemispheres on the rock. A turret starts firing a few seconds after it first sees the ship, slowly, at where the ship is now (no lead) with some spread. Can be shot and destroyed. |
+| Turrets | Real machines on the rock: a railgun on a turning mount, a battery, a generator and a fuel tank joined to it. The gun is seen to turn to its aim before it fires. First version (MVP1): it turns to a random bearing in its arc, then fires. Later: it aims roughly at the ship. Can be shot and destroyed. |
 | Turret bolts | Concussive: a small charge that makes gas. Mostly they push the ship off course; they do a little damage and may knock parts off. One hit doesn't kill. Chloe tunes the damage. |
 | Factory (reactor) | Powers the turrets. Each hit stops every turret for a time, longer with each hit. Enough damage and it goes critical: a countdown, then a very large explosion. Escaping with the pod before it blows earns a bonus. If it blows with the pod still on the planet, the **game is over**: nothing is replayed. |
 | Shield | A round field about the ship while its button is held. It turns away bolts and blast gas, so they neither damage nor push the ship. It burns fuel; engines and gun are off while it is up; it doesn't protect against rock. A separate button from the tractor. |
@@ -48,7 +48,7 @@ other sources in §12):
 | Game over | The third ship lost, the factory blowing while the pod is still on the planet, or the pod destroyed. The pod is made very, very hard to destroy. |
 | The top without the pod | The ship is beamed back to the start, as it is, to finish the mission. No life is lost. No exception: with the factory counting down it is beamed back too, and the game is lost when the factory blows. |
 | Out of fuel | The ship falls and crashes: a life lost in the usual way, and a new ship. |
-| Turrets' build | Made of welded pieces with materials, like a ship, and damaged by the same model. One good hit mostly blows a turret to bits; a poor one may leave it working, or working worse. |
+| Turrets' build | Welded pieces with materials, like a ship, and damaged by the same model: nothing is forced. One good hit mostly blows a turret to bits, above all a hit on its fuel; a poor one may leave it working, or working worse. |
 | Doors | Doors opened by shooting a panel, in a later phase. |
 | Shells | A magazine of 120, full with each new ship. |
 | Win | The ship, with the pod on its tether, climbs above the level's top. There is no air anywhere: the top is only a height. |
@@ -124,16 +124,61 @@ other sources in §12):
 
 ### Turrets and bolts
 
-- A turret is built like a ship: a fixed base on the ground, the cave wall or the roof, with a
-  dome, a gun and a power unit welded to it, each with a material. It is damaged by the Asteroids
-  damage model. To be designed piece by piece.
-- One good hit should mostly blow it to bits. Less than that can leave it working or working
-  worse: the gun knocked off (it can't fire), the power unit lost (it can't fire), the dome
-  damaged (first value: its aim spreads wider).
-- It sees the ship when the ship is within its range and the line to it is clear of rock.
-- From first sight it waits (first value 3 s), then fires one bolt every 2 s while it still sees
-  the ship, at the ship's present position, with a random error of up to about 8°.
-- It doesn't fire while the factory is stopped, or without its gun or its power unit.
+- A turret is a machine built of pieces, like a ship. Everything it does comes from its pieces:
+  none of it is forced by a rule.
+- **Its pieces** (MVP1 turret, first sizes; "up" is away from the rock it stands on):
+
+  ```
+                         gun
+                          /
+                         /
+     ______    ____   __(o)__   ____
+    | fuel |==| gen | |mount| |batt|
+    |_tank_|  |_____| |_____| |____|
+    =================================  base
+    ///////////// rock //////////////
+  ```
+
+  - **Base:** a fixed plate about 6 m long and 0.3 m thick on the ground, a wall or a roof.
+  - **Mount:** a half-disc of 1 m radius at the middle of the base. The gun's carriage turns about
+    its centre, across an arc (first value 60° each side of up) at a steady rate (first value
+    60°/s).
+  - **Railgun:** a barrel 1.8 m long on the carriage, with its magazine. A railgun as the ship's
+    (WPN-008): no propellant, the shell leaves along the bore.
+  - **Battery:** a 1 m box beside the mount. The gun fires from the battery's charge.
+  - **Generator:** a 1 m box on the mount's other side. It keeps the battery charged, and burns
+    fuel to do it.
+  - **Fuel tank:** one of the level's standard fuel tanks (§3, Fuel), beside the generator and
+    joined to it by a pipe that can be seen. The ship can take its fuel with the beam.
+  - Each piece has a material and is welded to the base (the gun to its carriage, the carriage
+    held by the mount), with weld limits.
+- **Power, simply** (there is no power model in the engine yet; proposed, §11):
+  - The gun fires only while it, its carriage, the battery and the wiring between them are whole
+    and joined.
+  - The battery holds a few shots (first value 5). The generator refills it while the generator is
+    whole, joined, and has fuel in its tank.
+  - So a turret whose fuel is stolen, or whose generator or pipe is gone, fires what its battery
+    holds and then falls quiet.
+- **Damage.** Nothing is forced:
+  - A hit on the fuel tank sets off what the tank holds: a significant explosion, which is likely
+    to wreck the generator and the mount beside it.
+  - The gun knocked off its carriage, or the carriage off its mount: no more firing; the gun lies
+    as wreckage.
+  - The mount damaged: the gun turns slower, or sticks (first values).
+  - The battery or generator lost: as Power above.
+- **Aiming, seen.** A turret never fires from where it happens to point. Each shot:
+  1. it picks a bearing in its arc;
+  2. the gun is seen to turn to it at the mount's rate;
+  3. on the bearing, and reloaded, it fires;
+  4. it holds for a moment (first value 0.5 s), then picks again.
+- **Which bearing.**
+  - **MVP1:** a random one in the arc (from the level's seed, so a replay is the same).
+  - **Next:** toward the ship's present position (no lead), with a random error of up to about
+    8°, kept inside the arc. The gun then follows the ship between shots.
+- **Waking.** It sees the ship when the ship is within its range and the line to it is clear of
+  rock. From first sight it waits (first value 3 s) before its first shot, and goes on while it
+  sees the ship. Out of sight, the gun stops where it is.
+- It doesn't fire while the factory has stopped it (see the question in §11).
 - A bolt is a slow shell (first value 40 m/s) that bursts on what it strikes, or after its time.
   Its charge gives mostly gas and little damage: the Asteroids gunship shell made weaker and
   gassier. Bolts don't damage turrets, the factory or the pod's stand.
@@ -256,12 +301,19 @@ Priority: **M** must, **S** should.
   on its tether.
 
 **Turrets and factory**
-- **MTH-030** `[M]` A turret fires only with a clear line to the ship inside its range, first
-  after its wait from first sight, then at its rate, at the ship's present position with its
-  spread.
-- **MTH-031** `[M]` A turret is welded pieces with materials, damaged by the shared damage model. One
-  that has lost its gun or its power unit doesn't fire, and stays so for the level.
-- **MTH-035** `[M]` A slug from the ship's cannon square on a turret's dome puts it out of action.
+- **MTH-030** `[M]` A turret fires only with a clear line to the ship inside its range, and first
+  after its wait from first sight.
+- **MTH-036** `[M]` Before each shot the gun turns at its mount's rate to the chosen bearing, inside
+  its arc, and fires only once it is on it. In MVP1 the bearing is random within the arc, the same
+  for the same seed.
+- **MTH-031** `[M]` A turret is a base, a mount, a railgun, a battery, a generator and a fuel tank
+  joined by a pipe: welded pieces with materials, damaged by the shared damage model.
+- **MTH-037** `[M]` A turret without its gun, its carriage or its battery doesn't fire. Without its
+  generator or its fuel it fires only the shots its battery holds.
+- **MTH-038** `[M]` A turret's fuel tank is a fuel tank: the ship can take its fuel (MTH-042), and
+  destroyed it explodes (MTH-043).
+- **MTH-035** `[M]` A slug from the ship's cannon square on a turret's fuel tank puts the turret out
+  of action through the explosion alone, with no rule forcing it.
 - **MTH-032** `[M]` A bolt that bursts 2 m from the ship changes the ship's velocity by a
   measurable amount and destroys no part of an undamaged ship. (Values tuned by Chloe.)
 - **MTH-033** `[M]` A slug hitting the factory stops every turret for a time that grows with each
@@ -290,9 +342,15 @@ Priority: **M** must, **S** should.
 
 New, shared physics or world logic:
 
-- **Fixed turret.** A gun on a fixed body with a simple fire control: range, line of sight, a wait
-  from first sight, a rate, a spread, a power switch. Not an AI pilot; it reuses `clearShot` from
+- **Fixed turret.** A railgun on a fixed base with a simple fire control: range, line of sight, a
+  wait from first sight, the bearing to turn to. Not an AI pilot; it reuses `clearShot` from
   `pilot.ts`. There are no fixed guns today.
+- **A turning mount.** The engine joins bodies with welds only. The gun needs a pivot that holds
+  it to the mount and turns it to a commanded angle at a rate, and that can break like a weld. On
+  a fixed turret the first build may simply set the carriage's angle each step.
+- **Power, simply.** Battery and generator are structure today, with no power model. The turret
+  needs the small rule in §3: shots held by a battery, refilled by a joined generator with fuel.
+  Whether the ship's own gun follows the same rule is a later question.
 - **Shield.** A new body component: a field that turns back shells and gas parcels while its
   channel is on, and burns fuel. The largest piece of new physics here.
 - **Fuel through the beam.** The tractor moving propellant from a declared tank body to the ship.
@@ -352,12 +410,20 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 | Out of fuel | You crash, lose the life, and get a new ship. |
 | Turret toughness | Built of pieces and damaged like anything else. One good hit mostly destroys one; partial damage can leave it working or working worse. |
 | Doors | Yes, in a later phase. |
+| Turrets (fourth round) | Real machines: railgun on a turning mount, battery, generator, a standard fuel tank joined on. The gun is seen to turn before it fires, even when its aim is random. Damage is modelled, not forced. |
 | The beam back | Always, with no exception, the factory critical or not. Gravity is uniform, so there is no escape velocity to worry about. |
 
 ## 11. Open questions
 
-None from the rules. To settle in the build: the turret's pieces and what each one's loss does; the
-30 m/s in MTH-025 and the other first values.
+1. **The factory and the turrets.** Each turret now has its own generator, battery and fuel, so
+   "the factory powers the turrets" no longer fits. Proposed: the factory is their fire control.
+   It finds the ship and tells the turrets where to look; hit, it drops out for a time and the
+   turrets stop. Or should shooting the factory no longer stop them at all?
+2. **Power, simply** (§3): is the battery-and-generator rule the right first step, or should a
+   turret just work while its pieces are joined?
+
+To settle in the build: the turret's sizes, weld limits and what a damaged mount does; the 30 m/s
+in MTH-025 and the other first values.
 
 ## 11b. Later (V2): where this is heading
 
