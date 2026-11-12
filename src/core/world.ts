@@ -20,6 +20,7 @@ import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
+import { runTerrain, startTerrain, type Terrain, type TerrainSpec } from "./terrain.ts";
 import { normalizeTurret, runTurrets, turnJoints, type Charge, type Generator, type JointTurn, type Turret, type TurretInput } from "./turret.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
@@ -350,6 +351,8 @@ export interface World {
   duel?: Duel;
   /** Mammoth Asteroids' game: levels, gold, lives and the score (docs/games/mammoth-asteroids.md). */
   arcade?: ArcadeGame;
+  /** Ground from an outline, which explosions and shells crater (TER): see terrain.ts. */
+  terrain?: Terrain;
   /** Mammoth Thrust's game: ships, the pod and the level's top (docs/games/mammoth-thrust.md). */
   thrust?: ThrustGame;
   /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
@@ -414,7 +417,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; terrain?: TerrainSpec } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -438,6 +441,8 @@ export function createWorld(
     pendingDebug: [],
   };
   for (const body of bodies) addBody(world, body);
+  // The ground's rock, from its outline (TER-001).
+  if (extra.terrain) world.terrain = startTerrain(world, extra.terrain, addBody);
   for (const j of extra.joints ?? []) addJoint(world, j);
   for (const l of extra.links ?? []) addLink(world, l);
   for (const f of extra.gas ?? []) fillGas(world, f, profile);
@@ -457,7 +462,7 @@ export function compareIds(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
-function addBody(world: World, input: BodyInput): void {
+export function addBody(world: World, input: BodyInput): void {
   if (world.bodies.some((b) => b.id === input.id)) throw new Error(`Duplicate body id "${input.id}"`);
   world.bodies.push(normalizeBody(input));
   world.bodies.sort((a, b) => compareIds(a.id, b.id));
@@ -1614,6 +1619,16 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   if (world.arcade) {
     const t0 = computeTotals(world);
     if (runArcade(world, dt, ARCADE_OPS)) {
+      after = computeTotals(world);
+      addDelta(sources.boundary, diff(t0, after));
+    }
+  }
+
+  // Craters (TER-002, TER-003): the rock is fixed, so cutting it changes no total; a shell spent in
+  // the rock leaves through the boundary.
+  if (world.terrain?.craters) {
+    let t0: ReturnType<typeof computeTotals> | undefined;
+    if (runTerrain(world, addBody, () => (t0 = computeTotals(world))) && t0) {
       after = computeTotals(world);
       addDelta(sources.boundary, diff(t0, after));
     }

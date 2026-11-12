@@ -95,6 +95,18 @@ describe("Mammoth Thrust's page", () => {
     expect(draw(w, { x: 0, y: -87, zoom: 8 }).filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length).toBe(2);
   });
 
+  it("TER-004 craters are drawn as open space: plain black discs cut into the rock's lines", () => {
+    const w = world();
+    const view = { ...w.thrust!.spec.view!, craters: [{ x: 0, y: -40, r: 3 }, { x: 500, y: -40, r: 3 }] };
+    const r = recorder();
+    renderFrame(r.ctx, w, { x: 0, y: -40, zoom: 8 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null, thrust: view });
+    // The one in view: a 24 px disc at the middle of the screen, filled black. The one far off isn't drawn.
+    expect(r.calls.filter((c) => c.startsWith("arc(400,300,24,") && c.endsWith("fill=#000"))).toHaveLength(1);
+    const black = r.calls.filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length;
+    const plain = draw(w, { x: 0, y: -40, zoom: 8 }).filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length;
+    expect(black).toBe(plain + 1);
+  });
+
   it("MTH-053 the pod glows, and a protected ship flashes", () => {
     const w = world();
     const calls = draw(w, { x: 12, y: -6, zoom: 20 });

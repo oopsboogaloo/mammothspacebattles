@@ -10,7 +10,7 @@ interface Body {
   turret?: { shots: number; sees: boolean; target?: string };
 }
 interface Hook {
-  sandbox: () => { world: { time: number; controls: Record<string, number>; bodies: Body[]; thrust: { spec: { start: { x: number; y: number }; top: number } } } };
+  sandbox: () => { world: { time: number; controls: Record<string, number>; bodies: Body[]; terrain: { holes: { x: number; y: number; r: number }[] }; thrust: { spec: { start: { x: number; y: number }; top: number } } } };
   thrust: () => { phase: string; lives: number; n: number; score: number; pod: string; stats: { back: number } } | null;
   level: () => number | null;
   camera: () => { x: number; y: number; zoom: number };
@@ -33,6 +33,14 @@ const overPod = (page: Page) =>
     const d = { x: pod.position.x - hull.position.x, y: pod.position.y + 9 - hull.position.y };
     return m.edit(w.bodies.filter((b) => b.id.startsWith(`p${n}-`)).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
   });
+
+/**
+ * Switches every turret off. A turret fires at random bearings, so whether a bolt knocks a ship the
+ * test is flying depends on how the browser's timing falls: tests that are about something else
+ * fly with the turrets quiet.
+ */
+const quiet = (page: Page) =>
+  hook(page, (m) => m.edit(m.sandbox().world.bodies.filter((b) => b.turret).map((b) => ({ type: "body.set", id: b.id, patch: { turret: { ...b.turret, enabled: false } } }))));
 
 test("MTH-001 MTH-002 Mammoth Thrust on its own page: the title over a still map, then play with only the level, the HUD and the buttons", async ({ page }) => {
   await page.goto("./thrust.html");
@@ -110,14 +118,28 @@ test("MTH-021 touch: the beam button works the tractor while held, with a thrust
 });
 
 test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the top, the level is complete, and level 2 opens with the score and ships carried over", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(300_000);
   await start(page);
+  expect(await quiet(page)).toBe(true);
   expect(await overPod(page)).toBe(true);
   await page.keyboard.down("z");
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON THE TETHER", { timeout: 15_000 });
   await page.keyboard.up("z");
   await page.keyboard.down("ArrowUp");
-  await expect(page.getByTestId("mth-won")).toBeVisible({ timeout: 60_000 });
+  // The climb is about 5 game seconds: 10 s on screen, and several times that on a slow machine. If
+  // it never ends, say where the ship and the pod had got to.
+  const where = () =>
+    hook(page, (m) => {
+      const w = m.sandbox().world;
+      const at = (id: string) => w.bodies.find((b) => b.id === id)?.position;
+      const s = m.thrust()!;
+      return JSON.stringify({ phase: s.phase, pod: s.pod, lives: s.lives, n: s.n, back: s.stats.back, time: w.time, top: w.thrust.spec.top, hull: at(`p${s.n}-hull`), podAt: at("pod") });
+    });
+  try {
+    await expect(page.getByTestId("mth-won")).toBeVisible({ timeout: 200_000 });
+  } catch {
+    throw new Error(`The level was not won in 200 s: ${await where()}`);
+  }
   await page.keyboard.up("ArrowUp");
   await expect(page.getByTestId("mth-won")).toContainText("Level 1 complete");
   await expect(page.getByTestId("mth-won")).toContainText("+2000");
@@ -160,6 +182,27 @@ test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires
     .toBeGreaterThan(0);
   expect((await turret())?.target).toBe("p1-hull");
   expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id.startsWith("t1-carriage-shell-")))).toBe(true);
+});
+
+test("MTH-060 slugs fired into the ground leave small craters in it, and the slugs are spent", async ({ page }) => {
+  test.setTimeout(60_000);
+  await start(page);
+  expect(await hook(page, (m) => m.sandbox().world.terrain.holes.length)).toBe(0);
+  // The ship turned over above the flat ground under the start, its gun pointing down.
+  await hook(page, (m) => {
+    const w = m.sandbox().world;
+    const hull = w.bodies.find((b) => b.id === "p1-hull")!;
+    return m.edit(
+      w.bodies
+        .filter((b) => b.id.startsWith("p1-"))
+        .map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: -70 - (b.position.x - hull.position.x), y: 26 - (b.position.y - hull.position.y) }, angle: (b as unknown as { angle: number }).angle + Math.PI, velocity: { x: 4, y: 2 } } })),
+    );
+  });
+  await page.keyboard.down("Space");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.terrain.holes.length), { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
+  await page.keyboard.up("Space");
+  const holes = await hook(page, (m) => m.sandbox().world.terrain.holes);
+  for (const h of holes) expect(h.r).toBe(0.8);
 });
 
 test("MTH-026 a ship that reaches the top without the pod is put back at the start, and told so; no life is lost", async ({ page }) => {

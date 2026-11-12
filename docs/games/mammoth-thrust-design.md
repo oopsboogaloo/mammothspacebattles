@@ -478,7 +478,7 @@ She found it fun and very hard, and asked for the pod to be easier to pick up an
 | A stronger beam | 400 N to 1,200 N. |
 | The tether to attach from further off and bring the pod in to its length, heavily damped | `tether.reach` 22 m (the length is 12 m). The tether starts at the distance the pod was taken at and reels in at 6 m/s (TRC-010, now both ways). Damping 0.7 to 1.5 of critical. Measured from 20 m while hovering on short burns: at 12 m in 1.5 game s, the pull never over 800 N. |
 | The beam and tether to take only the pod | `only: ["pod"]` on the ship's tractor (TRC-011, new). Wreckage in the beam is not pulled. |
-| A few seconds to watch a self-destruct | The page says "ship lost" 3 s (1.5 game s) after a self-destruct, and the next ship comes the usual 2.5 s after that. After a crash it says so at once, as before. |
+| A few seconds to watch a self-destruct, and then (after playing again) any loss | The page says "ship lost" 3 s (1.5 game s) after a ship is lost, however it was lost, and the next ship comes the usual 2.5 s after that (`watch` in the game's spec). |
 | A stronger tether: it let go under thrust | See below: it wasn't the tether's strength. The limit is up five times all the same, to 100,000 N. |
 
 **Why the tether let go.** It never reached its limit: the most it carried in hard flying was about
@@ -489,6 +489,76 @@ weaker each time, so after enough burns the unit came off, and the pod went with
 now carries the tractor, through the two units: the tractor unit is its beam's generator (TRC-012,
 new) and the tether unit its tether's (TRC-007), so losing either still stops it. Measured after:
 six seconds of full thrust and a hard turn with the pod on, no weld of the ship below 100%.
+
+## 11. Ground that can be cratered (12 November 2026)
+
+Asked for by Chloe: cannon shots and explosions should leave craters in the scenery. Built as
+version 1, `src/core/terrain.ts` (TER-001…005 in `docs/spec.md` §9.13).
+
+**How it works**
+
+- The level's ground was already one closed outline of its open space, with the rock as a crust
+  along it. The world now makes that crust itself, from `world.terrain.outline`, where the level
+  script used to write the rock's bodies into the scenario.
+- A crater is a disc of open space added to the outline. The boundary of the rock is then every
+  stretch of the outline outside all the craters, and every stretch of a crater's rim that lies
+  in rock. Each stretch gets its piece of crust. Nothing needs the boundary as one ordered loop,
+  so tunnels, islands of rock and craters on craters all come out of the same rule, with no
+  polygon clipping to go wrong.
+- Behind any new surface the crust is made afresh, so the rock is as deep as anyone digs. Round a
+  crater it is 4 m deep and fans out from the crater's centre, so its pieces meet.
+- A new crater makes again only the crust near it.
+- The page draws each crater as a black disc over the rock's lines.
+
+**What was decided** (Chloe, 12 November 2026)
+
+| Question | Answer |
+|---|---|
+| What makes a crater | Explosions, and a very small one for a bullet, to give bullets weight. Not other impacts this time (a mass-impact rule may come later). |
+| What stands on the ground | Let it float for version 1. Ideally it falls when its ground goes. |
+| Tunnelling | Yes. It is a physics sandbox; a stupid shortcut is the player's to take, and likely harder than the intended way. |
+| The rock removed | Dust, for now. |
+
+**First values** (`scripts/thrust.ts`)
+
+- An explosion's crater: 0.6 × the reach of its blast. The ship's magazines (6 m) 3.6 m; a
+  turret's fuel tank (4 m) 2.4 m; the ship's battery (1 m), tanks and engines (0.5 m), and a
+  turret's bolt (0.6 m) the least, 0.8 m.
+- A slug: 0.8 m, and the slug is spent. (0.5 m was tried first: 8 px across at the game's zoom, it
+  could hardly be seen.)
+- At most 250 craters, 150 of them under 1 m.
+
+**Sized from the blast's reach, not its energy.** Energy was tried first (0.9 × ∛kJ). A turret's
+bolt carries more energy than a fuel tank, because it is made to push with gas, so bolts left the
+bigger craters. The reach is what each charge is declared to damage.
+
+**Measured** (Node, the build machine, level 1)
+
+| What | Value |
+|---|---|
+| Cutting a crater, 250 there already | 4 ms on average, 13 ms at worst |
+| The same before the crust round a crater was made 4 m deep (it was 15 m) | 11 ms on average, 39 ms at worst |
+| A step with 250 craters (584 rock bodies; 38 at the start) | 1.9 ms falling, 3.7 ms thrusting |
+| A step with none | 1.3 ms falling, 1.9 ms thrusting |
+| 24 slugs strafed along flat ground | 23 craters; the rock's bodies 38 to 99 |
+| 13 craters of 2 m dug straight down | a shaft 18 m deep; a ball dropped in rests on its floor |
+
+**Found on the way**
+
+- **The view left with the ship.** With the cockpit destroyed the view went straight back to the
+  start, so the 3 s to watch a lost ship showed empty sky. It now stays where the ship was until
+  the next one beams in.
+- **Rays miss small craters.** The crust's depth was found by rays from 9 points along a stretch,
+  as Lander's cave does. A small crater between two rays under a 40 m stretch was missed, and the
+  crust ran through it. Every wall that passes over a stretch now limits its depth as well.
+
+**Not in version 1**
+
+- Things standing on the ground falling when it is cut away.
+- Craters from a ship, the pod or wreckage hitting the ground.
+- Rubble: the rock leaves as dust, which is only drawn.
+- Between two craters that nearly touch, the sliver of rock left is cased in both their crusts
+  but may be hollow inside. Nothing can get in.
 
 ## 7. To decide or measure, in order of when it bites
 

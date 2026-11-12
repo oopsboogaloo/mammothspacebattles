@@ -6,7 +6,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
 import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
-import { crust, narrowest, type Vec } from "./terrain.ts";
+import { narrowest, type Vec } from "./terrain.ts";
 import { turret, type TurretTuning } from "./turretParts.ts";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -59,6 +59,14 @@ const BOLT = { shape: { kind: "disc", radius: 0.12 }, mass: 0.3, restitution: 0,
  * each shot ("random"); aiming roughly at the ship ("ship") is the next step.
  */
 const TURRET: TurretTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", arc: Math.PI / 3, rate: 2.1, bolt: BOLT, speed: 40, reload: 1, bolts: 40, shots: 5, charge: 1, burn: 0.02, fuel: 8.1 };
+
+/**
+ * Craters (TER-002, TER-003; asked for by Chloe, 12 November 2026). An explosion leaves one of 0.6
+ * of its blast's reach: a fuel tank 2.4 m, one of the ship's magazines 3.6 m, a battery 0.6 m, a
+ * turret's bolt 0.8 m (the least). A slug leaves one of 0.8 m and is spent in the rock. At most 250
+ * are kept, 150 of them small ones: each costs a few fixed bodies, and so step time. First values.
+ */
+const CRATERS = { blast: 0.6, bullet: 0.8, least: 0.8, most: 8, limit: 250, small: 150 };
 
 const fixed = (id: string, shape: Json, position: Vec): Json => ({ id, fixed: true, mass: 1, friction: 0.9, position, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape });
 
@@ -129,7 +137,9 @@ function write(l: Level) {
     world: {
       gravity: { x: 0, y: -GRAVITY },
       bounds: { min: { x: left - 20, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right + 20, y: l.top + WALL + 20 }, wrap: false, farField: 10, depth: 2 },
-      bodies: [...crust(air, "rock-"), ...pod(l.pod), ...turrets.flatMap((t) => t.bodies)],
+      // The rock is made from the outline when the world is (TER-001), and explosions and shells crater it.
+      terrain: { outline: air, prefix: "rock-", craters: CRATERS },
+      bodies: [...pod(l.pod), ...turrets.flatMap((t) => t.bodies)],
       joints: turrets.flatMap((t) => t.joints),
       links: turrets.flatMap((t) => t.links),
       thrust: {

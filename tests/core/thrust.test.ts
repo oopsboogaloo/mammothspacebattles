@@ -1,8 +1,8 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { computeTotals, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
-import { crust, narrowest } from "../../scripts/terrain.ts";
+import { addBody, computeTotals, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { narrowest } from "../../scripts/terrain.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
 const sandbox = getProfile("sandbox");
@@ -88,11 +88,12 @@ describe("Mammoth Thrust", () => {
     const air = [P(-100, 100), P(100, 100), P(100, 0), P(10, 0), P(10, -60), P(-10, -60), P(-10, 0), P(-100, 0)];
     expect(narrowest(air, -1)).toBeCloseTo(160, 6); // only the shaft's floor is wholly below -1: 160 m up to the sky's top
     expect(narrowest(air, 1)).toBeCloseTo(20, 6); // with its walls: 20 m across
-    const rock = crust(air, "r-") as unknown as { shape: { vertices: { x: number; y: number }[] } }[];
-    // The floor's crust lies under the floor, and no crust reaches into the open shaft.
+    // The rock made from that outline (TER-001): the floor's crust lies under the floor, and none reaches into the open shaft.
+    const made = createWorld(1, [], { x: 0, y: 0 }, { terrain: { outline: air } }, sandbox);
+    const rock = made.bodies.map((b) => (b.shape.kind === "polygon" ? b.shape.vertices.map((v) => ({ x: v.x + b.position.x, y: v.y + b.position.y })) : []));
     const inShaft = (v: { x: number; y: number }) => Math.abs(v.x) < 10 - 1e-6 && v.y > -60 + 1e-6 && v.y < 0;
-    expect(rock.every((b) => !b.shape.vertices.some(inShaft))).toBe(true);
-    expect(rock.some((b) => b.shape.vertices.some((v) => v.y < -70))).toBe(true);
+    expect(rock.every((vs) => !vs.some(inShaft))).toBe(true);
+    expect(rock.some((vs) => vs.some((v) => v.y < -70))).toBe(true);
     // Level 2's shaft is 30 m wide: no narrower than the 25 m the generator insists on.
     const l2 = raw(2).world.thrust.view;
     expect(narrowest([...l2.caves[0]], 15)).toBeGreaterThanOrEqual(25);
@@ -224,8 +225,8 @@ describe("Mammoth Thrust", () => {
     step(0.1);
     expect(st(w)).toMatchObject({ phase: "between", lives: 2, n: 1 });
     expect(w.links.some((l) => l.kind === "control" && l.to.startsWith("p1-"))).toBe(false); // the keys fly only the next ship
-    // After a self-destruct there are 3 s on screen (1.5 game s) to watch it go before the page says
-    // the ship is lost, and then the usual wait for the next one.
+    // After any loss there are 3 s on screen (1.5 game s) to watch it go before the page says the
+    // ship is lost, and then the usual wait for the next one.
     expect(st(w).noteAt! - w.time).toBeGreaterThan(1.3);
     expect(st(w).next! - st(w).noteAt!).toBeCloseTo(1.25, 6);
     step(1.5);
@@ -343,8 +344,8 @@ describe("Mammoth Thrust", () => {
     expect(hull(w)).toBeDefined(); // it set down in one piece
     expect(w.events.filter((e) => e.type === "thrust.lost")).toHaveLength(1);
     expect(st(w).lives).toBe(2);
-    // A ship lost any other way than by its pilot's own hand is said to be lost at once.
-    expect(st(w).noteAt).toBeLessThanOrEqual(w.time);
+    // Lost this way too, there are 3 s on screen to watch before the page says so.
+    expect(st(w).noteAt! - w.time).toBeGreaterThan(1.3);
     expect(st(w).next! - st(w).noteAt!).toBeCloseTo(1.25, 6);
   });
 
@@ -444,6 +445,50 @@ it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its 
     expect(ps.every((b) => b.integrity > 0.9)).toBe(true);
     expect(w.joints.length).toBe(welds);
     expect(w.ledger.violations).toBe(0);
+  });
+
+it("MTH-060 the level's rock can be cratered: a slug leaves a small crater in the ground and is spent, and an explosion on the ground a bigger one", () => {
+    const { w, step } = game(1, (s) => {
+      s.world.gravity = { x: 0, y: 0 };
+      s.world.thrust.turrets = [];
+    });
+    expect(w.terrain!.craters).toMatchObject({ blast: 0.6, bullet: 0.8, limit: 250, small: 150 });
+    expect(w.terrain!.holes).toHaveLength(0);
+    // The ship upside down 12 m over the flat ground at the start (the ground there is at y = 10).
+    const h = hull(w);
+    const from = { ...h.position };
+    for (const b of parts(w, 1)) {
+      b.position = { x: -63 - (b.position.x - from.x), y: 22 - (b.position.y - from.y) };
+      b.angle += Math.PI;
+    }
+    settle(w);
+    step(0.02, [set("fire", 1)]);
+    step(0.5, [set("fire", 0)]);
+    expect(w.terrain!.holes).toHaveLength(1);
+    expect(w.terrain!.holes[0].r).toBe(0.8);
+    expect(Math.abs(w.terrain!.holes[0].y - 10)).toBeLessThan(0.3); // in the ground's surface
+    expect(w.bodies.some((b) => b.id.includes("-shell-"))).toBe(false); // the slug is spent in the rock
+    // The ship set down there and destroyed by its pilot: its magazines' blasts (6 m) leave 3.6 m craters.
+    for (const b of parts(w, 1)) b.position = { x: b.position.x, y: b.position.y - 9.5 };
+    settle(w);
+    step(0.1, [set("destruct", 1)]);
+    const big = w.terrain!.holes.filter((c) => c.r > 3);
+    expect(big.length).toBeGreaterThanOrEqual(1);
+    expect(big[0].r).toBeCloseTo(3.6, 6);
+    expect(w.events.filter((e) => e.type === "terrain.crater").length).toBe(w.terrain!.holes.length);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MTH-061 what stands on the ground stays where it is when the rock under it is cut away (for now): a turret's base, the pod's stand", () => {
+    const { w, step } = game();
+    const base = { ...body(w, "t1-base")!.position };
+    expect(cutCrater(w, { x: 38, y: 4 }, 3, addBody)).toBe(true); // under the turret on its ledge
+    expect(cutCrater(w, { x: 12, y: -9 }, 2, addBody)).toBe(true); // under the pod's stand
+    step(1);
+    expect(body(w, "t1-base")!.position).toEqual(base);
+    expect(turretWorks(w, body(w, "t1-carriage")!)).toBe(true);
+    expect(st(w).pod).toBe("stand");
+    expect(pod(w).position.y).toBeCloseTo(st(w).stand.y, 1);
   });
 
   it("the score and ships left carry over from the level before", () => {

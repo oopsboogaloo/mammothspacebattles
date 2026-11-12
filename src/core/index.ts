@@ -30,6 +30,7 @@ export { burst, removeDestroyed, stepDust, DUST_LIMIT, type Dust, type DustKind 
 export { runDuel, startDuel, type Duel, type DuelGoal, type DuelPhase, type DuelStatus } from "./duel.ts";
 export * from "./lander.ts";
 export * from "./arcade.ts";
+export * from "./terrain.ts";
 export * from "./thrust.ts";
 export * from "./turret.ts";
 export { wasmSinCos } from "./solverWasm.ts";
