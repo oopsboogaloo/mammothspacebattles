@@ -8,6 +8,7 @@ import { scenarioFile } from "./scenarios.ts";
 import { scoreBoard, type BaseEntry } from "./scores.ts";
 import { camera, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
 import { View } from "./View.tsx";
+import { usePad, type PadGame, type PadState } from "./gamepad.ts";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
 import { arenaFor, shipStatus } from "./asteroidsHud.ts";
 import { DESTRUCT } from "../core/index.ts";
@@ -174,6 +175,37 @@ export function asteroidsKeyUp(e: KeyboardEvent): void {
   dropShifts(e);
 }
 
+/**
+ * A game controller (gamepad.ts), by the keys it stands for: the stick or D-pad turns, A or the
+ * right trigger is forward, B or the left trigger reverse, X or the right bumper fires.
+ */
+function padControls(p: PadState): string[] {
+  const out: string[] = [];
+  if (p.left) out.push("ArrowLeft");
+  if (p.right) out.push("ArrowRight");
+  if (p.a || p.rt || p.up) out.push("ArrowUp");
+  if (p.b || p.lt || p.down) out.push("ArrowDown");
+  if (p.x || p.rb) out.push("Space");
+  return out;
+}
+const PAD: PadGame = {
+  flying: () => asteroidsScreen.value === "play" && !!sandbox.value && playing.value && !(sandbox.value?.world.arcade?.state.phase === "over"),
+  controls: padControls,
+  set: (code, on) => {
+    const pk = `Pad:${code}`;
+    if (!on) return release(pk);
+    if (down.has(pk) || !sandbox.value) return;
+    const to = KEYS[code].map(asteroidsSide);
+    down.set(pk, to);
+    for (const c of to) hold(c, 1);
+  },
+  pause: () => {
+    if (asteroidsScreen.value !== "play" || !sandbox.value || sandbox.value?.world.arcade?.state.phase === "over") return false;
+    playing.value = !playing.value;
+    return true;
+  },
+};
+
 /** Lets go of every key (leaving play, or the window losing the keyboard). */
 function releaseKeys(): void {
   down.clear();
@@ -185,6 +217,7 @@ function releaseKeys(): void {
 
 export function AsteroidsApp() {
   useNoZoom();
+  usePad(PAD);
   return (
     <main class="mas" data-testid="mas">
       {asteroidsScreen.value === "title" && <Title />}
@@ -456,41 +489,49 @@ function HowToPlay() {
             <th></th>
             <th>Keyboard</th>
             <th>Touch</th>
+            <th>Controller</th>
           </tr>
           <tr>
             <td>Turn left</td>
             <td>Q, ← or Left Shift</td>
             <td>hold L</td>
+            <td>stick or D-pad left</td>
           </tr>
           <tr>
             <td>Turn right</td>
             <td>E, → or Right Shift</td>
             <td>hold R</td>
+            <td>stick or D-pad right</td>
           </tr>
           <tr>
             <td>Forward</td>
             <td>both keys, or ↑</td>
             <td>both buttons</td>
+            <td>A, right trigger or D-pad up</td>
           </tr>
           <tr>
             <td>Reverse (brake)</td>
             <td>S or ↓</td>
             <td>hold REV</td>
+            <td>B, left trigger or D-pad down</td>
           </tr>
           <tr>
             <td>Fire</td>
             <td>Space or W (hold to repeat)</td>
             <td>hold FIRE</td>
+            <td>X or right bumper</td>
           </tr>
           <tr>
             <td>Pause</td>
             <td>P or Esc</td>
             <td>Pause button</td>
+            <td>Start</td>
           </tr>
           <tr>
             <td>Self-destruct</td>
             <td></td>
             <td>the button beside Pause, pressed twice</td>
+            <td></td>
           </tr>
         </tbody>
       </table>

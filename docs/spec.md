@@ -325,6 +325,10 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **SBX-045** `[S · M1 · E]` At widths below 900 px, the sandbox shall switch to a compact layout: the world, time controls and scrub bar, with panels as bottom sheets.
 - **SBX-047** `[M · M4b · E]` On phones and tablets the sandbox shall support the whole build-and-fly workflow by touch alone. The tools are a strip along the bottom and the parts palette a strip above it. Tap to place or attach, drag to link, and on-screen hold-to-fire buttons for every control channel, several at once. W3 and W9 run at phone (390 px) and tablet (820 px) widths.
 - **SBX-046** `[S · M1 · E]` UI animations shall respect `prefers-reduced-motion`. This does not affect the simulation.
+- **PAD-001** `[S · M10 · U]` A game controller with the browser's standard layout shall be read each frame: its buttons by name, the left stick as the D-pad past half its travel, a trigger past 0.3, every connected pad together.
+- **PAD-002** `[S · M10 · E]` The three games shall be playable with a controller (12 November 2026). In flight the pad holds the game's controls (below) and Start pauses. Out of flight (a title, a menu, paused, game over) the D-pad or stick steps through the buttons on screen, A presses the one chosen, and Start resumes a paused game. A button still held when flight begins does nothing until it is let go.
+  - *Lander:* the stick, D-pad, bumpers or triggers are the left and right controls; A is both engines.
+  - *Mammoth Asteroids and Mammoth Thrust:* the stick or D-pad turns; A, the right trigger or D-pad up is forward; B, the left trigger or D-pad down is reverse; X or the right bumper fires. In Thrust, Y or the left bumper is the tractor.
 
 ### 8.12 Usability verification
 
