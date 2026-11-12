@@ -1,7 +1,7 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { addBody, computeTotals, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { TERRAIN_OPS, computeTotals, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -447,13 +447,12 @@ it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its 
     expect(w.ledger.violations).toBe(0);
   });
 
-it("MTH-060 the level's rock can be cratered: a slug leaves a small crater in the ground and is spent, and an explosion on the ground a bigger one", () => {
+it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on the ground leaves craters; a slug leaves none, and is spent in the rock", () => {
     const { w, step } = game(1, (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];
     });
-    expect(w.terrain!.craters).toMatchObject({ blast: 0.6, bullet: 0.8, limit: 250, small: 150 });
-    expect(w.terrain!.holes).toHaveLength(0);
+    expect(w.terrain!.craters).toMatchObject({ blast: 0.6, bullet: 0, least: 1, limit: 250 });
     // The ship upside down 12 m over the flat ground at the start (the ground there is at y = 10).
     const h = hull(w);
     const from = { ...h.position };
@@ -464,31 +463,106 @@ it("MTH-060 the level's rock can be cratered: a slug leaves a small crater in th
     settle(w);
     step(0.02, [set("fire", 1)]);
     step(0.5, [set("fire", 0)]);
-    expect(w.terrain!.holes).toHaveLength(1);
-    expect(w.terrain!.holes[0].r).toBe(0.8);
-    expect(Math.abs(w.terrain!.holes[0].y - 10)).toBeLessThan(0.3); // in the ground's surface
-    expect(w.bodies.some((b) => b.id.includes("-shell-"))).toBe(false); // the slug is spent in the rock
-    // The ship set down there and destroyed by its pilot: its magazines' blasts (6 m) leave 3.6 m craters.
+    expect(w.events.some((e) => e.type === "railgun.fired")).toBe(true);
+    expect(w.terrain!.holes).toHaveLength(0); // no crater for a bullet
+    expect(w.bodies.some((b) => b.id.includes("-shell-"))).toBe(false); // but the slug is spent in the rock
+    // The ship set down there and destroyed by its pilot: its magazines' blasts (6 m) leave 3.6 m
+    // craters. Its tanks', engines' and battery's blasts are too small to leave any.
     for (const b of parts(w, 1)) b.position = { x: b.position.x, y: b.position.y - 9.5 };
     settle(w);
     step(0.1, [set("destruct", 1)]);
-    const big = w.terrain!.holes.filter((c) => c.r > 3);
-    expect(big.length).toBeGreaterThanOrEqual(1);
-    expect(big[0].r).toBeCloseTo(3.6, 6);
-    expect(w.events.filter((e) => e.type === "terrain.crater").length).toBe(w.terrain!.holes.length);
+    expect(w.events.filter((e) => e.type === "detonation").length).toBeGreaterThan(5);
+    expect(w.terrain!.holes.length).toBeGreaterThanOrEqual(1);
+    expect(w.terrain!.holes.length).toBeLessThanOrEqual(2);
+    for (const c of w.terrain!.holes) expect(c.r).toBeCloseTo(3.6, 6);
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("MTH-061 what stands on the ground stays where it is when the rock under it is cut away (for now): a turret's base, the pod's stand", () => {
+  it("MTH-061 a turret whose ground is cut away comes loose: half undermined it tips into the hole, still whole and still watching for the ship; one on a roof falls and breaks", () => {
     const { w, step } = game();
-    const base = { ...body(w, "t1-base")!.position };
-    expect(cutCrater(w, { x: 38, y: 4 }, 3, addBody)).toBe(true); // under the turret on its ledge
-    expect(cutCrater(w, { x: 12, y: -9 }, 2, addBody)).toBe(true); // under the pod's stand
-    step(1);
-    expect(body(w, "t1-base")!.position).toEqual(base);
+    step(0.2);
+    expect(body(w, "t1-base")).toMatchObject({ fixed: true });
+    expect(cutCrater(w, { x: 40, y: 3.5 }, 3, TERRAIN_OPS)).toBe(true); // under the right half of the turret on its ledge
+    settle(w);
+    expect(body(w, "t1-base")).toMatchObject({ fixed: false, mass: 100 });
+    step(3);
+    expect(body(w, "t1-base")!.position.y).toBeLessThan(4.5); // it was at 5.15
+    expect(Math.abs(body(w, "t1-base")!.angle)).toBeGreaterThan(0.5); // tipped into the hole
+    expect(w.joints.filter((j) => j.id.startsWith("t1-"))).toHaveLength(12); // nothing broke
     expect(turretWorks(w, body(w, "t1-carriage")!)).toBe(true);
-    expect(st(w).pod).toBe("stand");
-    expect(pod(w).position.y).toBeCloseTo(st(w).stand.y, 1);
+    expect(body(w, "t1-carriage")!.turret!.target).toBe("p1-hull");
+    expect(st(w).turretsOut).toEqual([]);
+    expect(w.ledger.violations).toBe(0);
+
+    // Level 2's third turret hangs from the chamber's roof, 50 m over the floor.
+    const roof = game(2);
+    roof.step(0.2);
+    expect(cutCrater(roof.w, { x: -30, y: -60.5 }, 2.5, TERRAIN_OPS)).toBe(true);
+    settle(roof.w);
+    roof.step(1);
+    expect(body(roof.w, "t3-base")!.velocity.y).toBeLessThan(-3); // falling
+    roof.step(5);
+    expect(body(roof.w, "t3-base")!.position.y).toBeLessThan(-105); // on the floor
+    expect(st(roof.w).turretsOut).toEqual(["t3-carriage"]); // broken by the fall: out of action
+    expect(st(roof.w).score).toBe(750);
+    expect(pod(roof.w).integrity).toBe(1); // it came down on the pod, which is very hard to destroy
+  });
+
+  it("MTH-061 the pod's stand comes loose with its ground, and the pod with it: loose, not lost", () => {
+    const { w, step } = game();
+    step(0.2);
+    expect(cutCrater(w, { x: 12, y: -10 }, 2.5, TERRAIN_OPS)).toBe(true); // under the stand
+    settle(w);
+    for (const id of ["stand", "stand-l", "stand-r"]) expect(body(w, id)!.fixed).toBe(false);
+    step(3);
+    expect(body(w, "stand")!.position.y).toBeLessThan(-9); // down in the crater (it was at -7.85)
+    expect(pod(w).position.y).toBeLessThan(st(w).stand.y - 1);
+    expect(st(w)).toMatchObject({ pod: "loose", phase: "flying" });
+    expect(pod(w).integrity).toBe(1);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MTH-062 an engine knocked off the ship no longer answers the controls: it burns out what it holds and is dead, and its tank leaks; a gun knocked off doesn't fire", () => {
+    const { w, step } = game(1, (s) => {
+      s.world.gravity = { x: 0, y: 0 };
+      s.world.thrust.turrets = [];
+    });
+    step(0.2);
+    // The left back thruster comes off its wing (its weld to the tank is cut), and drifts clear.
+    const loose = new Set(["p1-back-l", "p1-back-l-wall-a", "p1-back-l-wall-b"]);
+    w.joints = w.joints.filter((j) => loose.has(j.a) === loose.has(j.b));
+    for (const b of w.bodies) if (loose.has(b.id)) b.velocity = { x: -3, y: -3 };
+    settle(w);
+    step(0.1);
+    const engine = body(w, "p1-back-l")!;
+    // Its fuel line is cut and its control is no longer the pilot's.
+    expect(w.links.some((l) => l.kind === "feed" && l.to === "p1-back-l")).toBe(false);
+    expect(w.links.some((l) => l.kind === "control" && l.to === "p1-back-l" && l.channel === "bl")).toBe(false);
+    expect(w.events.some((e) => e.type === "thrust.line")).toBe(true);
+    expect(body(w, "p1-tank-l")!.integrity).toBeLessThan(1); // the tank leaks where the line left it
+    // It burns off what is left in it, on a channel of its own, and is then dead: holding "right"
+    // (which fires that thruster on a whole ship) feeds it nothing and lights nothing in it.
+    expect(engine.injector!.channel).toBe("p1-back-l.residual");
+    step(1.5);
+    const held = () => engine.contents!.reduce((m, c) => m + c.mass, 0);
+    expect(held()).toBeLessThan(1e-6);
+    const lit = () => w.events.filter((e) => e.type === "ignition" && e.data.id === "p1-back-l").length;
+    const before = lit();
+    step(1, [set("right", 1)]);
+    expect(w.controls.bl).toBe(1); // the pilot is asking for it
+    expect(held()).toBeLessThan(1e-6);
+    expect(lit()).toBe(before);
+    expect(body(w, "p1-front-r")!.contents!.reduce((m, c) => m + c.mass, 0)).toBeGreaterThan(0); // the thrusters still on the ship do fire
+    step(0.02, [set("right", 0)]);
+    // The gun knocked off: the fire control no longer reaches it.
+    w.joints = w.joints.filter((j) => j.a !== "p1-gun" && j.b !== "p1-gun");
+    body(w, "p1-gun")!.velocity = { x: 0, y: 4 };
+    settle(w);
+    step(0.1);
+    const fired = w.events.filter((e) => e.type === "railgun.fired").length;
+    step(0.6, [set("fire", 1)]);
+    expect(w.events.filter((e) => e.type === "railgun.fired")).toHaveLength(fired);
+    expect(st(w).phase).toBe("flying"); // the ship itself flies on
   });
 
   it("the score and ships left carry over from the level before", () => {

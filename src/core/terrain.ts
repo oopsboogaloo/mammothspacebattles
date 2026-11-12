@@ -13,7 +13,14 @@
 
 import { burst } from "./dust.ts";
 import { cross, length, sinCos, sub, type Vec2 } from "./math.ts";
-import type { Body, BodyInput, World } from "./world.ts";
+import { localVertices } from "./shapes.ts";
+import type { Body, BodyInput, JointInput, World } from "./world.ts";
+
+/** How the ground adds to the world: the world's own ways, handed in by the step. */
+export interface TerrainOps {
+  addBody(world: World, body: BodyInput): void;
+  addJoint(world: World, joint: JointInput): void;
+}
 
 export interface TerrainSpec {
   /** The open space: a closed outline, clockwise, the rock on its left. */
@@ -22,10 +29,11 @@ export interface TerrainSpec {
   prefix?: string;
   /**
    * What leaves a crater, and how big (TER-002, TER-003). An explosion leaves one of radius `blast`
-   * × the reach of its blast (the charge's declared `radius`), within `least` and `most`, m. A shell
-   * that strikes the rock leaves one of radius `bullet` and is spent. No more than `limit` craters
-   * are kept, and of those no more than `small` under 1 m (the ground's bodies cost step time).
-   * Absent: the ground can't be cratered.
+   * × the reach of its blast (the charge's declared `radius`), no bigger than `most`, m; one that
+   * would be smaller than `least` leaves none. A shell with no charge that strikes the rock is
+   * spent, and leaves a crater of radius `bullet`, or none if that is 0. No more than `limit`
+   * craters are kept, and of those no more than `small` under 1 m (the ground's bodies cost step
+   * time). Absent: the ground can't be cratered.
    */
   craters?: { blast?: number; bullet?: number; least?: number; most?: number; limit?: number; small?: number };
 }
@@ -276,23 +284,25 @@ function takeOut(world: World, gone: (b: Body) => boolean): void {
 }
 
 /** The ground at the start: the crust along the whole outline. */
-export function startTerrain(world: World, spec: TerrainSpec, addBody: (w: World, b: BodyInput) => void): Terrain {
+export function startTerrain(world: World, spec: TerrainSpec, ops: TerrainOps): Terrain {
   const t: Terrain = {
     outline: cut(spec.outline, LONGEST).map((p) => ({ x: p.x, y: p.y })),
     prefix: spec.prefix ?? "rock-",
     ...(spec.craters ? { craters: { ...TERRAIN_DEFAULTS, ...spec.craters } } : {}),
     holes: [],
   };
-  for (let i = 0; i < t.outline.length; i++) for (const b of outlineCrust(t, i)) addBody(world, b);
+  for (let i = 0; i < t.outline.length; i++) for (const b of outlineCrust(t, i)) ops.addBody(world, b);
   return t;
 }
 
 /**
  * Cuts a crater of radius r at a point (TER-001): the rock inside it is gone, and the crust is made
  * afresh round it. Returns whether the ground changed: a crater wholly in open space, or inside one
- * already there, changes nothing and isn't kept.
+ * already there, changes nothing and isn't kept. What stood on the rock it cut comes loose (TER-006):
+ * `beforeLoose` is called once, just before the first thing does, for the ledger.
  */
-export function cutCrater(world: World, at: Vec2, r: number, addBody: (w: World, b: BodyInput) => void): boolean {
+export function cutCrater(world: World, at: Vec2, r: number, ops: TerrainOps, beforeLoose?: () => void): boolean {
+  const addBody = ops.addBody;
   const t = world.terrain;
   if (!t?.craters || !(r > 0) || t.holes.length >= t.craters.limit) return false;
   if (r < SMALL && t.holes.filter((h) => h.r < SMALL).length >= t.craters.small) return false;
@@ -323,14 +333,81 @@ export function cutCrater(world: World, at: Vec2, r: number, addBody: (w: World,
   // The rock that was there leaves as dust (only drawn).
   burst(world, { id: `${t.prefix}dust-${c}`, shape: { kind: "disc", radius: r }, position: { x: at.x, y: at.y }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 } as Body);
   world.events.push({ tick: world.tick, type: "terrain.crater", data: { x: at.x, y: at.y, r, craters: t.holes.length } });
+  loosen(world, h, ops, beforeLoose);
   return true;
 }
 
-/** The radius of the crater an explosion leaves, m, from how far its blast reaches. */
+/** How near a crater's edge must come to an anchored body's outline to count as cutting its footing, m. */
+const FOOTING = 0.1;
+
+/** How near point c is to a body's outline: 0 inside it. Discs by their radius. */
+function gap(b: Body, c: Vec2): number {
+  if (b.shape.kind === "disc") return Math.max(0, length(sub(c, b.position)) - b.shape.radius);
+  const q = sinCos(b.angle);
+  const vs = localVertices(b.shape).map((v) => ({ x: b.position.x + q.c * v.x - q.s * v.y, y: b.position.y + q.s * v.x + q.c * v.y }));
+  let inside = true;
+  let sign = 0;
+  let best = Infinity;
+  for (let i = 0; i < vs.length; i++) {
+    const a = vs[i];
+    const d = vs[(i + 1) % vs.length];
+    best = Math.min(best, distance(c, a, d));
+    const s = cross(sub(d, a), sub(c, a));
+    if (s !== 0) {
+      if (sign && Math.sign(s) !== sign) inside = false;
+      sign = Math.sign(s);
+    }
+  }
+  return inside ? 0 : best;
+}
+
+/**
+ * What stood on the rock a crater cut comes loose (TER-006): every anchored fixed body whose outline
+ * the crater reaches, and the others of its group, become free bodies of their declared mass, at
+ * rest where they are. Their welds are kept, so what is built on them goes with them, and from
+ * there the physics decides: a turret whose ground is half gone tips into the hole; one on a roof
+ * falls. Those of a group are welded to the first of them.
+ */
+function loosen(world: World, h: Crater, ops: TerrainOps, before?: () => void): void {
+  const cut = world.bodies.filter((b) => b.fixed && b.anchored && gap(b, h) <= h.r + FOOTING);
+  if (!cut.length) return;
+  const groups = new Set(cut.map((b) => b.anchored!.group).filter((g): g is string => g !== undefined));
+  const loose = world.bodies.filter((b) => b.fixed && b.anchored && (cut.includes(b) || (b.anchored.group !== undefined && groups.has(b.anchored.group))));
+  before?.();
+  const ids = new Set(loose.map((b) => b.id));
+  // Each is taken out and put back as a free body: the step keeps what it knows of fixed bodies by
+  // the body itself, so a new one is the sure way to be seen as free.
+  world.bodies = world.bodies.filter((b) => !ids.has(b.id));
+  world.contacts = world.contacts.filter((c) => !ids.has(c.a) && !ids.has(c.b));
+  const first = new Map<string, Body>();
+  for (const b of loose) {
+    const { anchored, ...rest } = b;
+    ops.addBody(world, { ...rest, fixed: false, mass: anchored!.mass, velocity: { x: 0, y: 0 }, angularVelocity: 0 } as BodyInput);
+    world.events.push({ tick: world.tick, type: "terrain.loose", data: { id: b.id, x: b.position.x, y: b.position.y } });
+    const g = anchored!.group;
+    if (g === undefined) continue;
+    const head = first.get(g);
+    if (!head) {
+      first.set(g, b);
+      continue;
+    }
+    // Welded to the first of its group, at the point half way between them.
+    const mid = { x: (head.position.x + b.position.x) / 2, y: (head.position.y + b.position.y) / 2 };
+    const local = (o: Body): Vec2 => {
+      const q = sinCos(o.angle);
+      const d = sub(mid, o.position);
+      return { x: q.c * d.x + q.s * d.y, y: -q.s * d.x + q.c * d.y };
+    };
+    ops.addJoint(world, { id: `${head.id}+${b.id}`, a: head.id, b: b.id, anchorA: local(head), anchorB: local(b) });
+  }
+}
+
+/** The radius of the crater an explosion leaves, m, from how far its blast reaches: 0 if it is too small to leave one. */
 export function craterRadius(t: Terrain, reach: number): number {
   const c = t.craters;
   if (!c || !(reach > 0)) return 0;
-  return Math.min(c.most, Math.max(c.least, c.blast * reach));
+  const r = c.blast * reach;
+  return r < c.least ? 0 : Math.min(c.most, r);
 }
 
 /**
@@ -340,15 +417,21 @@ export function craterRadius(t: Terrain, reach: number): number {
  * `beforeSpent` is called once, just before the first is, so the ledger's totals need working out
  * only on the steps a shell leaves.
  */
-export function runTerrain(world: World, addBody: (w: World, b: BodyInput) => void, beforeSpent?: () => void): boolean {
+export function runTerrain(world: World, ops: TerrainOps, beforeSpent?: () => void): boolean {
   const t = world.terrain;
   if (!t?.craters) return false;
   let spent = false;
+  // The ledger's totals are worked out once, before the first thing that changes them: a shell
+  // spent, or something that stood on the rock coming loose.
+  const before = (): void => {
+    if (!spent) beforeSpent?.();
+    spent = true;
+  };
   for (let i = world.events.length - 1; i >= 0 && world.events[i].tick >= world.tick; i--) {
     const e = world.events[i];
     if (e.tick !== world.tick) continue;
     if (e.type === "detonation") {
-      cutCrater(world, { x: Number(e.data.x), y: Number(e.data.y) }, craterRadius(t, Number(e.data.radius)), addBody);
+      cutCrater(world, { x: Number(e.data.x), y: Number(e.data.y) }, craterRadius(t, Number(e.data.radius)), ops, before);
     } else if (e.type === "collision") {
       const a = String(e.data.a);
       const b = String(e.data.b);
@@ -358,11 +441,10 @@ export function runTerrain(world: World, addBody: (w: World, b: BodyInput) => vo
       if (!shell || shell.explosive) continue;
       // Where it touched the rock: the crater is a bowl in the surface there.
       const touch = world.contacts.find((c) => (c.a === a && c.b === b) || (c.a === b && c.b === a));
-      cutCrater(world, touch ? touch.point : shell.position, t.craters.bullet, addBody);
-      if (!spent) beforeSpent?.();
+      before();
+      cutCrater(world, touch ? touch.point : shell.position, t.craters.bullet, ops, before);
       world.bodies = world.bodies.filter((x) => x !== shell);
       world.contacts = world.contacts.filter((c) => c.a !== shell.id && c.b !== shell.id);
-      spent = true;
     }
   }
   return spent;

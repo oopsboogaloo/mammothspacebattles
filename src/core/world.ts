@@ -20,7 +20,7 @@ import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
-import { runTerrain, startTerrain, type Terrain, type TerrainSpec } from "./terrain.ts";
+import { runTerrain, startTerrain, type Terrain, type TerrainOps, type TerrainSpec } from "./terrain.ts";
 import { normalizeTurret, runTurrets, turnJoints, type Charge, type Generator, type JointTurn, type Turret, type TurretInput } from "./turret.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
@@ -87,6 +87,12 @@ export interface Body {
   /** A battery's shots, and a generator that refills one (WPN-010): see turret.ts. */
   charge?: Charge;
   generator?: Generator;
+  /**
+   * A fixed body that stands on the terrain (TER-006): when a crater cuts the rock at its foot it
+   * comes loose, a free body of this mass from then on, with whatever is welded to it. Those of one
+   * `group` come loose together, welded to each other.
+   */
+  anchored?: { mass: number; group?: string };
   /** A base's cargo collector, on a fixed body (BAS): see collector.ts. */
   collector?: Collector;
   /** An AI pilot flying this body's assembly (AIP): for now a computer built into the ship. See pilot.ts. */
@@ -442,7 +448,7 @@ export function createWorld(
   };
   for (const body of bodies) addBody(world, body);
   // The ground's rock, from its outline (TER-001).
-  if (extra.terrain) world.terrain = startTerrain(world, extra.terrain, addBody);
+  if (extra.terrain) world.terrain = startTerrain(world, extra.terrain, TERRAIN_OPS);
   for (const j of extra.joints ?? []) addJoint(world, j);
   for (const l of extra.links ?? []) addLink(world, l);
   for (const f of extra.gas ?? []) fillGas(world, f, profile);
@@ -509,6 +515,8 @@ function addLink(world: World, input: LinkInput): void {
 
 /** How Mammoth Asteroids' game adds its ships and rocks: as commands do. */
 const ARCADE_OPS: ArcadeOps = { addBody, addJoint, addLink };
+/** How the ground adds to the world: also what tests and tools hand to `cutCrater`. */
+export const TERRAIN_OPS: TerrainOps = { addBody, addJoint };
 
 /** Control channels reaching a body through intact control links, with their values (ASM-006). */
 export function controlInputs(world: World, bodyId: string): Record<string, number> {
@@ -1628,7 +1636,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // the rock leaves through the boundary.
   if (world.terrain?.craters) {
     let t0: ReturnType<typeof computeTotals> | undefined;
-    if (runTerrain(world, addBody, () => (t0 = computeTotals(world))) && t0) {
+    if (runTerrain(world, TERRAIN_OPS, () => (t0 = computeTotals(world))) && t0) {
       after = computeTotals(world);
       addDelta(sources.boundary, diff(t0, after));
     }

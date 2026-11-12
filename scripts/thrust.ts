@@ -62,11 +62,13 @@ const TURRET: TurretTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", 
 
 /**
  * Craters (TER-002, TER-003; asked for by Chloe, 12 November 2026). An explosion leaves one of 0.6
- * of its blast's reach: a fuel tank 2.4 m, one of the ship's magazines 3.6 m, a battery 0.6 m, a
- * turret's bolt 0.8 m (the least). A slug leaves one of 0.8 m and is spent in the rock. At most 250
- * are kept, 150 of them small ones: each costs a few fixed bodies, and so step time. First values.
+ * of its blast's reach: a turret's fuel tank 2.4 m, one of the ship's magazines 3.6 m. One that
+ * would be under 1 m leaves none: a turret's bolt, the ship's battery, tanks and engines. Bullets
+ * leave none either (the slug is still spent in the rock): with a crater for every slug and bolt
+ * the ground's bodies grew past what a step can afford, and Chloe chose to keep craters for
+ * explosions. So the limits are rarely near: 250 craters at most. First values.
  */
-const CRATERS = { blast: 0.6, bullet: 0.8, least: 0.8, most: 8, limit: 250, small: 150 };
+const CRATERS = { blast: 0.6, bullet: 0, least: 1, most: 8, limit: 250, small: 150 };
 
 const fixed = (id: string, shape: Json, position: Vec): Json => ({ id, fixed: true, mass: 1, friction: 0.9, position, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape });
 
@@ -75,10 +77,13 @@ const fixed = (id: string, shape: Json, position: Vec): Json => ({ id, fixed: tr
  * very hard to destroy (MTH-025), in a shallow cup so it doesn't roll off.
  */
 function pod(at: Vec): Json[] {
+  // The stand is anchored to the rock (TER-006): cut the rock at its foot and its three parts come
+  // loose as one, 30 kg, and the pod goes with it.
+  const part = (id: string, shape: Json, position: Vec, mass: number): Json => ({ ...fixed(id, shape, position), anchored: { mass, group: "stand" } });
   return [
-    fixed("stand", { kind: "box", width: 2.3, height: 0.3 }, { x: at.x, y: at.y + 0.15 }),
-    fixed("stand-l", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x - 1, y: at.y + 0.475 }),
-    fixed("stand-r", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x + 1, y: at.y + 0.475 }),
+    part("stand", { kind: "box", width: 2.3, height: 0.3 }, { x: at.x, y: at.y + 0.15 }, 20),
+    part("stand-l", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x - 1, y: at.y + 0.475 }, 5),
+    part("stand-r", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x + 1, y: at.y + 0.475 }, 5),
     {
       id: "pod",
       shape: { kind: "disc", radius: 1 },
@@ -147,6 +152,7 @@ function write(l: Level) {
         mix: SHIP_MIX,
         hull: "p{n}-hull",
         tractor: "p{n}-hull",
+        gun: "p{n}-gun",
         start: l.start,
         top: l.top,
         pod: "pod",

@@ -234,6 +234,14 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
   if (b.turret !== undefined) validateTurret(v, b.turret, `${path}.turret`);
+  if (b.anchored !== undefined) {
+    if (!isObj(b.anchored)) err(v, `${path}.anchored`, "must be {mass, group?}");
+    else {
+      num(v, b.anchored.mass, `${path}.anchored.mass`, { positive: true });
+      if (b.anchored.group !== undefined) str(v, b.anchored.group, `${path}.anchored.group`);
+      if (b.fixed !== true) err(v, `${path}.anchored`, "is for a fixed body");
+    }
+  }
   if (b.charge !== undefined) {
     if (!isObj(b.charge)) err(v, `${path}.charge`, "must be {shots, capacity}");
     else {
@@ -547,7 +555,8 @@ function validateTerrain(v: V, t: unknown, path: string): void {
   if (t.prefix !== undefined) str(v, t.prefix, `${path}.prefix`);
   if (t.craters !== undefined) {
     if (!isObj(t.craters)) return err(v, `${path}.craters`, "must be an object {blast?, bullet?, least?, most?, limit?, small?}");
-    for (const k of ["blast", "bullet", "least", "most"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { positive: true });
+    for (const k of ["blast", "least", "most"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { positive: true });
+    if (t.craters.bullet !== undefined) num(v, t.craters.bullet, `${path}.craters.bullet`, { min: 0 });
     for (const k of ["limit", "small"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { int: true, min: 0, max: 5000 });
   }
 }
@@ -556,7 +565,7 @@ function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
   if (!isObj(g)) return err(v, path, "must be an object {ship, hull, tractor, start, top, pod}");
   if (!isObj(g.ship) || !Array.isArray(g.ship.bodies) || !g.ship.bodies.length) err(v, `${path}.ship`, "must be {bodies, joints?, links?} with at least one body");
   else
-    for (const k of ["hull", "tractor"]) {
+    for (const k of g.gun !== undefined ? ["hull", "tractor", "gun"] : ["hull", "tractor"]) {
       const id = g[k];
       if (typeof id !== "string" || !id.includes("{n}")) err(v, `${path}.${k}`, 'must be an id with "{n}"');
       else if (!g.ship.bodies.some((b) => isObj(b) && b.id === id)) err(v, `${path}.${k}`, "must be the id of one of the ship's bodies");

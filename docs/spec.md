@@ -799,14 +799,17 @@ Your Gunship 3 against an AI Gunship 3 among the asteroids: the first playable f
 Ground made from an outline, which explosions and shells cut into, for Mammoth Thrust (`docs/games/mammoth-thrust-design.md` §11). Asked for by Chloe, 12 November 2026: physics-led play wants scenery that can be destroyed. Off unless a scenario declares `world.terrain`, and craters off unless it declares `terrain.craters`.
 
 - **TER-001** `[M · M10 · S]` Ground may be given as one closed outline of the open space above and inside it (`world.terrain.outline`, clockwise, the rock on its left). Its rock shall be a crust of fixed bodies along the outline on its rock side, 15 m deep or as deep as the rock is. A crater is a disc of open space added to that: the rock inside it shall be gone, and the crust made afresh round it, so that craters on craters dig as deep as anyone digs, and through to a cave. A crater wholly in open space, or wholly inside another, changes nothing and isn't kept.
-- **TER-002** `[M · M10 · S]` An explosion shall leave a crater where it went off, of radius `blast` (default 0.6) × the reach of its blast (the charge's declared radius), within `least` and `most`.
-- **TER-003** `[M · M10 · S]` A shell with no charge that strikes the ground shall leave a crater of radius `bullet` where it struck, and be spent: it leaves the world, through the boundary. Nothing else that strikes the ground leaves a crater.
+- **TER-002** `[M · M10 · S]` An explosion shall leave a crater where it went off, of radius `blast` (default 0.6) × the reach of its blast (the charge's declared radius), no bigger than `most`. One whose crater would be smaller than `least` leaves none.
+- **TER-003** `[M · M10 · S]` A shell with no charge that strikes the ground shall be spent: it leaves the world, through the boundary. It shall leave a crater of radius `bullet` where it struck, or none if `bullet` is 0. Nothing else that strikes the ground leaves a crater.
 - **TER-004** `[M · M10 · U]` A crater shall be drawn as open space: where the game draws the rock, plain black cut into it.
 - **TER-005** `[M · M10 · B]` No more than `limit` craters shall be kept (default 250), nor more than `small` of them under 1 m (default 150): past that, new ones are not made. With 250 craters a level shall still step inside the budget.
 
+- **TER-006** `[M · M10 · S]` A fixed body may be anchored to the ground (`anchored: {mass, group?}`). When a crater reaches its outline it shall come loose: a free body of that mass from then on, at rest where it is, with its welds kept, so that what is built on it goes with it. Those of one group shall come loose together, welded to each other. The mass that comes loose enters through the boundary. *Asked for by Chloe, 12 November 2026: let the physics rule.*
+
 - *The rock that was in a crater* leaves as dust, which is only drawn. The rock is fixed and has no mass in the ledger, so cutting it changes no total.
-- *What stands on the ground* (a turret's base, the pod's stand, a building's foundation) is fixed, and stays where it is when the rock under it is cut away. Making it fall is for later.
+- *What stands on the ground* and is anchored (Mammoth Thrust's turret bases and the pod's stand) comes loose as soon as a crater touches it (TER-006). Half undermined, it is a free body resting on what rock is left, and tips or not as its weight falls. Fixed bodies that aren't anchored stay where they are.
 - *What it costs* (Node, the build machine, Mammoth Thrust's level 1): cutting a crater takes 4 ms on average with 250 there already, 13 ms at worst. With 250 craters (584 rock bodies, where the level starts with 38) a step takes 1.9 ms with the ship falling and 3.7 ms with it thrusting, against 1.3 and 1.9 with none, and 6 ms allowed.
+- *Mammoth Thrust keeps craters for explosions* (Chloe, 12 November 2026): `bullet` 0 and `least` 1 m there, so slugs and the turrets' bolts leave none. With a crater for each, three turrets firing every 2 s would have used the 150 small craters allowed in a few minutes, and 351 craters put a step over budget (6.4 ms thrusting).
 - *Not done:* impacts of anything but shells (a ship or the pod crashing) leave no crater; Chloe may want that later.
 
 ### 9.12 Shield (M10)
@@ -1015,7 +1018,7 @@ Each milestone ends with: all its `M` requirements passing their stated verifica
 | **M7 Asteroids** | Aggregate asteroid generator and fracture | RS-14 passes. |
 | **M8 AI pilots** | Pilots that fly any ship through its controls: calibration, thrust allocation, flying, aiming, firing, tractor; skills; modes Ignoring, Evading, Mining, Cautious, Hunting, Mad (§9.10) | Every AIP scenario test passes. A Hunting Gunship 2 fights the player in the sandbox. |
 | **M9 Mammoth Asteroids** | Collisions across wrap edges, wrap-aware blasts and AI, rocks whose every piece pulls (or that pull as one), indestructible gold, the clearing pilot, and the game (`docs/games/mammoth-asteroids.md`) | FLT-015, FLT-016, AST-009, AST-010, AST-011, AIP-020 tests pass; the game's MAS tests pass; review `docs/reviews/M9.md`. |
-| **M10 Mammoth Thrust** | A joint that turns, turrets with a simple power rule, fuel through the tractor beam, a shield, and the game (`docs/games/mammoth-thrust.md`, `mammoth-thrust-design.md`). | The game's MTH requirements and ASM-008, WPN-009, WPN-010, TRC-008 to TRC-012, TER-001…005 and SHD-001…005 pass; `docs/reviews/M10.md`; Chloe has played it. |
+| **M10 Mammoth Thrust** | A joint that turns, turrets with a simple power rule, fuel through the tractor beam, a shield, and the game (`docs/games/mammoth-thrust.md`, `mammoth-thrust-design.md`). | The game's MTH requirements and ASM-008, WPN-009, WPN-010, TRC-008 to TRC-012, TER-001…006 and SHD-001…005 pass; `docs/reviews/M10.md`; Chloe has played it. |
 
 ## 13. Deferred: Game Layer
 

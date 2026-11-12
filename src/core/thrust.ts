@@ -8,6 +8,7 @@
 // Ids: the player's ships are `p{n}-…` (n counts up with every new ship).
 // Times in the spec are game seconds (the game runs at Lander's pace, one in two of the player's).
 
+import { cutControl, cutShipLines } from "./arcade.ts";
 import { shipState } from "./duel.ts";
 import { assemblyOf } from "./joints.ts";
 import { invRotate, length, sinCos, sub, type Vec2 } from "./math.ts";
@@ -20,6 +21,8 @@ export interface ThrustSpec {
   /** The ship's hull and the part that carries its tractor, with `{n}`. */
   hull: string;
   tractor: string;
+  /** The ship's railgun, with `{n}`: knocked off the ship, it no longer fires (MTH-062). */
+  gun?: string;
   /** How the player's controls drive the ship's engines, as Mammoth Asteroids' (MAS-035). */
   mix?: { channel: string; any: { on: string[]; off?: string[] }[] }[];
   /** Where each ship beams in, pointing up and at rest. */
@@ -77,6 +80,9 @@ export interface ThrustState {
   bonus?: { pod: number; fuel: number };
   /** Rings to draw where something beamed in: the step, the place and the size. */
   beams: { at: number; x: number; y: number; r: number }[];
+  /** The flying ship's fuel lines that have been cut, as "tank>engine", and those of a wing lost whole, whose engines burn on from its tank (MTH-062). */
+  cut?: string[];
+  burning?: string[];
   /** The turrets that can no longer fire: each scored once. */
   turretsOut: string[];
   /** For the end screens. */
@@ -128,6 +134,8 @@ function addShip(world: World, game: ThrustGame, ops: ThrustOps, grace: number):
   for (const l of t.links ?? []) ops.addLink(world, l);
   state.graceUntil = grace > 0 ? world.time + grace : undefined;
   state.stuckSince = undefined;
+  state.cut = undefined;
+  state.burning = undefined;
   state.stats.ships += 1;
   state.beams.push({ at: world.tick, x: spec.start.x, y: spec.start.y, r: 4 });
   world.events.push({ tick: world.tick, type: "thrust.ship", data: { n: state.n, x: spec.start.x, y: spec.start.y, protected: grace > 0 } });
@@ -247,6 +255,15 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
         changed = true;
       }
       world.controls = { ...world.controls, [THRUST_DESTRUCT]: 0 };
+    }
+
+    // 2a. What has come off the ship no longer answers its controls (MTH-062), as in Mammoth
+    // Asteroids (MAS-037): an engine no longer welded to the ship has its fuel line cut, burns off
+    // what it holds and is dead, and its tank leaks where the line left it; a wing lost whole burns
+    // on until its tank is empty; a gun knocked off doesn't fire.
+    if (world.bodies.some((b) => b.id === hullId)) {
+      changed = cutShipLines(world, spec, s.n, s, hullId, "thrust.line") || changed;
+      if (spec.gun) changed = cutControl(world, hullId, idOf(spec.gun, s.n)) || changed;
     }
 
     // 3. Out of fuel and lying still: the ship can never fly again, so it is lost (it has crashed, or

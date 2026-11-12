@@ -528,6 +528,14 @@ version 1, `src/core/terrain.ts` (TER-001…005 in `docs/spec.md` §9.13).
   could hardly be seen.)
 - At most 250 craters, 150 of them under 1 m.
 
+**Bullet craters dropped (12 November 2026, the same day).** Chloe asked what craters cost. Each
+adds two or three fixed bodies for good, and a step pays for every body: 250 craters took a step
+from 1.3 to 1.9 ms falling and from 1.9 to 3.7 ms thrusting, and 351 put it over the 6 ms allowed.
+Slugs and bolts were where the numbers came from (three turrets, a bolt each every 2 s). She chose
+craters for explosions only: `bullet` is 0 and `least` 1 m, so a slug, a bolt, and the ship's
+battery, tanks and engines leave none; the ship's magazines and a turret's fuel tank do. A slug is
+still spent in the rock. The first values and the slug measurements above are from before this.
+
 **Sized from the blast's reach, not its energy.** Energy was tried first (0.9 × ∛kJ). A turret's
 bolt carries more energy than a fuel tank, because it is made to push with gas, so bolts left the
 bigger craters. The reach is what each charge is declared to damage.
@@ -559,6 +567,64 @@ bigger craters. The reach is what each charge is declared to damage.
 - Rubble: the rock leaves as dust, which is only drawn.
 - Between two craters that nearly touch, the sliver of rock left is cased in both their crusts
   but may be hollow inside. Nothing can get in.
+
+## 12. Engines that had come off still answered the controls (12 November 2026)
+
+Found by Chloe in play: the controls still worked engines that were no longer on the ship.
+
+- **Cause.** Mammoth Asteroids has a rule for this (MAS-037, `cutLines` in `arcade.ts`): an engine
+  no longer welded to the ship has its fuel line cut, burns off what it holds on a channel of its
+  own, and is then dead; a gun knocked off loses its control link. Mammoth Thrust uses the same
+  ship but its game (`thrust.ts`) never called that rule. §8 said the MVP left it out; it should
+  not have. A link has no mass and no weld: when a part breaks off, nothing in the physics cuts it.
+- **Fix.** The rule is now one function both games call (`cutShipLines`, `cutControl`), and
+  Mammoth Thrust's requirement is MTH-062.
+- **Checked.** A test knocks the left back thruster off, then holds the control that fires it on
+  a whole ship: no fuel reaches it and nothing lights in it, while the thrusters still on the ship
+  fire. It failed before the fix. Mammoth Asteroids' own tests for the rule pass unchanged.
+- **What else was looked at.** The tractor unit and the tether unit: losing either stops the beam
+  or drops the pod (TRC-007, TRC-012, tested). A lost ship: all its control links go, so a wreck
+  answers nothing (tested). A turret: without its barrel, carriage joint or battery it doesn't fire
+  (tested).
+
+## 13. Turrets and the pod's stand come loose (12 November 2026)
+
+Version 1 of the craters left what stood on the ground floating. Chloe's answers for version 2:
+let the physics rule (it comes loose as soon as any of its rock is cut); a turret that has fallen
+keeps firing; the pod's stand too.
+
+**How** (`loosen` in `src/core/terrain.ts`, TER-006)
+
+- A fixed body may be `anchored: {mass, group?}`. A turret's base is (100 kg); so are the three
+  parts of the pod's stand (30 kg together, one group).
+- When a crater is cut, every anchored body whose outline it reaches (within 0.1 m) comes loose,
+  and the rest of its group with it. Each is taken out of the world and put back as a free body
+  of its mass, at rest where it was. Its welds are untouched, so the turret's pieces go with the
+  base. The parts of a group are welded to the first of them.
+- It is replaced, not changed in place, because the step keeps what it knows of fixed bodies by
+  the body itself.
+- Nothing decides whether it falls. A base with rock left under one end is a free plate resting
+  on that rock, and tips or not as its weight falls.
+- The mass that comes loose enters the ledger through the boundary.
+
+**Measured**
+
+| What | Result |
+|---|---|
+| Level 1's turret, a 3 m crater under its right half | tips 1.2 rad into the hole and comes to rest; all 12 welds whole; still works, and fired 3 bolts in the next 4 s with the ship in sight |
+| Level 2's roof turret, a 2.5 m crater in the roof beside it | falls 46 m in 5 s, lands by the pod, loses a piece and 5 welds: out of action (750) |
+| The pod's stand, a 2.5 m crater under it | stand and pod 3 to 4 m down in the crater; the pod loose, whole |
+| A plate with 3.1 m of its 6 m still on rock | stays where it is: its weight is over the rock |
+| Step time, level 1, with the turret loose | 0.8 ms |
+| The ledger | clean in every case |
+
+**Things to know**
+
+- A turret's own fuel tank, exploding, leaves a 2.4 m crater that reaches its base: what is left
+  of the turret comes loose and drops into it.
+- The roof turret hangs straight over the pod. It lands on it. The pod takes it.
+- A turret that has come loose is pushed by blasts and by its own gun. Its base is heavy so that
+  the gun's kick barely moves it.
 
 ## 7. To decide or measure, in order of when it bites
 
