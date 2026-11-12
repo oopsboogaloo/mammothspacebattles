@@ -10,12 +10,20 @@ Status: **draft, 12 November 2026**, from Chloe's brief and two rounds of questi
 questions are in §11. Nothing is built. The requirement IDs (MTH-…) are this game's own. The
 engine changes the game needs (§8) become requirements in `docs/spec.md` once agreed.
 
-What the original does, for reference (sources in §12): rotate and thrust under gravity; one
-button is both shield and tractor beam and burns fuel; fuel tanks on the ground are drawn up with
-the beam; limpet guns fire at you; shooting the reactor stops the guns for a while, longer with
-each hit, and too many hits make it go critical, with about 10 seconds to leave before the planet
-is destroyed; the pod hangs from the ship and swings; six layouts, then again with reversed
-gravity and with invisible walls.
+What the original does, for reference (Wikipedia's article, pasted by Chloe on 12 November 2026;
+other sources in §12):
+
+- Rotate and thrust under gravity. Ship and pod are joined by a stiff rod and can end up spinning
+  round each other. Ship or pod touching a wall is death.
+- Turrets fire bullets at the ship and are destroyed by a single shot.
+- The reactor powers the defences. Shot enough, the turrets stop for a short time. Shot more, it
+  goes critical and destroys the planet in 10 seconds. The ship must be in space before then,
+  with the pod (more points) or without it.
+- Fuel is collected with the tractor beam. Out of fuel, the whole game is over.
+- The shield burns fuel, and the ship can't shoot while it is up.
+- Later levels have doors opened by shooting a panel.
+- Six levels; then again with reversed gravity, then with the planet and walls invisible unless
+  the shield is up, then both.
 
 ## 1. Decisions
 
@@ -260,8 +268,9 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 
 ## 11. Open questions
 
-1. **Mission failed** (factory blows without the pod, or leaving without it): lose a life and
-   replay the level, or game over?
+1. **Leaving without the pod.** In the original, escaping a critical reactor without the pod
+   still counts, for fewer points. This draft calls it mission failed (§2 step 7, §3). Follow the
+   original (level done, no pod bonus), lose a life and replay, or game over?
 2. **More levels.** After the first: Chloe's drawn layouts in order? The original's later twists
    (reversed gravity, walls seen only with the shield up): wanted, or not?
 3. **Keys and buttons** for tractor and shield.
@@ -270,12 +279,16 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 6. **Turrets after a life is lost:** stay destroyed (as written), or come back?
 7. **A demo pilot** behind the title, as Asteroids has? It would need an AI that can fly a cave
    with a pod, which is a lot of work; a recorded flight would be cheaper.
-8. **Atmosphere:** is it only a height to reach, or should there be air (drag) below it?
+8. **Out of fuel:** the original ends the whole game. Here the ship just falls and the life is
+   lost in the crash. Keep ours?
+9. **Turret toughness:** one slug destroys a turret, as the original, or several?
+10. **Doors** opened by shooting a panel (the original's later levels): wanted for later levels?
+11. **Atmosphere:** is it only a height to reach, or should there be air (drag) below it?
 
 ## 12. Sources
 
-- Thrust (video game), Wikipedia: https://en.wikipedia.org/wiki/Thrust_(video_game) (read through
-  search results only; the site was not reachable from the build session)
+- Thrust (video game), Wikipedia: https://en.wikipedia.org/wiki/Thrust_(video_game) (the
+  article's text, pasted by Chloe)
 - Thrust (BBC/Electron), Everygamegoing: https://www.everygamegoing.com/litem/Thrust-1/1289/
 - Thrust instructions, 8BS: https://8bs.com/elecgame/thrust.htm
 - Thrust manual (C64 rewrite), Lysator: https://www.lysator.liu.se/~peda/thrust/thrust-man.html
