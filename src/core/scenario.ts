@@ -11,6 +11,7 @@ import { generateAsteroid, type AsteroidSpec } from "./asteroid.ts";
 import type { LandingGoal } from "./landing.ts";
 import type { DuelGoal } from "./duel.ts";
 import type { ArcadeSpec } from "./arcade.ts";
+import type { TerrainSpec } from "./terrain.ts";
 import type { ThrustSpec } from "./thrust.ts";
 import { PROFILES, getProfile, type Profile } from "./profile.ts";
 import type { ShipTemplate } from "./spawn.ts";
@@ -69,7 +70,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; asteroids?: AsteroidSpec[] };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[] };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -539,6 +540,18 @@ function validateLander(v: V, g: unknown, bodies: unknown, path: string): void {
     err(v, `${path}.solid`, 'must be a list of "below", "above" or "outside", one for each line');
 }
 
+function validateTerrain(v: V, t: unknown, path: string): void {
+  if (!isObj(t)) return err(v, path, "must be an object {outline, prefix?, craters?}");
+  if (!Array.isArray(t.outline) || t.outline.length < 3) err(v, `${path}.outline`, "must be a closed outline of at least 3 points");
+  else t.outline.forEach((p: unknown, i: number) => vec(v, p, `${path}.outline[${i}]`));
+  if (t.prefix !== undefined) str(v, t.prefix, `${path}.prefix`);
+  if (t.craters !== undefined) {
+    if (!isObj(t.craters)) return err(v, `${path}.craters`, "must be an object {blast?, bullet?, least?, most?, limit?, small?}");
+    for (const k of ["blast", "bullet", "least", "most"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { positive: true });
+    for (const k of ["limit", "small"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { int: true, min: 0, max: 5000 });
+  }
+}
+
 function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
   if (!isObj(g)) return err(v, path, "must be an object {ship, hull, tractor, start, top, pod}");
   if (!isObj(g.ship) || !Array.isArray(g.ship.bodies) || !g.ship.bodies.length) err(v, `${path}.ship`, "must be {bodies, joints?, links?} with at least one body");
@@ -940,6 +953,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     if (data.world.duel !== undefined) validateDuel(v, data.world.duel, data.world.bodies, "$.world.duel");
     if (data.world.lander !== undefined) validateLander(v, data.world.lander, data.world.bodies, "$.world.lander");
     if (data.world.arcade !== undefined) validateArcade(v, data.world.arcade, data.world.bounds, "$.world.arcade");
+    if (data.world.terrain !== undefined) validateTerrain(v, data.world.terrain, "$.world.terrain");
     if (data.world.thrust !== undefined) validateThrust(v, data.world.thrust, data.world.bodies, "$.world.thrust");
   }
 
@@ -1064,7 +1078,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, terrain: scn.world.terrain },
     getProfile(scn.profile),
   );
 }

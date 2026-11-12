@@ -54,6 +54,7 @@ other sources in §12):
 | Out of fuel | The ship falls and crashes: a life lost in the usual way, and a new ship. |
 | Turrets' build | Welded pieces with materials, like a ship, and damaged by the same model: nothing is forced. One good hit mostly blows a turret to bits, above all a hit on its fuel; a poor one may leave it working, or working worse. |
 | Doors | Doors opened by shooting a panel, in a later phase. |
+| Scenery that can be destroyed | Explosions and bullets leave craters in the rock (asked for by Chloe, 12 November 2026, in line with physics-led play). An explosion's crater is 0.6 of its blast's reach: one of the ship's magazines 3.6 m, a turret's fuel tank 2.4 m. A slug or a turret's bolt leaves a small one, 0.8 m, which gives bullets weight; the slug is spent in the rock. Nothing else that hits the ground leaves one, for now. The rock leaves as dust. Tunnelling is allowed: it is a sandbox, and harder than the intended way. What stands on the ground (turret bases, the pod's stand) stays floating when the rock under it goes, for version 1; ideally it would fall. |
 | After playing (12 November 2026) | It is already fun, and very hard: leave it that hard. The ship turning with real inertia is a lot to fly, balanced by a ship that survives grazing the walls: keep Asteroids' generous damage tolerance for now. Landing for a rest is possible until the pod is taken. Picking the pod up was too hard, so: |
 | Beam | Three times the pull (1,200 N). It pulls the pod and nothing else. |
 | Tether | Takes the pod from up to 22 m off, further than its 12 m length, and reels it in to that length and holds it there, heavily damped. It takes the pod and nothing else: not the wreckage of earlier ships. (Later games will want the tether as a general tool.) It holds five times the pull it did, and no longer lets go under thrust. |
@@ -340,6 +341,10 @@ Priority: **M** must, **S** should.
 - **MTH-043** `[M]` A destroyed fuel tank explodes in proportion to what it holds.
 
 **Lives and score**
+- **MTH-060** `[M]` The level's rock can be cratered (TER-001…005): explosions leave craters of 0.6
+  of their blast's reach, and slugs small ones of 0.8 m, in which the slug is spent.
+- **MTH-061** `[S]` What stands on the ground stays where it is when the rock under it is cut away.
+  (Version 1. Later it should fall.)
 - **MTH-050** `[M]` A life is lost when the cockpit is destroyed or no working engine is welded to
   it. Three lives. Running out of fuel costs nothing by itself.
 - **MTH-051** `[M]` Scoring as §3.

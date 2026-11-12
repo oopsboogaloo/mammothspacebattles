@@ -285,7 +285,7 @@ function burst(world: World, s: Body, dt: number): void {
     spots: corePoints(s, 2 * BLAST_PARCEL_RADIUS, 0.85),
   };
   (world.blasts ??= []).push(blast);
-  world.events.push({ tick: world.tick, type: "detonation", data: { id: s.id, energy: E, fragments: made.length, gas: gasMass, x: s.position.x, y: s.position.y } });
+  world.events.push({ tick: world.tick, type: "detonation", data: { id: s.id, energy: E, fragments: made.length, gas: gasMass, x: s.position.x, y: s.position.y, radius: e.radius ?? 2 } });
   // Blast damage: a share of E to each damageable body near enough.
   const R = e.radius ?? 2;
   for (const b of world.bodies) {

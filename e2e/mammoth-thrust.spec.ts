@@ -10,7 +10,7 @@ interface Body {
   turret?: { shots: number; sees: boolean; target?: string };
 }
 interface Hook {
-  sandbox: () => { world: { time: number; controls: Record<string, number>; bodies: Body[]; thrust: { spec: { start: { x: number; y: number }; top: number } } } };
+  sandbox: () => { world: { time: number; controls: Record<string, number>; bodies: Body[]; terrain: { holes: { x: number; y: number; r: number }[] }; thrust: { spec: { start: { x: number; y: number }; top: number } } } };
   thrust: () => { phase: string; lives: number; n: number; score: number; pod: string; stats: { back: number } } | null;
   level: () => number | null;
   camera: () => { x: number; y: number; zoom: number };
@@ -160,6 +160,27 @@ test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires
     .toBeGreaterThan(0);
   expect((await turret())?.target).toBe("p1-hull");
   expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id.startsWith("t1-carriage-shell-")))).toBe(true);
+});
+
+test("MTH-060 slugs fired into the ground leave small craters in it, and the slugs are spent", async ({ page }) => {
+  test.setTimeout(60_000);
+  await start(page);
+  expect(await hook(page, (m) => m.sandbox().world.terrain.holes.length)).toBe(0);
+  // The ship turned over above the flat ground under the start, its gun pointing down.
+  await hook(page, (m) => {
+    const w = m.sandbox().world;
+    const hull = w.bodies.find((b) => b.id === "p1-hull")!;
+    return m.edit(
+      w.bodies
+        .filter((b) => b.id.startsWith("p1-"))
+        .map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: -70 - (b.position.x - hull.position.x), y: 26 - (b.position.y - hull.position.y) }, angle: (b as unknown as { angle: number }).angle + Math.PI, velocity: { x: 4, y: 2 } } })),
+    );
+  });
+  await page.keyboard.down("Space");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.terrain.holes.length), { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
+  await page.keyboard.up("Space");
+  const holes = await hook(page, (m) => m.sandbox().world.terrain.holes);
+  for (const h of holes) expect(h.r).toBe(0.8);
 });
 
 test("MTH-026 a ship that reaches the top without the pod is put back at the start, and told so; no life is lost", async ({ page }) => {

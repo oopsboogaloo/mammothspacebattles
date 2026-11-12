@@ -405,7 +405,7 @@ export interface RenderOptions {
    * caves) as horizontal lines of one colour, fixed to the world, with no outline; stars in the sky
    * only; the caves plain black. The ship, the pod and everything else as Mammoth Asteroids draws them.
    */
-  thrust?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][] };
+  thrust?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][]; craters?: readonly { x: number; y: number; r: number }[] };
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -722,6 +722,15 @@ function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>,
       else ctx.lineTo(q.x, q.y);
     });
     ctx.closePath();
+    ctx.fill();
+  }
+  // Craters (TER-004): open space cut into the rock, plain black like the caves.
+  for (const h of view.craters ?? []) {
+    const q = toScreen(c, vp, h);
+    const r = h.r * c.zoom;
+    if (q.x + r < 0 || q.x - r > vp.width || q.y + r < 0 || q.y - r > vp.height) continue;
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
     ctx.fill();
   }
   drawStars(ctx, c, vp, (x, y) => insideOutline(view.sky, toWorld(c, vp, { x, y })));

@@ -41,12 +41,18 @@ function useFollowCamera(): void {
   useEffect(() => {
     setFollow(false);
     let raf = 0;
+    // Where the view last looked at a ship: with the ship gone it stays there, on the explosion and
+    // what it leaves, until the next ship beams in.
+    let last: { x: number; y: number } | null = null;
     const tick = () => {
       raf = requestAnimationFrame(tick);
       const w = sandbox.value?.world;
       const vp = viewport.value;
       if (!w?.thrust || !vp.width || !vp.height) return;
-      const at = lookAt(w, shown.time - w.time) ?? w.thrust.spec.start;
+      const ship = lookAt(w, shown.time - w.time);
+      if (ship) last = ship;
+      else if (w.time < 0.05) last = null; // a new level
+      const at = ship ?? last ?? w.thrust.spec.start;
       const zoom = zoomFor(vp.height);
       const c = camera.value;
       if (c.x !== at.x || c.y !== at.y || c.zoom !== zoom) camera.value = { x: at.x, y: at.y, zoom };

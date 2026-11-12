@@ -794,6 +794,21 @@ Your Gunship 3 against an AI Gunship 3 among the asteroids: the first playable f
   - *Measured:* against a player who does nothing it closes in, holds off and fires; the first explosive shell that hits knocks the player out, at about 11 s, with the ledger clean. About 5.5 ms a step with the railgun (WPN-008); with the gas cannon, firing while thrusting could take 5–18 s a step.
 - **Next:** balance (one hit is often enough: armour, more welds, or smaller blasts), several enemies, and Cautious or Evading ships as bystanders.
 
+### 9.13 Ground that can be cratered (M10)
+
+Ground made from an outline, which explosions and shells cut into, for Mammoth Thrust (`docs/games/mammoth-thrust-design.md` §11). Asked for by Chloe, 12 November 2026: physics-led play wants scenery that can be destroyed. Off unless a scenario declares `world.terrain`, and craters off unless it declares `terrain.craters`.
+
+- **TER-001** `[M · M10 · S]` Ground may be given as one closed outline of the open space above and inside it (`world.terrain.outline`, clockwise, the rock on its left). Its rock shall be a crust of fixed bodies along the outline on its rock side, 15 m deep or as deep as the rock is. A crater is a disc of open space added to that: the rock inside it shall be gone, and the crust made afresh round it, so that craters on craters dig as deep as anyone digs, and through to a cave. A crater wholly in open space, or wholly inside another, changes nothing and isn't kept.
+- **TER-002** `[M · M10 · S]` An explosion shall leave a crater where it went off, of radius `blast` (default 0.6) × the reach of its blast (the charge's declared radius), within `least` and `most`.
+- **TER-003** `[M · M10 · S]` A shell with no charge that strikes the ground shall leave a crater of radius `bullet` where it struck, and be spent: it leaves the world, through the boundary. Nothing else that strikes the ground leaves a crater.
+- **TER-004** `[M · M10 · U]` A crater shall be drawn as open space: where the game draws the rock, plain black cut into it.
+- **TER-005** `[M · M10 · B]` No more than `limit` craters shall be kept (default 250), nor more than `small` of them under 1 m (default 150): past that, new ones are not made. With 250 craters a level shall still step inside the budget.
+
+- *The rock that was in a crater* leaves as dust, which is only drawn. The rock is fixed and has no mass in the ledger, so cutting it changes no total.
+- *What stands on the ground* (a turret's base, the pod's stand, a building's foundation) is fixed, and stays where it is when the rock under it is cut away. Making it fall is for later.
+- *What it costs* (Node, the build machine, Mammoth Thrust's level 1): cutting a crater takes 4 ms on average with 250 there already, 13 ms at worst. With 250 craters (584 rock bodies, where the level starts with 38) a step takes 1.9 ms with the ship falling and 3.7 ms with it thrusting, against 1.3 and 1.9 with none, and 6 ms allowed.
+- *Not done:* impacts of anything but shells (a ship or the pod crashing) leave no crater; Chloe may want that later.
+
 ### 9.12 Shield (M10)
 
 A field round a ship that turns away shells and gas while it is held, for Mammoth Thrust (`docs/games/mammoth-thrust-design.md` §2.5). Agreed with Chloe, 12 November 2026. It is a declared cheat: the momentum it takes goes nowhere, and the ledger records how much.
@@ -978,7 +993,7 @@ Logged November 2026. The work builds towards a few playable mini games, each a 
 | **Mini game 1: Lander** | Land a ship on a pad under gravity (FLT-005). | Done (LAND). |
 | **Mini game 2: Asteroids** | Clear waves of asteroids. | In progress (M9): **Mammoth Asteroids**, `docs/games/mammoth-asteroids.md` (spec) and `mammoth-asteroids-design.md` (design and plan). |
 | **Mini game 3: Combat duel** | A duel with an AI ship among the asteroids. | First version built (AI-3, §9.11), on AI pilots phases 1–3 (§9.10). |
-| **Mini game 4: Thrust** | Fly a cave past turrets, take a pod on the tether and carry it out. | Draft spec (12 November 2026): **Mammoth Thrust**, `docs/games/mammoth-thrust.md` (spec) and `mammoth-thrust-design.md` (design and plan). The engine changes are agreed (12 November 2026): ASM-008, WPN-009, WPN-010, TRC-008, TRC-009, SHD-001…005 (M10). **The MVP is built** (12 November 2026): two levels, the ship, the pod, lives, the level's top, and the page `thrust.html`, with TRC-010. **Turrets are built too** (step 5: ASM-008, WPN-009, WPN-010). The factory, fuel through the beam and the shield are still to build. |
+| **Mini game 4: Thrust** | Fly a cave past turrets, take a pod on the tether and carry it out. | Draft spec (12 November 2026): **Mammoth Thrust**, `docs/games/mammoth-thrust.md` (spec) and `mammoth-thrust-design.md` (design and plan). The engine changes are agreed (12 November 2026): ASM-008, WPN-009, WPN-010, TRC-008, TRC-009, SHD-001…005 (M10). **The MVP is built** (12 November 2026): two levels, the ship, the pod, lives, the level's top, and the page `thrust.html`, with TRC-010. **Turrets are built too** (step 5: ASM-008, WPN-009, WPN-010). **The ground can be cratered** (TER-001…005). The factory, fuel through the beam and the shield are still to build. |
 | **Main game MVP** | A small economy with a tech and crafting tree; the home base (§9.8c); some kind of sector selection; mining in each sector, with combat threats in the more dangerous sectors. | Needs the rest: Mining and Mad pilots, sectors with exits (ships come and go), spending what is delivered (recipes, buildings, ship upgrades), and the cockpit with its mammoth pilot (§9.9). |
 
 *AI pilot plan (M8), one PR per phase.* 1: foundations (pilots in the step, per-ship channels, learning the ship from its design and correcting in flight, thrust allocation, attitude). 2: navigation and Ignoring (fly to a point, routes, station keeping, collision avoidance, inspector and overlay). 3: combat (detection, sides, leading the target, fire control; Hunting, Cautious, Evading). 4: Mining and Mad (tractor control, a minimal sector exit). 5: skill model and tuning (a delayed view of the world and unsteady hands first; deliberate mistakes later), against the speed budget.
@@ -1000,7 +1015,7 @@ Each milestone ends with: all its `M` requirements passing their stated verifica
 | **M7 Asteroids** | Aggregate asteroid generator and fracture | RS-14 passes. |
 | **M8 AI pilots** | Pilots that fly any ship through its controls: calibration, thrust allocation, flying, aiming, firing, tractor; skills; modes Ignoring, Evading, Mining, Cautious, Hunting, Mad (§9.10) | Every AIP scenario test passes. A Hunting Gunship 2 fights the player in the sandbox. |
 | **M9 Mammoth Asteroids** | Collisions across wrap edges, wrap-aware blasts and AI, rocks whose every piece pulls (or that pull as one), indestructible gold, the clearing pilot, and the game (`docs/games/mammoth-asteroids.md`) | FLT-015, FLT-016, AST-009, AST-010, AST-011, AIP-020 tests pass; the game's MAS tests pass; review `docs/reviews/M9.md`. |
-| **M10 Mammoth Thrust** | A joint that turns, turrets with a simple power rule, fuel through the tractor beam, a shield, and the game (`docs/games/mammoth-thrust.md`, `mammoth-thrust-design.md`). | The game's MTH requirements and ASM-008, WPN-009, WPN-010, TRC-008 to TRC-012 and SHD-001…005 pass; `docs/reviews/M10.md`; Chloe has played it. |
+| **M10 Mammoth Thrust** | A joint that turns, turrets with a simple power rule, fuel through the tractor beam, a shield, and the game (`docs/games/mammoth-thrust.md`, `mammoth-thrust-design.md`). | The game's MTH requirements and ASM-008, WPN-009, WPN-010, TRC-008 to TRC-012, TER-001…005 and SHD-001…005 pass; `docs/reviews/M10.md`; Chloe has played it. |
 
 ## 13. Deferred: Game Layer
 
