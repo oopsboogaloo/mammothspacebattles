@@ -57,7 +57,7 @@ other sources in §12):
 | After playing (12 November 2026) | It is already fun, and very hard: leave it that hard. The ship turning with real inertia is a lot to fly, balanced by a ship that survives grazing the walls: keep Asteroids' generous damage tolerance for now. Landing for a rest is possible until the pod is taken. Picking the pod up was too hard, so: |
 | Beam | Three times the pull (1,200 N). It pulls the pod and nothing else. |
 | Tether | Takes the pod from up to 22 m off, further than its 12 m length, and reels it in to that length and holds it there, heavily damped. It takes the pod and nothing else: not the wreckage of earlier ships. (Later games will want the tether as a general tool.) It holds five times the pull it did, and no longer lets go under thrust. |
-| Self-destruct | The ship goes up at once; the page then leaves 3 seconds to watch it before it says the ship is lost and the next one comes. |
+| A ship lost | However it is lost (a crash, a hit, self-destruct), the page leaves 3 seconds to enjoy the explosion before it says the ship is lost and the wait for the next one begins. Self-destruct goes up at once. (First for self-destruct only; for every loss after Chloe played again, 12 November 2026.) |
 | Shells | A magazine of 120, full with each new ship. |
 | Win | The ship, with the pod on its tether, climbs above the level's top. There is no air anywhere: the top is only a height. |
 | Levels | The missions we draw, in order. No reversed gravity, no invisible walls. |

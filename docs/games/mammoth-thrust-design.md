@@ -478,7 +478,7 @@ She found it fun and very hard, and asked for the pod to be easier to pick up an
 | A stronger beam | 400 N to 1,200 N. |
 | The tether to attach from further off and bring the pod in to its length, heavily damped | `tether.reach` 22 m (the length is 12 m). The tether starts at the distance the pod was taken at and reels in at 6 m/s (TRC-010, now both ways). Damping 0.7 to 1.5 of critical. Measured from 20 m while hovering on short burns: at 12 m in 1.5 game s, the pull never over 800 N. |
 | The beam and tether to take only the pod | `only: ["pod"]` on the ship's tractor (TRC-011, new). Wreckage in the beam is not pulled. |
-| A few seconds to watch a self-destruct | The page says "ship lost" 3 s (1.5 game s) after a self-destruct, and the next ship comes the usual 2.5 s after that. After a crash it says so at once, as before. |
+| A few seconds to watch a self-destruct, and then (after playing again) any loss | The page says "ship lost" 3 s (1.5 game s) after a ship is lost, however it was lost, and the next ship comes the usual 2.5 s after that (`watch` in the game's spec). |
 | A stronger tether: it let go under thrust | See below: it wasn't the tether's strength. The limit is up five times all the same, to 100,000 N. |
 
 **Why the tether let go.** It never reached its limit: the most it carried in hard flying was about

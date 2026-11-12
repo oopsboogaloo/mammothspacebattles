@@ -224,8 +224,8 @@ describe("Mammoth Thrust", () => {
     step(0.1);
     expect(st(w)).toMatchObject({ phase: "between", lives: 2, n: 1 });
     expect(w.links.some((l) => l.kind === "control" && l.to.startsWith("p1-"))).toBe(false); // the keys fly only the next ship
-    // After a self-destruct there are 3 s on screen (1.5 game s) to watch it go before the page says
-    // the ship is lost, and then the usual wait for the next one.
+    // After any loss there are 3 s on screen (1.5 game s) to watch it go before the page says the
+    // ship is lost, and then the usual wait for the next one.
     expect(st(w).noteAt! - w.time).toBeGreaterThan(1.3);
     expect(st(w).next! - st(w).noteAt!).toBeCloseTo(1.25, 6);
     step(1.5);
@@ -343,8 +343,8 @@ describe("Mammoth Thrust", () => {
     expect(hull(w)).toBeDefined(); // it set down in one piece
     expect(w.events.filter((e) => e.type === "thrust.lost")).toHaveLength(1);
     expect(st(w).lives).toBe(2);
-    // A ship lost any other way than by its pilot's own hand is said to be lost at once.
-    expect(st(w).noteAt).toBeLessThanOrEqual(w.time);
+    // Lost this way too, there are 3 s on screen to watch before the page says so.
+    expect(st(w).noteAt! - w.time).toBeGreaterThan(1.3);
     expect(st(w).next! - st(w).noteAt!).toBeCloseTo(1.25, 6);
   });
 
