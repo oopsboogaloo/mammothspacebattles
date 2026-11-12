@@ -33,11 +33,16 @@ export interface Tether {
   /** Largest force it carries, pulling or pushing, before it breaks, N. */
   maxTension: number;
   /**
-   * How fast it lengthens after taking cargo nearer than its length, m/s (TRC-010). It then starts
-   * at the distance the cargo was taken at and pays out to its length, so the two aren't thrown
-   * apart. Without it the tether is its full length at once.
+   * How fast it comes to its length after taking cargo nearer or further than that, m/s (TRC-010).
+   * It then starts at the distance the cargo was taken at and pays out, or reels in, to its length,
+   * so the two aren't thrown apart or snatched together. Without it the tether is its full length at once.
    */
   payOut?: number;
+  /**
+   * How far off it takes cargo, m (TRC-010): further than its length, it takes cargo out there and
+   * reels it in. Without it, cargo is taken within the tether's length.
+   */
+  reach?: number;
 }
 
 export interface Tractor {
@@ -61,6 +66,16 @@ export interface Tractor {
    * gone, broken, or no longer welded to the tractor's ship. The beam works without it.
    */
   tetherFrom?: string;
+  /**
+   * The body that makes the beam (TRC-012), if it is a separate part: no beam, and no tether, while
+   * it is gone, broken, or no longer welded to the tractor's ship.
+   */
+  beamFrom?: string;
+  /**
+   * The only bodies the beam pulls and the tether takes, by id (TRC-011). Without it, anything free
+   * in the wedge.
+   */
+  only?: string[];
   /** State: what it is doing now. */
   mode: "off" | "beam" | "tether";
   /** State: the control was on last step (to see a fresh press). */
@@ -153,7 +168,7 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
     const b = ship.body;
     const t = b.tractor!;
     const linked = world.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === t.channel && l.integrity > 0);
-    const on = linked && b.integrity > 0 && (world.controls[t.channel] ?? 0) > 0;
+    const on = linked && b.integrity > 0 && (world.controls[t.channel] ?? 0) > 0 && partWorks(b, t.beamFrom, byId, roots);
     const pressed = on && !t.held;
     t.held = on;
     if (!on) t.latched = false;
@@ -164,7 +179,7 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
       const cargo = t.cargo ? byId.get(t.cargo) : undefined;
       // A fresh press lets go; so does losing the control link (TRC-001), the cargo, the ship's tail,
       // or the tether's generator (TRC-007).
-      if (pressed || !linked || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id) || !tetherWorks(b, byId, roots)) {
+      if (pressed || !linked || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id) || !tetherWorks(b, byId, roots) || !partWorks(b, t.beamFrom, byId, roots)) {
         ev("tether.release", { id: b.id, cargo: t.cargo ?? "" });
         t.mode = "off";
         t.cargo = undefined;
@@ -186,13 +201,15 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
   }
 }
 
-/** The tether's generator, if it has one, is there, working, and on the tractor's ship (TRC-007). */
-function tetherWorks(b: Body, byId: Map<string, RB>, roots: ReadonlyMap<string, string>): boolean {
-  const id = b.tractor!.tetherFrom;
+/** A separate part the tractor needs, if it names one, is there, working, and on the tractor's ship. */
+function partWorks(b: Body, id: string | undefined, byId: Map<string, RB>, roots: ReadonlyMap<string, string>): boolean {
   if (id === undefined) return true;
   const g = byId.get(id);
   return !!g && g.body.integrity > 0 && roots.get(id) === roots.get(b.id);
 }
+
+/** The tether's generator, if it has one, is there, working, and on the tractor's ship (TRC-007). */
+const tetherWorks = (b: Body, byId: Map<string, RB>, roots: ReadonlyMap<string, string>): boolean => partWorks(b, b.tractor!.tetherFrom, byId, roots);
 
 function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: RB[], dt: number, ev: (type: string, data: Record<string, number | string | boolean>) => void, canTether: boolean): void {
   const t = ship.body.tractor!;
@@ -203,6 +220,7 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
   const inBeam = new Map<string, RB[]>();
   for (const r of rbs) {
     if (r.invMass === 0 || roots.get(r.body.id) === own) continue;
+    if (t.only && !t.only.includes(r.body.id)) continue;
     const d = sub(r.body.position, origin);
     const dist = length(d);
     if (dist > t.range || dist < 1e-6 || dot(d, axis) < dist * half) continue;
@@ -221,14 +239,14 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
     const g = groupOf(rbs, roots, root);
     if (g.mass > shipGroup.mass * t.capture || g.extent > shipGroup.extent * (1 + 1e-9)) continue;
     const dist = length(sub(g.com, shipGroup.com));
-    if (dist > t.tether.length || (best && dist >= best.dist)) continue;
+    if (dist > (t.tether.reach ?? t.tether.length) || (best && dist >= best.dist)) continue;
     const near = pieces.reduce((m, r) => (length(sub(r.body.position, origin)) < length(sub(m.body.position, origin)) ? r : m));
     best = { r: near, dist };
   }
   if (best) {
     t.mode = "tether";
     t.cargo = best.r.body.id;
-    if (t.tether.payOut !== undefined) t.paid = Math.min(t.tether.length, best.dist);
+    if (t.tether.payOut !== undefined) t.paid = best.dist;
     ev("tractor.off", { id: ship.body.id });
     ev("tether.engage", { id: ship.body.id, cargo: t.cargo, distance: best.dist });
     return;
@@ -272,7 +290,11 @@ function tether(world: World, ship: RB, cargo: RB, roots: ReadonlyMap<string, st
   const { stiffness: k, damping: zeta, maxTension } = t.tether;
   // A tether that pays out (TRC-010) is as long as it has got so far.
   const L = t.paid ?? t.tether.length;
-  if (t.paid !== undefined) t.paid = t.paid + (t.tether.payOut ?? 0) * dt >= t.tether.length ? undefined : t.paid + (t.tether.payOut ?? 0) * dt;
+  if (t.paid !== undefined) {
+    const step = (t.tether.payOut ?? 0) * dt;
+    const left = t.tether.length - t.paid;
+    t.paid = Math.abs(left) <= step ? undefined : t.paid + Math.sign(left) * step;
+  }
   const damp = 2 * zeta * Math.sqrt(k * mu);
   const v = dot(sub(groupVelocity(c), groupVelocity(a)), n);
   const x = dist - L;

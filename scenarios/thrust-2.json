@@ -1857,6 +1857,1840 @@
           "radius": 3,
           "whenDestroyed": true
         }
+      },
+      {
+        "id": "t1-base",
+        "fixed": true,
+        "shape": {
+          "kind": "box",
+          "width": 6.4,
+          "height": 0.3
+        },
+        "mass": 1,
+        "position": {
+          "x": 109,
+          "y": 24.15
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "friction": 0.9
+      },
+      {
+        "id": "t1-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.4,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 106.6,
+          "y": 24.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "tank",
+          "threshold": 60,
+          "toughness": 500
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "explosive": {
+          "charge": 0.3,
+          "arm": 1000000,
+          "fragments": 6,
+          "radius": 4,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "t1-pipe",
+        "shape": {
+          "kind": "box",
+          "width": 0.4,
+          "height": 0.15
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 107.5,
+          "y": 24.575
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.002222,
+            "capacity": 0.002222
+          },
+          {
+            "resource": "o2",
+            "mass": 0.017778,
+            "capacity": 0.017778
+          }
+        ]
+      },
+      {
+        "id": "t1-gen",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 108.2,
+          "y": 24.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.002222,
+            "capacity": 0.002222
+          },
+          {
+            "resource": "o2",
+            "mass": 0.017778,
+            "capacity": 0.017778
+          }
+        ],
+        "generator": {
+          "battery": "t1-battery",
+          "burn": 0.02,
+          "rate": 1
+        }
+      },
+      {
+        "id": "t1-battery",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 111.6,
+          "y": 24.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "charge": {
+          "shots": 5,
+          "capacity": 5
+        },
+        "explosive": {
+          "charge": 0.05,
+          "arm": 1000000,
+          "fragments": 4,
+          "radius": 1,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "t1-mount",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 1,
+              "y": -0.424413
+            },
+            {
+              "x": 0.92388,
+              "y": -0.04173
+            },
+            {
+              "x": 0.707107,
+              "y": 0.282694
+            },
+            {
+              "x": 0.382683,
+              "y": 0.499466
+            },
+            {
+              "x": 0,
+              "y": 0.575587
+            },
+            {
+              "x": -0.382683,
+              "y": 0.499466
+            },
+            {
+              "x": -0.707107,
+              "y": 0.282694
+            },
+            {
+              "x": -0.92388,
+              "y": -0.04173
+            },
+            {
+              "x": -1,
+              "y": -0.424413
+            }
+          ]
+        },
+        "mass": 3,
+        "position": {
+          "x": 109.9,
+          "y": 24.724413
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        }
+      },
+      {
+        "id": "t1-carriage",
+        "shape": {
+          "kind": "box",
+          "width": 0.5,
+          "height": 0.5
+        },
+        "mass": 1,
+        "position": {
+          "x": 109.9,
+          "y": 24.7
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "turret": {
+          "joint": "t1-w-pivot",
+          "gun": "t1-carriage",
+          "barrel": "t1-gun",
+          "battery": "t1-battery",
+          "range": 80,
+          "wait": 1.5,
+          "hold": 0.25,
+          "aim": "random",
+          "seed": 201
+        },
+        "magazine": {
+          "count": 40,
+          "reload": 1,
+          "at": {
+            "x": 0,
+            "y": 2.15
+          },
+          "angle": 0,
+          "shell": {
+            "shape": {
+              "kind": "disc",
+              "radius": 0.12
+            },
+            "mass": 0.3,
+            "restitution": 0,
+            "friction": 0.3,
+            "explosive": {
+              "charge": 0.05,
+              "heat": 30000000,
+              "fragments": 0,
+              "radius": 0.6,
+              "gas": 6
+            }
+          },
+          "railgun": {
+            "channel": "t1.fire",
+            "speed": 40
+          }
+        }
+      },
+      {
+        "id": "t1-gun",
+        "shape": {
+          "kind": "box",
+          "width": 0.3,
+          "height": 1.8
+        },
+        "mass": 1,
+        "position": {
+          "x": 109.9,
+          "y": 25.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        }
+      },
+      {
+        "id": "t2-base",
+        "fixed": true,
+        "shape": {
+          "kind": "box",
+          "width": 6.4,
+          "height": 0.3
+        },
+        "mass": 1,
+        "position": {
+          "x": 30,
+          "y": -111.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "friction": 0.9
+      },
+      {
+        "id": "t2-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.4,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 27.6,
+          "y": -111.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "tank",
+          "threshold": 60,
+          "toughness": 500
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "explosive": {
+          "charge": 0.3,
+          "arm": 1000000,
+          "fragments": 6,
+          "radius": 4,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "t2-pipe",
+        "shape": {
+          "kind": "box",
+          "width": 0.4,
+          "height": 0.15
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 28.5,
+          "y": -111.425
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.002222,
+            "capacity": 0.002222
+          },
+          {
+            "resource": "o2",
+            "mass": 0.017778,
+            "capacity": 0.017778
+          }
+        ]
+      },
+      {
+        "id": "t2-gen",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 29.2,
+          "y": -111.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.002222,
+            "capacity": 0.002222
+          },
+          {
+            "resource": "o2",
+            "mass": 0.017778,
+            "capacity": 0.017778
+          }
+        ],
+        "generator": {
+          "battery": "t2-battery",
+          "burn": 0.02,
+          "rate": 1
+        }
+      },
+      {
+        "id": "t2-battery",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 32.6,
+          "y": -111.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "charge": {
+          "shots": 5,
+          "capacity": 5
+        },
+        "explosive": {
+          "charge": 0.05,
+          "arm": 1000000,
+          "fragments": 4,
+          "radius": 1,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "t2-mount",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 1,
+              "y": -0.424413
+            },
+            {
+              "x": 0.92388,
+              "y": -0.04173
+            },
+            {
+              "x": 0.707107,
+              "y": 0.282694
+            },
+            {
+              "x": 0.382683,
+              "y": 0.499466
+            },
+            {
+              "x": 0,
+              "y": 0.575587
+            },
+            {
+              "x": -0.382683,
+              "y": 0.499466
+            },
+            {
+              "x": -0.707107,
+              "y": 0.282694
+            },
+            {
+              "x": -0.92388,
+              "y": -0.04173
+            },
+            {
+              "x": -1,
+              "y": -0.424413
+            }
+          ]
+        },
+        "mass": 3,
+        "position": {
+          "x": 30.9,
+          "y": -111.275587
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        }
+      },
+      {
+        "id": "t2-carriage",
+        "shape": {
+          "kind": "box",
+          "width": 0.5,
+          "height": 0.5
+        },
+        "mass": 1,
+        "position": {
+          "x": 30.9,
+          "y": -111.3
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "turret": {
+          "joint": "t2-w-pivot",
+          "gun": "t2-carriage",
+          "barrel": "t2-gun",
+          "battery": "t2-battery",
+          "range": 80,
+          "wait": 1.5,
+          "hold": 0.25,
+          "aim": "random",
+          "seed": 202
+        },
+        "magazine": {
+          "count": 40,
+          "reload": 1,
+          "at": {
+            "x": 0,
+            "y": 2.15
+          },
+          "angle": 0,
+          "shell": {
+            "shape": {
+              "kind": "disc",
+              "radius": 0.12
+            },
+            "mass": 0.3,
+            "restitution": 0,
+            "friction": 0.3,
+            "explosive": {
+              "charge": 0.05,
+              "heat": 30000000,
+              "fragments": 0,
+              "radius": 0.6,
+              "gas": 6
+            }
+          },
+          "railgun": {
+            "channel": "t2.fire",
+            "speed": 40
+          }
+        }
+      },
+      {
+        "id": "t2-gun",
+        "shape": {
+          "kind": "box",
+          "width": 0.3,
+          "height": 1.8
+        },
+        "mass": 1,
+        "position": {
+          "x": 30.9,
+          "y": -110.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        }
+      },
+      {
+        "id": "t3-base",
+        "fixed": true,
+        "shape": {
+          "kind": "box",
+          "width": 6.4,
+          "height": 0.3
+        },
+        "mass": 1,
+        "position": {
+          "x": -30,
+          "y": -62.15
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.141593,
+        "angularVelocity": 0,
+        "friction": 0.9
+      },
+      {
+        "id": "t3-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.4,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": -27.6,
+          "y": -62.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.141593,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "tank",
+          "threshold": 60,
+          "toughness": 500
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "explosive": {
+          "charge": 0.3,
+          "arm": 1000000,
+          "fragments": 6,
+          "radius": 4,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "t3-pipe",
+        "shape": {
+          "kind": "box",
+          "width": 0.4,
+          "height": 0.15
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -28.5,
+          "y": -62.575
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.141593,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.002222,
+            "capacity": 0.002222
+          },
+          {
+            "resource": "o2",
+            "mass": 0.017778,
+            "capacity": 0.017778
+          }
+        ]
+      },
+      {
+        "id": "t3-gen",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": -29.2,
+          "y": -62.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.141593,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.002222,
+            "capacity": 0.002222
+          },
+          {
+            "resource": "o2",
+            "mass": 0.017778,
+            "capacity": 0.017778
+          }
+        ],
+        "generator": {
+          "battery": "t3-battery",
+          "burn": 0.02,
+          "rate": 1
+        }
+      },
+      {
+        "id": "t3-battery",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": -32.6,
+          "y": -62.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.141593,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "charge": {
+          "shots": 5,
+          "capacity": 5
+        },
+        "explosive": {
+          "charge": 0.05,
+          "arm": 1000000,
+          "fragments": 4,
+          "radius": 1,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "t3-mount",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 1,
+              "y": -0.424413
+            },
+            {
+              "x": 0.92388,
+              "y": -0.04173
+            },
+            {
+              "x": 0.707107,
+              "y": 0.282694
+            },
+            {
+              "x": 0.382683,
+              "y": 0.499466
+            },
+            {
+              "x": 0,
+              "y": 0.575587
+            },
+            {
+              "x": -0.382683,
+              "y": 0.499466
+            },
+            {
+              "x": -0.707107,
+              "y": 0.282694
+            },
+            {
+              "x": -0.92388,
+              "y": -0.04173
+            },
+            {
+              "x": -1,
+              "y": -0.424413
+            }
+          ]
+        },
+        "mass": 3,
+        "position": {
+          "x": -30.9,
+          "y": -62.724413
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.141593,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        }
+      },
+      {
+        "id": "t3-carriage",
+        "shape": {
+          "kind": "box",
+          "width": 0.5,
+          "height": 0.5
+        },
+        "mass": 1,
+        "position": {
+          "x": -30.9,
+          "y": -62.7
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.141593,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "turret": {
+          "joint": "t3-w-pivot",
+          "gun": "t3-carriage",
+          "barrel": "t3-gun",
+          "battery": "t3-battery",
+          "range": 80,
+          "wait": 1.5,
+          "hold": 0.25,
+          "aim": "random",
+          "seed": 203
+        },
+        "magazine": {
+          "count": 40,
+          "reload": 1,
+          "at": {
+            "x": 0,
+            "y": 2.15
+          },
+          "angle": 0,
+          "shell": {
+            "shape": {
+              "kind": "disc",
+              "radius": 0.12
+            },
+            "mass": 0.3,
+            "restitution": 0,
+            "friction": 0.3,
+            "explosive": {
+              "charge": 0.05,
+              "heat": 30000000,
+              "fragments": 0,
+              "radius": 0.6,
+              "gas": 6
+            }
+          },
+          "railgun": {
+            "channel": "t3.fire",
+            "speed": 40
+          }
+        }
+      },
+      {
+        "id": "t3-gun",
+        "shape": {
+          "kind": "box",
+          "width": 0.3,
+          "height": 1.8
+        },
+        "mass": 1,
+        "position": {
+          "x": -30.9,
+          "y": -63.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 3.141593,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        }
+      }
+    ],
+    "joints": [
+      {
+        "id": "t1-w-tank-a",
+        "a": "t1-base",
+        "b": "t1-tank",
+        "anchorA": {
+          "x": -2.8,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-tank-b",
+        "a": "t1-base",
+        "b": "t1-tank",
+        "anchorA": {
+          "x": -2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-gen-a",
+        "a": "t1-base",
+        "b": "t1-gen",
+        "anchorA": {
+          "x": -1.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-gen-b",
+        "a": "t1-base",
+        "b": "t1-gen",
+        "anchorA": {
+          "x": -0.4,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-battery-a",
+        "a": "t1-base",
+        "b": "t1-battery",
+        "anchorA": {
+          "x": 2.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-battery-b",
+        "a": "t1-base",
+        "b": "t1-battery",
+        "anchorA": {
+          "x": 3,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-mount-a",
+        "a": "t1-base",
+        "b": "t1-mount",
+        "anchorA": {
+          "x": 0.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.7,
+          "y": -0.424413
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t1-w-mount-b",
+        "a": "t1-base",
+        "b": "t1-mount",
+        "anchorA": {
+          "x": 1.6,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.7,
+          "y": -0.424413
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t1-w-pipe-tank",
+        "a": "t1-tank",
+        "b": "t1-pipe",
+        "anchorA": {
+          "x": 0.7,
+          "y": -0.225
+        },
+        "anchorB": {
+          "x": -0.2,
+          "y": 0
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-pipe-gen",
+        "a": "t1-pipe",
+        "b": "t1-gen",
+        "anchorA": {
+          "x": 0.2,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": -0.225
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-pivot",
+        "a": "t1-mount",
+        "b": "t1-carriage",
+        "anchorA": {
+          "x": 0,
+          "y": -0.024413
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        },
+        "turn": {
+          "rate": 2.1,
+          "min": -1.047198,
+          "max": 1.047198,
+          "target": 0
+        }
+      },
+      {
+        "id": "t1-w-gun",
+        "a": "t1-carriage",
+        "b": "t1-gun",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.85
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t2-w-tank-a",
+        "a": "t2-base",
+        "b": "t2-tank",
+        "anchorA": {
+          "x": -2.8,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t2-w-tank-b",
+        "a": "t2-base",
+        "b": "t2-tank",
+        "anchorA": {
+          "x": -2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t2-w-gen-a",
+        "a": "t2-base",
+        "b": "t2-gen",
+        "anchorA": {
+          "x": -1.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t2-w-gen-b",
+        "a": "t2-base",
+        "b": "t2-gen",
+        "anchorA": {
+          "x": -0.4,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t2-w-battery-a",
+        "a": "t2-base",
+        "b": "t2-battery",
+        "anchorA": {
+          "x": 2.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t2-w-battery-b",
+        "a": "t2-base",
+        "b": "t2-battery",
+        "anchorA": {
+          "x": 3,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t2-w-mount-a",
+        "a": "t2-base",
+        "b": "t2-mount",
+        "anchorA": {
+          "x": 0.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.7,
+          "y": -0.424413
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t2-w-mount-b",
+        "a": "t2-base",
+        "b": "t2-mount",
+        "anchorA": {
+          "x": 1.6,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.7,
+          "y": -0.424413
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t2-w-pipe-tank",
+        "a": "t2-tank",
+        "b": "t2-pipe",
+        "anchorA": {
+          "x": 0.7,
+          "y": -0.225
+        },
+        "anchorB": {
+          "x": -0.2,
+          "y": 0
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t2-w-pipe-gen",
+        "a": "t2-pipe",
+        "b": "t2-gen",
+        "anchorA": {
+          "x": 0.2,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": -0.225
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t2-w-pivot",
+        "a": "t2-mount",
+        "b": "t2-carriage",
+        "anchorA": {
+          "x": 0,
+          "y": -0.024413
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        },
+        "turn": {
+          "rate": 2.1,
+          "min": -1.047198,
+          "max": 1.047198,
+          "target": 0
+        }
+      },
+      {
+        "id": "t2-w-gun",
+        "a": "t2-carriage",
+        "b": "t2-gun",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.85
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t3-w-tank-a",
+        "a": "t3-base",
+        "b": "t3-tank",
+        "anchorA": {
+          "x": -2.8,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t3-w-tank-b",
+        "a": "t3-base",
+        "b": "t3-tank",
+        "anchorA": {
+          "x": -2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t3-w-gen-a",
+        "a": "t3-base",
+        "b": "t3-gen",
+        "anchorA": {
+          "x": -1.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t3-w-gen-b",
+        "a": "t3-base",
+        "b": "t3-gen",
+        "anchorA": {
+          "x": -0.4,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t3-w-battery-a",
+        "a": "t3-base",
+        "b": "t3-battery",
+        "anchorA": {
+          "x": 2.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t3-w-battery-b",
+        "a": "t3-base",
+        "b": "t3-battery",
+        "anchorA": {
+          "x": 3,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t3-w-mount-a",
+        "a": "t3-base",
+        "b": "t3-mount",
+        "anchorA": {
+          "x": 0.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.7,
+          "y": -0.424413
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t3-w-mount-b",
+        "a": "t3-base",
+        "b": "t3-mount",
+        "anchorA": {
+          "x": 1.6,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.7,
+          "y": -0.424413
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t3-w-pipe-tank",
+        "a": "t3-tank",
+        "b": "t3-pipe",
+        "anchorA": {
+          "x": 0.7,
+          "y": -0.225
+        },
+        "anchorB": {
+          "x": -0.2,
+          "y": 0
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t3-w-pipe-gen",
+        "a": "t3-pipe",
+        "b": "t3-gen",
+        "anchorA": {
+          "x": 0.2,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": -0.225
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t3-w-pivot",
+        "a": "t3-mount",
+        "b": "t3-carriage",
+        "anchorA": {
+          "x": 0,
+          "y": -0.024413
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        },
+        "turn": {
+          "rate": 2.1,
+          "min": -1.047198,
+          "max": 1.047198,
+          "target": 0
+        }
+      },
+      {
+        "id": "t3-w-gun",
+        "a": "t3-carriage",
+        "b": "t3-gun",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.85
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "t1-feed-h2-a",
+        "kind": "feed",
+        "from": "t1-tank",
+        "to": "t1-pipe",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-feed-h2-b",
+        "kind": "feed",
+        "from": "t1-pipe",
+        "to": "t1-gen",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-feed-o2-a",
+        "kind": "feed",
+        "from": "t1-tank",
+        "to": "t1-pipe",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-feed-o2-b",
+        "kind": "feed",
+        "from": "t1-pipe",
+        "to": "t1-gen",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-ctl-fire",
+        "kind": "control",
+        "channel": "t1.fire",
+        "to": "t1-carriage"
+      },
+      {
+        "id": "t2-feed-h2-a",
+        "kind": "feed",
+        "from": "t2-tank",
+        "to": "t2-pipe",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t2-feed-h2-b",
+        "kind": "feed",
+        "from": "t2-pipe",
+        "to": "t2-gen",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t2-feed-o2-a",
+        "kind": "feed",
+        "from": "t2-tank",
+        "to": "t2-pipe",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t2-feed-o2-b",
+        "kind": "feed",
+        "from": "t2-pipe",
+        "to": "t2-gen",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t2-ctl-fire",
+        "kind": "control",
+        "channel": "t2.fire",
+        "to": "t2-carriage"
+      },
+      {
+        "id": "t3-feed-h2-a",
+        "kind": "feed",
+        "from": "t3-tank",
+        "to": "t3-pipe",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t3-feed-h2-b",
+        "kind": "feed",
+        "from": "t3-pipe",
+        "to": "t3-gen",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t3-feed-o2-a",
+        "kind": "feed",
+        "from": "t3-tank",
+        "to": "t3-pipe",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t3-feed-o2-b",
+        "kind": "feed",
+        "from": "t3-pipe",
+        "to": "t3-gen",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t3-ctl-fire",
+        "kind": "control",
+        "channel": "t3.fire",
+        "to": "t3-carriage"
       }
     ],
     "thrust": {
@@ -2151,6 +3985,34 @@
               "name": "hull",
               "threshold": 150,
               "toughness": 3000
+            },
+            "tractor": {
+              "channel": "tractor",
+              "range": 40,
+              "arc": 0.5235987755982988,
+              "force": 1200,
+              "capture": 1.2,
+              "only": [
+                "pod"
+              ],
+              "tether": {
+                "length": 12,
+                "reach": 22,
+                "stiffness": 2000,
+                "damping": 1.5,
+                "maxTension": 100000,
+                "payOut": 6
+              },
+              "origin": {
+                "x": 0,
+                "y": -1.5
+              },
+              "direction": {
+                "x": 0,
+                "y": -1
+              },
+              "beamFrom": "p{n}-tractor",
+              "tetherFrom": "p{n}-tether"
             }
           },
           {
@@ -3001,29 +4863,6 @@
               "name": "hull",
               "threshold": 150,
               "toughness": 3000
-            },
-            "tractor": {
-              "channel": "tractor",
-              "range": 40,
-              "arc": 0.5235987755982988,
-              "force": 400,
-              "capture": 1.2,
-              "tether": {
-                "length": 12,
-                "stiffness": 2000,
-                "damping": 0.7,
-                "maxTension": 20000,
-                "payOut": 4
-              },
-              "origin": {
-                "x": 1.025,
-                "y": -0.2
-              },
-              "direction": {
-                "x": 0,
-                "y": -1
-              },
-              "tetherFrom": "p{n}-tether"
             }
           },
           {
@@ -3872,7 +5711,7 @@
             "id": "p{n}-ctl-tractor",
             "kind": "control",
             "channel": "tractor",
-            "to": "p{n}-tractor"
+            "to": "p{n}-hull"
           }
         ]
       },
@@ -3946,13 +5785,18 @@
         }
       ],
       "hull": "p{n}-hull",
-      "tractor": "p{n}-tractor",
+      "tractor": "p{n}-hull",
       "start": {
         "x": -83,
         "y": 80
       },
       "top": 130,
       "pod": "pod",
+      "turrets": [
+        "t1-carriage",
+        "t2-carriage",
+        "t3-carriage"
+      ],
       "lives": 3,
       "respawn": 1.25,
       "grace": 1,

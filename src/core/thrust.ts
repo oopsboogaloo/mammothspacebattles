@@ -11,6 +11,7 @@
 import { shipState } from "./duel.ts";
 import { assemblyOf } from "./joints.ts";
 import { invRotate, length, sinCos, sub, type Vec2 } from "./math.ts";
+import { turretWorks } from "./turret.ts";
 import type { BodyInput, JointInput, LinkInput, World } from "./world.ts";
 
 export interface ThrustSpec {
@@ -33,10 +34,14 @@ export interface ThrustSpec {
   respawn?: number;
   /** Game seconds a new ship takes no damage after a loss (default 1). */
   grace?: number;
+  /** Game seconds more before the next ship when the last was destroyed by its own pilot (default 1.5): time to watch it go. */
+  destructWait?: number;
   /** The level's number, for the page. */
   level?: number;
-  /** Points: for the pod carried out, and for each kg of fuel left then. */
-  scores?: { pod?: number; fuel?: number };
+  /** The level's turrets (MTH-030): the bodies that carry their fire control. They watch for the ship flying. */
+  turrets?: string[];
+  /** Points: for the pod carried out, for each kg of fuel left then, and for a turret put out of action. */
+  scores?: { pod?: number; fuel?: number; turret?: number };
   /** The score and ships brought from the level before. */
   carry?: { score: number; lives: number };
   /**
@@ -62,6 +67,10 @@ export interface ThrustState {
   stand: Vec2;
   /** When the next ship comes, s. */
   next?: number;
+  /** When the page may say the ship is lost, s: at once after a crash, later after a self-destruct. */
+  noteAt?: number;
+  /** The ship flying was destroyed by its own pilot. */
+  destructed?: boolean;
   /** When the new ship's protection ends, s. */
   graceUntil?: number;
   /** Why the game is over: no ships left, or the pod destroyed. */
@@ -70,6 +79,8 @@ export interface ThrustState {
   bonus?: { pod: number; fuel: number };
   /** Rings to draw where something beamed in: the step, the place and the size. */
   beams: { at: number; x: number; y: number; r: number }[];
+  /** The turrets that can no longer fire: each scored once. */
+  turretsOut: string[];
   /** For the end screens. */
   stats: { ships: number; back: number };
   /** When a ship was last beamed back from the top, s. */
@@ -90,8 +101,8 @@ export interface ThrustOps {
   addLink(world: World, link: LinkInput): void;
 }
 
-export const THRUST_DEFAULTS = { lives: 3, respawn: 1.25, grace: 1 };
-export const THRUST_SCORES = { pod: 2000, fuel: 100 };
+export const THRUST_DEFAULTS = { lives: 3, respawn: 1.25, grace: 1, destructWait: 1.5 };
+export const THRUST_SCORES = { pod: 2000, fuel: 100, turret: 750 };
 /** The control that destroys the player's own ship, as Mammoth Asteroids' (MAS-039). */
 export const THRUST_DESTRUCT = "destruct";
 /** How long a beam ring shows, game s. */
@@ -175,6 +186,7 @@ export function startThrust(world: World, spec: ThrustSpec, ops: ThrustOps): Thr
       pod: "stand",
       stand: pod ? { ...pod.position } : { x: 0, y: 0 },
       beams: [],
+      turretsOut: [],
       stats: { ships: 0, back: 0 },
     },
   };
@@ -201,6 +213,17 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
 
   const hullId = idOf(spec.hull, s.n);
 
+  // 0. The turrets watch for the ship flying, and for nothing between ships. One that can no longer
+  // fire (its gun, carriage or battery gone) is out of action for the level, and scores once (MTH-031).
+  for (const id of spec.turrets ?? []) {
+    const c = world.bodies.find((b) => b.id === id);
+    if (c?.turret) c.turret.target = s.phase === "flying" ? hullId : undefined;
+    if (s.turretsOut.includes(id) || (c && turretWorks(world, c))) continue;
+    s.turretsOut = [...s.turretsOut, id];
+    s.score += spec.scores?.turret ?? THRUST_SCORES.turret;
+    world.events.push({ tick: world.tick, type: "thrust.turret", data: { id } });
+  }
+
   // 1. The pod (MTH-025): destroyed, the game is over.
   const pod = podState(world, game);
   if (pod !== s.pod) {
@@ -223,6 +246,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
         const ship = new Set(assemblyOf(world, hullId));
         for (const b of world.bodies) if (ship.has(b.id) && (b.id === hullId || b.explosive?.whenDestroyed)) b.integrity = 0;
         world.events.push({ tick: world.tick, type: "thrust.destruct", data: { n: s.n } });
+        s.destructed = true;
         changed = true;
       }
       world.controls = { ...world.controls, [THRUST_DESTRUCT]: 0 };
@@ -248,7 +272,10 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       world.links = world.links.filter((l) => !(l.kind === "control" && l.to.startsWith(prefix)));
       world.events.push({ tick: world.tick, type: "thrust.lost", data: { n: s.n, lives: s.lives } });
       s.phase = "between";
-      s.next = now + o.respawn;
+      // After a self-destruct the player gets a few seconds to watch it before anything is said.
+      s.noteAt = now + (s.destructed ? o.destructWait : 0);
+      s.next = s.noteAt + o.respawn;
+      s.destructed = undefined;
       return true;
     }
 
@@ -298,6 +325,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
   // 7. The wait after a loss is over: the game, or the next ship at the start.
   if (s.phase === "between" && due(s.next)) {
     s.next = undefined;
+    s.noteAt = undefined;
     if (s.lives <= 0) {
       s.phase = "over";
       s.reason = "ships";

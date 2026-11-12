@@ -31,4 +31,5 @@ export { runDuel, startDuel, type Duel, type DuelGoal, type DuelPhase, type Duel
 export * from "./lander.ts";
 export * from "./arcade.ts";
 export * from "./thrust.ts";
+export * from "./turret.ts";
 export { wasmSinCos } from "./solverWasm.ts";

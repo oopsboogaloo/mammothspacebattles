@@ -7,6 +7,7 @@ interface Body {
   velocity: { x: number; y: number };
   integrity: number;
   tractor?: { mode: string };
+  turret?: { shots: number; sees: boolean; target?: string };
 }
 interface Hook {
   sandbox: () => { world: { time: number; controls: Record<string, number>; bodies: Body[]; thrust: { spec: { start: { x: number; y: number }; top: number } } } };
@@ -90,9 +91,9 @@ test("MTH-021 the keys: ↑ is forward, Space fires slugs, and Z or / works the 
   await page.keyboard.up("Space");
   for (const key of ["z", "/"]) {
     await page.keyboard.down(key);
-    await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-tractor")?.tractor?.mode)).toBe("beam");
+    await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("beam");
     await page.keyboard.up(key);
-    await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-tractor")?.tractor?.mode)).toBe("off");
+    await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("off");
   }
 });
 
@@ -135,6 +136,32 @@ test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the 
   expect(await hook(page, (m) => m.level())).toBe(2);
 });
 
+test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires bolts; they show in flight", async ({ page }) => {
+  test.setTimeout(90_000);
+  await start(page);
+  const turret = () => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "t1-carriage")?.turret);
+  expect((await turret())?.shots).toBe(0);
+  // Over the hollow, in plain sight of the turret on its ledge, held there against gravity by the test.
+  const hold = () =>
+    hook(page, (m) => {
+      const w = m.sandbox().world;
+      const hull = w.bodies.find((b) => b.id === "p1-hull")!;
+      const d = { x: 20 - hull.position.x, y: 30 - hull.position.y };
+      return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-") && !b.id.includes("-shell-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
+    });
+  await expect
+    .poll(
+      async () => {
+        await hold();
+        return (await turret())?.shots ?? 0;
+      },
+      { timeout: 60_000, intervals: [500] },
+    )
+    .toBeGreaterThan(0);
+  expect((await turret())?.target).toBe("p1-hull");
+  expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id.startsWith("t1-carriage-shell-")))).toBe(true);
+});
+
 test("MTH-026 a ship that reaches the top without the pod is put back at the start, and told so; no life is lost", async ({ page }) => {
   test.setTimeout(90_000);
   await start(page);
@@ -157,7 +184,10 @@ test("MTH-050 self-destruct costs a ship, and three ships lost is game over, wit
     await page.getByTestId("mth-destruct").click();
     await expect(page.getByTestId("mth-destruct")).toHaveText("Confirm self-destruct");
     await page.getByTestId("mth-destruct").click();
-    if (k > 1) await expect(page.getByTestId("mth-lost")).toBeVisible({ timeout: 20_000 });
+    // The ship goes up at once; the page leaves 3 s to watch it before it says so.
+    await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("between");
+    if (k === 3) await expect(page.getByTestId("mth-lost")).toBeHidden();
+    if (k > 1) await expect(page.getByTestId("mth-lost")).toBeVisible({ timeout: 30_000 });
   }
   await expect(page.getByTestId("mth-over")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("mth-over")).toContainText("No ships left");

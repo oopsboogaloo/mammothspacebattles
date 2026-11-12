@@ -101,7 +101,7 @@ describe("Mammoth Thrust's page", () => {
     expect(calls.filter((c) => c.startsWith("arc(")).length).toBeGreaterThanOrEqual(3); // the pod and its two rings
     // A new ship after a loss is protected, and is drawn faint on alternate tenths of a second.
     stepInPlace(w, [{ type: "control.set", channel: "destruct", value: 1 }], sandbox);
-    for (let i = 0; i < 330; i++) stepInPlace(w, [], sandbox);
+    for (let i = 0; i < 700; i++) stepInPlace(w, [], sandbox);
     expect(w.thrust!.state.n).toBe(2);
     expect(w.thrust!.state.graceUntil).toBeDefined();
   });
