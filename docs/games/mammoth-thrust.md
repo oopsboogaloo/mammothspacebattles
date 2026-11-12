@@ -320,6 +320,29 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 None from the rules. To settle in the build: the turret's pieces and what each one's loss does; the
 30 m/s in MTH-025 and the other first values.
 
+## 11b. Later (V2): where this is heading
+
+From Chloe, 12 November 2026. None of this is in the first version (the MVP is §1 to §9), and no
+decision above changes. It is here so the build doesn't close these doors.
+
+- **Beyond Thrust.** The game already goes further than the original and will go further still.
+  The Amiga game Zarathrusta (1991), a 16-bit Thrust with many more planets, is a source of ideas;
+  which of its features we take is to be decided.
+- **Round gravity.** A level like Lander's Orbital: a massive asteroid whose pull comes from its
+  centre, with caves into it, and the pod somewhere inside.
+  - The level's top becomes an altitude above the asteroid, all the way round. The rules are the
+    same: reach it with the pod to win; reach it without and you are put back.
+  - Here an escape velocity does exist, so the beam back has to cope with a ship arriving fast.
+- **Organic levels.** The pod may be something living that we steal or harvest, with organic
+  defences in place of turrets. These levels probably have no factory. This leads toward the
+  main game's roadmap.
+- **What it asks of the first build** (design notes, not requirements):
+  - The level's top, the turrets' line of sight and the camera should work from "up", not from
+    the y axis, so point gravity can replace uniform gravity (the engine has both).
+  - The factory should be optional in a level, with the turrets able to run without one.
+  - Defences should be a kind of thing a level places, so another kind can be added beside the
+    turret.
+
 ## 12. Sources
 
 - Thrust (video game), Wikipedia: https://en.wikipedia.org/wiki/Thrust_(video_game) (the
@@ -327,4 +350,5 @@ None from the rules. To settle in the build: the turret's pieces and what each o
 - Thrust (BBC/Electron), Everygamegoing: https://www.everygamegoing.com/litem/Thrust-1/1289/
 - Thrust instructions, 8BS: https://8bs.com/elecgame/thrust.htm
 - Thrust manual (C64 rewrite), Lysator: https://www.lysator.liu.se/~peda/thrust/thrust-man.html
+- Zarathrusta, Wikipedia: https://en.wikipedia.org/wiki/Zarathrusta (through search results)
 - Thrust, BBC Model B, 1986: http://bestretrogames.blogspot.com/2012/10/thrust-bbc-model-b-1986.html
