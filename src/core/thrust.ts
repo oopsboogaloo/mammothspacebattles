@@ -72,6 +72,8 @@ export interface ThrustState {
   beams: { at: number; x: number; y: number; r: number }[];
   /** For the end screens. */
   stats: { ships: number; back: number };
+  /** When a ship was last beamed back from the top, s. */
+  backAt?: number;
   /** Since when the ship flying has been out of fuel and at rest, s (it is then lost). */
   stuckSince?: number;
 }
@@ -285,6 +287,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       }
       world.contacts = world.contacts.filter((c) => !ship.has(c.a) && !ship.has(c.b));
       s.stats.back += 1;
+      s.backAt = now;
       s.beams.push({ at: world.tick, x: from.x, y: from.y, r: 4 }, { at: world.tick, x: spec.start.x, y: spec.start.y, r: 4 });
       world.events.push({ tick: world.tick, type: "thrust.back", data: { n: s.n } });
       changed = true;

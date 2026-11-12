@@ -354,12 +354,72 @@ measurements in the PR and the spec. Chloe plays after steps 4, 6 and 8.
 Requirement IDs: the MTH-… IDs in test names; the engine requirements in `docs/spec.md` under a
 new milestone M10, so `req:report` traces them.
 
+## 8. The MVP as built (12 November 2026)
+
+Steps 2 to 4 of the plan, in one branch. What is in it, what it measured, and where it left the
+text above.
+
+**Built**
+
+- `src/core/thrust.ts`, with `world.thrust` in the scenario format: lives, the pod's state, a lost
+  ship and the next one, the level's top (won with the pod, beamed back without), the pod
+  destroyed, self-destruct.
+- `scripts/terrain.ts`, `scripts/thrust.ts`, `scenarios/thrust-1.json` and `thrust-2.json`.
+- The ship's tractor unit and tether unit (`scripts/asteroidShip.ts`, an option; Mammoth
+  Asteroids' scenario comes out unchanged).
+- `thrust.html`, `src/app/Thrust.tsx`, `thrustHud.ts`, `thrustMain.tsx`; the striped rock, the
+  stars in the sky only and the pod's glow in `render.ts`; a button on the sandbox's start screen.
+- Tests: `tests/core/thrust.test.ts` (14), `tests/app/thrust.test.ts` (5), one more in
+  `tests/core/tractor.test.ts`, `e2e/mammoth-thrust.spec.ts` (10).
+
+**Measured** (Node, the build machine)
+
+| What | Value |
+|---|---|
+| Turning, small thrusters at 1.45 kg/s (Asteroids: 0.68) | 7.0 rad/s² (Asteroids: 3.5) |
+| Forward, with those thrusters | 31.5 m/s² (Asteroids: 28.3) |
+| Braking | 8 m/s² (Asteroids: 4.2) |
+| Ship | 69 kg; the pod 34 kg |
+| Step time, level 1, falling | 0.8 ms |
+| Step time, level 2, hovering in the chamber for 12 s | 0.8 to 1.7 ms, against 6 ms |
+| A level-1 flight straight up from the pod to the top | 4.9 game s; 1,530 points of fuel left |
+| The pod: a 30 m/s crash into rock; a slug | integrity 1 after each |
+
+**Changed from the text above**
+
+- **The tether pays out (TRC-010, new).** Taken at 9 m, a 12 m tether pushed ship and pod apart
+  with 6,000 N (the TRC spring pushes as well as pulls) and tore the 1 kg tractor unit off. The
+  tether now starts at the distance the pod was taken at and lengthens at 4 m/s. It is an option
+  of the tractor, off unless a scenario sets it. The two units also have two welds each.
+- **`scripts/terrain.ts` is new code, not Lander's moved** (§4.1 said moved). Lander's generator is
+  untouched, so its scenarios can't have changed. The two could share the code later.
+- **A level's ground is one closed outline of its open space**, sky and caves together, with the
+  rock as a crust on its rock side. The scenario carries the sky's outline and each cave's, for
+  the drawing (`thrust.view`), where §4.1 said `ui.sky`.
+- **A ship out of fuel and lying still is lost** after 1 game second. The spec's rule (it falls and
+  crashes) leaves a ship set down gently with empty tanks stuck for ever.
+- **Self-destruct**, as Mammoth Asteroids', for a ship too damaged to fly usefully.
+- **The beam back sets the ship upright** at the start, as well as at rest.
+- **A new ship always beams in at the start.** §3.3 planned a search for a clear spot if wreckage
+  is there; the start is in the sky, where wreckage doesn't stay.
+- **The view is 90 m tall**, following the ship, and leans a third of the way toward a pod on the
+  tether. It doesn't widen.
+- **Keys:** Z or / for the tractor. X and . are kept for the shield.
+- **Not in the MVP:** high scores, How to play and The physics (step 9); the title has Play only.
+
+**To look at when playing**
+
+- Exhaust lingers in level 2's closed chamber as a glowing haze. It is the engine's own wisps,
+  and costs little, but it may be more than is wanted.
+- The 90 m view makes the ship about 45 px wide on a laptop.
+- Gravity, thrust, the tether's length and pay-out, and the fuel's worth are all first values.
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |
 |---|---|---|
 | Step 1 | The engine changes in §2 change shared code (joints, tractor, gas, explosive). | Agreed by Chloe, 12 November 2026 |
-| Step 2 | Does raising the small thrusters' flow give the turning wanted without too much extra braking, or should the thrusters move outward? | Measured |
+| Step 2 | Does raising the small thrusters' flow give the turning wanted without too much extra braking, or should the thrusters move outward? | Measured (§8): 7.0 rad/s², with braking doubled to 8 m/s². For Chloe to judge in play. |
 | Step 3 | Protection at beam-in: Asteroids' 2 s, assumed here. The spec doesn't say. | Chloe |
 | Step 5 | Is the weld solver stiff enough to hold and turn the gun (§2.1)? If not, the carriage's angle is set directly each step, and recoil is lost. | Measured |
 | Step 6 | How the factory fits with turrets that have their own power (parked, spec §11). | Chloe |

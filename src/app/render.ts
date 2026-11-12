@@ -1,7 +1,7 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
 import { add, assemblyRoots, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
-import { toScreen, type Camera, type Viewport } from "./camera.ts";
+import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "pilots" | "grid";
@@ -400,6 +400,12 @@ export interface RenderOptions {
    * orientation marks; beam rings; and black outside the arena if the screen is another shape.
    */
   arcade?: boolean;
+  /**
+   * Mammoth Thrust's view (MTH-053): black space; the rock (everything outside the sky and the
+   * caves) as horizontal lines of one colour, fixed to the world, with no outline; stars in the sky
+   * only; the caves plain black. The ship, the pod and everything else as Mammoth Asteroids draws them.
+   */
+  thrust?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][] };
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -651,7 +657,7 @@ export function starHash(a: number, b: number, c: number): number {
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
-function drawStars(ctx: Ctx, c: { x: number; y: number }, vp: Viewport): void {
+function drawStars(ctx: Ctx, c: { x: number; y: number }, vp: Viewport, shows?: (x: number, y: number) => boolean): void {
   ctx.fillStyle = "#dfe7ff";
   STAR_LAYERS.forEach((layer, l) => {
     // Where the sky's origin sits on screen for this layer.
@@ -665,10 +671,60 @@ function drawStars(ctx: Ctx, c: { x: number; y: number }, vp: Viewport): void {
         for (let k = 0; k < STARS_PER_TILE; k++) {
           const x = ox + (tx + starHash(tx, ty, l * 16 + 2 * k)) * STAR_TILE;
           const y = oy + (ty + starHash(tx, ty, l * 16 + 2 * k + 1)) * STAR_TILE;
+          if (shows && !shows(x, y)) continue;
           ctx.fillRect(x, y, layer.size, layer.size);
         }
   });
   ctx.globalAlpha = 1;
+}
+
+/** Whether p is inside a closed outline (even-odd). */
+export function insideOutline(outline: Vec2[], p: Vec2): boolean {
+  let inside = false;
+  for (let i = 0, j = outline.length - 1; i < outline.length; j = i++) {
+    const a = outline[i];
+    const b = outline[j];
+    if (a.y > p.y !== b.y > p.y && p.x < a.x + ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y)) inside = !inside;
+  }
+  return inside;
+}
+
+/** The height on screen, px, of one of the rock's lines (and of the gap under it) at a zoom: whole pixels, so the lines don't shimmer as the view moves. */
+export const stripeHeight = (pitch: number, zoom: number): number => Math.max(1, Math.round((pitch * zoom) / 2));
+
+/**
+ * Mammoth Thrust's ground (MTH-053): the whole view ruled with horizontal lines of the rock's colour,
+ * a line and a gap of equal height at fixed heights in the world; then the caves and the sky filled
+ * black over them, so the rock is what is left, with no outline; then the stars, in the sky only.
+ */
+function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport): void {
+  const h = stripeHeight(view.pitch, c.zoom);
+  ctx.fillStyle = view.colour;
+  if (view.pitch * c.zoom < 3) {
+    // Too far out to tell the lines apart: the rock at half strength.
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0, 0, vp.width, vp.height);
+    ctx.globalAlpha = 1;
+  } else {
+    const top = toWorld(c, vp, { x: 0, y: 0 }).y;
+    const bottom = toWorld(c, vp, { x: 0, y: vp.height }).y;
+    for (let k = Math.floor(bottom / view.pitch); k * view.pitch <= top + view.pitch; k++) {
+      const y = Math.round(toScreen(c, vp, { x: 0, y: k * view.pitch }).y);
+      ctx.fillRect(0, y - h, vp.width, h);
+    }
+  }
+  ctx.fillStyle = "#000";
+  for (const outline of [view.sky, ...view.caves]) {
+    ctx.beginPath();
+    outline.forEach((p, i) => {
+      const q = toScreen(c, vp, p);
+      if (i === 0) ctx.moveTo(q.x, q.y);
+      else ctx.lineTo(q.x, q.y);
+    });
+    ctx.closePath();
+    ctx.fill();
+  }
+  drawStars(ctx, c, vp, (x, y) => insideOutline(view.sky, toWorld(c, vp, { x, y })));
 }
 
 /** Ground in the game: fixed terrain, and the pieces of an asteroid (they carry its gravity field, LND-011). */
@@ -949,13 +1005,15 @@ const ROCK_FILL = "#1b1b1d";
 export const COCKPIT_FILL = "#8fd3ff";
 const COCKPIT = /^p\d+-hull$/;
 const ROCK_STROKE = "#b9b9b9";
+const POD_FILL = "#0e3a44";
+const POD_STROKE = "#7fe9ff";
 
 /** How long a beam ring shows, s of game time (as the game keeps them). */
 const BEAM_LIFE = 0.5;
 
 /** Mammoth Asteroids' beam rings: a white ring growing from where something beamed in, fading as it goes. */
 function drawBeams(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
-  const beams = world.arcade?.state.beams;
+  const beams = world.arcade?.state.beams ?? world.thrust?.state.beams;
   if (!beams?.length) return;
   const dt = world.tick > 0 ? world.time / world.tick : 1 / 240;
   for (const b of beams) {
@@ -983,9 +1041,12 @@ function maskOutside(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
 }
 
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
-  ctx.fillStyle = opts.arcade ? "#000" : COLORS.background;
+  // The games' look: Mammoth Asteroids' and Mammoth Thrust's.
+  const game = !!opts.arcade || !!opts.thrust;
+  ctx.fillStyle = game ? "#000" : COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
-  if (opts.stars) drawStars(ctx, opts.stars === "still" ? { x: 0, y: 0 } : c, vp);
+  if (opts.thrust) drawStripedGround(ctx, opts.thrust, c, vp);
+  else if (opts.stars) drawStars(ctx, opts.stars === "still" ? { x: 0, y: 0 } : c, vp);
   if (opts.overlays.has("grid")) drawGrid(ctx, c, vp);
   // A wrapped world (FLT-012): its neighbouring copies first, plain, so the seam doesn't show.
   if (world.bounds.wrap) {
@@ -1028,27 +1089,44 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   // the surface drawn, not the sides and bottoms where the pieces meet.
   if (opts.groundLine) drawGroundLine(ctx, world, c, vp);
   // Every body: its fill and outline by what it is, then its orientation mark and label.
-  const grace = world.arcade?.state.graceUntil !== undefined && Math.floor(world.time * 10) % 2 === 0;
-  const flashing = grace ? `p${world.arcade!.state.n}-` : null;
+  const playing = world.arcade?.state ?? world.thrust?.state;
+  const grace = playing?.graceUntil !== undefined && Math.floor(world.time * 10) % 2 === 0;
+  const flashing = grace ? `p${playing!.n}-` : null;
   const drawBodies = (cam: Camera): void => {
     for (const b of world.bodies) {
       if (opts.groundLine && isGround(b)) continue;
+      if (opts.thrust && b.fixed && b.id.startsWith("rock-")) continue; // the rock is the lines behind
       const selected = opts.selection.has(b.id);
       const hover = opts.hover === b.id;
       // Gold shows once it can be seen: not while hidden inside a larger fragment (AST-006).
       const gold = b.mineral === "gold" && !b.compound;
       // The game's rocks are dark grey with light edges (every piece of one carries its gravity).
       const rock = opts.arcade && !!b.gravity && !gold;
-      const cockpit = opts.arcade && COCKPIT.test(b.id);
-      const fill = b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : cockpit ? COCKPIT_FILL : b.fixed ? COLORS.fixed : COLORS.body;
+      const cockpit = game && COCKPIT.test(b.id);
+      const pod = !!opts.thrust && b.id === world.thrust?.spec.pod;
+      const fill = b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : cockpit ? COCKPIT_FILL : pod ? POD_FILL : b.fixed ? COLORS.fixed : COLORS.body;
       // In Mammoth Asteroids a slug is too small to see at the arena's scale: a white dot, 2 px at least.
-      if (opts.arcade && b.id.includes("-shell-")) {
+      if (game && b.id.includes("-shell-")) {
         const at = toScreen(cam, vp, b.position);
         ctx.fillStyle = b.id.startsWith("g") ? "#ff6b6b" : "#fff"; // a gunship's shell is red
         ctx.beginPath();
         ctx.arc(at.x, at.y, Math.max(2, 0.12 * cam.zoom), 0, Math.PI * 2);
         ctx.fill();
         continue;
+      }
+      // The pod glows (MTH-053): a soft ring round it.
+      if (pod) {
+        const at = toScreen(cam, vp, b.position);
+        const r = (b.shape.kind === "disc" ? b.shape.radius : 1) * cam.zoom;
+        ctx.strokeStyle = POD_STROKE;
+        for (const [k, alpha] of [[1.9, 0.12], [1.5, 0.25]] as const) {
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth = 0.35 * r;
+          ctx.beginPath();
+          ctx.arc(at.x, at.y, k * r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
       }
       // A ship that is protected flashes (MAS-034).
       const dim = flashing !== null && b.id.startsWith(flashing);
@@ -1057,14 +1135,14 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       ctx.fillStyle = fill;
       ctx.fill();
       ctx.lineWidth = selected ? 3 : hover ? 2 : 1.25;
-      ctx.strokeStyle = selected ? COLORS.selected : hover ? COLORS.hover : gold ? COLORS.goldStroke : rock ? ROCK_STROKE : b.fixed ? COLORS.fixedStroke : COLORS.bodyStroke;
-      ctx.setLineDash(b.fixed && !selected ? [6, 4] : []);
+      ctx.strokeStyle = selected ? COLORS.selected : hover ? COLORS.hover : gold ? COLORS.goldStroke : rock ? ROCK_STROKE : pod ? POD_STROKE : b.fixed ? COLORS.fixedStroke : COLORS.bodyStroke;
+      ctx.setLineDash(b.fixed && !selected && !opts.thrust ? [6, 4] : []);
       const hidden = seams.get(b.id);
       if (hidden && b.shape.kind !== "disc" && !selected) strokeOutline(ctx, cam, vp, b, hidden, fill);
       else ctx.stroke();
       ctx.setLineDash([]);
       if (dim) ctx.globalAlpha = 1;
-      if (opts.arcade || (b.compound && !selected)) continue; // no orientation mark or label to give its pieces away (none at all in the game)
+      if (game || (b.compound && !selected)) continue; // no orientation mark or label to give its pieces away (none at all in the game)
       // Orientation mark: centre to the body's local +x edge, so rotation is visible.
       const q = sinCos(b.angle);
       const reach = b.shape.kind === "disc" ? b.shape.radius : b.shape.kind === "box" ? b.shape.width / 2 : massProps(b.shape, b.mass).boundingRadius;
@@ -1098,6 +1176,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     drawBeams(ctx, world, c, vp);
     maskOutside(ctx, world, c, vp);
   }
+  if (opts.thrust) drawBeams(ctx, world, c, vp);
   drawTractors(ctx, world, c, vp);
   // Several pads, each with its multiplier (Mammoth Lander, LND-010); or the one pad.
   const goal = world.challenge?.goal;

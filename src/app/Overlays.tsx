@@ -91,6 +91,10 @@ export function Picker() {
         <a class="btn primary" href="asteroids.html" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }} data-testid="open-asteroids">
           Play Mammoth Asteroids
         </a>
+        {/* Mammoth Thrust's own page (thrust.html), the same way. */}
+        <a class="btn primary" href="thrust.html" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }} data-testid="open-thrust">
+          Play Mammoth Thrust
+        </a>
         <button class="btn" onClick={openFile} data-testid="open-file">
           Open scenario file…
         </button>
