@@ -750,22 +750,96 @@
               "y": 6
             },
             {
-              "x": 30,
-              "y": 2
+              "x": 42,
+              "y": 5
             },
             {
-              "x": 34.120817,
-              "y": -12.422859
+              "x": 48.708204,
+              "y": -8.416408
             },
             {
-              "x": 48.120817,
-              "y": -8.422859
+              "x": 50.708204,
+              "y": -7.416408
             }
           ]
         }
       },
       {
         "id": "rock-20",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 42,
+              "y": 5
+            },
+            {
+              "x": 34,
+              "y": 5
+            },
+            {
+              "x": 34,
+              "y": -10
+            },
+            {
+              "x": 42,
+              "y": -10
+            }
+          ]
+        }
+      },
+      {
+        "id": "rock-21",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 34,
+              "y": 5
+            },
+            {
+              "x": 30,
+              "y": 2
+            },
+            {
+              "x": 39,
+              "y": -10
+            },
+            {
+              "x": 43,
+              "y": -7
+            }
+          ]
+        }
+      },
+      {
+        "id": "rock-22",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -802,7 +876,7 @@
         }
       },
       {
-        "id": "rock-21",
+        "id": "rock-23",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -839,7 +913,7 @@
         }
       },
       {
-        "id": "rock-22",
+        "id": "rock-24",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -876,7 +950,7 @@
         }
       },
       {
-        "id": "rock-23",
+        "id": "rock-25",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -913,7 +987,7 @@
         }
       },
       {
-        "id": "rock-24",
+        "id": "rock-26",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -950,7 +1024,7 @@
         }
       },
       {
-        "id": "rock-25",
+        "id": "rock-27",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -987,7 +1061,7 @@
         }
       },
       {
-        "id": "rock-26",
+        "id": "rock-28",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -1024,7 +1098,7 @@
         }
       },
       {
-        "id": "rock-27",
+        "id": "rock-29",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -1061,7 +1135,7 @@
         }
       },
       {
-        "id": "rock-28",
+        "id": "rock-30",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -1098,7 +1172,7 @@
         }
       },
       {
-        "id": "rock-29",
+        "id": "rock-31",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -1135,7 +1209,7 @@
         }
       },
       {
-        "id": "rock-30",
+        "id": "rock-32",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -1172,7 +1246,7 @@
         }
       },
       {
-        "id": "rock-31",
+        "id": "rock-33",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -1209,7 +1283,7 @@
         }
       },
       {
-        "id": "rock-32",
+        "id": "rock-34",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -1246,81 +1320,81 @@
         }
       },
       {
-        "id": "rock-33",
-        "fixed": true,
-        "mass": 1,
-        "friction": 0.9,
-        "position": {
-          "x": 0,
-          "y": 0
-        },
-        "velocity": {
-          "x": 0,
-          "y": 0
-        },
-        "angle": 0,
-        "angularVelocity": 0,
-        "shape": {
-          "kind": "polygon",
-          "vertices": [
-            {
-              "x": -150,
-              "y": 60
-            },
-            {
-              "x": -150,
-              "y": 100
-            },
-            {
-              "x": -165,
-              "y": 100
-            },
-            {
-              "x": -165,
-              "y": 60
-            }
-          ]
-        }
-      },
-      {
-        "id": "rock-34",
-        "fixed": true,
-        "mass": 1,
-        "friction": 0.9,
-        "position": {
-          "x": 0,
-          "y": 0
-        },
-        "velocity": {
-          "x": 0,
-          "y": 0
-        },
-        "angle": 0,
-        "angularVelocity": 0,
-        "shape": {
-          "kind": "polygon",
-          "vertices": [
-            {
-              "x": -150,
-              "y": 100
-            },
-            {
-              "x": -150,
-              "y": 140
-            },
-            {
-              "x": -165,
-              "y": 140
-            },
-            {
-              "x": -165,
-              "y": 100
-            }
-          ]
-        }
-      },
-      {
         "id": "rock-35",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -150,
+              "y": 60
+            },
+            {
+              "x": -150,
+              "y": 100
+            },
+            {
+              "x": -165,
+              "y": 100
+            },
+            {
+              "x": -165,
+              "y": 60
+            }
+          ]
+        }
+      },
+      {
+        "id": "rock-36",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -150,
+              "y": 100
+            },
+            {
+              "x": -150,
+              "y": 140
+            },
+            {
+              "x": -165,
+              "y": 140
+            },
+            {
+              "x": -165,
+              "y": 100
+            }
+          ]
+        }
+      },
+      {
+        "id": "rock-37",
         "fixed": true,
         "mass": 1,
         "friction": 0.9,
@@ -1450,6 +1524,620 @@
           "radius": 3,
           "whenDestroyed": true
         }
+      },
+      {
+        "id": "t1-base",
+        "fixed": true,
+        "shape": {
+          "kind": "box",
+          "width": 6.4,
+          "height": 0.3
+        },
+        "mass": 1,
+        "position": {
+          "x": 38,
+          "y": 5.15
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "friction": 0.9
+      },
+      {
+        "id": "t1-tank",
+        "shape": {
+          "kind": "box",
+          "width": 1.4,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 35.6,
+          "y": 5.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "tank",
+          "threshold": 60,
+          "toughness": 500
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.9,
+            "capacity": 0.9
+          },
+          {
+            "resource": "o2",
+            "mass": 7.2,
+            "capacity": 7.2
+          }
+        ],
+        "explosive": {
+          "charge": 0.3,
+          "arm": 1000000,
+          "fragments": 6,
+          "radius": 4,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "t1-pipe",
+        "shape": {
+          "kind": "box",
+          "width": 0.4,
+          "height": 0.15
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 36.5,
+          "y": 5.575
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.002222,
+            "capacity": 0.002222
+          },
+          {
+            "resource": "o2",
+            "mass": 0.017778,
+            "capacity": 0.017778
+          }
+        ]
+      },
+      {
+        "id": "t1-gen",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 37.2,
+          "y": 5.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.002222,
+            "capacity": 0.002222
+          },
+          {
+            "resource": "o2",
+            "mass": 0.017778,
+            "capacity": 0.017778
+          }
+        ],
+        "generator": {
+          "battery": "t1-battery",
+          "burn": 0.02,
+          "rate": 1
+        }
+      },
+      {
+        "id": "t1-battery",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 1
+        },
+        "mass": 2,
+        "position": {
+          "x": 40.6,
+          "y": 5.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "charge": {
+          "shots": 5,
+          "capacity": 5
+        },
+        "explosive": {
+          "charge": 0.05,
+          "arm": 1000000,
+          "fragments": 4,
+          "radius": 1,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "t1-mount",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 1,
+              "y": -0.424413
+            },
+            {
+              "x": 0.92388,
+              "y": -0.04173
+            },
+            {
+              "x": 0.707107,
+              "y": 0.282694
+            },
+            {
+              "x": 0.382683,
+              "y": 0.499466
+            },
+            {
+              "x": 0,
+              "y": 0.575587
+            },
+            {
+              "x": -0.382683,
+              "y": 0.499466
+            },
+            {
+              "x": -0.707107,
+              "y": 0.282694
+            },
+            {
+              "x": -0.92388,
+              "y": -0.04173
+            },
+            {
+              "x": -1,
+              "y": -0.424413
+            }
+          ]
+        },
+        "mass": 3,
+        "position": {
+          "x": 38.9,
+          "y": 5.724413
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        }
+      },
+      {
+        "id": "t1-carriage",
+        "shape": {
+          "kind": "box",
+          "width": 0.5,
+          "height": 0.5
+        },
+        "mass": 1,
+        "position": {
+          "x": 38.9,
+          "y": 5.7
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        },
+        "turret": {
+          "joint": "t1-w-pivot",
+          "gun": "t1-carriage",
+          "barrel": "t1-gun",
+          "battery": "t1-battery",
+          "range": 80,
+          "wait": 1.5,
+          "hold": 0.25,
+          "aim": "random",
+          "seed": 101
+        },
+        "magazine": {
+          "count": 40,
+          "reload": 1,
+          "at": {
+            "x": 0,
+            "y": 2.15
+          },
+          "angle": 0,
+          "shell": {
+            "shape": {
+              "kind": "disc",
+              "radius": 0.12
+            },
+            "mass": 0.3,
+            "restitution": 0,
+            "friction": 0.3,
+            "explosive": {
+              "charge": 0.05,
+              "heat": 30000000,
+              "fragments": 0,
+              "radius": 0.6,
+              "gas": 6
+            }
+          },
+          "railgun": {
+            "channel": "t1.fire",
+            "speed": 40
+          }
+        }
+      },
+      {
+        "id": "t1-gun",
+        "shape": {
+          "kind": "box",
+          "width": 0.3,
+          "height": 1.8
+        },
+        "mass": 1,
+        "position": {
+          "x": 38.9,
+          "y": 6.8
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.4,
+        "material": {
+          "name": "hull",
+          "threshold": 150,
+          "toughness": 1000
+        }
+      }
+    ],
+    "joints": [
+      {
+        "id": "t1-w-tank-a",
+        "a": "t1-base",
+        "b": "t1-tank",
+        "anchorA": {
+          "x": -2.8,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-tank-b",
+        "a": "t1-base",
+        "b": "t1-tank",
+        "anchorA": {
+          "x": -2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-gen-a",
+        "a": "t1-base",
+        "b": "t1-gen",
+        "anchorA": {
+          "x": -1.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-gen-b",
+        "a": "t1-base",
+        "b": "t1-gen",
+        "anchorA": {
+          "x": -0.4,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-battery-a",
+        "a": "t1-base",
+        "b": "t1-battery",
+        "anchorA": {
+          "x": 2.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-battery-b",
+        "a": "t1-base",
+        "b": "t1-battery",
+        "anchorA": {
+          "x": 3,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -0.5
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-mount-a",
+        "a": "t1-base",
+        "b": "t1-mount",
+        "anchorA": {
+          "x": 0.2,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": -0.7,
+          "y": -0.424413
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t1-w-mount-b",
+        "a": "t1-base",
+        "b": "t1-mount",
+        "anchorA": {
+          "x": 1.6,
+          "y": 0.15
+        },
+        "anchorB": {
+          "x": 0.7,
+          "y": -0.424413
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      },
+      {
+        "id": "t1-w-pipe-tank",
+        "a": "t1-tank",
+        "b": "t1-pipe",
+        "anchorA": {
+          "x": 0.7,
+          "y": -0.225
+        },
+        "anchorB": {
+          "x": -0.2,
+          "y": 0
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-pipe-gen",
+        "a": "t1-pipe",
+        "b": "t1-gen",
+        "anchorA": {
+          "x": 0.2,
+          "y": 0
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": -0.225
+        },
+        "limits": {
+          "tension": 22950,
+          "compression": 45900,
+          "shear": 16050,
+          "torque": 5520
+        }
+      },
+      {
+        "id": "t1-w-pivot",
+        "a": "t1-mount",
+        "b": "t1-carriage",
+        "anchorA": {
+          "x": 0,
+          "y": -0.024413
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        },
+        "turn": {
+          "rate": 2.1,
+          "min": -1.047198,
+          "max": 1.047198,
+          "target": 0
+        }
+      },
+      {
+        "id": "t1-w-gun",
+        "a": "t1-carriage",
+        "b": "t1-gun",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.85
+        },
+        "limits": {
+          "tension": 45900,
+          "compression": 91800,
+          "shear": 32100,
+          "torque": 11040
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "t1-feed-h2-a",
+        "kind": "feed",
+        "from": "t1-tank",
+        "to": "t1-pipe",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-feed-h2-b",
+        "kind": "feed",
+        "from": "t1-pipe",
+        "to": "t1-gen",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-feed-o2-a",
+        "kind": "feed",
+        "from": "t1-tank",
+        "to": "t1-pipe",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-feed-o2-b",
+        "kind": "feed",
+        "from": "t1-pipe",
+        "to": "t1-gen",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-ctl-fire",
+        "kind": "control",
+        "channel": "t1.fire",
+        "to": "t1-carriage"
       }
     ],
     "thrust": {
@@ -3546,6 +4234,9 @@
       },
       "top": 120,
       "pod": "pod",
+      "turrets": [
+        "t1-carriage"
+      ],
       "lives": 3,
       "respawn": 1.25,
       "grace": 1,
@@ -3597,6 +4288,14 @@
           {
             "x": 44,
             "y": 6
+          },
+          {
+            "x": 42,
+            "y": 5
+          },
+          {
+            "x": 34,
+            "y": 5
           },
           {
             "x": 30,

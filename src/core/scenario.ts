@@ -232,6 +232,22 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
+  if (b.turret !== undefined) validateTurret(v, b.turret, `${path}.turret`);
+  if (b.charge !== undefined) {
+    if (!isObj(b.charge)) err(v, `${path}.charge`, "must be {shots, capacity}");
+    else {
+      num(v, b.charge.shots, `${path}.charge.shots`, { min: 0 });
+      num(v, b.charge.capacity, `${path}.charge.capacity`, { positive: true });
+    }
+  }
+  if (b.generator !== undefined) {
+    if (!isObj(b.generator)) err(v, `${path}.generator`, "must be {battery, burn, rate}");
+    else {
+      str(v, b.generator.battery, `${path}.generator.battery`);
+      num(v, b.generator.burn, `${path}.generator.burn`, { min: 0 });
+      num(v, b.generator.rate, `${path}.generator.rate`, { min: 0 });
+    }
+  }
   if (b.pilot !== undefined) {
     const pl = b.pilot;
     const pp = `${path}.pilot`;
@@ -408,6 +424,24 @@ function validateJoint(v: V, j: unknown, path: string): void {
   if (j.limits !== undefined) validateLimits(v, j.limits, `${path}.limits`);
   if (j.integrity !== undefined) num(v, j.integrity, `${path}.integrity`, { positive: true, max: 1 });
   if (j.yield !== undefined && num(v, j.yield, `${path}.yield`, { min: 0 }) && (j.yield as number) >= 1) err(v, `${path}.yield`, "must be below 1");
+  if (j.turn !== undefined) {
+    if (!isObj(j.turn)) return err(v, `${path}.turn`, "must be {rate, min, max, target}");
+    num(v, j.turn.rate, `${path}.turn.rate`, { positive: true });
+    for (const k of ["min", "max", "target"]) num(v, j.turn[k], `${path}.turn.${k}`);
+    if (typeof j.turn.min === "number" && typeof j.turn.max === "number" && j.turn.max < j.turn.min) err(v, `${path}.turn`, "must have max no less than min");
+  }
+}
+
+function validateTurret(v: V, t: unknown, path: string): void {
+  if (!isObj(t)) return err(v, path, "must be {joint, gun, battery?, range?, wait?, hold?, aim?, spread?, seed?, enabled?, target?}");
+  str(v, t.joint, `${path}.joint`);
+  str(v, t.gun, `${path}.gun`);
+  for (const k of ["battery", "barrel", "target"]) if (t[k] !== undefined) str(v, t[k], `${path}.${k}`);
+  if (t.range !== undefined) num(v, t.range, `${path}.range`, { positive: true });
+  for (const k of ["wait", "hold", "spread"]) if (t[k] !== undefined) num(v, t[k], `${path}.${k}`, { min: 0 });
+  if (t.seed !== undefined) num(v, t.seed, `${path}.seed`, { int: true });
+  if (t.aim !== undefined && t.aim !== "random" && t.aim !== "ship") err(v, `${path}.aim`, 'must be "random" or "ship"');
+  if (t.enabled !== undefined && typeof t.enabled !== "boolean") err(v, `${path}.enabled`, "must be true or false");
 }
 
 function validateLimits(v: V, l: unknown, path: string): void {
@@ -525,7 +559,13 @@ function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
   for (const k of ["respawn", "grace"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
   if (g.scores !== undefined) {
     if (!isObj(g.scores)) err(v, `${path}.scores`, "must be an object {pod?, fuel?}");
-    else for (const k of ["pod", "fuel"]) if (g.scores[k] !== undefined) num(v, g.scores[k], `${path}.scores.${k}`, { min: 0 });
+    else for (const k of ["pod", "fuel", "turret"]) if (g.scores[k] !== undefined) num(v, g.scores[k], `${path}.scores.${k}`, { min: 0 });
+  }
+  if (g.turrets !== undefined) {
+    if (!Array.isArray(g.turrets)) err(v, `${path}.turrets`, "must be a list of body ids");
+    else g.turrets.forEach((id: unknown, i: number) => {
+      if (typeof id !== "string" || !Array.isArray(bodies) || !bodies.some((b) => isObj(b) && b.id === id && isObj(b.turret))) err(v, `${path}.turrets[${i}]`, "must be the id of a body with a turret");
+    });
   }
   if (g.carry !== undefined) {
     if (!isObj(g.carry)) err(v, `${path}.carry`, "must be an object {score, lives}");

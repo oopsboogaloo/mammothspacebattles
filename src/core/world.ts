@@ -20,6 +20,7 @@ import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
+import { normalizeTurret, runTurrets, turnJoints, type Charge, type Generator, type JointTurn, type Turret, type TurretInput } from "./turret.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { boundingRadiusOf, massProps, normalizePolygon, type Shape } from "./shapes.ts";
@@ -80,6 +81,11 @@ export interface Body {
   explosive?: Explosive;
   /** A tractor beam and tether (TRC): see tractor.ts. */
   tractor?: Tractor;
+  /** A gun turret's fire control, on the gun's carriage (WPN-009): see turret.ts. */
+  turret?: Turret;
+  /** A battery's shots, and a generator that refills one (WPN-010): see turret.ts. */
+  charge?: Charge;
+  generator?: Generator;
   /** A base's cargo collector, on a fixed body (BAS): see collector.ts. */
   collector?: Collector;
   /** An AI pilot flying this body's assembly (AIP): for now a computer built into the ship. See pilot.ts. */
@@ -209,8 +215,8 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
 const GOLDEN = 0.6180339887498949;
 
 /** Body as written in scenarios and commands: material fields are optional. */
-export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine" | "tractor" | "collector" | "pilot"> &
-  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput; tractor?: TractorInput; collector?: CollectorInput; pilot?: PilotInput };
+export type BodyInput = Omit<Body, "fixed" | "restitution" | "friction" | "injector" | "integrity" | "magazine" | "tractor" | "collector" | "pilot" | "turret"> &
+  Partial<Pick<Body, "fixed" | "restitution" | "friction" | "integrity">> & { injector?: InjectorInput; magazine?: MagazineInput; tractor?: TractorInput; collector?: CollectorInput; pilot?: PilotInput; turret?: TurretInput };
 
 /** A magazine as written in scenarios: its state starts at zero. */
 export type MagazineInput = Omit<Magazine, "timer" | "loaded"> & Partial<Pick<Magazine, "timer" | "loaded">>;
@@ -256,9 +262,11 @@ export interface Joint {
    * load sets it: bending doesn't heal. Absent: it holds whole until it breaks.
    */
   yield?: number;
+  /** It can be turned (ASM-008): its rest angle moves toward a target at a rate. See turret.ts. */
+  turn?: JointTurn;
 }
 
-export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity" | "hidden" | "yield">> & { limits?: Partial<JointLimits> };
+export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity" | "hidden" | "yield" | "turn">> & { limits?: Partial<JointLimits> };
 
 /** Zero-mass connections (ASM-006): feed links move a resource between stores; control links carry a channel to a component. */
 export type Link = (
@@ -380,8 +388,9 @@ export type Command =
   | { type: "debug.kick"; id: string; dv: Vec2 };
 
 export function normalizeBody(input: BodyInput): Body {
-  const { injector, magazine, tractor, collector, pilot, ...rest } = structuredClone(input);
+  const { injector, magazine, tractor, collector, pilot, turret, ...rest } = structuredClone(input);
   const body: Body = { ...BODY_DEFAULTS, integrity: 1, ...rest };
+  if (turret) body.turret = normalizeTurret(turret);
   if (tractor) body.tractor = normalizeTractor(tractor);
   if (collector) body.collector = normalizeCollector(collector);
   if (pilot) body.pilot = normalizePilot(pilot);
@@ -474,6 +483,7 @@ export function addJoint(world: World, input: JointInput): void {
     load: { tension: 0, compression: 0, shear: 0, torque: 0, fraction: 0 },
     ...(input.hidden ? { hidden: { ...input.hidden } } : {}),
     ...(input.yield !== undefined ? { yield: input.yield } : {}),
+    ...(input.turn ? { turn: { ...input.turn } } : {}),
   };
   world.joints = [...world.joints, joint].sort((p, q) => compareIds(p.id, q.id));
 }
@@ -1294,6 +1304,17 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // block below that changes the world ends by setting it, so none needs to work them out again
   // before it starts (the totals walk every body and parcel, and nothing changes in between).
   let before = computeTotals(world);
+  // Turrets (WPN-009, WPN-010) and the joints that aim them (ASM-008). What a generator burns leaves
+  // the world; the joint's turning is work the weld solver does, booked with the joints'.
+  if (world.bodies.some((b) => b.turret || b.generator) || world.joints.some((j) => j.turn)) {
+    const burned = runTurrets(world, dt);
+    turnJoints(world, dt);
+    if (burned > 0) {
+      const after = computeTotals(world);
+      addDelta(sources.boundary, diff(before, after));
+      before = after;
+    }
+  }
   if (world.links.length) {
     const { touchedFixed, spinShift } = runFeeds(world, dt);
     const after = computeTotals(world);

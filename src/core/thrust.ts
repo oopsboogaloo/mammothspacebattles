@@ -11,6 +11,7 @@
 import { shipState } from "./duel.ts";
 import { assemblyOf } from "./joints.ts";
 import { invRotate, length, sinCos, sub, type Vec2 } from "./math.ts";
+import { turretWorks } from "./turret.ts";
 import type { BodyInput, JointInput, LinkInput, World } from "./world.ts";
 
 export interface ThrustSpec {
@@ -35,8 +36,10 @@ export interface ThrustSpec {
   grace?: number;
   /** The level's number, for the page. */
   level?: number;
-  /** Points: for the pod carried out, and for each kg of fuel left then. */
-  scores?: { pod?: number; fuel?: number };
+  /** The level's turrets (MTH-030): the bodies that carry their fire control. They watch for the ship flying. */
+  turrets?: string[];
+  /** Points: for the pod carried out, for each kg of fuel left then, and for a turret put out of action. */
+  scores?: { pod?: number; fuel?: number; turret?: number };
   /** The score and ships brought from the level before. */
   carry?: { score: number; lives: number };
   /**
@@ -70,6 +73,8 @@ export interface ThrustState {
   bonus?: { pod: number; fuel: number };
   /** Rings to draw where something beamed in: the step, the place and the size. */
   beams: { at: number; x: number; y: number; r: number }[];
+  /** The turrets that can no longer fire: each scored once. */
+  turretsOut: string[];
   /** For the end screens. */
   stats: { ships: number; back: number };
   /** When a ship was last beamed back from the top, s. */
@@ -91,7 +96,7 @@ export interface ThrustOps {
 }
 
 export const THRUST_DEFAULTS = { lives: 3, respawn: 1.25, grace: 1 };
-export const THRUST_SCORES = { pod: 2000, fuel: 100 };
+export const THRUST_SCORES = { pod: 2000, fuel: 100, turret: 750 };
 /** The control that destroys the player's own ship, as Mammoth Asteroids' (MAS-039). */
 export const THRUST_DESTRUCT = "destruct";
 /** How long a beam ring shows, game s. */
@@ -175,6 +180,7 @@ export function startThrust(world: World, spec: ThrustSpec, ops: ThrustOps): Thr
       pod: "stand",
       stand: pod ? { ...pod.position } : { x: 0, y: 0 },
       beams: [],
+      turretsOut: [],
       stats: { ships: 0, back: 0 },
     },
   };
@@ -200,6 +206,17 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
   if (s.phase === "won" || s.phase === "over") return false;
 
   const hullId = idOf(spec.hull, s.n);
+
+  // 0. The turrets watch for the ship flying, and for nothing between ships. One that can no longer
+  // fire (its gun, carriage or battery gone) is out of action for the level, and scores once (MTH-031).
+  for (const id of spec.turrets ?? []) {
+    const c = world.bodies.find((b) => b.id === id);
+    if (c?.turret) c.turret.target = s.phase === "flying" ? hullId : undefined;
+    if (s.turretsOut.includes(id) || (c && turretWorks(world, c))) continue;
+    s.turretsOut = [...s.turretsOut, id];
+    s.score += spec.scores?.turret ?? THRUST_SCORES.turret;
+    world.events.push({ tick: world.tick, type: "thrust.turret", data: { id } });
+  }
 
   // 1. The pod (MTH-025): destroyed, the game is over.
   const pod = podState(world, game);

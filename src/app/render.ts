@@ -1108,7 +1108,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       // In Mammoth Asteroids a slug is too small to see at the arena's scale: a white dot, 2 px at least.
       if (game && b.id.includes("-shell-")) {
         const at = toScreen(cam, vp, b.position);
-        ctx.fillStyle = b.id.startsWith("g") ? "#ff6b6b" : "#fff"; // a gunship's shell is red
+        ctx.fillStyle = b.id.startsWith("p") ? "#fff" : "#ff6b6b"; // an enemy's shell (a gunship's, a turret's) is red
         ctx.beginPath();
         ctx.arc(at.x, at.y, Math.max(2, 0.12 * cam.zoom), 0, Math.PI * 2);
         ctx.fill();

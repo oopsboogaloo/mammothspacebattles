@@ -8,9 +8,9 @@ levels, look and sound are our own; only the idea and the rules of play follow t
 
 Status: agreed 12 November 2026, from Chloe's brief and several rounds of questions (§10). **The
 MVP is built** (milestones 1 and the playable part of 4, §9): two levels, the ship, the pod, lives,
-the level's top and the page. Turrets, the factory, fuel and the shield are not built yet, so the
-rules for them below are still plans. What the build measured and changed is in
-`mammoth-thrust-design.md` §8. The requirement IDs (MTH-…) are this game's own. The
+the level's top and the page. **Turrets are built too** (the MVP1 turret, firing at random bearings). The factory, fuel and the
+shield are not built yet, so the rules for them below are still plans. What the build measured and changed is in
+`mammoth-thrust-design.md` §8 and §9. The requirement IDs (MTH-…) are this game's own. The
 engine changes the game needs (§8) become requirements in `docs/spec.md` once agreed. Design and plan:
 `mammoth-thrust-design.md`.
 

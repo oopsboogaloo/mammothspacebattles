@@ -7,6 +7,7 @@ interface Body {
   velocity: { x: number; y: number };
   integrity: number;
   tractor?: { mode: string };
+  turret?: { shots: number; sees: boolean; target?: string };
 }
 interface Hook {
   sandbox: () => { world: { time: number; controls: Record<string, number>; bodies: Body[]; thrust: { spec: { start: { x: number; y: number }; top: number } } } };
@@ -133,6 +134,32 @@ test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the 
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON ITS STAND");
   await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("flying");
   expect(await hook(page, (m) => m.level())).toBe(2);
+});
+
+test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires bolts; they show in flight", async ({ page }) => {
+  test.setTimeout(90_000);
+  await start(page);
+  const turret = () => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "t1-carriage")?.turret);
+  expect((await turret())?.shots).toBe(0);
+  // Over the hollow, in plain sight of the turret on its ledge, held there against gravity by the test.
+  const hold = () =>
+    hook(page, (m) => {
+      const w = m.sandbox().world;
+      const hull = w.bodies.find((b) => b.id === "p1-hull")!;
+      const d = { x: 20 - hull.position.x, y: 30 - hull.position.y };
+      return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-") && !b.id.includes("-shell-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
+    });
+  await expect
+    .poll(
+      async () => {
+        await hold();
+        return (await turret())?.shots ?? 0;
+      },
+      { timeout: 60_000, intervals: [500] },
+    )
+    .toBeGreaterThan(0);
+  expect((await turret())?.target).toBe("p1-hull");
+  expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id.startsWith("t1-carriage-shell-")))).toBe(true);
 });
 
 test("MTH-026 a ship that reaches the top without the pod is put back at the start, and told so; no life is lost", async ({ page }) => {

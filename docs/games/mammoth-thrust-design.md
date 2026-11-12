@@ -414,6 +414,61 @@ text above.
 - The 90 m view makes the ship about 45 px wide on a laptop.
 - Gravity, thrust, the tether's length and pay-out, and the fuel's worth are all first values.
 
+## 9. Turrets as built (step 5, 12 November 2026)
+
+**Built**
+
+- `src/core/turret.ts`: the joint that turns (ASM-008), turret fire control (WPN-009), and the
+  battery and generator rule (WPN-010). Bodies gain `turret`, `charge` and `generator`; joints gain
+  `turn`. All off unless a scenario declares them.
+- `scripts/turretParts.ts`: the turret of the spec's drawing, 8 pieces: a fixed base; a fuel tank,
+  a pipe, a generator, a mount and a battery welded to it; a carriage on the mount by the turning
+  joint; a barrel welded to the carriage.
+- One turret on level 1 (a ledge at the hollow's rim, 26 m from the pod); three on level 2 (the
+  surface, the chamber's floor, and hanging from its roof over the pod).
+- The game points each turret at the ship flying, and at nothing between ships. A turret that can
+  no longer fire scores 750, once.
+- Tests: `tests/core/turret.test.ts` (9), four more in `tests/core/thrust.test.ts`, one browser test.
+
+**Measured**
+
+| What | Value |
+|---|---|
+| The gun behind its bearing while turning at 2.1 rad/s | under 0.012 rad; on it as the joint arrives |
+| A turret standing or hanging under 4 m/s² for 8 s | all 12 welds whole; the mount moved 1 mm |
+| One of the ship's slugs on the fuel tank | the tank, pipe, generator, mount and barrel gone; out of action |
+| One slug on the barrel, battery or generator | that piece at 30 to 40%; a second destroys it |
+| A bolt bursting 2 m from a wing tip | the ship pushed 0.6 m/s; nothing broken |
+| A bolt striking the wing | pushed 2.3 m/s, turned 0.5 rad/s; the part it strikes destroyed |
+| Step time, level 2, hovering in the chamber, three turrets awake | 1.5 ms; worst half second 2.9 ms; against 6 ms |
+
+**Changed from the text above**
+
+- **The bolts ride at the pivot.** The railgun is on the carriage, which carries the bolts; the
+  barrel is a light piece welded to it, and the turret needs it to fire. With 12 kg of bolts in the
+  barrel the gun hung 0.19 rad off its bearing and took seconds to settle: a weld to a fixed body
+  is held softly.
+- **A turret's target is a body's id**, set by the scenario or by the game each step. §2.2 said
+  the nearest body of the other side; the player's ship has no pilot, so no side.
+- **Aiming at the ship works without an angle.** The core may not use `atan2` (DET-003). The gun
+  turns by the sine of the angle between its bore and the line to the target, which is enough.
+  Levels use `random` for now, as agreed for MVP1; `ship` is one word in `scripts/thrust.ts`.
+- **A turret's metal is a third as tough as the ship's**, so two slugs destroy a piece.
+- **The bolt:** 0.3 kg at 40 m/s, a 0.05 kg charge that makes 6 kg of gas (a cheat the ledger
+  records) and damages only within 0.6 m.
+- **The wait is once.** A turret waits 3 s the first time it sees a ship. After that, losing sight
+  and seeing again starts it firing at once.
+- **Not built:** the sandbox scenario `turret.json`; the factory's stop (step 6), so `enabled` is
+  always on; the ship taking a turret's fuel (step 7), though a turret whose tank is empty does
+  fall quiet once its battery is flat.
+
+**To look at when playing**
+
+- Random fire with gravity: bolts go up and come down somewhere. On level 1 that is mostly not on
+  you; in level 2's chamber they burst on the walls round you.
+- A direct hit destroys the part it strikes, often a thruster's nozzle wall. The HUD's DAMAGE reads
+  the worst part still on the ship, so a part knocked clean off can leave it at 0%.
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |
@@ -421,6 +476,6 @@ text above.
 | Step 1 | The engine changes in §2 change shared code (joints, tractor, gas, explosive). | Agreed by Chloe, 12 November 2026 |
 | Step 2 | Does raising the small thrusters' flow give the turning wanted without too much extra braking, or should the thrusters move outward? | Measured (§8): 7.0 rad/s², with braking doubled to 8 m/s². For Chloe to judge in play. |
 | Step 3 | Protection at beam-in: Asteroids' 2 s, assumed here. The spec doesn't say. | Chloe |
-| Step 5 | Is the weld solver stiff enough to hold and turn the gun (§2.1)? If not, the carriage's angle is set directly each step, and recoil is lost. | Measured |
+| Step 5 | Is the weld solver stiff enough to hold and turn the gun (§2.1)? If not, the carriage's angle is set directly each step, and recoil is lost. | Measured (§9): yes, once the bolts' weight is at the pivot. |
 | Step 6 | How the factory fits with turrets that have their own power (parked, spec §11). | Chloe |
 | Step 8 | The shield's gas wall, or the simpler fallback. | Measured, then Chloe |
