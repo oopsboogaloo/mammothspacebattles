@@ -41,7 +41,9 @@ function ship() {
   // pod from up to 22 m off, starts at the distance it took it at, and reels it in (or pays out) to
   // 12 m at 6 m/s (TRC-010), heavily damped, so nothing is snatched or thrown. It holds five times
   // the pull it did: Chloe had it let go under thrust.
-  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, capture: 1.2, only: ["pod"], tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
+  // Held on a fuel tank in its wedge, the beam draws the tank's fuel into the ship's two tanks
+  // (TRC-008), 2 kg a game second: a full 8.1 kg tank in 8 s on screen. The tank isn't pulled.
+  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, capture: 1.2, only: ["pod"], siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor });
 }
 
@@ -100,6 +102,41 @@ function pod(at: Vec): Json[] {
   ];
 }
 
+/** Thin metal for a fuel tank, as the turrets' (J): one slug sets it off. */
+const TANK = { name: "tank", threshold: 60, toughness: 500 };
+/** What a fuel tank holds, kg: half the ship's load (hydrogen and oxygen, 1 to 8). */
+const TANK_FUEL = 8.1;
+
+/**
+ * A fuel tank standing on flat rock at `at` (spec §3, Fuel): a free tank welded to a pad that is
+ * anchored to the rock. The ship draws its fuel through the beam (MTH-042). While it holds fuel it
+ * explodes when destroyed (MTH-043).
+ */
+function fuelTank(name: string, at: Vec) {
+  const store = (resource: string, mass: number) => ({ resource, mass: Math.round(mass * 1e6) / 1e6, capacity: Math.round(mass * 1e6) / 1e6 });
+  const bodies: Json[] = [
+    { ...fixed(`${name}-pad`, { kind: "box", width: 2, height: 0.3 }, { x: at.x, y: at.y + 0.15 }), anchored: { mass: 30 } },
+    {
+      id: name,
+      shape: { kind: "box", width: 1.4, height: 1.6 },
+      mass: 2,
+      position: { x: at.x, y: at.y + 1.1 },
+      velocity: { x: 0, y: 0 },
+      angle: 0,
+      angularVelocity: 0,
+      restitution: 0,
+      friction: 0.4,
+      material: TANK,
+      siphon: true,
+      contents: [store("h2", TANK_FUEL / 9), store("o2", (8 * TANK_FUEL) / 9)],
+      explosive: { charge: 0.3, arm: 1e6, fragments: 6, radius: 4, whenDestroyed: true },
+    },
+  ];
+  const limits = { tension: 22950, compression: 45900, shear: 16050, torque: 5520 };
+  const joints: Json[] = [-0.5, 0.5].map((x, k) => ({ id: `${name}-w-${k}`, a: `${name}-pad`, b: name, anchorA: { x, y: 0.15 }, anchorB: { x, y: -0.8 }, limits }));
+  return { bodies, joints, tank: name };
+}
+
 interface Level {
   n: number;
   title: string;
@@ -116,6 +153,8 @@ interface Level {
   pod: Vec;
   /** The turrets: where each stands (the middle of its base, on flat rock) and which way is up for it, rad from +y. */
   turrets: { at: Vec; angle: number }[];
+  /** The fuel tanks: where each stands, on flat rock. */
+  tanks: Vec[];
 }
 
 function write(l: Level) {
@@ -131,6 +170,7 @@ function write(l: Level) {
   const inCave = (p: Vec) => l.caves.some((c) => c.slice(1, -1).some((q) => q.x === p.x && q.y === p.y));
   const sky = [{ x: left, y: SKY }, { x: right, y: SKY }, ...l.ground.filter((p) => !inCave(p))];
   const turrets = l.turrets.map((t, k) => turret(`t${k + 1}`, t.at, t.angle, TURRET, 100 * l.n + k + 1));
+  const tanks = l.tanks.map((at, k) => fuelTank(`fuel-${k + 1}`, at));
   const name = `thrust-${l.n}`;
   const scenario = {
     schema: 1,
@@ -144,8 +184,8 @@ function write(l: Level) {
       bounds: { min: { x: left - 20, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right + 20, y: l.top + WALL + 20 }, wrap: false, farField: 10, depth: 2 },
       // The rock is made from the outline when the world is (TER-001), and explosions and shells crater it.
       terrain: { outline: air, prefix: "rock-", craters: CRATERS },
-      bodies: [...pod(l.pod), ...turrets.flatMap((t) => t.bodies)],
-      joints: turrets.flatMap((t) => t.joints),
+      bodies: [...pod(l.pod), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies)],
+      joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints)],
       links: turrets.flatMap((t) => t.links),
       thrust: {
         ship: ship(),
@@ -157,6 +197,8 @@ function write(l: Level) {
         top: l.top,
         pod: "pod",
         turrets: turrets.map((t) => t.carriage),
+        // Every tank the ship can draw from: the fuel tanks, and each turret's own.
+        tanks: [...tanks.map((t) => t.tank), ...turrets.map((t) => t.tank)],
         lives: 3,
         respawn: 1.25,
         grace: 1,
@@ -196,6 +238,8 @@ write({
   pod: P(12, -8),
   // One turret, on a ledge at the hollow's rim, overlooking the pod.
   turrets: [{ at: P(38, 5), angle: 0 }],
+  // One fuel tank, on the flat to the right.
+  tanks: [P(104, 16)],
 });
 
 // Level 2, one chamber (MTH-011): a shaft 30 m wide and 80 m deep opens into a single chamber 120 m
@@ -228,5 +272,7 @@ write({
       { at: P(30, -112), angle: 0 },
       { at: P(-30, -62), angle: Math.PI },
     ],
+    // One on the surface beside the start, one on the chamber's floor at the foot of the shaft.
+    tanks: [P(-91, 20), P(5, -112)],
   });
 }

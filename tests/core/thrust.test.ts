@@ -421,6 +421,7 @@ it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its 
     const { w, step } = game(1, (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];
+      s.world.thrust.tanks = [];
       s.world.bodies = s.world.bodies.filter((b: { id: string }) => !b.id.startsWith("t1-"));
       s.world.joints = [];
       s.world.links = [];
@@ -594,6 +595,89 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     const none = raw(1);
     none.world.thrust = 1;
     expect(() => parseScenario(none)).toThrow(ScenarioError);
+  });
+  /** The ship at rest `up` m over a body, with no gravity, its tanks holding `share` of a full load. */
+  function over(id: string, share: number, up = 12, n = 1) {
+    const g = game(n, (s) => {
+      s.world.gravity = { x: 0, y: 0 };
+      s.world.thrust.turrets = [];
+    });
+    const b = body(g.w, id)!;
+    for (const t of ["p1-tank-l", "p1-tank-r"]) for (const c of body(g.w, t)!.contents!) c.mass = c.capacity * share;
+    moveShip(g.w, { x: b.position.x, y: b.position.y + up });
+    return g;
+  }
+  const holds = (w: World, id: string) => (body(w, id)?.contents ?? []).reduce((m, c) => m + c.mass, 0);
+
+  it("MTH-042 holding the beam on a fuel tank moves its fuel to the ship, the tank where it stood; emptied, it scores 300 once", () => {
+    for (const n of [1, 2]) expect(raw(n).world.thrust.tanks.filter((id: string) => id.startsWith("fuel-")).length).toBeGreaterThan(0);
+    const { w, step } = over("fuel-1", 0.25);
+    const mass = computeTotals(w).mass;
+    const at = { ...body(w, "fuel-1")!.position };
+    const before = thrustFuel(w).mass;
+    expect(holds(w, "fuel-1")).toBeCloseTo(8.1, 6);
+    step(2, [set("tractor", 1)]);
+    // 2 kg a game second (the ship burns a little of it as it comes).
+    expect(thrustFuel(w).mass - before).toBeGreaterThan(3.5);
+    expect(holds(w, "fuel-1")).toBeCloseTo(4.1, 1);
+    expect(hull(w).tractor!.siphoning).toBe("fuel-1");
+    expect(st(w).score).toBe(0);
+    // Let go, nothing moves.
+    step(1, [set("tractor", 0)]);
+    expect(holds(w, "fuel-1")).toBeCloseTo(4.1, 1);
+    step(3, [set("tractor", 1)]);
+    expect(holds(w, "fuel-1")).toBeCloseTo(0, 6);
+    expect(thrustFuel(w).mass - before).toBeGreaterThan(7);
+    expect(w.ledger.violations).toBe(0);
+    expect(st(w).score).toBe(THRUST_SCORES.tank);
+    expect(THRUST_SCORES.tank).toBe(300);
+    expect(w.events.filter((e) => e.type === "thrust.tank")).toHaveLength(1);
+    expect(body(w, "fuel-1")!.position).toEqual(at);
+    expect(computeTotals(w).mass).toBeCloseTo(mass, 6);
+    step(1);
+    expect(st(w).score).toBe(300);
+  });
+
+  it("MTH-042 a full ship takes nothing, and a tank emptied some other way scores nothing", () => {
+    const { w, step } = over("fuel-1", 1);
+    step(2, [set("tractor", 1)]);
+    // Only what the ship burns in that time is made up.
+    expect(thrustFuel(w).mass).toBeCloseTo(thrustFuel(w).capacity, 2);
+    expect(holds(w, "fuel-1")).toBeGreaterThan(7.5);
+    const other = over("fuel-1", 1);
+    for (const c of body(other.w, "fuel-1")!.contents!) c.mass = 0;
+    settle(other.w);
+    other.step(0.5);
+    expect(st(other.w).score).toBe(0);
+  });
+
+  it("MTH-038 a turret's fuel tank gives up its fuel to the beam too, and the turret then has only its battery", () => {
+    const { w, step } = over("t1-tank", 0.25);
+    const held = holds(w, "t1-tank");
+    expect(held).toBeGreaterThan(1);
+    step(6, [set("tractor", 1)]);
+    expect(holds(w, "t1-tank")).toBeCloseTo(0, 6);
+    expect(st(w).score).toBe(300);
+    expect(body(w, "t1-tank")!.explosive).toBeUndefined();
+  });
+
+  it("MTH-043 a destroyed fuel tank explodes with what it still holds: a full charge full, half half drained, none empty", () => {
+    const full = over("fuel-1", 0.25);
+    const charge = body(full.w, "fuel-1")!.explosive!.charge;
+    full.step(2, [set("tractor", 1)]);
+    expect(body(full.w, "fuel-1")!.explosive!.charge / charge).toBeCloseTo(4.1 / 8.1, 1);
+    full.step(0.1, [set("tractor", 0)]);
+    body(full.w, "fuel-1")!.integrity = 0;
+    full.step(0.1);
+    expect(body(full.w, "fuel-1")).toBeUndefined();
+    expect(full.w.events.some((e) => e.type === "detonation")).toBe(true);
+    // Emptied first, it only breaks.
+    const empty = over("fuel-1", 0.25);
+    empty.step(5, [set("tractor", 1)]);
+    expect(body(empty.w, "fuel-1")!.explosive).toBeUndefined();
+    body(empty.w, "fuel-1")!.integrity = 0;
+    empty.step(0.1, [set("tractor", 0)]);
+    expect(empty.w.events.some((e) => e.type === "detonation")).toBe(false);
   });
 });
 

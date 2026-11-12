@@ -82,7 +82,7 @@ export function turret(name: string, at: Vec, angle: number, t: TurretTuning, se
   bodies.push({ id: id("base"), fixed: true, shape: { kind: "box", width: 6.4, height: 0.3 }, mass: 1, position: place({ x: 0, y: 0.15 }), velocity: { x: 0, y: 0 }, angle: round(angle), angularVelocity: 0, friction: 0.9, anchored: { mass: 100 } });
 
   // The fuel tank: a standard one. What it holds goes up with it when it is destroyed.
-  box("tank", -3.1, -1.7, 0.3, 1.3, 2, { material: TANK, contents: stores(t.fuel), explosive: { charge: 0.3, arm: 1e6, fragments: 6, radius: 4, whenDestroyed: true } });
+  box("tank", -3.1, -1.7, 0.3, 1.3, 2, { material: TANK, siphon: true, contents: stores(t.fuel), explosive: { charge: 0.3, arm: 1e6, fragments: 6, radius: 4, whenDestroyed: true } });
   // The pipe, seen: the fuel passes through it, so cutting it starves the generator.
   box("pipe", -1.7, -1.3, 0.5, 0.65, 0.3, { contents: stores(0.02) });
   box("gen", -1.3, -0.3, 0.3, 1.3, 2, { contents: stores(0.02), generator: { battery: id("battery"), burn: t.burn, rate: t.charge } });

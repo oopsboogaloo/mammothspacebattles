@@ -216,10 +216,13 @@ other sources in §12):
 ### Fuel
 
 - One tank load is about 2 minutes of full thrust, as in Asteroids. Out of fuel, the ship falls.
-- A fuel tank on the ground is a fixed body. While the beam is held on one within range, fuel
-  moves to the ship at a fixed rate until the tank is empty (first value: one tank is half a ship's
-  load). The tank isn't lifted.
-- A tank that is destroyed explodes with what it still holds.
+- A fuel tank stands on a pad on the ground. While the beam is held with one in its wedge, fuel
+  moves to the ship until the tank is empty or the ship is full, and the game says REFUELLING.
+  First values: a tank holds 8.1 kg, half a ship's load, and gives 2 kg a game second, so a full
+  tank takes about 8 s on screen. The tank isn't lifted or pulled.
+- A turret's own tank gives up its fuel the same way.
+- A tank that is destroyed explodes with what it still holds; an empty one only breaks.
+- A crater under a tank's pad lets it fall, as a turret does (MTH-063).
 
 ### Scoring
 
@@ -337,7 +340,7 @@ Priority: **M** must, **S** should.
   ship (the pod is not covered) nor changes its velocity; fuel falls at the shield's rate; engines and gun don't work.
 - **MTH-041** `[M]` With no fuel the shield doesn't come up.
 - **MTH-042** `[M]` Holding the tractor on a fuel tank in range moves fuel to the ship until the
-  tank is empty or the ship is full.
+  tank is empty or the ship is full. A tank the ship has emptied scores once.
 - **MTH-043** `[M]` A destroyed fuel tank explodes in proportion to what it holds.
 
 **Lives and score**

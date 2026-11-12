@@ -234,6 +234,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
   if (b.turret !== undefined) validateTurret(v, b.turret, `${path}.turret`);
+  if (b.siphon !== undefined && typeof b.siphon !== "boolean") err(v, `${path}.siphon`, "must be true or false");
   if (b.anchored !== undefined) {
     if (!isObj(b.anchored)) err(v, `${path}.anchored`, "must be {mass, group?}");
     else {
@@ -378,6 +379,13 @@ function validateTractor(v: V, t: unknown, path: string): void {
   if (t.capture !== undefined) num(v, t.capture, `${path}.capture`, { min: 0 });
   if (t.tetherFrom !== undefined) str(v, t.tetherFrom, `${path}.tetherFrom`);
   if (t.beamFrom !== undefined) str(v, t.beamFrom, `${path}.beamFrom`);
+  if (t.siphon !== undefined) {
+    if (!isObj(t.siphon)) err(v, `${path}.siphon`, "must be {rate, into}");
+    else {
+      num(v, t.siphon.rate, `${path}.siphon.rate`, { positive: true });
+      if (!(Array.isArray(t.siphon.into) && t.siphon.into.length > 0 && t.siphon.into.every((id: unknown) => typeof id === "string" && id.length > 0))) err(v, `${path}.siphon.into`, "must be a list of body ids");
+    }
+  }
   if (t.only !== undefined && !(Array.isArray(t.only) && t.only.every((id: unknown) => typeof id === "string" && id.length > 0))) err(v, `${path}.only`, "must be a list of body ids");
   if (t.tether !== undefined) {
     if (!isObj(t.tether)) return err(v, `${path}.tether`, "must be {length?, stiffness?, damping?, maxTension?}");
@@ -584,7 +592,13 @@ function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
   for (const k of ["respawn", "grace", "watch"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
   if (g.scores !== undefined) {
     if (!isObj(g.scores)) err(v, `${path}.scores`, "must be an object {pod?, fuel?}");
-    else for (const k of ["pod", "fuel", "turret"]) if (g.scores[k] !== undefined) num(v, g.scores[k], `${path}.scores.${k}`, { min: 0 });
+    else for (const k of ["pod", "fuel", "turret", "tank"]) if (g.scores[k] !== undefined) num(v, g.scores[k], `${path}.scores.${k}`, { min: 0 });
+  }
+  if (g.tanks !== undefined) {
+    if (!Array.isArray(g.tanks)) err(v, `${path}.tanks`, "must be a list of body ids");
+    else g.tanks.forEach((id: unknown, i: number) => {
+      if (typeof id !== "string" || !Array.isArray(bodies) || !bodies.some((b) => isObj(b) && b.id === id && Array.isArray(b.contents))) err(v, `${path}.tanks[${i}]`, "must be the id of a body that holds something");
+    });
   }
   if (g.turrets !== undefined) {
     if (!Array.isArray(g.turrets)) err(v, `${path}.turrets`, "must be a list of body ids");
