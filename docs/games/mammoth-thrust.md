@@ -340,7 +340,7 @@ Priority: **M** must, **S** should.
 - **MTH-052** `[M]` The HUD shows score, lives, fuel, shells, the pod's state, the turrets' stop
   time and the factory's countdown.
 
-## 8. Engine changes (to agree, then into `docs/spec.md`)
+## 8. Engine changes (agreed 12 November 2026; in `docs/spec.md` as milestone M10)
 
 New, shared physics or world logic:
 

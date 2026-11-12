@@ -33,9 +33,12 @@ These facts shape the design. Each was read in the source.
 | The ledger books what a game adds or removes under `boundary`. | `ledger.ts`, `stepInPlace` | The beam back, the shield's push and beamed-in ships are booked there. |
 | Step budget: 6 ms a step, 240 steps a game second. | `docs/spec.md:572`, `profile.ts:85` | Measured at steps 3, 5 and 8. |
 
-## 2. Engine changes (shared physics, to agree with Chloe)
+## 2. Engine changes (shared physics, agreed with Chloe)
 
-Each becomes a requirement in `docs/spec.md` with its number assigned when it is added. None
+*Agreed, 12 November 2026:* Chloe approved every engine addition in this section. Changes to what
+Lander or Asteroids themselves do are a separate matter, to be talked through with her first; none
+is proposed here. The requirements are in `docs/spec.md` under milestone M10: ASM-008 (§2.1),
+WPN-009 (§2.2), WPN-010 (§2.3), TRC-008 and TRC-009 (§2.4), SHD-001…005 (§2.5). None
 changes what the sandbox, Lander or Asteroids do today: every one is a new, optional component, off
 unless a scenario declares it (determinism hashes unchanged, checked in each PR).
 
@@ -355,7 +358,7 @@ new milestone M10, so `req:report` traces them.
 
 | When | What | Who |
 |---|---|---|
-| Step 1 | The engine changes in §2 change shared code (joints, tractor, gas, explosive). Agreed? | Chloe |
+| Step 1 | The engine changes in §2 change shared code (joints, tractor, gas, explosive). | Agreed by Chloe, 12 November 2026 |
 | Step 2 | Does raising the small thrusters' flow give the turning wanted without too much extra braking, or should the thrusters move outward? | Measured |
 | Step 3 | Protection at beam-in: Asteroids' 2 s, assumed here. The spec doesn't say. | Chloe |
 | Step 5 | Is the weld solver stiff enough to hold and turn the gun (§2.1)? If not, the carriage's angle is set directly each step, and recoil is lost. | Measured |
