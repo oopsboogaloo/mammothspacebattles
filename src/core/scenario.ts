@@ -228,6 +228,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       num(v, b.gravity.core, `${path}.gravity.core`, { positive: true });
       if (b.gravity.feels !== undefined && typeof b.gravity.feels !== "boolean") err(v, `${path}.gravity.feels`, "must be true or false");
       if (b.gravity.joined !== undefined && typeof b.gravity.joined !== "boolean") err(v, `${path}.gravity.joined`, "must be true or false");
+      if (b.gravity.radius !== undefined) num(v, b.gravity.radius, `${path}.gravity.radius`, { positive: true });
     }
   }
   if (b.integrity !== undefined) num(v, b.integrity, `${path}.integrity`, { min: 0, max: 1 });
@@ -402,6 +403,7 @@ function validateTractor(v: V, t: unknown, path: string): void {
       if (!(Array.isArray(t.siphon.into) && t.siphon.into.length > 0 && t.siphon.into.every((id: unknown) => typeof id === "string" && id.length > 0))) err(v, `${path}.siphon.into`, "must be a list of body ids");
     }
   }
+  if (t.pullAny !== undefined && typeof t.pullAny !== "boolean") err(v, `${path}.pullAny`, "must be true or false");
   if (t.only !== undefined && !(Array.isArray(t.only) && t.only.every((id: unknown) => typeof id === "string" && id.length > 0))) err(v, `${path}.only`, "must be a list of body ids");
   if (t.tether !== undefined) {
     if (!isObj(t.tether)) return err(v, `${path}.tether`, "must be {length?, stiffness?, damping?, maxTension?}");
@@ -577,6 +579,14 @@ function validateTerrain(v: V, t: unknown, path: string): void {
   if (!isObj(t)) return err(v, path, "must be an object {outline, prefix?, craters?}");
   if (!Array.isArray(t.outline) || t.outline.length < 3) err(v, `${path}.outline`, "must be a closed outline of at least 3 points");
   else t.outline.forEach((p: unknown, i: number) => vec(v, p, `${path}.outline[${i}]`));
+  if (t.islands !== undefined) {
+    if (!Array.isArray(t.islands)) err(v, `${path}.islands`, "must be a list of closed outlines");
+    else
+      t.islands.forEach((loop: unknown, k: number) => {
+        if (!Array.isArray(loop) || loop.length < 3) err(v, `${path}.islands[${k}]`, "must be a closed outline of at least 3 points");
+        else loop.forEach((p: unknown, i: number) => vec(v, p, `${path}.islands[${k}][${i}]`));
+      });
+  }
   if (t.prefix !== undefined) str(v, t.prefix, `${path}.prefix`);
   if (t.craters !== undefined) {
     if (!isObj(t.craters)) return err(v, `${path}.craters`, "must be an object {blast?, bullet?, least?, most?, limit?, small?}");

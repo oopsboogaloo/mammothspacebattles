@@ -108,6 +108,15 @@ other sources in §12):
   left, one hanging from the right wall, one from the chamber's roof, and one on the chamber's
   floor. The pod stands at the chamber's left end with two fuel tanks beside it; one more fuel
   tank is on the surface. Play can start here: `thrust.html?level=3`.
+- **Level 4: the asteroid** (13 November 2026, a first design to try before Chloe draws one). A
+  round asteroid 180 m across floating in open space 340 m across, its gravity pulling toward its
+  centre as a uniform ball's: 4 m/s² at the surface, falling as 1/r² further out and in a straight
+  line to nothing at its centre (its caves aren't counted). A tunnel winds down from a mouth on
+  its upper left into a chamber above the centre, where the pod and a fuel tank stand (gravity
+  there about 0.5 m/s²); another tank stands on the top, under the start. Eight electric turrets
+  round the tunnel and chamber (no plant: unlimited power), five fuel turrets round the surface.
+  The level is left by getting 150 m from the centre with the pod; without it, the ship is beamed
+  back, as at a level's top.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
   through). Level 3 is drawn tighter at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
@@ -369,7 +378,8 @@ Priority: **M** must, **S** should.
   a bolt and a slug each leave it whole.
 - **MTH-026** `[M]` A ship above the level's top without the pod on its tether is beamed back to the
   start as it is, with no life lost.
-- **MTH-027** `[M]` The beam pulls, and the tether takes, the pod and nothing else.
+- **MTH-027** `[M]` The tether takes the pod and nothing else. The beam pulls anything free in its
+  wedge (Chloe, 13 November 2026, to try again; until then it pulled the pod alone).
 - **MTH-024** `[M]` The level is complete when the ship is above the level's top with the pod
   on its tether.
 
@@ -418,6 +428,11 @@ Priority: **M** must, **S** should.
   off (up to 3), and knocks the plant offline.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
   often the less coolant is left.
+- **MTH-091** `[M]` Level 4 is an asteroid: rock as an island in open space, gravity toward its
+  centre as a uniform ball's (inverse square outside, linear inside), left by getting 150 m from
+  its centre.
+- **MTH-090** `[S]` For testing (Chloe, 13 November 2026), the page shows the simulation's step
+  time (mean and slowest) against its budget, with the gas parcels and bodies. To go before release.
 - **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to
   start at any level. Not meant for players: to go before release.
 - **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the

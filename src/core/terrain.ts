@@ -25,6 +25,11 @@ export interface TerrainOps {
 export interface TerrainSpec {
   /** The open space: a closed outline, clockwise, the rock on its left. */
   outline: Vec2[];
+  /**
+   * Islands of rock inside it (TER-007): each a closed outline running counter-clockwise, so its rock
+   * is on its left too. An asteroid floating in the open is one.
+   */
+  islands?: Vec2[][];
   /** The rock bodies' ids start with this (default "rock-"). */
   prefix?: string;
   /**
@@ -48,8 +53,9 @@ export interface Crater {
 }
 
 export interface Terrain {
-  /** The outline, with its long stretches cut into pieces. */
+  /** The outline, with its long stretches cut into pieces; and the islands', the same. */
   outline: Vec2[];
+  islands?: Vec2[][];
   prefix: string;
   craters?: Required<NonNullable<TerrainSpec["craters"]>>;
   /** The craters so far, in the order they were made. */
@@ -105,6 +111,20 @@ function insideRim(vs: Vec2[], p: Vec2): boolean {
     if (cross(sub(b, a), sub(p, a)) > -1e-9) return false;
   }
   return true;
+}
+
+/** Every stretch of boundary the ground starts with: the outline's and each island's, in order. */
+function segments(t: Terrain): Seg[] {
+  const out: Seg[] = [];
+  for (const loop of [t.outline, ...(t.islands ?? [])]) for (let i = 0; i < loop.length; i++) out.push([loop[i], loop[(i + 1) % loop.length]]);
+  return out;
+}
+
+/** Whether p is in the ground's open space at the start: inside the outline and outside every island (even-odd over them all). */
+function insideOpen(t: Terrain, p: Vec2): boolean {
+  let inside = false;
+  for (const loop of [t.outline, ...(t.islands ?? [])]) if (insideOutline(loop, p)) inside = !inside;
+  return inside;
 }
 
 /** Whether p is inside a closed outline (even-odd). */
@@ -166,11 +186,7 @@ function near(t: Terrain, at: Vec2, within: number): Near {
     if (length(sub(at, h)) <= within + h.r) holes.push({ h, vs: rim(h), index });
   });
   const walls: Seg[] = [];
-  for (let i = 0; i < t.outline.length; i++) {
-    const a = t.outline[i];
-    const b = t.outline[(i + 1) % t.outline.length];
-    if (distance(at, a, b) <= within) walls.push([a, b]);
-  }
+  for (const [a, b] of segments(t)) if (distance(at, a, b) <= within) walls.push([a, b]);
   for (const { vs } of holes) for (let e = 0; e < vs.length; e++) walls.push([vs[e], vs[(e + 1) % vs.length]]);
   return { walls, holes };
 }
@@ -242,8 +258,7 @@ function pieces(a: Vec2, b: Vec2, cutters: Seg[], keep: (mid: Vec2) => boolean):
 
 /** The crust along stretch i of the outline: what is left of it outside every crater. */
 function outlineCrust(t: Terrain, i: number): BodyInput[] {
-  const a = t.outline[i];
-  const b = t.outline[(i + 1) % t.outline.length];
+  const [a, b] = segments(t)[i];
   const mid = lerp(a, b, 0.5);
   const n = near(t, mid, length(sub(b, a)) / 2 + CRUST + 1);
   const own = (s: Seg) => s[0] === a && s[1] === b;
@@ -259,13 +274,13 @@ function craterCrust(t: Terrain, c: number): BodyInput[] {
   const n = near(t, h, h.r + RIM_CRUST + 1);
   const vs = n.holes.find((o) => o.index === c)!.vs;
   const others = n.holes.filter((o) => o.index !== c);
-  const outline: Seg[] = t.outline.map((p, i): Seg => [p, t.outline[(i + 1) % t.outline.length]]).filter(([p, q]) => distance(h, p, q) <= h.r + 1e-6);
+  const outline: Seg[] = segments(t).filter(([p, q]) => distance(h, p, q) <= h.r + 1e-6);
   const cutters: Seg[] = [...outline, ...others.flatMap(({ vs: o }) => o.map((v, e): Seg => [v, o[(e + 1) % o.length]]))];
   const out: BodyInput[] = [];
   for (let e = 0; e < vs.length; e++) {
     const a = vs[e];
     const b = vs[(e + 1) % vs.length];
-    const kept = pieces(a, b, cutters, (p) => !insideOutline(t.outline, p) && !others.some(({ vs: o }) => insideRim(o, p)));
+    const kept = pieces(a, b, cutters, (p) => !insideOpen(t, p) && !others.some(({ vs: o }) => insideRim(o, p)));
     const walls = n.walls.filter((s) => !(s[0] === a && s[1] === b) && !vs.includes(s[0]));
     kept.forEach(([p, q], k) => {
       const body = crust(`${t.prefix}c${c}-${e}-${k}`, p, q, walls, RIM_CRUST, h);
@@ -287,11 +302,13 @@ function takeOut(world: World, gone: (b: Body) => boolean): void {
 export function startTerrain(world: World, spec: TerrainSpec, ops: TerrainOps): Terrain {
   const t: Terrain = {
     outline: cut(spec.outline, LONGEST).map((p) => ({ x: p.x, y: p.y })),
+    ...(spec.islands?.length ? { islands: spec.islands.map((loop) => cut(loop, LONGEST).map((p) => ({ x: p.x, y: p.y }))) } : {}),
     prefix: spec.prefix ?? "rock-",
     ...(spec.craters ? { craters: { ...TERRAIN_DEFAULTS, ...spec.craters } } : {}),
     holes: [],
   };
-  for (let i = 0; i < t.outline.length; i++) for (const b of outlineCrust(t, i)) ops.addBody(world, b);
+  const n = segments(t).length;
+  for (let i = 0; i < n; i++) for (const b of outlineCrust(t, i)) ops.addBody(world, b);
   return t;
 }
 
@@ -315,7 +332,9 @@ export function cutCrater(world: World, at: Vec2, r: number, ops: TerrainOps, be
   // their boundary or their crust's depth to change.
   const reach0 = r + CRUST + 1;
   const stretches: number[] = [];
-  for (let i = 0; i < t.outline.length; i++) if (distance(h, t.outline[i], t.outline[(i + 1) % t.outline.length]) <= reach0) stretches.push(i);
+  segments(t).forEach(([a, b], i) => {
+    if (distance(h, a, b) <= reach0) stretches.push(i);
+  });
   const craters: number[] = [];
   for (let k = 0; k < c; k++) if (length(sub(h, t.holes[k])) <= r + RIM_CRUST + 1 + t.holes[k].r) craters.push(k);
   // In open space already (or wholly inside other craters): none of its rim is in rock.

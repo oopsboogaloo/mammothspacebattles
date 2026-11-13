@@ -35,7 +35,8 @@ function ship() {
   // A solid slug: no blast, so a shot at a wall beside the ship does nothing to it (MTH-020).
   const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05 };
   const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
-  // The beam is a 30° wedge down the ship's tail, and pulls only the pod (TRC-011): not the wreckage
+  // The beam is a 30° wedge down the ship's tail. It pulls whatever is free in it (TRC-013: Chloe,
+  // 13 November 2026, to try again), but the tether takes only the pod (TRC-011): not the wreckage
   // of the ships before. Its pull is three times the engine's default (asked for by Chloe after
   // playing, 12 November 2026: picking the pod up was too hard).
   // The tether is the TRC spring between the two centres of mass (TRC-004), 12 m long. It takes the
@@ -44,7 +45,7 @@ function ship() {
   // the pull it did: Chloe had it let go under thrust.
   // Held on a fuel tank in its wedge, the beam draws the tank's fuel into the ship's two tanks
   // (TRC-008), 2 kg a game second: a full 8.1 kg tank in 8 s on screen. The tank isn't pulled.
-  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, capture: 1.2, only: ["pod"], siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
+  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor });
 }
 
@@ -187,14 +188,23 @@ interface Level {
    * stands and which way it points); its power lines, each needing the transmitter (`"tx"`) or not;
    * and which turrets (by number) are fed through the transmitter.
    */
+  /**
+   * An asteroid level: the rock is an island (its outline, counter-clockwise, cave included) in a
+   * square of open space `box` m from the centre each way; its gravity is a uniform ball's of
+   * `radius` with `gravity` m/s² at the surface (FLT-015), pulling toward the centre (0, 0); and the
+   * level is left by getting `escape` m from the centre. `ground` and `top` aren't used.
+   */
+  asteroid?: { island: Vec[]; radius: number; gravity: number; box: number; escape: number };
   plant?: { at: Vec; antennae: [{ at: Vec; angle: number }, { at: Vec; angle: number }]; lines: { points: Vec[]; needs?: string[] }[]; beyond: number[] };
 }
 
 function write(l: Level) {
-  const left = l.ground[l.ground.length - 1].x;
-  const right = l.ground[0].x;
-  // The outline that makes the rock: closed over the sky a little above the level's top.
-  const air = [{ x: left, y: l.top + WALL }, { x: right, y: l.top + WALL }, ...l.ground];
+  const ast = l.asteroid;
+  const left = ast ? -ast.box : l.ground[l.ground.length - 1].x;
+  const right = ast ? ast.box : l.ground[0].x;
+  // The outline that makes the rock: closed over the sky a little above the level's top; on an
+  // asteroid level, the square of open space round the asteroid, clockwise.
+  const air = ast ? [P(-ast.box, ast.box), P(ast.box, ast.box), P(ast.box, -ast.box), P(-ast.box, -ast.box)] : [{ x: left, y: l.top + WALL }, { x: right, y: l.top + WALL }, ...l.ground];
   if (l.caveBelow !== undefined) {
     const w = narrowest(air, l.caveBelow, l.alcoves);
     const least = l.leastWidth ?? LEAST_WIDTH;
@@ -202,7 +212,7 @@ function write(l: Level) {
   }
   // The sky, for the stars: the open space above the ground, closed across each cave's mouth.
   const inCave = (p: Vec) => l.caves.some((c) => c.slice(1, -1).some((q) => q.x === p.x && q.y === p.y));
-  const sky = [{ x: left, y: SKY }, { x: right, y: SKY }, ...l.ground.filter((p) => !inCave(p))];
+  const sky = ast ? air : [{ x: left, y: SKY }, { x: right, y: SKY }, ...l.ground.filter((p) => !inCave(p))];
   const turrets = l.turrets.map((t, k) => (t.electric ? electricTurret : turret)(`t${k + 1}`, t.at, t.angle, (t.electric ? ELECTRIC_TURRET : TURRET) as never, 100 * l.n + k + 1));
   const tanks = l.tanks.map((at, k) => fuelTank(`fuel-${k + 1}`, at));
   const plant = l.plant ? powerPlant(l.plant.at, PLANT) : undefined;
@@ -216,11 +226,14 @@ function write(l: Level) {
     profile: "sandbox",
     seed: 1,
     world: {
-      gravity: { x: 0, y: -GRAVITY },
-      bounds: { min: { x: left - 20, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right + 20, y: l.top + WALL + 20 }, wrap: false, farField: 10, depth: 2 },
+      gravity: ast ? { x: 0, y: 0 } : { x: 0, y: -GRAVITY },
+      bounds: ast ? { min: { x: -ast.box - 20, y: -ast.box - 20 }, max: { x: ast.box + 20, y: ast.box + 20 }, wrap: false, farField: 10, depth: 2 } : { min: { x: left - 20, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right + 20, y: l.top + WALL + 20 }, wrap: false, farField: 10, depth: 2 },
       // The rock is made from the outline when the world is (TER-001), and explosions and shells crater it.
-      terrain: { outline: air, prefix: "rock-", craters: CRATERS },
-      bodies: [...pod(l.pod), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies)],
+      terrain: { outline: air, ...(ast ? { islands: [ast.island] } : {}), prefix: "rock-", craters: CRATERS },
+      bodies: [
+        // An asteroid's gravity: a source at its centre that pulls as a uniform ball (FLT-015), hidden in the rock.
+        ...(ast ? [{ ...fixed("rock-core", { kind: "disc", radius: 0.5 }, P(0, 0)), gravity: { mu: ast.gravity * ast.radius * ast.radius, core: 1, radius: ast.radius } }] : []),
+        ...pod(l.pod), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies)],
       joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints), ...(plant?.joints ?? []), ...aerials.flatMap((a) => a.joints)],
       links: turrets.flatMap((t) => t.links),
       thrust: {
@@ -231,6 +244,7 @@ function write(l: Level) {
         gun: "p{n}-gun",
         start: l.start,
         top: l.top,
+        ...(ast ? { escape: { centre: P(0, 0), radius: ast.escape } } : {}),
         pod: "pod",
         turrets: turrets.map((t) => t.carriage),
         // Every tank the ship can draw from: the fuel tanks, and each turret's own.
@@ -256,7 +270,7 @@ function write(l: Level) {
         respawn: 1.25,
         grace: 1,
         level: l.n,
-        view: { colour: l.colour, pitch: 1, sky, caves: l.caves },
+        view: { colour: l.colour, pitch: 1, sky, caves: l.caves, ...(ast ? { islands: [ast.island] } : {}) },
       },
     },
     timeline: [],
@@ -401,5 +415,65 @@ write({
       ],
       beyond: [3],
     },
+  });
+}
+
+// Level 4, the asteroid (13 November 2026, a first design to try, before Chloe draws one): a round
+// asteroid 180 m across floating in a box of open space 340 m across, its gravity a uniform ball's
+// (FLT-015): 4 m/s² at the surface, falling as 1/r² outside and in a straight line to nothing at
+// its centre. A tunnel winds down from a mouth on its upper left into a chamber above its centre,
+// where the pod stands (gravity there 0.5 m/s²). Eight electric turrets round the tunnel and
+// chamber, five fuel turrets round the surface (one hanging underneath). Escape: 150 m from the
+// centre. Generated from shapes (disc, chamber, tunnel) traced as level 3 was; the points are below.
+{
+  // The asteroid's rock, counter-clockwise (rock on the left), cave included.
+  const island = [
+      P(60.2, 67), P(53.2, 72.8), P(46.5, 77.2), P(32.8, 84), P(24.5, 86.8), P(15.8, 88.8), P(8.2, 89.8), P(1.6, 90), P(-1.6, 90), P(-8.2, 89.8),
+      P(-19.5, 88), P(-30.8, 84.8), P(-38, 81.8), P(-40.2, 80.2), P(-47.8, 69), P(-47.9, 67), P(-48.1, 59), P(-48, 56.8), P(-42.8, 52.4), P(-35.2, 50.1),
+      P(-24.4, 52.3), P(-16.6, 53.7), P(-13.8, 54), P(-9.8, 56.2), P(-4, 58), P(4, 58), P(6.8, 57.2), P(11.5, 55.5), P(16.7, 52.6), P(21.8, 46.4),
+      P(23.5, 43.5), P(25.5, 37.8), P(26, 34.5), P(25.9, 27.8), P(23.6, 20.2), P(20.5, 15.8), P(16.8, 12), P(11.6, 12), P(8.4, 12), P(-4.4, 12),
+      P(-7.6, 12), P(-16.8, 12), P(-18, 13), P(-20.5, 15.8), P(-23.2, 20), P(-25.2, 25.2), P(-25.8, 28), P(-34, 26.4), P(-42, 26.1), P(-46.5, 27.8),
+      P(-67.2, 40.2), P(-69.8, 42.8), P(-71.2, 45.5), P(-72, 48.2), P(-68.9, 51.2), P(-75.1, 56.3), P(-72.5, 53.5), P(-79.2, 43), P(-83.5, 34), P(-86, 27.1),
+      P(-88, 19.4), P(-90, 4.8), P(-90, -4.8), P(-88.8, -15.8), P(-86.8, -24.5), P(-84, -32.8), P(-79.2, -43), P(-76.1, -48.2), P(-71.4, -54.8), P(-67.8, -59.5),
+      P(-65, -62.5), P(-59, -67.8), P(-57.2, -69.2), P(-51.5, -74), P(-43, -79.2), P(-34, -83.5), P(-24.5, -86.8), P(-14.2, -89), P(-4, -90), P(4, -90),
+      P(14.2, -89), P(24.5, -86.8), P(34, -83.5), P(43, -79.2), P(51.5, -74), P(57.8, -69.2), P(59.5, -67.8), P(65, -62), P(67.8, -59), P(71.4, -54.8),
+      P(76.1, -48.2), P(79.2, -43), P(84, -32.8), P(86.8, -24.5), P(88.8, -15.8), P(90, -4.8), P(90, 4.8), P(88, 19.4), P(86, 27.1), P(81.8, 38),
+      P(76, 48.5), P(69.2, 57.8),
+  ];
+  // The cave, for the view: the island's points inside the surface, closed across the mouth.
+  const cave = [
+      P(-40.2, 80.2), P(-47.8, 69), P(-47.9, 67), P(-48.1, 59), P(-48, 56.8), P(-42.8, 52.4), P(-35.2, 50.1), P(-24.4, 52.3), P(-16.6, 53.7), P(-13.8, 54),
+      P(-9.8, 56.2), P(-4, 58), P(4, 58), P(6.8, 57.2), P(11.5, 55.5), P(16.7, 52.6), P(21.8, 46.4), P(23.5, 43.5), P(25.5, 37.8), P(26, 34.5),
+      P(25.9, 27.8), P(23.6, 20.2), P(20.5, 15.8), P(16.8, 12), P(11.6, 12), P(8.4, 12), P(-4.4, 12), P(-7.6, 12), P(-16.8, 12), P(-18, 13),
+      P(-20.5, 15.8), P(-23.2, 20), P(-25.2, 25.2), P(-25.8, 28), P(-34, 26.4), P(-42, 26.1), P(-46.5, 27.8), P(-67.2, 40.2), P(-69.8, 42.8), P(-71.2, 45.5),
+      P(-72, 48.2), P(-68.9, 51.2), P(-75.1, 56.3),
+  ];
+  write({
+    n: 4,
+    title: "The asteroid",
+    description: "A round asteroid with a winding tunnel into a chamber where the pod stands. Its gravity pulls toward its centre. Fly in, take the pod on the tether, and carry it 150 m out from the centre.",
+    colour: "#8a7bd8",
+    top: 150,
+    ground: [],
+    caves: [cave],
+    start: P(0, 118),
+    pod: P(-6.0, 12.0),
+    turrets: [
+      { at: P(87.0, 23.2), angle: -1.313 },
+      { at: P(-87.0, 23.2), angle: 1.313 },
+      { at: P(-73.8, -51.5), angle: 2.191 },
+      { at: P(0.0, -90.0), angle: -3.142 },
+      { at: P(73.8, -51.5), angle: -2.191 },
+      { at: P(-20.5, 53.0), angle: -2.972, electric: true },
+      { at: P(19.2, 49.5), angle: 2.273, electric: true },
+      { at: P(24.8, 24.0), angle: 1.282, electric: true },
+      { at: P(0.0, 58.0), angle: -3.142, electric: true },
+      { at: P(-39.0, 51.2), angle: 2.856, electric: true },
+      { at: P(-38.0, 26.2), angle: 0.048, electric: true },
+      { at: P(-72.0, 53.8), angle: -0.686, electric: true },
+      { at: P(-48.0, 63.0), angle: 1.55, electric: true },
+    ],
+    tanks: [P(0.0, 90.0), P(10.0, 12.0)],
+    asteroid: { island, radius: 90, gravity: 4, box: 170, escape: 150 },
   });
 }

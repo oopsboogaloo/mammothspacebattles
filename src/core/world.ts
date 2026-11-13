@@ -68,8 +68,11 @@ export interface Body {
    * With `joined` (AST-011) it pulls as one with the other joined sources it is welded to: one pull
    * from their centre, with their mu together, softened by half their reach from it. A rock of twenty
    * pieces is then one source, not twenty, and a piece that breaks off is a source of its own.
+   * With `radius` (FLT-015) it pulls as a uniform ball of that radius: mu/r² outside, strongest at
+   * its surface, and inside falling in a straight line to nothing at its centre (mu·r/radius³);
+   * `core` is then not used. Mammoth Thrust's asteroid level.
    */
-  gravity?: { mu: number; core: number; feels?: boolean; joined?: boolean };
+  gravity?: { mu: number; core: number; feels?: boolean; joined?: boolean; radius?: number };
   /** How it takes damage (DMG-002). Absent: it can't be damaged. */
   material?: Material;
   /** 1 whole, 0 failed (DMG-001). At 0 it is wreckage: it no longer functions (DMG-003). */
@@ -625,6 +628,8 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
   const sy: number[] = [];
   const mu: number[] = [];
   const core2: number[] = [];
+  /** A uniform ball's radius cubed (FLT-015), or 0. */
+  const ball3: number[] = [];
   /** Each source's body (a group of joined sources has none), and its assembly. */
   const sid: string[] = [];
   const sroot: string[] | null = roots ? [] : null;
@@ -642,6 +647,7 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
         sy.push(0);
         mu.push(0);
         core2.push(0);
+        ball3.push(0);
         sid.push("");
         sroot!.push(root);
       }
@@ -654,7 +660,8 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
     sx.push(s.position.x);
     sy.push(s.position.y);
     mu.push(g.mu);
-    core2.push(g.core * g.core);
+    core2.push(g.radius ? 0 : g.core * g.core);
+    ball3.push(g.radius ? g.radius * g.radius * g.radius : 0);
     sid.push(s.id);
     sroot?.push(root);
   }
@@ -694,7 +701,9 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
         dy -= h * Math.round(dy / h);
       }
       const r2 = dx * dx + dy * dy + core2[i];
-      const k = mu[i] / (r2 * Math.sqrt(r2));
+      const r3 = r2 * Math.sqrt(r2);
+      // A uniform ball (FLT-015): inverse square outside, straight down to nothing inside.
+      const k = mu[i] / (ball3[i] > r3 ? ball3[i] : r3);
       ax += k * dx;
       ay += k * dy;
     }
