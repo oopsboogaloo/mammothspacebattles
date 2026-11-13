@@ -5,7 +5,7 @@
 import { signal } from "@preact/signals";
 import { useEffect, useState } from "preact/hooks";
 import { scenarioFile } from "./scenarios.ts";
-import { camera, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
+import { camera, GAME_PACE, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
 import { shown } from "./smooth.ts";
 import { View } from "./View.tsx";
 import { usePad, type PadGame, type PadState } from "./gamepad.ts";
@@ -361,6 +361,12 @@ function Play() {
           REFUELLING
         </div>
       )}
+      {s.plant?.critical !== undefined && !s.plant.blown && (s.phase === "flying" || s.phase === "between") && (
+        <div class="mth-note mth-critical" data-testid="mth-critical">
+          REACTOR CRITICAL {Math.max(0, Math.ceil((s.plant.critical - sb.world.time) / GAME_PACE))}
+          <small>Get the pod out before it blows.</small>
+        </div>
+      )}
       {s.phase === "flying" && back && (
         <div class="mth-note" data-testid="mth-back">
           BACK YOU GO
@@ -380,7 +386,7 @@ function Play() {
           </button>
         </div>
       )}
-      {won && <Won level={level} score={s.score} lives={s.lives} pod={s.bonus?.pod ?? 0} fuel={s.bonus?.fuel ?? 0} />}
+      {won && <Won level={level} score={s.score} lives={s.lives} pod={s.bonus?.pod ?? 0} fuel={s.bonus?.fuel ?? 0} plant={s.bonus?.plant} />}
       {over && <GameOver score={s.score} level={level} reason={s.reason} />}
       {!over && !won && (
         <>
@@ -401,13 +407,19 @@ function quit(): void {
 }
 
 /** The pod is out: what it scored, and on to the next level with the score and ships carried over. */
-function Won({ level, score, lives, pod, fuel }: { level: number; score: number; lives: number; pod: number; fuel: number }) {
+function Won({ level, score, lives, pod, fuel, plant }: { level: number; score: number; lives: number; pod: number; fuel: number; plant?: number }) {
   const last = level >= LEVELS;
   return (
     <div class="mas-modal" data-testid="mth-won">
       <h2>{last ? "Mission complete" : `Level ${level} complete`}</h2>
       <p>
         The pod <b>+{pod}</b> · fuel left <b>+{fuel}</b>
+        {plant ? (
+          <>
+            {" "}
+            · out before the plant blew <b>+{plant}</b>
+          </>
+        ) : null}
       </p>
       <p>
         Score <b>{score}</b>
@@ -430,11 +442,11 @@ function Won({ level, score, lives, pod, fuel }: { level: number; score: number;
   );
 }
 
-function GameOver({ score, level, reason }: { score: number; level: number; reason?: "ships" | "pod" }) {
+function GameOver({ score, level, reason }: { score: number; level: number; reason?: "ships" | "pod" | "plant" }) {
   return (
     <div class="mas-modal" data-testid="mth-over">
       <h2>Game over</h2>
-      <p>{reason === "pod" ? "The pod was destroyed." : "No ships left."}</p>
+      <p>{reason === "pod" ? "The pod was destroyed." : reason === "plant" ? "The power plant blew with the pod still down." : "No ships left."}</p>
       <p>
         Score <b>{score}</b> · level <b>{level}</b>
       </p>

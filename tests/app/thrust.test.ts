@@ -1,7 +1,7 @@
 // Mammoth Thrust's page: the HUD's readings, where the view looks, and how the level is drawn.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { insideOutline, RECOIL_TIME, recoilOf, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
+import { insideOutline, LAMP_OFF, LAMP_ON, LINE_OFF, LINE_ON, RECOIL_TIME, recoilOf, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
 import { easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
 import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
@@ -14,7 +14,7 @@ function recorder(): { ctx: Ctx; calls: string[] } {
   const calls: string[] = [];
   const state: Record<string, unknown> = {};
   const ctx = new Proxy(state, {
-    get: (t, k: string) => (k in t ? t[k] : (...args: unknown[]) => void calls.push(`${k}(${args.map((a) => (typeof a === "number" ? Math.round(a) : String(a))).join(",")})|fill=${String(t.fillStyle)}`)),
+    get: (t, k: string) => (k in t ? t[k] : (...args: unknown[]) => void calls.push(`${k}(${args.map((a) => (typeof a === "number" ? Math.round(a) : String(a))).join(",")})|stroke=${String(t.strokeStyle)}|fill=${String(t.fillStyle)}`)),
     set: (t, k: string, v) => ((t[k] = v), true),
   }) as unknown as Ctx;
   return { ctx, calls };
@@ -153,5 +153,30 @@ describe("Mammoth Thrust's page", () => {
     expect(recoilOf(w, barrel)).toBeCloseTo(0.35, 9);
     mag.timer = RECOIL_TIME * 2;
     expect(recoilOf(w, barrel)).toBe(0);
+  });
+  it("MTH-085 the power lines are white while they carry power and dark while they don't; the plant's light is green or red; the shock shows only while it carries power", () => {
+    const w = world(3);
+    const strokes = (calls: string[]) => calls.filter((c) => c.startsWith("stroke(")).map((c) => c.split("|stroke=")[1].split("|fill=")[0]);
+    const fills = (calls: string[]) => calls.filter((c) => c.startsWith("fill(")).map((c) => c.split("|fill=")[1]);
+    // Over the antennae: both lines there, and the shock between them.
+    const cam = { x: -18, y: -50, zoom: 8 };
+    let calls = draw(w, cam);
+    expect(strokes(calls).filter((c) => c === LINE_ON).length).toBe(7);
+    expect(strokes(calls)).not.toContain(LINE_OFF);
+    expect(strokes(calls)).toContain("#eaf6ff");
+    // The plant offline: every line dark, no shock, and its light red.
+    w.thrust!.state.plant!.offlineUntil = w.time + 10;
+    calls = draw(w, cam);
+    expect(strokes(calls).filter((c) => c === LINE_OFF).length).toBe(7);
+    expect(strokes(calls)).not.toContain("#eaf6ff");
+    const plant = { x: 61, y: 10, zoom: 8 };
+    expect(fills(draw(w, plant))).toContain(LAMP_OFF);
+    w.thrust!.state.plant!.offlineUntil = 0;
+    expect(fills(draw(w, plant))).toContain(LAMP_ON);
+    // The transmitter down: only the line beyond it is dark.
+    w.thrust!.state.plant!.up = { tx: false };
+    calls = draw(w, cam);
+    expect(strokes(calls).filter((c) => c === LINE_OFF).length).toBe(1);
+    expect(strokes(calls)).not.toContain("#eaf6ff");
   });
 });

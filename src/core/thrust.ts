@@ -8,6 +8,7 @@
 // Ids: the player's ships are `p{n}-…` (n counts up with every new ship).
 // Times in the spec are game seconds (the game runs at Lander's pace, one in two of the player's).
 
+import { PLANT_BONUS, runPlant, startPlant, type PlantSpec, type PlantState } from "./plant.ts";
 import { cutControl, cutShipLines } from "./arcade.ts";
 import { shipState } from "./duel.ts";
 import { assemblyOf } from "./joints.ts";
@@ -49,6 +50,8 @@ export interface ThrustSpec {
   scores?: { pod?: number; fuel?: number; turret?: number; tank?: number };
   /** The score and ships brought from the level before. */
   carry?: { score: number; lives: number };
+  /** The power plant and what it powers (plant.ts), if the level has one. */
+  plant?: PlantSpec;
   /**
    * How the page draws the level (MTH-053): the rock's colour and the height of a line and its gap, m;
    * the open sky (a closed outline: stars show inside it) and the open space underground (closed
@@ -76,10 +79,12 @@ export interface ThrustState {
   noteAt?: number;
   /** When the new ship's protection ends, s. */
   graceUntil?: number;
-  /** Why the game is over: no ships left, or the pod destroyed. */
-  reason?: "ships" | "pod";
-  /** What the level scored when it was won: the pod and the fuel left. */
-  bonus?: { pod: number; fuel: number };
+  /** Why the game is over: no ships left, the pod destroyed, or the plant blew with the pod still down. */
+  reason?: "ships" | "pod" | "plant";
+  /** What the level scored when it was won: the pod, the fuel left, and leaving while the plant was critical. */
+  bonus?: { pod: number; fuel: number; plant?: number };
+  /** The power plant (plant.ts), if the level has one. */
+  plant?: PlantState;
   /** Rings to draw where something beamed in: the step, the place and the size. */
   beams: { at: number; x: number; y: number; r: number }[];
   /** The flying ship's fuel lines that have been cut, as "tank>engine", and those of a wing lost whole, whose engines burn on from its tank (MTH-062). */
@@ -211,6 +216,7 @@ export function startThrust(world: World, spec: ThrustSpec, ops: ThrustOps): Thr
       stand: pod ? { ...pod.position } : { x: 0, y: 0 },
       beams: [],
       tanksDrawn: [],
+      ...(spec.plant ? { plant: startPlant(spec.plant) } : {}),
       tanksEmptied: [],
       tankCharge: tankCharges(world, spec),
       turretsOut: [],
@@ -239,6 +245,20 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
   if (s.phase === "won" || s.phase === "over") return false;
 
   const hullId = idOf(spec.hull, s.n);
+
+  // 0b. The power plant (plant.ts): hits, coolant, the turrets' power and the shock. When it blows
+  // with the pod still down, the game is over (MTH-034).
+  if (spec.plant && s.plant) {
+    const r = runPlant(world, spec.plant, s.plant, s.phase === "flying" ? `p${s.n}-` : null);
+    changed = r.changed || changed;
+    if (r.blew) {
+      s.phase = "over";
+      s.reason = "plant";
+      s.next = undefined;
+      world.events.push({ tick: world.tick, type: "thrust.over", data: { score: s.score, reason: "plant" } });
+      return true;
+    }
+  }
 
   // 0. The turrets watch for the ship flying, and for nothing between ships. One that can no longer
   // fire (its gun, carriage or battery gone) is out of action for the level, and scores once (MTH-031).
@@ -348,7 +368,9 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       if (pod === "tether") {
         const left = thrustFuel(world).mass;
         s.bonus = { pod: spec.scores?.pod ?? THRUST_SCORES.pod, fuel: Math.round((spec.scores?.fuel ?? THRUST_SCORES.fuel) * left) };
-        s.score += s.bonus.pod + s.bonus.fuel;
+        // Out with the pod while the plant is critical: more (spec §3, Scoring).
+        if (s.plant?.critical !== undefined && spec.plant) s.bonus.plant = spec.plant.bonus ?? PLANT_BONUS;
+        s.score += s.bonus.pod + s.bonus.fuel + (s.bonus.plant ?? 0);
         s.phase = "won";
         world.events.push({ tick: world.tick, type: "thrust.won", data: { score: s.score, pod: s.bonus.pod, fuel: s.bonus.fuel } });
         return changed;

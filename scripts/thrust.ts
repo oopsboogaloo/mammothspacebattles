@@ -8,6 +8,7 @@ import { parseScenario } from "../src/core/index.ts";
 import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
 import { narrowest, type Vec } from "./terrain.ts";
 import { electricTurret, turret, type ElectricTuning, type TurretTuning } from "./turretParts.ts";
+import { antenna, powerPlant, type PlantTuning } from "./plantParts.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;
@@ -65,6 +66,16 @@ const BOLT = { shape: { kind: "disc", radius: 0.12 }, mass: 0.3, restitution: 0,
  * with the barrel riding 50° either way along its arc. It needs no power until the power design.
  */
 const ELECTRIC_TURRET: ElectricTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", arc: 0.87, rate: 2.1, bolt: BOLT, speed: 40, reload: 1, bolts: 40 };
+/**
+ * The power plant (Chloe, 13 November 2026). Times are game seconds (half of screen seconds): a hit
+ * takes it offline 5 s on screen, and each hit while it is down 2 s more; critical, it blows 10 s
+ * later. Each hole vents 0.02 kg/s of its 1.2 kg of coolant: one hole empties it in 2 minutes on
+ * screen, two in one, and so on. A ship in the transmitter's shock has no control for 1 s.
+ */
+const PLANT: PlantTuning = { coolant: 1.2, rate: 0.02, charge: 3, radius: 14 };
+const PLANT_OFFLINE = { first: 2.5, more: 1 };
+const PLANT_COUNTDOWN = 5;
+const SHOCK = 0.5;
 const TURRET: TurretTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", arc: Math.PI / 3, rate: 2.1, bolt: BOLT, speed: 40, reload: 1, bolts: 40, shots: 5, charge: 1, burn: 0.02, fuel: 8.1 };
 
 /**
@@ -163,6 +174,12 @@ interface Level {
   turrets: { at: Vec; angle: number; electric?: boolean }[];
   /** The fuel tanks: where each stands, on flat rock. */
   tanks: Vec[];
+  /**
+   * The power plant, if the level has one (plant.ts): where it stands; its two antennae (where each
+   * stands and which way it points); its power lines, each needing the transmitter (`"tx"`) or not;
+   * and which turrets (by number) are fed through the transmitter.
+   */
+  plant?: { at: Vec; antennae: [{ at: Vec; angle: number }, { at: Vec; angle: number }]; lines: { points: Vec[]; needs?: string[] }[]; beyond: number[] };
 }
 
 function write(l: Level) {
@@ -180,6 +197,8 @@ function write(l: Level) {
   const sky = [{ x: left, y: SKY }, { x: right, y: SKY }, ...l.ground.filter((p) => !inCave(p))];
   const turrets = l.turrets.map((t, k) => (t.electric ? electricTurret : turret)(`t${k + 1}`, t.at, t.angle, (t.electric ? ELECTRIC_TURRET : TURRET) as never, 100 * l.n + k + 1));
   const tanks = l.tanks.map((at, k) => fuelTank(`fuel-${k + 1}`, at));
+  const plant = l.plant ? powerPlant(l.plant.at, PLANT) : undefined;
+  const aerials = l.plant ? l.plant.antennae.map((a, k) => antenna(`aerial-${k + 1}`, a.at, a.angle)) : [];
   const name = `thrust-${l.n}`;
   const scenario = {
     schema: 1,
@@ -193,8 +212,8 @@ function write(l: Level) {
       bounds: { min: { x: left - 20, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right + 20, y: l.top + WALL + 20 }, wrap: false, farField: 10, depth: 2 },
       // The rock is made from the outline when the world is (TER-001), and explosions and shells crater it.
       terrain: { outline: air, prefix: "rock-", craters: CRATERS },
-      bodies: [...pod(l.pod), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies)],
-      joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints)],
+      bodies: [...pod(l.pod), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies)],
+      joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints), ...(plant?.joints ?? []), ...aerials.flatMap((a) => a.joints)],
       links: turrets.flatMap((t) => t.links),
       thrust: {
         ship: ship(),
@@ -208,6 +227,22 @@ function write(l: Level) {
         turrets: turrets.map((t) => t.carriage),
         // Every tank the ship can draw from: the fuel tanks, and each turret's own.
         tanks: [...tanks.map((t) => t.tank), ...turrets.flatMap((t) => (t.tank ? [t.tank] : []))],
+        ...(plant && l.plant
+          ? {
+              plant: {
+                parts: plant.parts,
+                domes: plant.domes,
+                core: plant.core,
+                charge: plant.charge,
+                light: plant.light,
+                offline: PLANT_OFFLINE,
+                countdown: PLANT_COUNTDOWN,
+                lines: l.plant.lines,
+                transmitters: [{ id: "tx", sides: aerials.map((a) => ({ mount: a.mount, parts: a.parts, tip: a.tip })), width: 1, shock: SHOCK }],
+                turrets: turrets.map((t, k) => ({ id: t.carriage, ...(l.plant!.beyond.includes(k + 1) ? { needs: ["tx"] } : {}) })),
+              },
+            }
+          : {}),
         lives: 3,
         respawn: 1.25,
         grace: 1,
@@ -292,24 +327,24 @@ write({
 // Six electric turrets: two on a ledge under the mouth, one on the left ledge, one on the right
 // wall and one on the roof, hanging, and one on the chamber's floor.
 {
-  // Right to left: the open space is above (the cave's mouth is between P(50, 4) and P(11.6, 2.8)).
+  // Right to left: the open space is above (the cave's mouth is between P(50.2, 4) and P(11.6, 2.8)).
   const ground = [
-    P(102.4, 8.8), P(91.6, 9.6), P(91.6, 11.2), P(88, 12.4), P(79.2, 20), P(76, 15.2), P(72, 18), P(66.8, 18), P(63.6, 4), P(50, 4),
-    P(47.6, 1.2), P(44.4, -5.6), P(44, -15.6), P(40.8, -21.2), P(38.3, -21.1), P(30.5, -22.9), P(28.7, -23.5), P(20.9, -25.3), P(20.4, -26.8), P(17.2, -26.8),
-    P(16, -29.6), P(3.6, -33.6), P(-2, -41.6), P(-1.6, -53.6), P(1.6, -53.6), P(4.6, -55.9), P(11.4, -60.1), P(16.4, -70.4), P(23.2, -73.2), P(25.6, -76),
+    P(102.4, 8.8), P(91.6, 9.6), P(91.6, 11.2), P(88, 12.4), P(86, 15.2), P(80.8, 15.2), P(80, 12.4), P(72.2, 4), P(50.2, 4), P(44.4, -5.6),
+    P(44, -15.6), P(40.8, -21.2), P(38.3, -21.1), P(30.5, -22.9), P(28.7, -23.5), P(20.9, -25.3), P(20.4, -26.8), P(17.2, -26.8), P(16, -29.6), P(3.6, -33.6),
+    P(-2.8, -43.6), P(-2.1, -49), P(-1.9, -50.2), P(-1.6, -53.6), P(1.6, -53.6), P(4.6, -55.9), P(11.4, -60.1), P(16.4, -70.4), P(23.2, -73.2), P(25.6, -76),
     P(28, -76), P(28, -77.6), P(32, -78.8), P(34, -82), P(41.2, -82.7), P(49.2, -83.7), P(58.4, -84.8), P(68.8, -93.2), P(74.8, -104.4), P(74, -116.8),
     P(71.6, -124.8), P(64.4, -125.2), P(61.2, -127.6), P(50.8, -130.4), P(41.6, -130.5), P(33.6, -130.3), P(22, -131.6), P(21.2, -133.2), P(17.2, -133.2), P(6.4, -133.2),
     P(3.2, -133.2), P(-0.4, -133.2), P(-3.6, -133.2), P(-11.6, -133.2), P(-12.8, -131.6), P(-17.2, -131.2), P(-20.4, -131.2), P(-37.2, -129.2), P(-41.6, -127.6), P(-46.4, -127.6),
     P(-46.8, -120.4), P(-45.6, -118.4), P(-39.2, -117.2), P(-38.4, -115.6), P(-32.8, -114), P(-32.4, -112.4), P(-22.4, -111.2), P(-22, -109.6), P(-18.8, -109.6), P(-14.4, -106.4),
     P(-5.2, -107.2), P(1.6, -106), P(2.4, -104.4), P(7.2, -104.4), P(6.4, -98), P(-7.6, -94), P(-11.2, -88.8), P(-16.8, -88.4), P(-20.4, -85.6), P(-25.2, -77.2),
-    P(-34.4, -74.4), P(-37.2, -69.6), P(-39.6, -68.8), P(-41.2, -66.4), P(-40.8, -56.4), P(-39.6, -53.6), P(-34.8, -50.4), P(-38.1, -47.7), P(-45.9, -45.9), P(-50.8, -45.2),
-    P(-56.4, -43.6), P(-57.2, -40), P(-54.4, -36.8), P(-37.2, -30.8), P(-32, -22.8), P(-28, -21.6), P(-27.6, -20), P(-21.2, -18.8), P(-20.8, -17.2), P(-14, -16),
-    P(-14, -14.4), P(-10, -14.4), P(-3.2, -6), P(2.4, -2), P(2.4, -0.4), P(6.4, -0.4), P(8.8, 2.4), P(11.6, 2.8), P(7.2, 6.8), P(-5.2, 9.6),
-    P(-5.2, 11.2), P(-16.4, 15.2), P(-19.2, 18), P(-23.2, 16.8), P(-27.6, 12.4), P(-32, 12), P(-35.2, 12), P(-38.4, 11.6), P(-39.2, 9.6), P(-48.4, 5.2),
-    P(-52, 6.8), P(-53.6, 9.6), P(-56, 9.6), P(-57.6, 12.4), P(-65.6, 15.2), P(-67.6, 18), P(-72.8, 18), P(-78.4, 15.2), P(-84.8, 15.2), P(-94.8, 1.2),
-    P(-102.4, 0.8),
+    P(-34.4, -74.4), P(-37.2, -69.6), P(-39.6, -68.8), P(-41.2, -66.4), P(-40.8, -56.4), P(-39.6, -53.6), P(-34.8, -50.6), P(-34.8, -49.4), P(-37.6, -49.2), P(-38.1, -47.7),
+    P(-45.9, -45.9), P(-50.8, -45.2), P(-56.4, -43.6), P(-57.2, -40), P(-54.4, -36.8), P(-37.2, -30.8), P(-32, -22.8), P(-28, -21.6), P(-27.6, -20), P(-21.2, -18.8),
+    P(-20.8, -17.2), P(-14, -16), P(-14, -14.4), P(-10, -14.4), P(-3.2, -6), P(2.4, -2), P(2.4, -0.4), P(6.4, -0.4), P(8.8, 2.4), P(11.6, 2.8),
+    P(7.2, 6.8), P(-5.2, 9.6), P(-5.2, 11.2), P(-16.4, 15.2), P(-19.2, 18), P(-23.2, 16.8), P(-27.6, 12.4), P(-32, 12), P(-35.2, 12), P(-38.4, 11.6),
+    P(-39.2, 9.6), P(-48.4, 5.2), P(-52, 6.8), P(-53.6, 9.6), P(-56, 9.6), P(-57.6, 12.4), P(-65.6, 15.2), P(-67.6, 18), P(-72.8, 18), P(-78.4, 15.2),
+    P(-84.8, 15.2), P(-94.8, 1.2), P(-102.4, 0.8),
   ];
-  const mouth = [ground.findIndex((p) => p.x === 50 && p.y === 4), ground.findIndex((p) => p.x === 11.6 && p.y === 2.8)];
+  const mouth = [ground.findIndex((p) => p.x === 50.2 && p.y === 4), ground.findIndex((p) => p.x === 11.6 && p.y === 2.8)];
   write({
     n: 3,
     title: "The winding cave",
@@ -337,5 +372,25 @@ write({
       { at: P(37.6, -130.4), angle: -0.029, electric: true },
     ],
     tanks: [P(4.8, -133.2), P(-2.0, -133.2), P(-33.6, 12.0)],
+    // The power plant on the surface right of the mouth (Chloe's second drawing). Its lines run
+    // through the rock to every turret; to the one on the left ledge they cross the cave between
+    // two antennae.
+    plant: {
+      at: P(61.2, 4),
+      antennae: [
+        { at: P(-34.8, -50), angle: -1.571 },
+        { at: P(-2, -49.6), angle: 1.681 },
+      ],
+      lines: [
+        { points: [P(55.9, 4), P(55.9, -1.1), P(46.5, -23.4), P(35.4, -26.3), P(25.3, -28.9), P(9.9, -49), P(10.5, -54.1), P(45.5, -79.2), P(69.9, -79.8), P(79.4, -92.5), P(79.9, -119.5), P(68, -135.1), P(37.8, -135.1), P(37.6, -130.4)] },
+        { points: [P(35.4, -26.3), P(34.4, -22)] },
+        { points: [P(25.3, -28.9), P(24.8, -24.4)] },
+        { points: [P(9.9, -49), P(-2, -49.6)] },
+        { points: [P(10.5, -54.1), P(8, -58)] },
+        { points: [P(45.5, -79.2), P(45.2, -83.2)] },
+        { points: [P(-34.8, -50), P(-42.5, -49.9), P(-42.5, -46.6), P(-42, -46.8)], needs: ["tx"] },
+      ],
+      beyond: [3],
+    },
   });
 }

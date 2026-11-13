@@ -205,8 +205,8 @@ From Chloe's drawing (13 November 2026). A turret of a second kind, on level 3:
   circle, not a full half-disc), welded. At each end of the arc, on the base, a **power node**.
   The **barrel**, in two parts (the breech and the outer barrel), stands on the arc and rides
   along it as it aims: it turns about the arc's centre, so the arc itself stays still.
-- **Power.** Unlimited for now: it has no battery, generator or fuel tank. How the factory and
-  power work comes next (Chloe's plan).
+- **Power.** From the level's power plant, along its power lines (below). It has no battery,
+  generator or fuel tank of its own.
 - **Firing.** As the fuel turret: it waits from first sight, picks a random bearing (here within
   50° either way along the arc), turns to it and fires a bolt. The outer barrel folds back into
   the breech with the recoil and slides out again (drawn; the body itself doesn't move).
@@ -214,7 +214,32 @@ From Chloe's drawing (13 November 2026). A turret of a second kind, on level 3:
   action. The arc takes two slugs. A power node is the weak point: one slug sets it off, and its
   blast alone puts the turret out of action.
 
+### The power plant
+
+From Chloe's drawings (13 November 2026), on level 3. It takes the place of the original's
+reactor and of our factory below.
+
+- **The plant.** Three tall domes, a tower with a light, and an annex, on a base on the surface.
+  The light is green while the plant is on, red while it is off. Bullets don't wear it down.
+- **Offline.** A slug that hits any part of it takes it offline: 5 s for the first hit, and each
+  hit while it is offline adds 2 s. Offline, it powers nothing.
+- **Coolant.** The reactor holds a quantity of coolant. A slug that hits a dome makes a hole
+  there, and coolant leaks from every hole as gas (real gas: it pushes what flies through it).
+  One hole empties it in 2 minutes, two in 1, ten in 12 s: holed enough, it goes critical almost
+  at once. The amount isn't shown yet.
+- **Critical.** With no coolant left, a 10 s countdown on the page, then it explodes. Out above the
+  top with the pod before then: 2000 more. If it blows with the pod still down, the game is over.
+  Critical, it powers nothing.
+- **Power lines** run from the plant through the rock to every turret it powers: white while they
+  carry power, dark while they don't. They can't be destroyed (for now: we may come back to that).
+- **Transmitter.** Where a line has to cross the open, two antennae, one either side, carry the
+  power across as a moving electric shock. A ship that touches the shock loses all control for
+  1 s. Each antenna is destructible (one slug): with either gone there's no shock, and the turret
+  beyond it has no power.
+
 ### The factory
+
+From before Chloe's power design; level 3's plant does this. Levels 1 and 2 have none yet.
 
 - Each slug that hits the factory stops all turrets: 4 s for the first hit, 2 s longer for each
   one after (first values).
@@ -369,6 +394,20 @@ Priority: **M** must, **S** should.
   power node sets it off, and the blast alone puts the turret out of action.
 - **MTH-072** `[S]` When it fires, the outer barrel is drawn folded back into the breech, and slides
   out again.
+
+**Power plant**
+- **MTH-080** `[M]` A level's power plant powers its turrets. A slug on it takes it offline 5 s,
+  and each slug while it is offline 2 s more; offline, no turret it powers fires.
+- **MTH-081** `[M]` A slug in a dome holes it. The reactor's coolant leaks from every hole as gas
+  at a steady rate: 2 minutes for one hole, that divided by the holes for more.
+- **MTH-082** `[M]` With no coolant left the plant goes critical: the page counts down 10 s, then
+  it explodes. With the pod still down the game is over; out with it first, 2000 more.
+- **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond
+  them have no power, and the others still do.
+- **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s.
+- **MTH-085** `[M]` Power lines are drawn white while they carry power and dark while they don't;
+  the plant's light green while it is on and red while it is off; the shock, moving like
+  electricity, only while it carries power.
 
 **Shield and fuel**
 - **MTH-040** `[M]` While the shield is held, a bolt bursting at the field neither damages the

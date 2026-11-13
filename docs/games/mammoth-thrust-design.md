@@ -679,6 +679,38 @@ keeps firing; the pod's stand too.
 - **Not done:** power (Chloe's plan comes next); the factory; turret colours (drawn as any body).
   The magazine holds 40 bolts, as the fuel turret's: ammunition, not power.
 
+## 16. The power plant (13 November 2026)
+
+Chloe's design and two drawings (`IMG_0512`, `IMG_0513`): plant on, lines white, the shock
+between the antennae; plant off, lines dark, no shock. Her answers: critical counts down and then
+blows (as MTH-034); coolant lasts 2 minutes for one hole; the leak is real gas; level 3 only.
+
+- **Rules** (`src/core/plant.ts`, run by `runThrust` each step). A hit is a new contact between a
+  player's slug (`p{n}-…-shell-…`) and any plant body, each shell counted once. Offline until
+  `offlineUntil`: 2.5 game s after the first hit, +1 for each while down (5 s and 2 s on screen).
+  A hit in a dome adds a hole where it struck (the contact point, in the dome's frame, pointing
+  out from its centre). Coolant below one leak parcel (2 g): critical, 5 game s, then the charge
+  body's integrity is set to 0 and its explosive goes off (3 kg, reach 14 m); the game is over if
+  it isn't won. Won while critical: `bonus.plant`, 2000.
+- **Coolant** (DMG-009, `vents` in `world.ts`): 1.2 kg of steam in the middle dome; every dome
+  vents it from there at 0.02 kg/s a hole. Each parcel is a leak's (2 g at 10 m/s), so the push is
+  0.2 N a hole: real, and small.
+- **Power** (WPN-011): each turret is `powered` while the plant is on and its transmitters are up.
+  `enabled` is left alone, for tests and the factory to come.
+- **Transmitter**: up while every piece of both antennae (mast and dish, thin metal, one slug) is
+  whole and still on its mount. The shock is the segment between the masts' tips, 1 m wide: any
+  part of the ship flying within it switches the ship's control links off (ASM-009) for 0.5 game s
+  (1 s on screen). Integrity couldn't be used: the damage model removes links at 0. A ship still in
+  the shock when it ends is shocked again.
+- **Drawing** (`render.ts`): lines over the rock's stripes, white or near-black; the lamp body's
+  fill green or red; the shock a jagged three-stroke line that changes every step.
+- **The level**: re-traced from the second drawing, whose surface right of the mouth changed (a
+  flat for the plant, the hill moved right); the rest is the first drawing's. The plant's base is
+  21.7 m, on a pad snapped to the flat; the antennae are snapped to the walls (within 1 m). The
+  lines are Chloe's, read off the drawing to about 1 m and joined to each turret's base.
+- **Not done:** a coolant gauge (Chloe expects to need one); destructible lines; a plant on levels
+  1 and 2; what the blast does to the surface beyond the crater (it is the explosive's own).
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |

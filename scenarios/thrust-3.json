@@ -50,32 +50,24 @@
           "y": 12.4
         },
         {
-          "x": 79.2,
-          "y": 20
-        },
-        {
-          "x": 76,
+          "x": 86,
           "y": 15.2
         },
         {
-          "x": 72,
-          "y": 18
+          "x": 80.8,
+          "y": 15.2
         },
         {
-          "x": 66.8,
-          "y": 18
+          "x": 80,
+          "y": 12.4
         },
         {
-          "x": 63.6,
+          "x": 72.2,
           "y": 4
         },
         {
-          "x": 50,
+          "x": 50.2,
           "y": 4
-        },
-        {
-          "x": 47.6,
-          "y": 1.2
         },
         {
           "x": 44.4,
@@ -122,8 +114,16 @@
           "y": -33.6
         },
         {
-          "x": -2,
-          "y": -41.6
+          "x": -2.8,
+          "y": -43.6
+        },
+        {
+          "x": -2.1,
+          "y": -49
+        },
+        {
+          "x": -1.9,
+          "y": -50.2
         },
         {
           "x": -1.6,
@@ -379,7 +379,15 @@
         },
         {
           "x": -34.8,
-          "y": -50.4
+          "y": -50.6
+        },
+        {
+          "x": -34.8,
+          "y": -49.4
+        },
+        {
+          "x": -37.6,
+          "y": -49.2
         },
         {
           "x": -38.1,
@@ -2847,6 +2855,676 @@
           "radius": 4,
           "whenDestroyed": true
         }
+      },
+      {
+        "id": "plant-base",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -10.85,
+              "y": -0.490673
+            },
+            {
+              "x": 10.85,
+              "y": -0.490673
+            },
+            {
+              "x": 9.7,
+              "y": 0.509327
+            },
+            {
+              "x": -9.7,
+              "y": 0.509327
+            }
+          ]
+        },
+        "mass": 1,
+        "position": {
+          "x": 61.2,
+          "y": 4.490673
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "fixed": true,
+        "anchored": {
+          "mass": 5000
+        }
+      },
+      {
+        "id": "plant-dome-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -2.7,
+              "y": -4.2162
+            },
+            {
+              "x": 2.7,
+              "y": -4.2162
+            },
+            {
+              "x": 2.7,
+              "y": 2.0838
+            },
+            {
+              "x": 2.567853,
+              "y": 2.918146
+            },
+            {
+              "x": 2.184346,
+              "y": 3.67082
+            },
+            {
+              "x": 1.58702,
+              "y": 4.268146
+            },
+            {
+              "x": 0.834346,
+              "y": 4.651653
+            },
+            {
+              "x": 0,
+              "y": 4.7838
+            },
+            {
+              "x": -0.834346,
+              "y": 4.651653
+            },
+            {
+              "x": -1.58702,
+              "y": 4.268146
+            },
+            {
+              "x": -2.184346,
+              "y": 3.67082
+            },
+            {
+              "x": -2.567853,
+              "y": 2.918146
+            },
+            {
+              "x": -2.7,
+              "y": 2.0838
+            }
+          ]
+        },
+        "mass": 400,
+        "position": {
+          "x": 55,
+          "y": 9.2162
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "vents": {
+          "from": "plant-core",
+          "rate": 0.02,
+          "holes": []
+        }
+      },
+      {
+        "id": "plant-core",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -2.7,
+              "y": -4.2162
+            },
+            {
+              "x": 2.7,
+              "y": -4.2162
+            },
+            {
+              "x": 2.7,
+              "y": 2.0838
+            },
+            {
+              "x": 2.567853,
+              "y": 2.918146
+            },
+            {
+              "x": 2.184346,
+              "y": 3.67082
+            },
+            {
+              "x": 1.58702,
+              "y": 4.268146
+            },
+            {
+              "x": 0.834346,
+              "y": 4.651653
+            },
+            {
+              "x": 0,
+              "y": 4.7838
+            },
+            {
+              "x": -0.834346,
+              "y": 4.651653
+            },
+            {
+              "x": -1.58702,
+              "y": 4.268146
+            },
+            {
+              "x": -2.184346,
+              "y": 3.67082
+            },
+            {
+              "x": -2.567853,
+              "y": 2.918146
+            },
+            {
+              "x": -2.7,
+              "y": 2.0838
+            }
+          ]
+        },
+        "mass": 400,
+        "position": {
+          "x": 60.8,
+          "y": 9.2162
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "vents": {
+          "from": "plant-core",
+          "rate": 0.02,
+          "holes": []
+        },
+        "contents": [
+          {
+            "resource": "h2o",
+            "mass": 1.2,
+            "capacity": 1.2
+          }
+        ]
+      },
+      {
+        "id": "plant-dome-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -2.7,
+              "y": -4.2162
+            },
+            {
+              "x": 2.7,
+              "y": -4.2162
+            },
+            {
+              "x": 2.7,
+              "y": 2.0838
+            },
+            {
+              "x": 2.567853,
+              "y": 2.918146
+            },
+            {
+              "x": 2.184346,
+              "y": 3.67082
+            },
+            {
+              "x": 1.58702,
+              "y": 4.268146
+            },
+            {
+              "x": 0.834346,
+              "y": 4.651653
+            },
+            {
+              "x": 0,
+              "y": 4.7838
+            },
+            {
+              "x": -0.834346,
+              "y": 4.651653
+            },
+            {
+              "x": -1.58702,
+              "y": 4.268146
+            },
+            {
+              "x": -2.184346,
+              "y": 3.67082
+            },
+            {
+              "x": -2.567853,
+              "y": 2.918146
+            },
+            {
+              "x": -2.7,
+              "y": 2.0838
+            }
+          ]
+        },
+        "mass": 400,
+        "position": {
+          "x": 66.6,
+          "y": 9.2162
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "vents": {
+          "from": "plant-core",
+          "rate": 0.02,
+          "holes": []
+        }
+      },
+      {
+        "id": "plant-tower",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.6,
+              "y": -5.5
+            },
+            {
+              "x": 0.6,
+              "y": -5.5
+            },
+            {
+              "x": 0.6,
+              "y": 5.5
+            },
+            {
+              "x": -0.6,
+              "y": 5.5
+            }
+          ]
+        },
+        "mass": 100,
+        "position": {
+          "x": 70,
+          "y": 10.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6
+      },
+      {
+        "id": "plant-light",
+        "shape": {
+          "kind": "disc",
+          "radius": 0.45
+        },
+        "mass": 2,
+        "position": {
+          "x": 70,
+          "y": 16.45
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6
+      },
+      {
+        "id": "plant-annex",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.5,
+              "y": -2.5
+            },
+            {
+              "x": 0.5,
+              "y": -2.5
+            },
+            {
+              "x": 0.5,
+              "y": 2.5
+            },
+            {
+              "x": -0.5,
+              "y": 2.5
+            }
+          ]
+        },
+        "mass": 50,
+        "position": {
+          "x": 71.1,
+          "y": 7.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6
+      },
+      {
+        "id": "plant-charge",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.6,
+              "y": -0.6
+            },
+            {
+              "x": 0.6,
+              "y": -0.6
+            },
+            {
+              "x": 0.6,
+              "y": 0.6
+            },
+            {
+              "x": -0.6,
+              "y": 0.6
+            }
+          ]
+        },
+        "mass": 4,
+        "position": {
+          "x": 61.2,
+          "y": 7.6
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "explosive": {
+          "charge": 3,
+          "arm": 1000000,
+          "fragments": 4,
+          "radius": 14,
+          "whenDestroyed": true
+        }
+      },
+      {
+        "id": "aerial-1-mount",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.5,
+              "y": -0.25
+            },
+            {
+              "x": 0.5,
+              "y": -0.25
+            },
+            {
+              "x": 0.5,
+              "y": 0.25
+            },
+            {
+              "x": -0.5,
+              "y": 0.25
+            }
+          ]
+        },
+        "mass": 1,
+        "position": {
+          "x": -34.55,
+          "y": -50.000051
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": -1.571,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "fixed": true,
+        "anchored": {
+          "mass": 20
+        }
+      },
+      {
+        "id": "aerial-1-mast",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.1,
+              "y": -0.9
+            },
+            {
+              "x": 0.1,
+              "y": -0.9
+            },
+            {
+              "x": 0.1,
+              "y": 0.9
+            },
+            {
+              "x": -0.1,
+              "y": 0.9
+            }
+          ]
+        },
+        "mass": 1,
+        "position": {
+          "x": -33.4,
+          "y": -50.000285
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": -1.571,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "material": {
+          "name": "antenna",
+          "threshold": 30,
+          "toughness": 150
+        }
+      },
+      {
+        "id": "aerial-1-dish",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.7,
+              "y": -0.1
+            },
+            {
+              "x": 0.7,
+              "y": -0.1
+            },
+            {
+              "x": 0.7,
+              "y": 0.1
+            },
+            {
+              "x": -0.7,
+              "y": 0.1
+            }
+          ]
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -33.2,
+          "y": -50.000326
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": -1.571,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "material": {
+          "name": "antenna",
+          "threshold": 30,
+          "toughness": 150
+        }
+      },
+      {
+        "id": "aerial-2-mount",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.5,
+              "y": -0.25
+            },
+            {
+              "x": 0.5,
+              "y": -0.25
+            },
+            {
+              "x": 0.5,
+              "y": 0.25
+            },
+            {
+              "x": -0.5,
+              "y": 0.25
+            }
+          ]
+        },
+        "mass": 1,
+        "position": {
+          "x": -2.248483,
+          "y": -49.627495
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 1.681,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "fixed": true,
+        "anchored": {
+          "mass": 20
+        }
+      },
+      {
+        "id": "aerial-2-mast",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.1,
+              "y": -0.9
+            },
+            {
+              "x": 0.1,
+              "y": -0.9
+            },
+            {
+              "x": 0.1,
+              "y": 0.9
+            },
+            {
+              "x": -0.1,
+              "y": 0.9
+            }
+          ]
+        },
+        "mass": 1,
+        "position": {
+          "x": -3.391507,
+          "y": -49.753973
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 1.681,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "material": {
+          "name": "antenna",
+          "threshold": 30,
+          "toughness": 150
+        }
+      },
+      {
+        "id": "aerial-2-dish",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": -0.7,
+              "y": -0.1
+            },
+            {
+              "x": 0.7,
+              "y": -0.1
+            },
+            {
+              "x": 0.7,
+              "y": 0.1
+            },
+            {
+              "x": -0.7,
+              "y": 0.1
+            }
+          ]
+        },
+        "mass": 0.5,
+        "position": {
+          "x": -3.590294,
+          "y": -49.775969
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 1.681,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.6,
+        "material": {
+          "name": "antenna",
+          "threshold": 30,
+          "toughness": 150
+        }
       }
     ],
     "joints": [
@@ -3682,6 +4360,310 @@
           "compression": 45900,
           "shear": 16050,
           "torque": 5520
+        }
+      },
+      {
+        "id": "plant-w-dome-l-a",
+        "a": "plant-base",
+        "b": "plant-dome-l",
+        "anchorA": {
+          "x": -8.3,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": -2.1,
+          "y": -4.2162
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-dome-l-b",
+        "a": "plant-base",
+        "b": "plant-dome-l",
+        "anchorA": {
+          "x": -4.1,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": 2.1,
+          "y": -4.2162
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-core-a",
+        "a": "plant-base",
+        "b": "plant-core",
+        "anchorA": {
+          "x": -2.5,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": -2.1,
+          "y": -4.2162
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-core-b",
+        "a": "plant-base",
+        "b": "plant-core",
+        "anchorA": {
+          "x": 1.7,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": 2.1,
+          "y": -4.2162
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-dome-r-a",
+        "a": "plant-base",
+        "b": "plant-dome-r",
+        "anchorA": {
+          "x": 3.3,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": -2.1,
+          "y": -4.2162
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-dome-r-b",
+        "a": "plant-base",
+        "b": "plant-dome-r",
+        "anchorA": {
+          "x": 7.5,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": 2.1,
+          "y": -4.2162
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-tower-a",
+        "a": "plant-base",
+        "b": "plant-tower",
+        "anchorA": {
+          "x": 8.4,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": -0.4,
+          "y": -5.5
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-tower-b",
+        "a": "plant-base",
+        "b": "plant-tower",
+        "anchorA": {
+          "x": 9.2,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": 0.4,
+          "y": -5.5
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-light",
+        "a": "plant-tower",
+        "b": "plant-light",
+        "anchorA": {
+          "x": 0,
+          "y": 5.5
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.45
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-annex",
+        "a": "plant-base",
+        "b": "plant-annex",
+        "anchorA": {
+          "x": 9.9,
+          "y": 0.509327
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -2.5
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-annex-tower",
+        "a": "plant-tower",
+        "b": "plant-annex",
+        "anchorA": {
+          "x": 0.6,
+          "y": -3
+        },
+        "anchorB": {
+          "x": -0.5,
+          "y": 0
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "plant-w-charge",
+        "a": "plant-core",
+        "b": "plant-charge",
+        "anchorA": {
+          "x": 0.4,
+          "y": -1.6162
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "aerial-1-w-mast",
+        "a": "aerial-1-mount",
+        "b": "aerial-1-mast",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.9
+        },
+        "limits": {
+          "tension": 7650,
+          "compression": 15300,
+          "shear": 5350,
+          "torque": 1840
+        }
+      },
+      {
+        "id": "aerial-1-w-dish",
+        "a": "aerial-1-mast",
+        "b": "aerial-1-dish",
+        "anchorA": {
+          "x": 0,
+          "y": 0.2
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 7650,
+          "compression": 15300,
+          "shear": 5350,
+          "torque": 1840
+        }
+      },
+      {
+        "id": "aerial-2-w-mast",
+        "a": "aerial-2-mount",
+        "b": "aerial-2-mast",
+        "anchorA": {
+          "x": 0,
+          "y": 0.25
+        },
+        "anchorB": {
+          "x": 0,
+          "y": -0.9
+        },
+        "limits": {
+          "tension": 7650,
+          "compression": 15300,
+          "shear": 5350,
+          "torque": 1840
+        }
+      },
+      {
+        "id": "aerial-2-w-dish",
+        "a": "aerial-2-mast",
+        "b": "aerial-2-dish",
+        "anchorA": {
+          "x": 0,
+          "y": 0.2
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0
+        },
+        "limits": {
+          "tension": 7650,
+          "compression": 15300,
+          "shear": 5350,
+          "torque": 1840
         }
       }
     ],
@@ -5843,6 +6825,236 @@
         "fuel-2",
         "fuel-3"
       ],
+      "plant": {
+        "parts": [
+          "plant-base",
+          "plant-dome-l",
+          "plant-core",
+          "plant-dome-r",
+          "plant-tower",
+          "plant-light",
+          "plant-annex",
+          "plant-charge"
+        ],
+        "domes": [
+          "plant-dome-l",
+          "plant-core",
+          "plant-dome-r"
+        ],
+        "core": "plant-core",
+        "charge": "plant-charge",
+        "light": "plant-light",
+        "offline": {
+          "first": 2.5,
+          "more": 1
+        },
+        "countdown": 5,
+        "lines": [
+          {
+            "points": [
+              {
+                "x": 55.9,
+                "y": 4
+              },
+              {
+                "x": 55.9,
+                "y": -1.1
+              },
+              {
+                "x": 46.5,
+                "y": -23.4
+              },
+              {
+                "x": 35.4,
+                "y": -26.3
+              },
+              {
+                "x": 25.3,
+                "y": -28.9
+              },
+              {
+                "x": 9.9,
+                "y": -49
+              },
+              {
+                "x": 10.5,
+                "y": -54.1
+              },
+              {
+                "x": 45.5,
+                "y": -79.2
+              },
+              {
+                "x": 69.9,
+                "y": -79.8
+              },
+              {
+                "x": 79.4,
+                "y": -92.5
+              },
+              {
+                "x": 79.9,
+                "y": -119.5
+              },
+              {
+                "x": 68,
+                "y": -135.1
+              },
+              {
+                "x": 37.8,
+                "y": -135.1
+              },
+              {
+                "x": 37.6,
+                "y": -130.4
+              }
+            ]
+          },
+          {
+            "points": [
+              {
+                "x": 35.4,
+                "y": -26.3
+              },
+              {
+                "x": 34.4,
+                "y": -22
+              }
+            ]
+          },
+          {
+            "points": [
+              {
+                "x": 25.3,
+                "y": -28.9
+              },
+              {
+                "x": 24.8,
+                "y": -24.4
+              }
+            ]
+          },
+          {
+            "points": [
+              {
+                "x": 9.9,
+                "y": -49
+              },
+              {
+                "x": -2,
+                "y": -49.6
+              }
+            ]
+          },
+          {
+            "points": [
+              {
+                "x": 10.5,
+                "y": -54.1
+              },
+              {
+                "x": 8,
+                "y": -58
+              }
+            ]
+          },
+          {
+            "points": [
+              {
+                "x": 45.5,
+                "y": -79.2
+              },
+              {
+                "x": 45.2,
+                "y": -83.2
+              }
+            ]
+          },
+          {
+            "points": [
+              {
+                "x": -34.8,
+                "y": -50
+              },
+              {
+                "x": -42.5,
+                "y": -49.9
+              },
+              {
+                "x": -42.5,
+                "y": -46.6
+              },
+              {
+                "x": -42,
+                "y": -46.8
+              }
+            ],
+            "needs": [
+              "tx"
+            ]
+          }
+        ],
+        "transmitters": [
+          {
+            "id": "tx",
+            "sides": [
+              {
+                "mount": "aerial-1-mount",
+                "parts": [
+                  "aerial-1-mast",
+                  "aerial-1-dish"
+                ],
+                "tip": {
+                  "body": "aerial-1-mast",
+                  "at": {
+                    "x": 0,
+                    "y": 0.9
+                  }
+                }
+              },
+              {
+                "mount": "aerial-2-mount",
+                "parts": [
+                  "aerial-2-mast",
+                  "aerial-2-dish"
+                ],
+                "tip": {
+                  "body": "aerial-2-mast",
+                  "at": {
+                    "x": 0,
+                    "y": 0.9
+                  }
+                }
+              }
+            ],
+            "width": 1,
+            "shock": 0.5
+          }
+        ],
+        "turrets": [
+          {
+            "id": "t1-breech"
+          },
+          {
+            "id": "t2-breech"
+          },
+          {
+            "id": "t3-breech",
+            "needs": [
+              "tx"
+            ]
+          },
+          {
+            "id": "t4-breech"
+          },
+          {
+            "id": "t5-breech"
+          },
+          {
+            "id": "t6-breech"
+          }
+        ]
+      },
       "lives": 3,
       "respawn": 1.25,
       "grace": 1,
@@ -5876,27 +7088,23 @@
             "y": 12.4
           },
           {
-            "x": 79.2,
-            "y": 20
-          },
-          {
-            "x": 76,
+            "x": 86,
             "y": 15.2
           },
           {
-            "x": 72,
-            "y": 18
+            "x": 80.8,
+            "y": 15.2
           },
           {
-            "x": 66.8,
-            "y": 18
+            "x": 80,
+            "y": 12.4
           },
           {
-            "x": 63.6,
+            "x": 72.2,
             "y": 4
           },
           {
-            "x": 50,
+            "x": 50.2,
             "y": 4
           },
           {
@@ -5999,12 +7207,8 @@
         "caves": [
           [
             {
-              "x": 50,
+              "x": 50.2,
               "y": 4
-            },
-            {
-              "x": 47.6,
-              "y": 1.2
             },
             {
               "x": 44.4,
@@ -6051,8 +7255,16 @@
               "y": -33.6
             },
             {
-              "x": -2,
-              "y": -41.6
+              "x": -2.8,
+              "y": -43.6
+            },
+            {
+              "x": -2.1,
+              "y": -49
+            },
+            {
+              "x": -1.9,
+              "y": -50.2
             },
             {
               "x": -1.6,
@@ -6308,7 +7520,15 @@
             },
             {
               "x": -34.8,
-              "y": -50.4
+              "y": -50.6
+            },
+            {
+              "x": -34.8,
+              "y": -49.4
+            },
+            {
+              "x": -37.6,
+              "y": -49.2
             },
             {
               "x": -38.1,

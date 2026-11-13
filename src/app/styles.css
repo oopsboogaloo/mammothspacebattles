@@ -375,6 +375,7 @@ button { cursor: pointer; }
 /* Mammoth Thrust: the tractor's button, over Fire. */
 .mas-thrust.tractor { right: calc(max(18px, env(safe-area-inset-right)) + 104px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px); width: 76px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
 .mth-note { position: absolute; top: 22%; left: 0; right: 0; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 0.12em; pointer-events: none; }
+.mth-note.mth-critical { color: #ff6b6b; top: 12%; }
 .mth-note small { display: block; margin-top: 6px; font-size: 13px; font-weight: 400; letter-spacing: 0.04em; }
 .mas-title.over { background: transparent; pointer-events: none; }
 .mas-title.over h1 { text-shadow: 0 0 12px #000, 0 0 4px #000; }

@@ -1,7 +1,7 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TERRAIN_OPS, addBody, computeTotals, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -788,5 +788,144 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 120_000);
 
 
+  // ---- The power plant (level 3) ----
+  const plantState = (w: World) => st(w).plant!;
+  const poweredTurrets = (w: World) => w.bodies.filter((b) => b.turret).map((b) => `${b.id.split("-")[0]}:${b.turret!.powered ? "on" : "off"}`).join(" ");
+  /** A slug from the ship's gun at `at`, from 6 m off along (-1, 1): the plant's left and top face the open. */
+  function slugAtPoint(w: World, at: { x: number; y: number }, n: number, from = { x: -6, y: 6 }): void {
+    const shell = structuredClone(body(w, "p1-gun")!.magazine!.shell) as Record<string, unknown>;
+    const L = Math.hypot(from.x, from.y);
+    addBody(w, { ...shell, id: `p1-gun-shell-t${n}`, position: { x: at.x + from.x, y: at.y + from.y }, velocity: { x: (-144 * from.x) / L, y: (-144 * from.y) / L }, angle: 0, angularVelocity: 0 } as never);
+    settle(w);
+  }
+
+  it("MTH-080 WPN-011 the power plant powers the level's turrets; a slug takes it offline 5 s on screen, each more while it is down 2 s more, and the turrets stop meanwhile", () => {
+    const { w, step } = game(3);
+    step(0.5);
+    expect(plantState(w)).toMatchObject({ hits: 0, holes: 0, up: { tx: true } });
+    expect(poweredTurrets(w)).toBe("t1:on t2:on t3:on t4:on t5:on t6:on");
+    // The tower: a hit, but no hole.
+    const tower = body(w, "plant-tower")!;
+    slugAtPoint(w, { x: tower.position.x, y: tower.position.y + 4 }, 1, { x: 0, y: 6 });
+    step(0.2);
+    expect(plantState(w)).toMatchObject({ hits: 1, holes: 0 });
+    const first = plantState(w).offlineUntil;
+    const hitAt = w.events.find((e) => e.type === "plant.hit")!.tick / 240;
+    expect(first - hitAt).toBeCloseTo(2.5, 1); // 5 s on screen
+    expect(poweredTurrets(w)).toBe("t1:off t2:off t3:off t4:off t5:off t6:off");
+    w.bodies = w.bodies.filter((b) => b.id !== "p1-gun-shell-t1"); // out of the way of the next
+    settle(w);
+    slugAtPoint(w, { x: tower.position.x, y: tower.position.y + 4 }, 2, { x: 0, y: 6 });
+    step(0.2);
+    expect(plantState(w).offlineUntil - first).toBeCloseTo(1, 6); // 2 s more on screen
+    step(first + 1 - w.time + 0.1);
+    expect(poweredTurrets(w)).toBe("t1:on t2:on t3:on t4:on t5:on t6:on");
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("MTH-081 DMG-009 a slug in a dome holes it, and the reactor's coolant vents from every hole as gas: 2 minutes for one hole on screen, half that for two", () => {
+    const { w, step } = game(3);
+    const spec = w.thrust!.spec.plant!;
+    expect(plantCoolant(w, spec)).toBeCloseTo(1.2, 9);
+    const core = body(w, "plant-core")!;
+    slugAtPoint(w, { x: core.position.x - 2.7, y: core.position.y + 1 }, 1);
+    step(0.3);
+    expect(plantState(w).holes).toBe(1);
+    const c0 = plantCoolant(w, spec);
+    step(5);
+    // 1.2 kg at 0.02 kg/s: 60 game seconds, 2 minutes on screen.
+    expect((c0 - plantCoolant(w, spec)) / 5).toBeCloseTo(0.02, 3);
+    expect(w.events.some((e) => e.type === "vent")).toBe(true);
+    const dome = body(w, "plant-dome-l")!;
+    slugAtPoint(w, { x: dome.position.x - 2.7, y: dome.position.y + 1 }, 2);
+    step(0.3);
+    expect(plantState(w).holes).toBe(2);
+    const c1 = plantCoolant(w, spec);
+    step(5);
+    expect((c1 - plantCoolant(w, spec)) / 5).toBeCloseTo(0.04, 3);
+    // The coolant leaves as gas, every kg accounted for.
+    expect(w.gas.count + w.events.filter((e) => e.type === "vent").length).toBeGreaterThan(0);
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("MTH-082 with no coolant left the plant goes critical: 10 s on screen, then it blows; with the pod still down the game is over", () => {
+    const { w, step } = game(3);
+    step(0.2);
+    body(w, "plant-core")!.contents![0].mass = 0.001;
+    settle(w);
+    step(0.1);
+    const at = plantState(w).critical!;
+    expect(at - w.time).toBeGreaterThan(4.8);
+    expect(poweredTurrets(w)).toBe("t1:off t2:off t3:off t4:off t5:off t6:off");
+    step(at - w.time - 0.2);
+    expect(st(w).phase).toBe("flying");
+    step(0.4);
+    expect(plantState(w).blown).toBe(true);
+    expect(st(w)).toMatchObject({ phase: "over", reason: "plant" });
+    expect(w.events.some((e) => e.type === "detonation")).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("MTH-082 out with the pod while the plant is critical: 2000 more", () => {
+    const g = withPod(3, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    expect(st(g.w).pod).toBe("tether");
+    body(g.w, "plant-core")!.contents![0].mass = 0.001;
+    settle(g.w);
+    g.step(0.1);
+    expect(plantState(g.w).critical).toBeDefined();
+    // Ship and pod lifted together past the top.
+    const d = { x: 0, y: g.w.thrust!.spec.top + 5 - hull(g.w).position.y };
+    for (const b of g.w.bodies) if (b.id.startsWith("p1-") || b.id === "pod") b.position = { x: b.position.x + d.x, y: b.position.y + d.y };
+    settle(g.w);
+    g.step(0.1);
+    expect(st(g.w).phase).toBe("won");
+    expect(st(g.w).bonus!.plant).toBe(2000);
+  }, 60_000);
+
+  it("MTH-083 the antennae carry the power across the cave: one destroyed, the turret beyond them (the left ledge's) has no power, and the rest do", () => {
+    const { w, step } = game(3);
+    step(0.2);
+    expect(plantState(w).up.tx).toBe(true);
+    const mast = body(w, "aerial-1-mast")!;
+    slugAtPoint(w, { x: mast.position.x, y: mast.position.y }, 1, { x: 0, y: 5 });
+    step(0.5);
+    expect(body(w, "aerial-1-mast")?.integrity ?? 0).toBeLessThanOrEqual(0);
+    expect(plantState(w).up.tx).toBe(false);
+    expect(poweredTurrets(w)).toBe("t1:on t2:on t3:off t4:on t5:on t6:on");
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("MTH-084 ASM-009 a ship in the shock between the antennae loses all control for 1 s on screen; with the antennae down there is no shock", () => {
+    const fly = (down: boolean) => {
+      const { w, step } = game(3, (s) => (s.world.gravity = { x: 0, y: 0 }));
+      step(0.1);
+      const [a, b] = transmitterTips(w, w.thrust!.spec.plant!.transmitters[0])!;
+      if (down) {
+        body(w, "aerial-2-mast")!.integrity = 0;
+        step(0.1);
+      }
+      moveShip(w, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      step(0.02, [set("left", 1), set("right", 1)]);
+      const links = () => w.links.filter((l) => l.kind === "control" && l.to.startsWith("p1-")).map((l) => (l.off ? 0 : 1));
+      return { w, step, links };
+    };
+    const shocked = fly(false);
+    expect(shocked.w.events.filter((e) => e.type === "plant.shock")).toHaveLength(1);
+    expect(shocked.links().every((k) => k === 0)).toBe(true);
+    // Keys held, nothing fires: it doesn't move.
+    shocked.step(0.4);
+    expect(Math.hypot(hull(shocked.w).velocity.x, hull(shocked.w).velocity.y)).toBeLessThan(0.2);
+    // Out of the shock, after half a game second (1 s on screen) the controls come back and the engines fire.
+    const at = hull(shocked.w).position;
+    moveShip(shocked.w, { x: at.x, y: at.y + 10 });
+    shocked.step(0.2);
+    expect(shocked.links().every((k) => k === 1)).toBe(true);
+    shocked.step(1);
+    expect(hull(shocked.w).velocity.y).toBeGreaterThan(0.5);
+    expect(shocked.w.events.filter((e) => e.type === "plant.shock")).toHaveLength(1);
+    const free = fly(true);
+    expect(free.w.events.some((e) => e.type === "plant.shock")).toBe(false);
+    expect(free.links().every((k) => k === 1)).toBe(true);
+  }, 60_000);
 });
 

@@ -183,7 +183,7 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
     const t = b.tractor!;
     const drawing = t.siphoning;
     t.siphoning = undefined;
-    const linked = world.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === t.channel && l.integrity > 0);
+    const linked = world.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === t.channel && l.integrity > 0 && !l.off);
     const on = linked && b.integrity > 0 && (world.controls[t.channel] ?? 0) > 0 && partWorks(b, t.beamFrom, byId, roots);
     const pressed = on && !t.held;
     t.held = on;
