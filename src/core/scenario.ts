@@ -669,7 +669,10 @@ function validateArcade(v: V, g: unknown, bounds: unknown, path: string): void {
   if (g.demo !== undefined && typeof g.demo !== "boolean") err(v, `${path}.demo`, "must be true or false");
   if (g.mix !== undefined) {
     const names = (x: unknown) => Array.isArray(x) && x.every((c) => typeof c === "string" && c.length > 0);
-    if (!Array.isArray(g.mix)) err(v, `${path}.mix`, "must be a list");
+    if (isObj(g.mix)) {
+      for (const k of ["forward", "left", "right", "reverse", "main", "backLeft", "backRight", "frontLeft", "frontRight"]) str(v, g.mix[k], `${path}.mix.${k}`);
+      num(v, g.mix.frontTurn, `${path}.mix.frontTurn`, { min: 0, max: 1 });
+    } else if (!Array.isArray(g.mix)) err(v, `${path}.mix`, "must be a list, or a steering mix");
     else
       g.mix.forEach((row: unknown, i: number) => {
         const r = row as { channel?: unknown; any?: unknown };

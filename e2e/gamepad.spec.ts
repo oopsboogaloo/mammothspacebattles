@@ -141,3 +141,30 @@ test("PAD-002 Lander with a controller: A opens the missions; a trigger or bumpe
   await tap(page, START);
   await expect(page.getByText("Paused")).toHaveCount(0);
 });
+
+test("PAD-003 Mammoth Thrust with a controller: the right trigger half pulled is half thrust, and the stick a little to the side while going forward turns gently", async ({ page }) => {
+  await plugIn(page);
+  await page.goto("./thrust.html");
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-hud")).toBeVisible();
+  const engines = () => world(page, (w) => ["main", "bl", "br", "fl", "fr"].map((c) => +(w.controls[c] ?? 0).toFixed(2)).join(" "));
+  await page.evaluate(() => {
+    const b = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[] } }).__pad.buttons[7];
+    b.value = 0.5;
+  });
+  await expect.poll(engines).toBe("0.5 0.5 0.5 0 0");
+  await page.evaluate(() => {
+    const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
+    p.buttons[7].value = 1;
+    p.buttons[7].pressed = true;
+    p.axes[0] = 0.15 + 0.85 * 0.4; // 40% of the way past the dead zone, to the right
+  });
+  await expect.poll(engines).toBe("1 1 0.6 0 0.2");
+  await page.evaluate(() => {
+    const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
+    p.buttons[7].value = 0;
+    p.buttons[7].pressed = false;
+    p.axes[0] = 0;
+  });
+  await expect.poll(engines).toBe("0 0 0 0 0");
+});

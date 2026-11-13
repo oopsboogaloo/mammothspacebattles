@@ -8,7 +8,7 @@ import { scenarioFile } from "./scenarios.ts";
 import { scoreBoard, type BaseEntry } from "./scores.ts";
 import { camera, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
 import { View } from "./View.tsx";
-import { usePad, type PadGame, type PadState } from "./gamepad.ts";
+import { usePad, type PadAnalog, type PadGame, type PadState } from "./gamepad.ts";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
 import { arenaFor, shipStatus } from "./asteroidsHud.ts";
 import { DESTRUCT } from "../core/index.ts";
@@ -118,7 +118,7 @@ const KEYS: Record<string, string[]> = {
   ShiftRight: ["right"],
   ControlLeft: ["left"],
   ControlRight: ["right"],
-  ArrowUp: ["left", "right"],
+  ArrowUp: ["forward"],
   KeyS: ["reverse"],
   ArrowDown: ["reverse"],
   Space: ["fire"],
@@ -178,21 +178,29 @@ export function asteroidsKeyUp(e: KeyboardEvent): void {
 }
 
 /**
- * A game controller (gamepad.ts), by the keys it stands for: the stick or D-pad turns, A or the
- * right trigger is forward, B or the left trigger reverse, X or the right bumper fires.
+ * A game controller (gamepad.ts). The ship's movement takes values between 0 and 1: the stick turns
+ * as far as it is pushed, and forward is the stick pushed up, the right trigger as far as it is
+ * pulled, or A or D-pad up at full; reverse the stick pulled down, the left trigger, or B or D-pad
+ * down. The rest by the keys it stands for: X or the right bumper fires.
  */
 function padControls(p: PadState): string[] {
   const out: string[] = [];
-  if (p.left) out.push("ArrowLeft");
-  if (p.right) out.push("ArrowRight");
-  if (p.a || p.rt || p.up) out.push("ArrowUp");
-  if (p.b || p.lt || p.down) out.push("ArrowDown");
   if (p.x || p.rb) out.push("Space");
   return out;
+}
+function padMovement(p: PadState, a: PadAnalog): Record<string, number> {
+  const on = (b: boolean) => (b ? 1 : 0);
+  return {
+    [asteroidsSide("left")]: Math.max(a.left, on(p.left && a.left === 0)),
+    [asteroidsSide("right")]: Math.max(a.right, on(p.right && a.right === 0)),
+    forward: Math.max(a.up, a.rt, on(p.a), on(p.up && a.up === 0)),
+    reverse: Math.max(a.down, a.lt, on(p.b), on(p.down && a.down === 0)),
+  };
 }
 const PAD: PadGame = {
   flying: () => asteroidsScreen.value === "play" && !!sandbox.value && playing.value && !(sandbox.value?.world.arcade?.state.phase === "over"),
   controls: padControls,
+  analog: { values: padMovement, set: (channel, value) => sandbox.value && sendControl(channel, value, "Pad", 9_000_000) },
   set: (code, on) => {
     const pk = `Pad:${code}`;
     if (!on) return release(pk);
@@ -497,25 +505,25 @@ function HowToPlay() {
             <td>Turn left</td>
             <td>Q, ←, Left Shift or Left Ctrl</td>
             <td>hold L</td>
-            <td>stick or D-pad left</td>
+            <td>stick left (as far as pushed) or D-pad left</td>
           </tr>
           <tr>
             <td>Turn right</td>
             <td>E, →, Right Shift or Right Ctrl</td>
             <td>hold R</td>
-            <td>stick or D-pad right</td>
+            <td>stick right (as far as pushed) or D-pad right</td>
           </tr>
           <tr>
             <td>Forward</td>
             <td>both keys, or ↑</td>
             <td>both buttons</td>
-            <td>A, right trigger or D-pad up</td>
+            <td>stick up or right trigger (as far as pulled), A or D-pad up</td>
           </tr>
           <tr>
             <td>Reverse (brake)</td>
             <td>S or ↓</td>
             <td>hold REV</td>
-            <td>B, left trigger or D-pad down</td>
+            <td>stick down or left trigger, B or D-pad down</td>
           </tr>
           <tr>
             <td>Fire</td>

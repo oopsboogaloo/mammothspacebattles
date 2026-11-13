@@ -8,6 +8,7 @@
 // Ids: the player's ships are `p{n}-…` (n counts up with every new ship).
 // Times in the spec are game seconds (the game runs at Lander's pace, one in two of the player's).
 
+import type { MixRow, SteerMix } from "./arcade.ts";
 import { PLANT_BONUS, runPlant, startPlant, type PlantSpec, type PlantState } from "./plant.ts";
 import { cutControl, cutShipLines } from "./arcade.ts";
 import { shipState } from "./duel.ts";
@@ -25,7 +26,7 @@ export interface ThrustSpec {
   /** The ship's railgun, with `{n}`: knocked off the ship, it no longer fires (MTH-062). */
   gun?: string;
   /** How the player's controls drive the ship's engines, as Mammoth Asteroids' (MAS-035). */
-  mix?: { channel: string; any: { on: string[]; off?: string[] }[] }[];
+  mix?: MixRow[] | SteerMix;
   /** Where each ship beams in, pointing up and at rest. */
   start: Vec2;
   /** The height that ends the level (MTH-024, MTH-026). */

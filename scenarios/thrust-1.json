@@ -3009,75 +3009,18 @@
           }
         ]
       },
-      "mix": [
-        {
-          "channel": "bl",
-          "any": [
-            {
-              "on": [
-                "right"
-              ]
-            }
-          ]
-        },
-        {
-          "channel": "br",
-          "any": [
-            {
-              "on": [
-                "left"
-              ]
-            }
-          ]
-        },
-        {
-          "channel": "fr",
-          "any": [
-            {
-              "on": [
-                "right"
-              ],
-              "off": [
-                "left"
-              ]
-            },
-            {
-              "on": [
-                "reverse"
-              ]
-            }
-          ]
-        },
-        {
-          "channel": "fl",
-          "any": [
-            {
-              "on": [
-                "left"
-              ],
-              "off": [
-                "right"
-              ]
-            },
-            {
-              "on": [
-                "reverse"
-              ]
-            }
-          ]
-        },
-        {
-          "channel": "main",
-          "any": [
-            {
-              "on": [
-                "left",
-                "right"
-              ]
-            }
-          ]
-        }
-      ],
+      "mix": {
+        "forward": "forward",
+        "left": "left",
+        "right": "right",
+        "reverse": "reverse",
+        "main": "main",
+        "backLeft": "bl",
+        "backRight": "br",
+        "frontLeft": "fl",
+        "frontRight": "fr",
+        "frontTurn": 0.5
+      },
       "hull": "p{n}-hull",
       "tractor": "p{n}-hull",
       "gun": "p{n}-gun",

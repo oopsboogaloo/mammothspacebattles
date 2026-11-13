@@ -84,7 +84,7 @@ export interface ArcadeSpec {
    * any of its `any` holds, that is, every channel in its `on` is held and none in its `off`. The
    * demo's pilot sets the engines' channels itself, so the demo has no mixing.
    */
-  mix?: { channel: string; any: { on: string[]; off?: string[] }[] }[];
+  mix?: MixRow[] | SteerMix;
   /** Game seconds between losing a ship and the next (default 1.25). */
   respawn?: number;
   /** Game seconds a new ship takes no damage after a loss (default 1). */
@@ -111,10 +111,68 @@ export function arcadeMix(world: World): void {
   mixControls(world, spec.mix);
 }
 
-/** Sets each row's channel from the controls held: a mix as Mammoth Asteroids' and Mammoth Thrust's ships use. */
+/** A row of an on/off mix: the channel is on while any of its combinations is held. */
+export interface MixRow {
+  channel: string;
+  any: { on: string[]; off?: string[] }[];
+}
+
+/**
+ * A ship's steering mix (MAS-054; Chloe, 13 November 2026), from the player's controls, each 0 to 1
+ * (a game controller's stick and triggers give values between): forward, left, right and reverse,
+ * to its five engines. Left and right held together are forward, as before.
+ *   main        = forward
+ *   back left   = most of right, and forward less left      (it turns the ship right)
+ *   back right  = most of left, and forward less right
+ *   front right = most of reverse, and right less `frontTurn` of forward
+ *   front left  = most of reverse, and left less `frontTurn` of forward
+ * So forward and right together keep the main engine and the back-left at full, cut the back-right,
+ * and fire the front-right at (1 − frontTurn): it turns as it goes on accelerating.
+ */
+export interface SteerMix {
+  forward: string;
+  left: string;
+  right: string;
+  reverse: string;
+  main: string;
+  backLeft: string;
+  backRight: string;
+  frontLeft: string;
+  frontRight: string;
+  frontTurn: number;
+}
+
+/** The engines' values from a steering mix and the controls held. */
+export function steerValues(m: SteerMix, c: Record<string, number>): Record<string, number> {
+  const v = (k: string) => Math.max(0, Math.min(1, c[k] ?? 0));
+  const left = v(m.left);
+  const right = v(m.right);
+  const forward = Math.max(v(m.forward), Math.min(left, right));
+  const turn = right - left;
+  const r = Math.max(turn, 0);
+  const l = Math.max(-turn, 0);
+  const reverse = v(m.reverse);
+  const front = 1 - m.frontTurn * forward;
+  return {
+    [m.main]: forward,
+    [m.backLeft]: Math.max(r, forward * (1 - l)),
+    [m.backRight]: Math.max(l, forward * (1 - r)),
+    [m.frontRight]: Math.max(reverse, r * front),
+    [m.frontLeft]: Math.max(reverse, l * front),
+  };
+}
+
+/** Sets each engine's channel from the controls held: a mix as Mammoth Asteroids' and Mammoth Thrust's ships use. */
 export function mixControls(world: World, mix: NonNullable<ArcadeSpec["mix"]>): void {
-  const held = (c: string) => (world.controls[c] ?? 0) > 0;
   let next: Record<string, number> | null = null;
+  if (!Array.isArray(mix)) {
+    for (const [channel, value] of Object.entries(steerValues(mix, world.controls))) {
+      if (Math.abs((world.controls[channel] ?? 0) - value) > 1e-12) (next ??= { ...world.controls })[channel] = value;
+    }
+    if (next) world.controls = next;
+    return;
+  }
+  const held = (c: string) => (world.controls[c] ?? 0) > 0;
   for (const row of mix) {
     const value = row.any.some((r) => r.on.every(held) && !(r.off ?? []).some(held)) ? 1 : 0;
     if ((world.controls[row.channel] ?? 0) !== value) (next ??= { ...world.controls })[row.channel] = value;

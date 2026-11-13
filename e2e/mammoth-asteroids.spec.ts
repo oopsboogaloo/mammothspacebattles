@@ -67,30 +67,30 @@ test("MAS-052 the keys: Space fires shells, ↑ is forward (the main thruster), 
   await expect(page.getByTestId("mas-slugs")).not.toHaveText("SHELLS 120");
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.fire ?? 0)).toBe(0);
   await page.keyboard.down("ArrowUp");
-  await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.left ?? 0, m.sandbox().world.controls.right ?? 0].join())).toBe("1,1");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.forward ?? 0)).toBe(1);
   // Forward is the main thruster and both back ones, and no front one (MAS-035).
-  const engines = () => hook(page, (m) => ["main", "bl", "br", "fl", "fr"].map((c) => m.sandbox().world.controls[c] ?? 0).join(""));
-  await expect.poll(engines).toBe("11100");
-  // Q with ↑ still down, then Q up: left stays on for ↑.
+  const engines = () => hook(page, (m) => ["main", "bl", "br", "fl", "fr"].map((c) => m.sandbox().world.controls[c] ?? 0).join(" "));
+  await expect.poll(engines).toBe("1 1 1 0 0");
+  // Q with ↑ down: forward and left (MAS-054): the main and back-right on, back-left off, front-left at half. Q up: forward again.
   await page.keyboard.down("q");
+  await expect.poll(engines).toBe("1 0 1 0.5 0");
   await page.keyboard.up("q");
-  await page.waitForTimeout(300);
-  expect(await hook(page, (m) => m.sandbox().world.controls.left)).toBe(1);
+  await expect.poll(engines).toBe("1 1 1 0 0");
   await page.keyboard.up("ArrowUp");
-  await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.left ?? 0, m.sandbox().world.controls.right ?? 0].join())).toBe("0,0");
-  await expect.poll(engines).toBe("00000");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.forward ?? 0)).toBe(0);
+  await expect.poll(engines).toBe("0 0 0 0 0");
   // E turns right: the back left thruster and the front right one.
   await page.keyboard.down("e");
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.right ?? 0)).toBe(1);
-  await expect.poll(engines).toBe("01001");
+  await expect.poll(engines).toBe("0 1 0 0 1");
   await page.keyboard.up("e");
   await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.right ?? 0)).toBe(0);
   // S and ↓ are reverse: both front thrusters.
   for (const key of ["s", "ArrowDown"]) {
     await page.keyboard.down(key);
-    await expect.poll(engines).toBe("00011");
+    await expect.poll(engines).toBe("0 0 0 1 1");
     await page.keyboard.up(key);
-    await expect.poll(engines).toBe("00000");
+    await expect.poll(engines).toBe("0 0 0 0 0");
   }
 });
 
