@@ -420,3 +420,15 @@ test("MTH-082 level 3's power plant: with its coolant gone it goes critical, the
   await expect(page.getByTestId("mth-coolant")).toHaveAttribute("title", "Coolant: 0%, 0 holes");
   await expect(page.getByTestId("mth-over")).toContainText("The power plant blew with the pod still down.", { timeout: 90_000 });
 });
+
+test("MTH-087 for testing, the title has a button for each level that starts the game there", async ({ page }) => {
+  await page.goto("./thrust.html");
+  for (const n of [3, 2, 1]) {
+    await page.getByTestId(`mth-level-${n}`).click();
+    await expect(page.getByTestId("mth-level")).toHaveText(`LEVEL ${n}`);
+    expect(await hook(page, (m) => m.level())).toBe(n);
+    await page.keyboard.press("p");
+    await page.getByTestId("mth-quit").click();
+    await expect(page.getByTestId("mth-start")).toBeVisible();
+  }
+});

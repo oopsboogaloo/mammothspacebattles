@@ -405,6 +405,8 @@ Priority: **M** must, **S** should.
 - **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond
   them have no power, and the others still do.
 - **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s.
+- **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to
+  start at any level. Not meant for players: to go before release.
 - **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the
   reactor's coolant left, red under a quarter.
 - **MTH-085** `[M]` Power lines are drawn white while they carry power and dark while they don't;

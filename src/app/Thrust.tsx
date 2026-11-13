@@ -276,6 +276,15 @@ function Title() {
             Play
           </button>
         </div>
+        {/* For testing (Chloe, 13 November 2026): start at any level. Not for players; to go before release. */}
+        <div class="mas-row mth-levels" data-testid="mth-levels">
+          <span>Test: start at</span>
+          {Array.from({ length: LEVELS }, (_, k) => (
+            <button key={k} class="mas-btn small" onClick={() => startThrust(k + 1)} data-testid={`mth-level-${k + 1}`}>
+              Level {k + 1}
+            </button>
+          ))}
+        </div>
         <p class="mas-credit">by Chloe Bolland © 2026</p>
       </div>
     </div>
