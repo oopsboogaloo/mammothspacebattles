@@ -1,7 +1,7 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -994,12 +994,18 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
 
   it("MTH-089 below half its coolant the plant's power fails now and then for 2 to 3 s on screen, more often the less is left", () => {
+    // The plant's own rules (plant.ts), run step by step for 40 game seconds with the world held still:
+    // a whole level for that long is more than a slow machine's test time allows.
     const outages = (share: number) => {
-      const { w, step } = game(3);
+      const { w } = game(3);
       const core = body(w, "plant-core")!;
       core.contents![0].mass = core.contents![0].capacity * share;
-      settle(w);
-      step(40);
+      const dt = 1 / 240;
+      for (let k = 0; k < 40 * 240; k++) {
+        w.tick += 1;
+        w.time += dt;
+        runPlant(w, w.thrust!.spec.plant!, st(w).plant!, null, dt);
+      }
       const list = w.events.filter((e) => e.type === "plant.outage");
       for (const e of list) {
         const last = Number(e.data.until) - e.tick / 240;
