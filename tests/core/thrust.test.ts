@@ -960,5 +960,52 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(free.w.events.some((e) => e.type === "plant.shock")).toBe(false);
     expect(free.links().every((k) => k === 1)).toBe(true);
   }, 60_000);
+  it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
+    const blast = (gap: number) => {
+      const { w, step } = game(3);
+      step(0.2);
+      const dome = body(w, "plant-dome-l")!;
+      // A charge as a fuel tank's (0.3 kg, reach 4 m), `gap` m off the dome's left side, set off.
+      addBody(w, { id: "bomb", shape: { kind: "box", width: 0.4, height: 0.4 }, mass: 1, position: { x: dome.position.x - 2.7 - gap - 0.2, y: dome.position.y }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.5, explosive: { charge: 0.3, arm: 1e6, fragments: 0, radius: 4, trigger: true } } as never);
+      settle(w);
+      step(0.1);
+      expect(w.events.some((e) => e.type === "detonation" && e.data.id === "bomb")).toBe(true);
+      return { w, leaks: dome.vents!.holes.length, off: plantState(w).offlineUntil > w.time };
+    };
+    const close = blast(0.3);
+    expect(close.leaks).toBe(3);
+    expect(close.off).toBe(true);
+    expect(close.w.events.filter((e) => e.type === "plant.blast")).toHaveLength(1);
+    const further = blast(2.5);
+    expect(further.leaks).toBeGreaterThanOrEqual(1);
+    expect(further.leaks).toBeLessThan(3);
+    // Out of its reach: nothing.
+    const far = blast(6);
+    expect(far.leaks).toBe(0);
+    expect(far.off).toBe(false);
+    for (const r of [close, further, far]) expect(r.w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("MTH-089 below half its coolant the plant's power fails now and then for 2 to 3 s on screen, more often the less is left", () => {
+    const outages = (share: number) => {
+      const { w, step } = game(3);
+      const core = body(w, "plant-core")!;
+      core.contents![0].mass = core.contents![0].capacity * share;
+      settle(w);
+      step(40);
+      const list = w.events.filter((e) => e.type === "plant.outage");
+      for (const e of list) {
+        const last = Number(e.data.until) - e.tick / 240;
+        expect(last).toBeGreaterThanOrEqual(1 - 1e-6);
+        expect(last).toBeLessThanOrEqual(1.5 + 1e-6);
+      }
+      return list.length;
+    };
+    expect(outages(0.6)).toBe(0);
+    const quarter = outages(0.25);
+    const little = outages(0.05);
+    expect(quarter).toBeGreaterThan(0);
+    expect(little).toBeGreaterThan(quarter);
+  }, 120_000);
 });
 

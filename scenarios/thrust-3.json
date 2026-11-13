@@ -6857,6 +6857,16 @@
         "countdown": 5,
         "perLeak": 3,
         "leakSpeed": 20,
+        "blastLeaks": 3,
+        "outages": {
+          "below": 0.5,
+          "rate": 0.5,
+          "last": [
+            1,
+            1.5
+          ]
+        },
+        "seed": 31,
         "lines": [
           {
             "points": [

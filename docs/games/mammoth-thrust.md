@@ -230,6 +230,11 @@ reactor and of our factory below.
   4 minutes, two in 2, eight in 30 s. The gas is real and pushes what flies through it, about 2 N
   for each slug's share. It is drawn as pale vapour. A COOLANT gauge on the HUD shows what is left
   (red under a quarter).
+- **Explosions** (Chloe, 13 November 2026). An explosion that reaches a dome (a ship
+  self-destructing, a turret's power node, a fuel tank) punches leaks in it: up to 3 at point-blank
+  range, fewer further off, none beyond its reach. It also knocks the plant offline, as a hit does.
+- **Outages** (Chloe). Below half its coolant the power fails now and then, for 2 to 3 s, more
+  often the less is left: on average every 8 s at a quarter, every 4 s near empty.
 - **Critical.** With no coolant left, a 10 s countdown on the page, then it explodes. Out above the
   top with the pod before then: 2000 more. If it blows with the pod still down, the game is over.
   Critical, it powers nothing.
@@ -409,6 +414,10 @@ Priority: **M** must, **S** should.
 - **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond
   them have no power, and the others still do.
 - **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s.
+- **MTH-088** `[M]` An explosion that reaches a dome punches leaks in it, more the nearer it went
+  off (up to 3), and knocks the plant offline.
+- **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
+  often the less coolant is left.
 - **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to
   start at any level. Not meant for players: to go before release.
 - **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the
