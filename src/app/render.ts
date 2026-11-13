@@ -422,7 +422,7 @@ export interface RenderOptions {
    * caves) as horizontal lines of one colour, fixed to the world, with no outline; stars in the sky
    * only; the caves plain black. The ship, the pod and everything else as Mammoth Asteroids draws them.
    */
-  thrust?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][]; craters?: readonly { x: number; y: number; r: number }[] };
+  thrust?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][]; islands?: Vec2[][]; craters?: readonly { x: number; y: number; r: number }[] };
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -803,14 +803,22 @@ function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>,
     }
   }
   ctx.fillStyle = "#000";
-  for (const outline of [view.sky, ...view.caves]) {
-    ctx.beginPath();
+  const trace = (outline: Vec2[]) => {
     outline.forEach((p, i) => {
       const q = toScreen(c, vp, p);
       if (i === 0) ctx.moveTo(q.x, q.y);
       else ctx.lineTo(q.x, q.y);
     });
     ctx.closePath();
+  };
+  // The sky, with any island of rock in it (an asteroid, TER-007) left as rock: filled even-odd.
+  ctx.beginPath();
+  trace(view.sky);
+  for (const island of view.islands ?? []) trace(island);
+  ctx.fill("evenodd");
+  for (const outline of view.caves) {
+    ctx.beginPath();
+    trace(outline);
     ctx.fill();
   }
   // Craters (TER-004): open space cut into the rock, plain black like the caves.
@@ -822,7 +830,10 @@ function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>,
     ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
     ctx.fill();
   }
-  drawStars(ctx, c, vp, (x, y) => insideOutline(view.sky, toWorld(c, vp, { x, y })));
+  drawStars(ctx, c, vp, (x, y) => {
+    const p = toWorld(c, vp, { x, y });
+    return insideOutline(view.sky, p) && !(view.islands ?? []).some((o) => insideOutline(o, p)) && !view.caves.some((o) => insideOutline(o, p));
+  });
 }
 
 /** Ground in the game: fixed terrain, and the pieces of an asteroid (they carry its gravity field, LND-011). */

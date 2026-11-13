@@ -2629,6 +2629,7 @@
               "only": [
                 "pod"
               ],
+              "pullAny": true,
               "siphon": {
                 "rate": 2,
                 "into": [

@@ -30,6 +30,8 @@ export interface ThrustSpec {
   start: Vec2;
   /** The height that ends the level (MTH-024, MTH-026). */
   top: number;
+  /** On an asteroid level: the level ends this far from the asteroid's centre instead (MTH-091). */
+  escape?: { centre: Vec2; radius: number };
   /** The pod: a body of the scenario. */
   pod: string;
   /** Ships a game (default 3). */
@@ -57,7 +59,7 @@ export interface ThrustSpec {
    * the open sky (a closed outline: stars show inside it) and the open space underground (closed
    * outlines, plain black). Everything else is rock.
    */
-  view?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][] };
+  view?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][]; islands?: Vec2[][] };
 }
 
 export type ThrustPhase = "flying" | "between" | "won" | "over";
@@ -364,7 +366,8 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
     if (due(s.graceUntil)) endGrace(world, game);
 
     // 6. The level's top (MTH-024, MTH-026).
-    if (hull && hull.position.y > spec.top) {
+    const out = spec.escape ? !!hull && length(sub(hull.position, spec.escape.centre)) > spec.escape.radius : !!hull && hull.position.y > spec.top;
+    if (hull && out) {
       if (pod === "tether") {
         const left = thrustFuel(world).mass;
         s.bonus = { pod: spec.scores?.pod ?? THRUST_SCORES.pod, fuel: Math.round((spec.scores?.fuel ?? THRUST_SCORES.fuel) * left) };

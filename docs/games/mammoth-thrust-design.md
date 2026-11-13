@@ -723,6 +723,26 @@ blows (as MTH-034); coolant lasts 2 minutes for one hole; the leak is real gas; 
 - **Not done:** destructible lines; a plant on levels
   1 and 2; what the blast does to the surface beyond the crater (it is the explosive's own).
 
+## 17. Level 4, the asteroid; the beam on everything (13 November 2026)
+
+- **The beam** pulls whatever is free in its wedge again (TRC-013, `pullAny`), and the tether still
+  takes only the pod. What the siphon draws from (a fuel tank) isn't pulled, so refuelling still
+  holds the ship where it is. Over a turret, though, the beam pulls on its welded pieces and drags
+  the ship toward it: physics, and part of the test.
+- **Islands** (TER-007): the terrain takes extra loops of rock, counter-clockwise. The crust and
+  craters walk every loop's stretches; "inside the open space" is even-odd over all the loops. The
+  page draws the sky even-odd with the islands, so an island is rock, and keeps stars out of caves.
+- **Gravity** (FLT-015): a gravity source with `radius` pulls mu/max(r, R)³ × r. The asteroid's is a
+  hidden fixed body at its centre (`rock-core`, mu = 4 × 90²); the world's uniform gravity is 0.
+- **The level** is built from shapes, not drawn: a disc of radius 90, a chamber (radius 26, centred
+  32 m up, floor flat at 12 m) and a tunnel 24 m wide along five points from the chamber out past
+  the surface on the upper left; traced at 0.25 m and simplified to 0.3 m, with pads for every
+  turret, tank and the pod as on level 3. Escape (MTH-091) replaces the level's top: 150 m from the
+  centre, in a square 170 m each way.
+- **Measured:** 2.3 ms a step on this machine (budget 8.3 ms); a 13 cm sag of the electric turret's
+  barrel on the tunnel's outer wall, where the pull is across it.
+- **Not done:** Chloe's own drawing of it; a power plant; the view doesn't turn with "down".
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |

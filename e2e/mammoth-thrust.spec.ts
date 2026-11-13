@@ -432,3 +432,15 @@ test("MTH-087 for testing, the title has a button for each level that starts the
     await expect(page.getByTestId("mth-start")).toBeVisible();
   }
 });
+
+test("MTH-090 for testing, the page shows the simulation's step time against its budget, with the gas and bodies", async ({ page }) => {
+  await start(page);
+  await expect(page.getByTestId("mth-step")).toContainText(/step \d+\.\d \/ 8\.3 ms · worst \d+ ms · gas \d+ · bodies \d+/, { timeout: 15_000 });
+});
+
+test("MTH-091 level 4, the asteroid, opens from the title's test row", async ({ page }) => {
+  await page.goto("./thrust.html");
+  await page.getByTestId("mth-level-4").click();
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 4");
+  expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(13);
+});

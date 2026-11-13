@@ -268,6 +268,19 @@ describe("tractor beam", () => {
     expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ only: "prize" })] } })).toThrow(ScenarioError);
   });
 
+  it("TRC-013 with pullAny the beam pulls everything free in its wedge, and the tether still takes only what is named", () => {
+    const w = world([ball("junk", 0.5, 5, 0, -6), ball("prize", 0.5, 5, 0.5, -30)], { only: ["prize"], pullAny: true, tether: { length: 12, reach: 12 } });
+    run(w, 24, () => set(1));
+    // The junk, nearer, is pulled, but never taken; the prize, beyond the tether's reach, is pulled too.
+    expect(at(w, "junk").velocity.y).toBeGreaterThan(0);
+    expect(at(w, "prize").velocity.y).toBeGreaterThan(0);
+    expect(at(w, "ship").tractor!.mode).toBe("beam");
+    // Pulled within reach, the prize is taken.
+    run(w, 2400, () => set(1));
+    expect(at(w, "ship").tractor).toMatchObject({ mode: "tether", cargo: "prize" });
+    expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ pullAny: "yes" })] } })).toThrow(ScenarioError);
+  });
+
   it("TRC-012 a tractor that names its beam's generator has no beam, and holds nothing, once that part is off the ship", () => {
     const gen = { ...box("gen", 1, 1, { mass: 2, position: { x: 0, y: 2.5 } }) } as BodyInput;
     const make = () =>

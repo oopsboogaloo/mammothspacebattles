@@ -77,6 +77,11 @@ export interface Tractor {
    */
   only?: string[];
   /**
+   * With `only`, the beam still pulls whatever is free in its wedge; only the tether is limited to
+   * the bodies named (TRC-013).
+   */
+  pullAny?: boolean;
+  /**
    * It can draw propellant through its beam (TRC-008): while the beam is on and a body marked
    * `siphon` is in its wedge, that body's propellant moves to the bodies named in `into` (the
    * ship's tanks), `rate` kg/s in all. The source is not pulled, whatever `only` says.
@@ -287,7 +292,9 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
   const inBeam = new Map<string, RB[]>();
   for (const r of rbs) {
     if (r.invMass === 0 || roots.get(r.body.id) === own) continue;
-    if (t.only && !t.only.includes(r.body.id)) continue;
+    if (t.only && !t.pullAny && !t.only.includes(r.body.id)) continue;
+    // What its siphon draws from isn't pulled (TRC-008): a fuel tank stays where it stands.
+    if (t.siphon && r.body.siphon) continue;
     const d = sub(r.body.position, origin);
     const dist = length(d);
     if (dist > t.range || dist < 1e-6 || dot(d, axis) < dist * half) continue;
@@ -303,11 +310,14 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
   let best: { r: RB; dist: number } | null = null;
   for (const [root, pieces] of inBeam) {
     if (!canTether) break;
+    // The tether takes only what the tractor names, if it names anything (TRC-011, TRC-013).
+    const named = t.only ? pieces.filter((r) => t.only!.includes(r.body.id)) : pieces;
+    if (!named.length) continue;
     const g = groupOf(rbs, roots, root);
     if (g.mass > shipGroup.mass * t.capture || g.extent > shipGroup.extent * (1 + 1e-9)) continue;
     const dist = length(sub(g.com, shipGroup.com));
     if (dist > (t.tether.reach ?? t.tether.length) || (best && dist >= best.dist)) continue;
-    const near = pieces.reduce((m, r) => (length(sub(r.body.position, origin)) < length(sub(m.body.position, origin)) ? r : m));
+    const near = named.reduce((m, r) => (length(sub(r.body.position, origin)) < length(sub(m.body.position, origin)) ? r : m));
     best = { r: near, dist };
   }
   if (best) {

@@ -291,6 +291,24 @@ function Title() {
   );
 }
 
+/**
+ * For testing (Chloe, 13 November 2026): how long a simulation step takes, the mean over the last
+ * couple of seconds and the slowest, against what it may take to keep up (8.3 ms at the game's
+ * pace); and the gas parcels and bodies in the world. Not for players: to go before release.
+ */
+function StepReadout() {
+  void version.value;
+  const sb = sandbox.value;
+  if (!sb) return null;
+  const p = sb.perf();
+  const budget = (1000 * sb.profile.timestep) / (timeScale.value * GAME_PACE);
+  return (
+    <div class={`mth-step${p && p.msPerStep > budget ? " behind" : ""}`} data-testid="mth-step" title="Simulation step time: mean over the last couple of seconds, the slowest step, and the budget to keep up.">
+      step {p ? p.msPerStep.toFixed(1) : "–"} / {budget.toFixed(1)} ms · worst {p ? p.worstMs.toFixed(0) : "–"} ms · gas {sb.world.gas.count} · bodies {sb.world.bodies.length}
+    </div>
+  );
+}
+
 /** How long the note stays up after a ship is beamed back from the top, game s. */
 const BACK_NOTE = 1.5;
 
@@ -377,6 +395,7 @@ function Play() {
           REFUELLING
         </div>
       )}
+      <StepReadout />
       {s.plant?.critical !== undefined && !s.plant.blown && (s.phase === "flying" || s.phase === "between") && (
         <div class="mth-note mth-critical" data-testid="mth-critical">
           REACTOR CRITICAL {Math.max(0, Math.ceil((s.plant.critical - sb.world.time) / GAME_PACE))}

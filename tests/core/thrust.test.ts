@@ -174,18 +174,22 @@ describe("Mammoth Thrust", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("MTH-027 the beam and the tether work on the pod alone: wreckage in the beam, nearer than the pod, is left where it is", () => {
+  it("MTH-027 the beam pulls anything free in its wedge (wreckage too), but the tether takes the pod alone", () => {
     const { w, step } = game(1, (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];
       // A loose piece of an earlier ship, 6 m under where the ship will be.
-      s.world.bodies.push({ id: "p0-wreck", shape: { kind: "box", width: 0.6, height: 0.6 }, mass: 2, position: { x: 12, y: 7 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
+      s.world.bodies.push({ id: "p0-wreck", shape: { kind: "box", width: 0.6, height: 0.6 }, mass: 2, position: { x: 12, y: 27 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
     });
-    moveShip(w, { x: 12, y: 13 });
-    step(0.3, [set("tractor", 1)]);
-    expect(body(w, "p0-wreck")!.velocity).toEqual({ x: 0, y: 0 });
-    expect(hull(w).tractor!.targets).not.toContain("p0-wreck");
-    expect(hull(w).tractor).toMatchObject({ mode: "tether", cargo: "pod" }); // the pod, 20 m off, past the wreck
+    // 39 m over the pod: beyond the tether's reach (22 m), within the beam's (40 m).
+    moveShip(w, { x: 12, y: 33 });
+    step(0.03, [set("tractor", 1)]);
+    expect(hull(w).tractor!.mode).toBe("beam");
+    expect(hull(w).tractor!.targets).toContain("p0-wreck");
+    expect(body(w, "p0-wreck")!.velocity.y).toBeGreaterThan(0);
+    // The wreck comes within the tether's length, and isn't taken.
+    step(2);
+    expect(hull(w).tractor!.cargo).not.toBe("p0-wreck");
   });
 
   it("MTH-022 with the tractor unit lost there is no beam at all", () => {
@@ -653,6 +657,9 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
 
   it("MTH-038 a turret's fuel tank gives up its fuel to the beam too, and the turret then has only its battery", () => {
     const { w, step } = over("t1-tank", 0.25);
+    // The beam pulls the turret's other pieces too (TRC-013), and they drag the ship down onto it:
+    // here only the siphon is under test, so the beam pulls the pod alone.
+    hull(w).tractor!.pullAny = false;
     const held = holds(w, "t1-tank");
     expect(held).toBeGreaterThan(1);
     step(6, [set("tractor", 1)]);
@@ -1007,5 +1014,61 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(quarter).toBeGreaterThan(0);
     expect(little).toBeGreaterThan(quarter);
   }, 120_000);
+  it("MTH-091 FLT-015 TER-007 level 4 is an asteroid: rock as an island in open space, pulling toward its centre as a uniform ball, left by getting 150 m from its centre", () => {
+    const s = raw(4);
+    expect(s.world.gravity).toEqual({ x: 0, y: 0 });
+    expect(s.world.terrain.islands).toHaveLength(1);
+    const { w, step } = game(4);
+    expect(w.thrust!.spec.escape).toEqual({ centre: { x: 0, y: 0 }, radius: 150 });
+    // Rock all round the asteroid's surface, none in the open beside it.
+    const rock = w.bodies.filter((b) => b.id.startsWith("rock-s"));
+    expect(rock.length).toBeGreaterThan(30);
+    expect(rock.every((b) => Math.hypot(b.position.x, b.position.y) < 90 + 5 || Math.max(Math.abs(b.position.x), Math.abs(b.position.y)) > 170 - 1)).toBe(true);
+    // The pull on a 1 kg ball held still at 135 m, 90 m (the surface, over the sea of rock: a probe in
+    // the open beside it) and 45 m from the centre, in the tunnel's direction where needed.
+    const pullAt = (x: number, y: number) => {
+      const g = game(4, (sc) => {
+        sc.world.thrust.turrets = [];
+        sc.world.bodies.push({ id: "probe", shape: { kind: "disc", radius: 0.1 }, mass: 1, position: { x, y }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
+      });
+      g.step(1 / 240);
+      const v = body(g.w, "probe")!.velocity;
+      return { a: Math.hypot(v.x, v.y) * 240, inward: -(v.x * x + v.y * y) / Math.hypot(x, y) > 0 };
+    };
+    const far = pullAt(0, 135);
+    expect(far.a).toBeCloseTo((4 * 90 * 90) / (135 * 135), 2);
+    expect(far.inward).toBe(true);
+    expect(pullAt(-90.5, 0).a).toBeCloseTo(4 * (90 / 90.5) ** 2, 2);
+    // Inside, in the chamber 30 m from the centre: a straight line to nothing, 4 × 30/90.
+    const inside = pullAt(0, 30);
+    expect(inside.a).toBeCloseTo((4 * 30) / 90, 2);
+    expect(inside.inward).toBe(true);
+    // Settled, nothing on the rock moves (turrets off), and the ledger is clean.
+    for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    const at = new Map(w.bodies.map((b) => [b.id, { ...b.position }]));
+    step(3);
+    // (A barrel held across the pull sags a little on its joint: 13 cm on the tunnel's outer wall.)
+    for (const b of w.bodies.filter((x) => x.id.startsWith("t") || x.id.startsWith("fuel") || x.id === "pod"))
+      expect(Math.hypot(b.position.x - at.get(b.id)!.x, b.position.y - at.get(b.id)!.y), b.id).toBeLessThan(/barrel|breech/.test(b.id) ? 0.2 : 0.1);
+    expect(w.ledger.violations).toBe(0);
+  }, 120_000);
+
+  it("MTH-091 on the asteroid, a ship with the pod 150 m from the centre wins, and one without it is sent back", () => {
+    const g = withPod(4, (s) => {
+      s.world.thrust.turrets = [];
+    });
+    expect(st(g.w).pod).toBe("tether");
+    // Ship and pod moved together out past 150 m, to the right.
+    const d = { x: 155 - hull(g.w).position.x, y: 0 - hull(g.w).position.y };
+    for (const b of g.w.bodies) if (b.id.startsWith("p1-") || b.id === "pod") b.position = { x: b.position.x + d.x, y: b.position.y + d.y };
+    settle(g.w);
+    g.step(0.05);
+    expect(st(g.w).phase).toBe("won");
+    const alone = game(4, (s) => (s.world.thrust.turrets = []));
+    moveShip(alone.w, { x: -152, y: 10 });
+    alone.step(0.05);
+    expect(st(alone.w).phase).toBe("flying");
+    expect(st(alone.w).stats.back).toBe(1);
+  }, 60_000);
 });
 
