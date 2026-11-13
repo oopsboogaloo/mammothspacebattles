@@ -32,9 +32,18 @@ function openLevel(n: number, run: boolean, carry?: { score: number; lives: numb
   return true;
 }
 
-export function startThrust(): void {
-  if (!openLevel(1, true)) return;
+/**
+ * Play: from level 1, or from the level the page's address names (`thrust.html?level=3`), to try a
+ * level without flying the ones before it.
+ */
+export function startThrust(level = firstLevel()): void {
+  if (!openLevel(level, true)) return;
   thrustScreen.value = "play";
+}
+
+function firstLevel(): number {
+  const n = Number(new URLSearchParams(window.location.search).get("level"));
+  return Number.isInteger(n) && n >= 1 && n <= LEVELS ? n : 1;
 }
 
 /** The view follows the ship (and leans toward a pod on its tether), at a zoom set by the screen's height. */
@@ -263,7 +272,7 @@ function Title() {
       <div class="mas-title over">
         <h1>MAMMOTH THRUST</h1>
         <div class="mas-col">
-          <button class="mas-btn" onClick={startThrust} data-testid="mth-start">
+          <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-start">
             Play
           </button>
         </div>
@@ -405,7 +414,7 @@ function Won({ level, score, lives, pod, fuel }: { level: number; score: number;
       </p>
       {last ? (
         <div class="mas-row">
-          <button class="mas-btn" onClick={startThrust} data-testid="mth-again">
+          <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-again">
             Play again
           </button>
           <button class="mas-btn" onClick={quit}>
@@ -430,7 +439,7 @@ function GameOver({ score, level, reason }: { score: number; level: number; reas
         Score <b>{score}</b> · level <b>{level}</b>
       </p>
       <div class="mas-row">
-        <button class="mas-btn" onClick={startThrust} data-testid="mth-again">
+        <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-again">
           Play again
         </button>
         <button class="mas-btn" onClick={quit}>

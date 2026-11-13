@@ -7,7 +7,7 @@ export const VIEW_HEIGHT = 90;
 export const zoomFor = (height: number): number => Math.min(12, Math.max(3.5, height / VIEW_HEIGHT));
 
 /** The levels, in order: the scenario files `thrust-{n}`. */
-export const LEVELS = 2;
+export const LEVELS = 3;
 
 /** What the HUD shows of the ship flying: its fuel (0–1), slugs left, and its worst-hit part or weld (0–1). */
 export function shipStatus(world: World): { fuel: number; slugs: number; damage: number } {

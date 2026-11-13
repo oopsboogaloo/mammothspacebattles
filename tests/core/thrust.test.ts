@@ -1,7 +1,7 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TERRAIN_OPS, computeTotals, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { TERRAIN_OPS, addBody, computeTotals, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -52,7 +52,7 @@ const types = (w: World) => new Set(w.events.map((e) => e.type));
 
 describe("Mammoth Thrust", () => {
   it("MTH-010 MTH-011 a level is fixed ground that can't be damaged under 4 m/s² of gravity, with no wrap, the pod on its stand and the ship at the start", () => {
-    for (const n of [1, 2]) {
+    for (const n of [1, 2, 3]) {
       const { w } = game(n);
       expect(w.gravity).toEqual({ x: 0, y: -4 });
       expect(w.bounds.wrap).toBeFalsy();
@@ -679,5 +679,113 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     empty.step(0.1, [set("tractor", 0)]);
     expect(empty.w.events.some((e) => e.type === "detonation")).toBe(false);
   });
+  /** Level 3 with every turret off, after `settle` game seconds. */
+  function cave(settle = 0.5) {
+    const g = game(3);
+    for (const b of g.w.bodies) if (b.turret) b.turret.enabled = false;
+    g.step(settle);
+    return g;
+  }
+  /** Where a slug comes from at each part of turret 6 or 5, in the turret's frame: the side of it that faces the open. */
+  const FROM: Record<string, [number, number]> = { barrel: [1, 0.15], breech: [1, 0.1], arc: [0.3, 1], "node-r": [1, 0.25], "node-l": [-1, 0.25] };
+  /** A slug from the ship's gun, as fired, 3 m off part `part` of turret `k` and flying straight at it. */
+  function slugAt(w: World, k: number, part: string, n: number): void {
+    const t = body(w, `t${k}-${part}`)!.position;
+    const a = body(w, `t${k}-base`)!.angle;
+    const [dx, dy] = FROM[part];
+    const L = Math.hypot(dx, dy);
+    const u = { x: (Math.cos(a) * dx - Math.sin(a) * dy) / L, y: (Math.sin(a) * dx + Math.cos(a) * dy) / L };
+    const shell = structuredClone(body(w, "p1-gun")!.magazine!.shell) as Record<string, unknown>;
+    addBody(w, { ...shell, id: `p1-shell-t${n}`, position: { x: t.x + 3 * u.x, y: t.y + 3 * u.y }, velocity: { x: -144 * u.x, y: -144 * u.y }, angle: 0, angularVelocity: 0 } as never);
+    settle(w);
+  }
+
+  it("MTH-014 level 3 is Chloe's winding cave: six electric turrets, three fuel tanks and the pod 130 m down, and nothing moves as it starts", () => {
+    const s = raw(3);
+    expect(s.world.thrust.view.caves).toHaveLength(1);
+    expect(s.world.thrust.turrets).toHaveLength(6);
+    expect(s.world.thrust.tanks).toEqual(["fuel-1", "fuel-2", "fuel-3"]);
+    const { w } = game(3);
+    expect(pod(w).position.y).toBeLessThan(-125);
+    // Two hang from the rock: one on the right wall, one from the roof.
+    const hanging = [1, 2, 3, 4, 5, 6].filter((k) => Math.cos(body(w, `t${k}-base`)!.angle) < 0);
+    expect(hanging).toEqual([4, 5]);
+    const at = new Map(w.bodies.map((b) => [b.id, { ...b.position }]));
+    const { w: after } = cave(3);
+    for (const k of [1, 2, 3, 4, 5, 6])
+      for (const part of ["arc", "node-l", "node-r", "breech", "barrel"]) {
+        const p = body(after, `t${k}-${part}`)!.position;
+        // (The barrel hanging from the right wall sags 5 cm under its bolts.)
+        expect(Math.hypot(p.x - at.get(`t${k}-${part}`)!.x, p.y - at.get(`t${k}-${part}`)!.y), `t${k}-${part}`).toBeLessThan(0.1);
+      }
+    for (const k of [1, 2, 3]) expect(Math.hypot(body(after, `fuel-${k}`)!.position.x - at.get(`fuel-${k}`)!.x, body(after, `fuel-${k}`)!.position.y - at.get(`fuel-${k}`)!.y)).toBeLessThan(0.05);
+    expect(after.ledger.violations).toBe(0);
+  });
+
+  it("MTH-070 an electric turret is a base, an arc, two power nodes and a two-part barrel that rides the arc; it needs no power, and fires at the ship", () => {
+    const { w, step } = game(3, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    for (const k of [1, 2, 3, 4, 5, 6]) {
+      for (const part of ["base", "arc", "node-l", "node-r", "breech", "barrel"]) expect(body(w, `t${k}-${part}`), `t${k}-${part}`).toBeDefined();
+      for (const part of ["battery", "gen", "tank"]) expect(body(w, `t${k}-${part}`)).toBeUndefined();
+      expect(body(w, `t${k}-base`)!.fixed).toBe(true);
+      expect(body(w, `t${k}-breech`)!.turret!.battery).toBeUndefined();
+      expect(turretWorks(w, body(w, `t${k}-breech`)!)).toBe(true);
+    }
+    // The barrel turns about the arc's centre: its root stays on the arc as it swings 0.8 rad.
+    const pivot = w.joints.find((j) => j.id === "t6-w-pivot")!;
+    const arc = body(w, "t6-arc")!;
+    const c = Math.cos(arc.angle);
+    const s = Math.sin(arc.angle);
+    const centre = { x: arc.position.x + c * pivot.anchorA.x - s * pivot.anchorA.y, y: arc.position.y + s * pivot.anchorA.x + c * pivot.anchorA.y };
+    const radius = () => Math.hypot(body(w, "t6-breech")!.position.x - centre.x, body(w, "t6-breech")!.position.y - centre.y);
+    const r0 = radius();
+    body(w, "t6-breech")!.turret!.enabled = false;
+    pivot.turn!.target = 0.8;
+    step(2);
+    expect(body(w, "t6-breech")!.angle - body(w, "t6-base")!.angle).toBeCloseTo(0.8, 1);
+    expect(radius()).toBeCloseTo(r0, 1);
+    // With the ship in sight, 21 m over it, it fires.
+    body(w, "t6-breech")!.turret!.enabled = true;
+    moveShip(w, { x: 37.6, y: -110 });
+    step(6);
+    expect(w.events.some((e) => e.type === "railgun.fired" && e.data.id === "t6-breech")).toBe(true);
+    expect(body(w, "t6-breech")!.magazine!.count).toBeLessThan(40);
+  });
+
+  it("MTH-071 one slug on the barrel or a power node puts an electric turret out of action, the node with a blast; the arc takes two", () => {
+    // On the floor (6) and hanging from the roof (5).
+    for (const k of [6, 5]) {
+      const hits = (part: string, n = 1) => {
+        const g = cave();
+        for (let i = 0; i < n; i++) {
+          slugAt(g.w, k, part, i);
+          g.step(0.5);
+        }
+        g.step(1.5);
+        const breech = body(g.w, `t${k}-breech`);
+        expect(g.w.ledger.violations).toBe(0);
+        return { works: !!breech && turretWorks(g.w, breech), w: g.w };
+      };
+      // The barrel: knocked off at its weld, or destroyed; the breech destroyed.
+      expect(hits("barrel").works, `t${k} barrel`).toBe(false);
+      expect(hits("breech").works, `t${k} breech`).toBe(false);
+      // The arc: one slug damages it, two destroy it.
+      const once = hits("arc");
+      expect(once.works, `t${k} arc once`).toBe(true);
+      expect(body(once.w, `t${k}-arc`)!.integrity).toBeLessThan(0.5);
+      const twice = hits("arc", 2);
+      expect(body(twice.w, `t${k}-arc`), `t${k} arc twice`).toBeUndefined();
+      expect(twice.works).toBe(false);
+      // A power node, either: it goes up, and its blast alone wrecks the turret, which scores.
+      for (const side of ["node-l", "node-r"]) {
+        const node = hits(side);
+        expect(node.w.events.some((e) => e.type === "detonation"), `t${k} ${side}`).toBe(true);
+        expect(node.works, `t${k} ${side}`).toBe(false);
+        expect(st(node.w).turretsOut).toContain(`t${k}-breech`);
+        expect(st(node.w).score).toBeGreaterThanOrEqual(THRUST_SCORES.turret);
+      }
+    }
+  });
+
 });
 

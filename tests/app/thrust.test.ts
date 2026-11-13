@@ -1,7 +1,7 @@
 // Mammoth Thrust's page: the HUD's readings, where the view looks, and how the level is drawn.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { insideOutline, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
+import { insideOutline, RECOIL_TIME, recoilOf, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
 import { easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
 import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
@@ -38,7 +38,7 @@ describe("Mammoth Thrust's page", () => {
     expect(shipStatus(w).damage).toBe(1); // a lost ship is lost
     expect(Object.keys(POD_LABEL).sort()).toEqual(["gone", "loose", "stand", "tether"]);
     expect(shipStatus(initialWorld(parseScenario(JSON.parse(readFileSync(new URL("../../scenarios/empty.json", import.meta.url), "utf8")))))).toEqual({ fuel: 0, slugs: 0, damage: 0 });
-    expect(LEVELS).toBe(2);
+    expect(LEVELS).toBe(3);
     for (let n = 1; n <= LEVELS; n++) expect(raw(n).world.thrust.level).toBe(n);
   });
 
@@ -137,5 +137,21 @@ describe("Mammoth Thrust's page", () => {
     for (let i = 0; i < 700; i++) stepInPlace(w, [], sandbox);
     expect(w.thrust!.state.n).toBe(2);
     expect(w.thrust!.state.graceUntil).toBeDefined();
+  });
+  it("MTH-072 an electric turret's outer barrel is drawn folded back into the breech when it fires, and slides out again", () => {
+    const w = world(3);
+    const barrel = w.bodies.find((b) => b.id === "t6-barrel")!;
+    const mag = w.bodies.find((b) => b.id === "t6-breech")!.magazine!;
+    expect(barrel.recoil).toEqual({ gun: "t6-breech", travel: 0.7 });
+    // Before its first shot it is out.
+    expect(recoilOf(w, barrel)).toBe(0);
+    // At the shot it is all the way back; halfway through, half; then out.
+    mag.loaded = 1;
+    mag.timer = 0;
+    expect(recoilOf(w, barrel)).toBeCloseTo(0.7, 9);
+    mag.timer = RECOIL_TIME / 2;
+    expect(recoilOf(w, barrel)).toBeCloseTo(0.35, 9);
+    mag.timer = RECOIL_TIME * 2;
+    expect(recoilOf(w, barrel)).toBe(0);
   });
 });

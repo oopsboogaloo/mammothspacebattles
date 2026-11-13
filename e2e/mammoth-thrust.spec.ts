@@ -387,3 +387,15 @@ test("MTH-021 the Ctrl keys turn as the Shift keys do, the other keys still work
   await key("keyup", "ControlRight", false);
   await expect.poll(engines).toBe("00000");
 });
+
+test("MTH-014 thrust.html?level=3 plays from level 3, the winding cave, with its six electric turrets", async ({ page }) => {
+  await page.goto("./thrust.html?level=3");
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 3");
+  expect(await hook(page, (m) => m.level())).toBe(3);
+  expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(6);
+  // Without the address, Play starts at level 1.
+  await page.goto("./thrust.html");
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 1");
+});

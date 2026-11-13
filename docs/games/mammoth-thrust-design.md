@@ -652,6 +652,33 @@ keeps firing; the pod's stand too.
 - **Not done:** a tank looks like a plain box. A turret drained by the ship falls quiet only when
   its battery is flat (5 shots), as before.
 
+## 15. Level 3 and the electric turret (13 November 2026)
+
+- **The level** is traced from Chloe's drawing (`IMG_0508`, 2048 px square) at 0.1 m a pixel:
+  the green stripes are closed into rock, the open space joined to the sky is traced round, and
+  the outline is simplified to within 1 m. Each turret, tank and the pod is snapped to the outline
+  where it was drawn (all within 1.3 m), and the outline under it is made a straight pad: a
+  turret's along the slope (its tilt as drawn, within a few degrees), a tank's and the pod's level.
+  The traced points are written into `scripts/thrust.ts` as the other levels' are.
+- **Width.** The generator's check leaves out the tips of two dead-end alcoves (`alcoves`), and
+  takes 18 m for this level: over the pod the roof is 19 m up, as drawn.
+- **The electric turret** (`electricTurret` in `scripts/turretParts.ts`): base 7.6 by 0.4 m; arc a
+  segment 5.8 m across and 1.9 m high (radius 3.16 m); nodes 0.85 m trapezoids at its feet,
+  0.3 kg TNT each (as the fuel turret's tank); breech 0.5 by 1 m and outer barrel 0.28 by 1 m,
+  radial from the arc's centre. The turned joint (ASM-008) is at that centre, so the barrel rides
+  the arc, 0.87 rad (50°) either way. Turret code is the existing one with no battery
+  (`turretWorks`: the arc is the joint's mount, the outer barrel is `barrel`).
+- **Materials, measured** (`tests/core/thrust.test.ts` MTH-071, on the floor and the roof
+  turrets): the arc is the fuel turret's HULL, left at 0.37 after one slug and destroyed by the
+  second. The barrel is thinner (threshold 30 J, toughness 150 J) and the outer part's weld is
+  Lander's: a slug that only glanced off the first version (threshold 60, toughness 500) left it
+  working.
+- **Recoil** is drawn only (`recoil` on the outer barrel; `recoilOf` in `render.ts`): 0.7 m back
+  at the shot, out again over 0.35 game s, from the gun's magazine timer. We have no sliding
+  joint, and the drawing is what the drawing asked for.
+- **Not done:** power (Chloe's plan comes next); the factory; turret colours (drawn as any body).
+  The magazine holds 40 bolts, as the fuel turret's: ammunition, not power.
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |

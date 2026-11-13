@@ -697,6 +697,16 @@ export const stripeHeight = (pitch: number, zoom: number): number => Math.max(1,
  * a line and a gap of equal height at fixed heights in the world; then the caves and the sky filled
  * black over them, so the rock is what is left, with no outline; then the stars, in the sky only.
  */
+/** How long an electric turret's barrel takes to slide out again after a shot, game s. */
+export const RECOIL_TIME = 0.35;
+
+/** How far a body with `recoil` is drawn folded back now, m: all the way at the shot, none after RECOIL_TIME. */
+export function recoilOf(world: World, b: Body): number {
+  const mag = world.bodies.find((g) => g.id === b.recoil!.gun)?.magazine;
+  if (!mag || mag.loaded === 0) return 0;
+  return b.recoil!.travel * Math.max(0, 1 - mag.timer / RECOIL_TIME);
+}
+
 function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport): void {
   const h = stripeHeight(view.pitch, c.zoom);
   ctx.fillStyle = view.colour;
@@ -1140,7 +1150,9 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       // A ship that is protected flashes (MAS-034).
       const dim = flashing !== null && b.id.startsWith(flashing);
       if (dim) ctx.globalAlpha = 0.3;
-      bodyPath(ctx, cam, vp, b);
+      // An electric turret's outer barrel folds back into the breech when the gun fires, and slides out again.
+      const fold = b.recoil ? recoilOf(world, b) : 0;
+      bodyPath(ctx, cam, vp, fold > 0 ? { ...b, position: add(b.position, rotate(sinCos(b.angle), { x: 0, y: -fold })) } : b);
       ctx.fillStyle = fill;
       ctx.fill();
       ctx.lineWidth = selected ? 3 : hover ? 2 : 1.25;

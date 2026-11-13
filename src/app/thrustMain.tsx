@@ -2,7 +2,7 @@
 import { render } from "preact";
 import { useEffect } from "preact/hooks";
 import "./styles.css";
-import { thrustKeyDown, thrustKeyUp, ThrustApp } from "./Thrust.tsx";
+import { startThrust, thrustKeyDown, thrustKeyUp, ThrustApp } from "./Thrust.tsx";
 import { camera, edit, sandbox } from "./state.ts";
 import { toScreen } from "./camera.ts";
 import { hashValue, type Command } from "../core/index.ts";
@@ -35,6 +35,8 @@ function Game() {
   camera: () => camera.value,
   thrust: () => sandbox.value?.world.thrust?.state ?? null,
   level: () => sandbox.value?.world.thrust?.spec.level ?? null,
+  // For tests: play from level n.
+  play: (n: number) => startThrust(n),
   // For tests: an edit to the world, as the sandbox makes them (to put the ship where a test needs it).
   edit: (commands: Command[]) => edit(commands, "Test", Math.floor(Math.random() * 1e9)),
 };

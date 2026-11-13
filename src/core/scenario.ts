@@ -235,6 +235,13 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
   if (b.turret !== undefined) validateTurret(v, b.turret, `${path}.turret`);
   if (b.siphon !== undefined && typeof b.siphon !== "boolean") err(v, `${path}.siphon`, "must be true or false");
+  if (b.recoil !== undefined) {
+    if (!isObj(b.recoil)) err(v, `${path}.recoil`, "must be {gun, travel}");
+    else {
+      str(v, b.recoil.gun, `${path}.recoil.gun`);
+      num(v, b.recoil.travel, `${path}.recoil.travel`, { min: 0 });
+    }
+  }
   if (b.anchored !== undefined) {
     if (!isObj(b.anchored)) err(v, `${path}.anchored`, "must be {mass, group?}");
     else {

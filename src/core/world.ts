@@ -95,6 +95,11 @@ export interface Body {
   anchored?: { mass: number; group?: string };
   /** A tractor's siphon may draw this body's propellant through its beam (TRC-008): see tractor.ts. */
   siphon?: boolean;
+  /**
+   * Drawn folded back along its -y by up to `travel` m just after `gun` fires, and sliding out again
+   * (an electric turret's outer barrel). Only the drawing moves: the body stays where it is.
+   */
+  recoil?: { gun: string; travel: number };
   /** A base's cargo collector, on a fixed body (BAS): see collector.ts. */
   collector?: Collector;
   /** An AI pilot flying this body's assembly (AIP): for now a computer built into the ship. See pilot.ts. */
