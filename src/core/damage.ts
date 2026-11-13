@@ -58,6 +58,8 @@ export interface Breach {
   count: number;
   /** How fast the gas leaves, m/s (default LEAK_SPEED): a narrower, harder jet pushes more for the same loss. */
   speed?: number;
+  /** A vent's hole only (DMG-009): how big it is, a multiple of the vent's rate (default 1). */
+  size?: number;
 }
 
 /**

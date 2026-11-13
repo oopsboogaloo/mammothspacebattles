@@ -2971,8 +2971,10 @@
         "friction": 0.6,
         "vents": {
           "from": "plant-core",
-          "rate": 0.02,
-          "holes": []
+          "rate": 0.1,
+          "holes": [],
+          "parcel": 0.01,
+          "radius": 0.12
         }
       },
       {
@@ -3049,14 +3051,16 @@
         "friction": 0.6,
         "vents": {
           "from": "plant-core",
-          "rate": 0.02,
-          "holes": []
+          "rate": 0.1,
+          "holes": [],
+          "parcel": 0.01,
+          "radius": 0.12
         },
         "contents": [
           {
-            "resource": "h2o",
-            "mass": 1.2,
-            "capacity": 1.2
+            "resource": "coolant",
+            "mass": 12,
+            "capacity": 12
           }
         ]
       },
@@ -3134,8 +3138,10 @@
         "friction": 0.6,
         "vents": {
           "from": "plant-core",
-          "rate": 0.02,
-          "holes": []
+          "rate": 0.1,
+          "holes": [],
+          "parcel": 0.01,
+          "radius": 0.12
         }
       },
       {
@@ -6849,6 +6855,8 @@
           "more": 1
         },
         "countdown": 5,
+        "perLeak": 3,
+        "leakSpeed": 20,
         "lines": [
           {
             "points": [

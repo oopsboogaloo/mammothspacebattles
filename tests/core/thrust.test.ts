@@ -823,28 +823,61 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(w.ledger.violations).toBe(0);
   }, 60_000);
 
-  it("MTH-081 DMG-009 a slug in a dome holes it, and the reactor's coolant vents from every hole as gas: 2 minutes for one hole on screen, half that for two", () => {
+  it("MTH-081 DMG-009 slugs in the domes leak the coolant as gas: each adds 0.1 kg/s, 4 minutes for one on screen; every third opens a new leak, the others make the newest bigger", () => {
     const { w, step } = game(3);
     const spec = w.thrust!.spec.plant!;
-    expect(plantCoolant(w, spec)).toBeCloseTo(1.2, 9);
-    const core = body(w, "plant-core")!;
-    slugAtPoint(w, { x: core.position.x - 2.7, y: core.position.y + 1 }, 1);
-    step(0.3);
+    expect(plantCoolant(w, spec)).toBeCloseTo(12, 9);
+    const leaks = () => spec.domes.flatMap((id) => body(w, id)!.vents!.holes.map((h) => h.size ?? 1));
+    /** The coolant lost over 2 game seconds, kg/s. */
+    const rate = () => {
+      const c0 = plantCoolant(w, spec);
+      step(2);
+      return (c0 - plantCoolant(w, spec)) / 2;
+    };
+    // Six slugs, each on its own spot along the domes' left sides and tops.
+    const spots = ["plant-dome-l", "plant-core", "plant-dome-r"].flatMap((id) => {
+      const d = body(w, id)!.position;
+      return [{ x: d.x - 2.7, y: d.y }, { x: d.x - 1, y: d.y + 4.2 }];
+    });
+    const hit = (k: number) => {
+      slugAtPoint(w, spots[k], k);
+      step(0.3);
+    };
+    hit(0);
+    expect(leaks()).toEqual([1]);
+    // 12 kg at 0.1 kg/s: 120 game seconds, 4 minutes on screen.
+    expect(rate()).toBeCloseTo(0.1, 2);
+    hit(1);
+    hit(2);
     expect(plantState(w).holes).toBe(1);
-    const c0 = plantCoolant(w, spec);
-    step(5);
-    // 1.2 kg at 0.02 kg/s: 60 game seconds, 2 minutes on screen.
-    expect((c0 - plantCoolant(w, spec)) / 5).toBeCloseTo(0.02, 3);
-    expect(w.events.some((e) => e.type === "vent")).toBe(true);
-    const dome = body(w, "plant-dome-l")!;
-    slugAtPoint(w, { x: dome.position.x - 2.7, y: dome.position.y + 1 }, 2);
-    step(0.3);
+    expect(leaks()).toEqual([3]);
+    expect(rate()).toBeCloseTo(0.3, 2);
+    hit(3);
+    expect(leaks().sort()).toEqual([1, 3]);
     expect(plantState(w).holes).toBe(2);
-    const c1 = plantCoolant(w, spec);
-    step(5);
-    expect((c1 - plantCoolant(w, spec)) / 5).toBeCloseTo(0.04, 3);
-    // The coolant leaves as gas, every kg accounted for.
-    expect(w.gas.count + w.events.filter((e) => e.type === "vent").length).toBeGreaterThan(0);
+    expect(rate()).toBeCloseTo(0.4, 2);
+    expect(w.events.some((e) => e.type === "vent")).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("MTH-081 a leak's gas pushes what is in it: a body held in the jet is pushed away from the dome", () => {
+    const { w, step } = game(3, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    const dome = body(w, "plant-dome-l")!;
+    slugAtPoint(w, { x: dome.position.x - 2.7, y: dome.position.y }, 0);
+    step(0.3);
+    for (let k = 1; k < 3; k++) {
+      slugAtPoint(w, { x: dome.position.x - 1, y: dome.position.y + 4.2 }, k, { x: -6 + k, y: 6 });
+      step(0.3);
+    }
+    expect(plantState(w).holes).toBe(1);
+    // A crate 3 m out in front of the leak.
+    const hole = dome.vents!.holes[0];
+    const out = { x: dome.position.x + hole.point.x + 3 * hole.normal.x, y: dome.position.y + hole.point.y + 3 * hole.normal.y };
+    addBody(w, { id: "crate", shape: { kind: "box", width: 1, height: 1 }, mass: 5, position: out, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.5 } as never);
+    settle(w);
+    step(1.5);
+    const v = body(w, "crate")!.velocity;
+    expect(v.x * hole.normal.x + v.y * hole.normal.y).toBeGreaterThan(0.05);
     expect(w.ledger.violations).toBe(0);
   }, 60_000);
 

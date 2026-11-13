@@ -184,7 +184,7 @@ describe("Mammoth Thrust's page", () => {
     const w = world(3);
     expect(coolantStatus(w)).toEqual({ share: 1, holes: 0 });
     const core = w.bodies.find((b) => b.id === "plant-core")!;
-    core.contents![0].mass = 0.3;
+    core.contents![0].mass = 3; // of 12 kg
     w.thrust!.state.plant!.holes = 4;
     const c = coolantStatus(w)!;
     expect(c.share).toBeCloseTo(0.25, 9);

@@ -59,6 +59,9 @@ export const SPECIES: Readonly<Record<string, Species>> = {
   helium: { molarMass: 0.0040026, gamma: 5 / 3, colour: "#ffd166" },
   co2: { molarMass: 0.04401, gamma: 1.289, colour: "#ef8a62" },
   h2o: { molarMass: 0.018015, gamma: 1.33, colour: "#67a9cf" },
+  // Mammoth Thrust's reactor coolant (a volatile liquid that boils off): water's properties, its own
+  // name so it can be drawn as the bright vapour it is, apart from engines' exhaust.
+  coolant: { molarMass: 0.018015, gamma: 1.33, colour: "#d6ecff" },
   // Declared heat: 3.4e7 J/kg of H₂ (the lower heating value is 1.2e8). With 8 kg O₂ per kg H₂ the
   // products reach about 3,000 K, as dissociation limits a real H₂/O₂ flame to (PRP-003).
   h2: { molarMass: 0.002016, gamma: 1.405, colour: "#f7f7f7", heat: 3.4e7 },

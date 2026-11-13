@@ -223,10 +223,13 @@ reactor and of our factory below.
   The light is green while the plant is on, red while it is off. Bullets don't wear it down.
 - **Offline.** A slug that hits any part of it takes it offline: 5 s for the first hit, and each
   hit while it is offline adds 2 s. Offline, it powers nothing.
-- **Coolant.** The reactor holds a quantity of coolant. A slug that hits a dome makes a hole
-  there, and coolant leaks from every hole as gas (real gas: it pushes what flies through it).
-  One hole empties it in 2 minutes, two in 1, ten in 12 s: holed enough, it goes critical almost
-  at once. A COOLANT gauge on the HUD shows what is left (red under a quarter).
+- **Coolant.** The reactor holds a volatile liquid coolant that boils off as it leaks. The first
+  slug in a dome opens a leak where it strikes; the next two make that leak bigger; the fourth
+  opens a second leak where it strikes, and so on: a new leak every 3 slugs (Chloe, 13 November
+  2026: fewer, stronger leaks that show). Every slug adds the same to the flow: one empties it in
+  4 minutes, two in 2, eight in 30 s. The gas is real and pushes what flies through it, about 2 N
+  for each slug's share. It is drawn as pale vapour. A COOLANT gauge on the HUD shows what is left
+  (red under a quarter).
 - **Critical.** With no coolant left, a 10 s countdown on the page, then it explodes. Out above the
   top with the pod before then: 2000 more. If it blows with the pod still down, the game is over.
   Critical, it powers nothing.
@@ -398,8 +401,9 @@ Priority: **M** must, **S** should.
 **Power plant**
 - **MTH-080** `[M]` A level's power plant powers its turrets. A slug on it takes it offline 5 s,
   and each slug while it is offline 2 s more; offline, no turret it powers fires.
-- **MTH-081** `[M]` A slug in a dome holes it. The reactor's coolant leaks from every hole as gas
-  at a steady rate: 2 minutes for one hole, that divided by the holes for more.
+- **MTH-081** `[M]` Slugs in the domes leak the reactor's coolant as gas: each adds the same to
+  the flow (4 minutes for one, that divided by the slugs for more). Every third opens a new leak
+  where it strikes; the others make the newest leak bigger. The gas pushes what is in it.
 - **MTH-082** `[M]` With no coolant left the plant goes critical: the page counts down 10 s, then
   it explodes. With the pod still down the game is over; out with it first, 2000 more.
 - **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond

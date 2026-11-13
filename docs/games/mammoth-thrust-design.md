@@ -692,9 +692,13 @@ blows (as MTH-034); coolant lasts 2 minutes for one hole; the leak is real gas; 
   out from its centre). Coolant below one leak parcel (2 g): critical, 5 game s, then the charge
   body's integrity is set to 0 and its explosive goes off (3 kg, reach 14 m); the game is over if
   it isn't won. Won while critical: `bonus.plant`, 2000.
-- **Coolant** (DMG-009, `vents` in `world.ts`): 1.2 kg of steam in the middle dome; every dome
-  vents it from there at 0.02 kg/s a hole. Each parcel is a leak's (2 g at 10 m/s), so the push is
-  0.2 N a hole: real, and small.
+- **Coolant** (DMG-009, `vents` in `world.ts`), changed after Chloe played (13 November 2026: 2
+  minutes was too short, and the leaks didn't show): 12 kg of `coolant` (a gas species of its own,
+  water's properties, so it can be drawn apart from engine exhaust) in the middle dome. A leak of
+  size 1 vents 0.1 kg/s, in 10 g puffs 0.12 m across at 20 m/s: 2 N a slug. The slugs in the domes
+  are counted: the 1st, 4th, 7th … open a leak where they strike (size 1); the others add 1 to the
+  newest leak's size, which scales its rate. Drawn as pale-blue vapour (`steamSprite`), and its
+  tail wisps last 3 s, so a leak's cloud shows.
 - **Power** (WPN-011): each turret is `powered` while the plant is on and its transmitters are up.
   `enabled` is left alone, for tests and the factory to come.
 - **Transmitter**: up while every piece of both antennae (mast and dish, thin metal, one slug) is

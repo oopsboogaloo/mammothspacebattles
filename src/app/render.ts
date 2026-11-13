@@ -189,6 +189,22 @@ function plumeSprites(): HTMLCanvasElement[] {
   return sprites;
 }
 
+/** Mammoth Thrust's coolant leaking: a soft pale-blue blob, drawn bright so the leaks show. */
+let steam: HTMLCanvasElement | null = null;
+const STEAM_ALPHA = 0.7;
+function steamSprite(): HTMLCanvasElement {
+  if (steam) return steam;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = SPRITE;
+  const g = cv.getContext("2d")!;
+  const grad = g.createRadialGradient(SPRITE / 2, SPRITE / 2, 0, SPRITE / 2, SPRITE / 2, SPRITE / 2);
+  for (const [at, a] of [[0, 1], [0.35, 0.8], [0.65, 0.35], [0.9, 0.08], [1, 0]]) grad.addColorStop(at, `rgba(214,236,255,${a})`);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, SPRITE, SPRITE);
+  steam = cv;
+  return cv;
+}
+
 /** Can this context draw the plume (a real canvas, not a test recorder)? */
 function canPlume(ctx: Ctx): ctx is Ctx & CanvasRenderingContext2D {
   return typeof document !== "undefined" && typeof (ctx as Partial<CanvasRenderingContext2D>).drawImage === "function";
@@ -240,6 +256,7 @@ function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: V
       const k = buckets[i];
       const f = flameColour(bucketT(k));
       if (f.glow !== glow) continue;
+      const vapour = !glow && (gas.composition[i]?.coolant ?? 0) > 0.5;
       at.x = gas.x[i];
       at.y = gas.y[i];
       const s = toScreen(c, vp, at);
@@ -250,22 +267,22 @@ function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: V
       const y = s.y / PLUME_DOWN;
       if (x < -R || y < -R || x > w + R || y > h + R) continue;
       // Thinner where it has spread: the same gas over a larger area.
-      b.globalAlpha = f.alpha * Math.min(1, Math.max(0.35, (0.5 / Math.max(size[i], 0.5)) ** 0.5));
-      b.drawImage(sp[k], x - R, y - R, 2 * R, 2 * R);
+      b.globalAlpha = (vapour ? STEAM_ALPHA : f.alpha) * Math.min(1, Math.max(0.35, (0.5 / Math.max(size[i], 0.5)) ** 0.5));
+      b.drawImage(vapour ? steamSprite() : sp[k], x - R, y - R, 2 * R, 2 * R);
     }
     // The tail (GAS-011): gas gone from the gas model cools, grows and fades out.
     for (const wp of wisps) {
       const fade = wispFade(wp);
       const k = bucketOf(wp.temperature * (1 - 0.7 * fade));
       const f = flameColour(bucketT(k));
-      if (f.glow !== glow) continue;
+      if ((wp.vapour ? false : f.glow) !== glow) continue;
       const s = toScreen(c, vp, wp.position);
       const R = Math.max(1.5, WISP_SIZE * (wispRadius(wp) / wp.radius) * c.zoom) / PLUME_DOWN;
       const x = s.x / PLUME_DOWN;
       const y = s.y / PLUME_DOWN;
       if (x < -R || y < -R || x > w + R || y > h + R) continue;
-      b.globalAlpha = 0.6 * f.alpha * (1 - fade);
-      b.drawImage(sp[k], x - R, y - R, 2 * R, 2 * R);
+      b.globalAlpha = (wp.vapour ? 0.5 * STEAM_ALPHA : 0.6 * f.alpha) * (1 - fade);
+      b.drawImage(wp.vapour ? steamSprite() : sp[k], x - R, y - R, 2 * R, 2 * R);
     }
   }
   // Blur at the small size (cheap), then let the stretch up smooth it further.
