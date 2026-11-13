@@ -75,7 +75,12 @@ const ELECTRIC_TURRET: ElectricTuning = { range: 80, wait: 1.5, hold: 0.25, aim:
  * 20 m/s, so each slug's share pushes 2 N. A ship in the transmitter's shock has no control for 1 s.
  */
 const PLANT: PlantTuning = { coolant: 12, rate: 0.1, parcel: 0.01, puff: 0.12, charge: 3, radius: 14 };
-const PLANT_LEAK = { perLeak: 3, leakSpeed: 20 };
+/**
+ * An explosion that reaches a dome punches up to 3 leaks in it (Chloe). Below half its coolant the
+ * power fails for 2 to 3 s on screen at a time, more often as the coolant falls: on average once
+ * every 8 s on screen at a quarter left, every 4 s near empty (0.5 a game second).
+ */
+const PLANT_LEAK = { perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31 };
 const PLANT_OFFLINE = { first: 2.5, more: 1 };
 const PLANT_COUNTDOWN = 5;
 const SHOCK = 0.5;

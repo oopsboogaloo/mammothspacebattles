@@ -712,6 +712,12 @@ blows (as MTH-034); coolant lasts 2 minutes for one hole; the leak is real gas; 
   flat for the plant, the hill moved right); the rest is the first drawing's. The plant's base is
   21.7 m, on a pad snapped to the flat; the antennae are snapped to the walls (within 1 m). The
   lines are Chloe's, read off the drawing to about 1 m and joined to each turret's base.
+- **Explosions and outages** (Chloe, 13 November 2026). Each `detonation` this step (not the
+  plant's own) whose reach covers a dome's outline: n = max(1, round(3 × (1 − d ÷ reach))) leaks
+  of size 1, a metre apart along the side facing it, at the outline's nearest points; and the plant
+  offline as for a hit. Outages: while on and below half its coolant, each step it fails with
+  chance 0.5 × ((0.5 − share) ÷ 0.5) × dt, for 1 to 1.5 game s (2 to 3 on screen), from its own
+  seeded generator (the same game, the same outages).
 - **Coolant gauge** (asked for by Chloe, 13 November 2026): a bar like the fuel's, blue, red
   under a quarter; its tooltip gives the share and the holes (`coolantStatus` in `thrustHud.ts`).
 - **Not done:** destructible lines; a plant on levels

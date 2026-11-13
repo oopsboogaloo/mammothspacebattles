@@ -249,7 +249,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
   // 0b. The power plant (plant.ts): hits, coolant, the turrets' power and the shock. When it blows
   // with the pod still down, the game is over (MTH-034).
   if (spec.plant && s.plant) {
-    const r = runPlant(world, spec.plant, s.plant, s.phase === "flying" ? `p${s.n}-` : null);
+    const r = runPlant(world, spec.plant, s.plant, s.phase === "flying" ? `p${s.n}-` : null, dt);
     changed = r.changed || changed;
     if (r.blew) {
       s.phase = "over";

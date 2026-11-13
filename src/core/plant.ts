@@ -8,6 +8,7 @@
 
 import { assemblyRoots } from "./joints.ts";
 import { add, invRotate, length, rotate, sinCos, sub, type Vec2 } from "./math.ts";
+import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { localVertices } from "./shapes.ts";
 import type { Breach } from "./damage.ts";
 import type { Body, World } from "./world.ts";
@@ -57,6 +58,15 @@ export interface PlantSpec {
   perLeak?: number;
   /** How fast a leak's gas leaves, m/s. */
   leakSpeed?: number;
+  /** The most leaks one explosion punches in a dome at point-blank range; fewer further off, none past its reach (default 3). */
+  blastLeaks?: number;
+  /**
+   * Below `below` of its coolant (a share), the power fails now and then for `last` game seconds
+   * (a range), more often as the coolant falls: at none left, `rate` times a game second.
+   */
+  outages?: { below: number; rate: number; last: [number, number] };
+  /** Seeds its outages. */
+  seed?: number;
 }
 
 export interface PlantState {
@@ -75,6 +85,8 @@ export interface PlantState {
   up: Record<string, boolean>;
   /** The ship flying has no control until this time, s. */
   shockUntil?: number;
+  /** Its outages' random numbers (deterministic: the same seed, the same outages). */
+  rng?: RngState;
   /** The newest leak, which the next slugs make bigger: its dome and its place in the dome's holes. */
   leak?: { dome: string; index: number };
 }
@@ -86,7 +98,38 @@ const EMPTY = 0.002;
 const SEEN = 64;
 
 export function startPlant(spec: PlantSpec): PlantState {
-  return { offlineUntil: 0, hits: 0, holes: 0, seen: [], up: Object.fromEntries(spec.transmitters.map((t) => [t.id, true])) };
+  return { offlineUntil: 0, hits: 0, holes: 0, seen: [], up: Object.fromEntries(spec.transmitters.map((t) => [t.id, true])), rng: createRng(spec.seed ?? 1) };
+}
+
+/** A new leak of size 1 on a dome at a world point on (or near) its surface, pointing out from its centre. */
+function addLeak(dome: Body, at: Vec2, speed: number | undefined): number {
+  const local = invRotate(sinCos(dome.angle), sub(at, dome.position));
+  const d = length(local);
+  const hole: Breach = { point: local, normal: d > 1e-9 ? { x: local.x / d, y: local.y / d } : { x: 0, y: 1 }, credit: 0, count: 0, size: 1, ...(speed ? { speed } : {}) };
+  dome.vents!.holes.push(hole);
+  return dome.vents!.holes.length - 1;
+}
+
+/** The point of a body's outline nearest p, in the world. */
+function nearestOnOutline(b: Body, p: Vec2): Vec2 {
+  const q = sinCos(b.angle);
+  const vs = localVertices(b.shape).map((v) => add(b.position, rotate(q, v)));
+  let best = vs[0] ?? b.position;
+  let bestD = Infinity;
+  for (let k = 0; k < vs.length; k++) {
+    const a = vs[k];
+    const c = vs[(k + 1) % vs.length];
+    const ab = sub(c, a);
+    const L2 = ab.x * ab.x + ab.y * ab.y;
+    const f = L2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / L2)) : 0;
+    const on = add(a, { x: ab.x * f, y: ab.y * f });
+    const d = length(sub(p, on));
+    if (d < bestD) {
+      bestD = d;
+      best = on;
+    }
+  }
+  return best;
 }
 
 /** Whether the plant is giving power now. */
@@ -144,7 +187,7 @@ export interface PlantResult {
  * transmitters, the turrets' power, and the shock on the ship flying (prefix `p{n}-`, or null between
  * ships). Called by Mammoth Thrust's game each step.
  */
-export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: string | null): PlantResult {
+export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: string | null, dt: number): PlantResult {
   const now = world.time;
   let changed = false;
   let blew = false;
@@ -179,16 +222,61 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       const touch = world.contacts.find((c) => (c.a === a && c.b === b) || (c.a === b && c.b === a));
       const shellBody = world.bodies.find((x) => x.id === shell);
       const at = touch?.point ?? shellBody?.position ?? dome.position;
-      const local = invRotate(sinCos(dome.angle), sub(at, dome.position));
-      const d = length(local);
-      const hole: Breach = { point: local, normal: d > 1e-9 ? { x: local.x / d, y: local.y / d } : { x: 0, y: 1 }, credit: 0, count: 0, size: 1, ...(spec.leakSpeed ? { speed: spec.leakSpeed } : {}) };
-      dome.vents.holes.push(hole);
-      s.leak = { dome: dome.id, index: dome.vents.holes.length - 1 };
+      s.leak = { dome: dome.id, index: addLeak(dome, at, spec.leakSpeed) };
       s.domeHits = (s.domeHits ?? 0) + 1;
       s.holes += 1;
       changed = true;
     }
     world.events.push({ tick: world.tick, type: "plant.hit", data: { part: hit, hits: s.hits, holes: s.holes, until: s.offlineUntil } });
+  }
+
+  // Explosions (Chloe, 13 November 2026): one that reaches a dome punches leaks in it, more the
+  // nearer it went off (up to `blastLeaks` at point-blank range), spread round the side facing it,
+  // and knocks the plant offline as a hit does.
+  if (!s.blown) {
+    for (let i = world.events.length - 1; i >= 0 && world.events[i].tick >= world.tick; i--) {
+      const e = world.events[i];
+      if (e.type !== "detonation" || e.tick !== world.tick || e.data.id === spec.charge) continue;
+      const at = { x: Number(e.data.x), y: Number(e.data.y) };
+      const reach = Number(e.data.radius);
+      let struck = false;
+      for (const id of spec.domes) {
+        const dome = world.bodies.find((x) => x.id === id);
+        if (!dome?.vents || !(reach > 0)) continue;
+        const near = nearestOnOutline(dome, at);
+        const d = length(sub(near, at));
+        if (d >= reach) continue;
+        const n = Math.max(1, Math.round((spec.blastLeaks ?? 3) * (1 - d / reach)));
+        // Spread along the side facing the blast, a metre apart.
+        const toward = d > 1e-9 ? { x: (near.x - at.x) / d, y: (near.y - at.y) / d } : { x: 0, y: -1 };
+        const across = { x: -toward.y, y: toward.x };
+        for (let k = 0; k < n; k++) {
+          const off = (k - (n - 1) / 2) * 1;
+          addLeak(dome, nearestOnOutline(dome, add(near, { x: across.x * off, y: across.y * off })), spec.leakSpeed);
+          s.holes += 1;
+        }
+        struck = true;
+        changed = true;
+        world.events.push({ tick: world.tick, type: "plant.blast", data: { dome: id, leaks: n } });
+      }
+      if (struck && s.critical === undefined) s.offlineUntil = now >= s.offlineUntil - 1e-9 ? now + spec.offline.first : s.offlineUntil + spec.offline.more;
+    }
+  }
+
+  // Outages (Chloe): below half its coolant, the power fails now and then, more often as it falls.
+  const out = spec.outages;
+  if (out && s.critical === undefined && !s.blown && plantOn(s, now)) {
+    const core = world.bodies.find((b) => b.id === spec.core);
+    const capacity = (core?.contents ?? []).reduce((m, c) => m + c.capacity, 0);
+    const share = capacity > 0 ? plantCoolant(world, spec) / capacity : 1;
+    if (share < out.below) {
+      s.rng ??= createRng(spec.seed ?? 1);
+      const chance = out.rate * ((out.below - share) / out.below) * dt;
+      if (nextFloat(s.rng) < chance) {
+        s.offlineUntil = now + out.last[0] + (out.last[1] - out.last[0]) * nextFloat(s.rng);
+        world.events.push({ tick: world.tick, type: "plant.outage", data: { until: s.offlineUntil, share } });
+      }
+    }
   }
 
   // Coolant gone: critical, then the explosion.
