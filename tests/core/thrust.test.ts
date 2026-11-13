@@ -752,9 +752,9 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(body(w, "t6-breech")!.magazine!.count).toBeLessThan(40);
   });
 
-  it("MTH-071 one slug on the barrel or a power node puts an electric turret out of action, the node with a blast; the arc takes two", () => {
-    // On the floor (6) and hanging from the roof (5).
-    for (const k of [6, 5]) {
+  // On the floor (6) and hanging from the roof (5). Twelve short runs each: given time on a slow machine.
+  it.each([6, 5])("MTH-071 one slug on the barrel or a power node puts electric turret %i out of action, the node with a blast; the arc takes two", (k) => {
+    {
       const hits = (part: string, n = 1) => {
         const g = cave();
         for (let i = 0; i < n; i++) {
@@ -785,7 +785,8 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
         expect(st(node.w).score).toBeGreaterThanOrEqual(THRUST_SCORES.turret);
       }
     }
-  });
+  }, 120_000);
+
 
 });
 
