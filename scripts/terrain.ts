@@ -29,15 +29,18 @@ function reach(outline: Vec[], p: Vec, u: Vec, skip: number): number {
 
 /**
  * The narrowest the open space is, m, measured straight across from the middle of each segment that
- * lies wholly below `below` (the caves, not the sky's valleys).
+ * lies wholly below `below` (the caves, not the sky's valleys), leaving out segments whose middle is
+ * in one of `skip`'s boxes (the tip of a dead-end alcove, which narrows to nothing by its nature).
  */
-export function narrowest(air: Vec[], below: number): number {
+export function narrowest(air: Vec[], below: number, skip: [Vec, Vec][] = []): number {
   let least = Infinity;
   for (let i = 0; i < air.length; i++) {
     const a = air[i];
     const b = air[(i + 1) % air.length];
     const L = Math.hypot(b.x - a.x, b.y - a.y);
     if (L < 1e-6 || a.y > below || b.y > below) continue;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    if (skip.some(([lo, hi]) => mid.x >= lo.x && mid.x <= hi.x && mid.y >= lo.y && mid.y <= hi.y)) continue;
     const into = { x: (b.y - a.y) / L, y: -(b.x - a.x) / L }; // the open side: the right of the way it runs
     least = Math.min(least, reach(air, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, into, i));
   }

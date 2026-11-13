@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
@@ -697,6 +697,78 @@ export const stripeHeight = (pitch: number, zoom: number): number => Math.max(1,
  * a line and a gap of equal height at fixed heights in the world; then the caves and the sky filled
  * black over them, so the rock is what is left, with no outline; then the stars, in the sky only.
  */
+/** How long an electric turret's barrel takes to slide out again after a shot, game s. */
+export const RECOIL_TIME = 0.35;
+
+/** How far a body with `recoil` is drawn folded back now, m: all the way at the shot, none after RECOIL_TIME. */
+export function recoilOf(world: World, b: Body): number {
+  const mag = world.bodies.find((g) => g.id === b.recoil!.gun)?.magazine;
+  if (!mag || mag.loaded === 0) return 0;
+  return b.recoil!.travel * Math.max(0, 1 - mag.timer / RECOIL_TIME);
+}
+
+/** Power lines (Mammoth Thrust's power plant): white while they carry power, dark while they don't. */
+export const LINE_ON = "#f4f6fa";
+export const LINE_OFF = "#10151c";
+/** The light on the plant's tower. */
+export const LAMP_ON = "#3fdc5a";
+export const LAMP_OFF = "#ff4040";
+
+function drawPowerLines(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  const spec = world.thrust?.spec.plant;
+  const s = world.thrust?.state.plant;
+  if (!spec || !s) return;
+  ctx.lineWidth = Math.max(2, 0.45 * c.zoom);
+  for (const l of spec.lines) {
+    if (l.points.length < 2) continue;
+    ctx.strokeStyle = powered(s, world.time, l.needs) ? LINE_ON : LINE_OFF;
+    ctx.beginPath();
+    l.points.forEach((p, k) => {
+      const q = toScreen(c, vp, p);
+      if (k === 0) ctx.moveTo(q.x, q.y);
+      else ctx.lineTo(q.x, q.y);
+    });
+    ctx.stroke();
+  }
+}
+
+/** A number in [-1, 1) from two integers: the shock's jitter, different every step. */
+const jitter = (a: number, b: number): number => {
+  const x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+  return 2 * (x - Math.floor(x)) - 1;
+};
+
+/** The power crossing between a transmitter's antennae: a jagged arc that moves every step, only while it carries power. */
+function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  const spec = world.thrust?.spec.plant;
+  const s = world.thrust?.state.plant;
+  if (!spec || !s) return;
+  for (const t of spec.transmitters) {
+    if (!powered(s, world.time, [t.id])) continue;
+    const tips = transmitterTips(world, t);
+    if (!tips) continue;
+    const [a, b] = tips;
+    const d = { x: b.x - a.x, y: b.y - a.y };
+    const L = Math.hypot(d.x, d.y);
+    if (L < 1e-6) continue;
+    const n = { x: -d.y / L, y: d.x / L };
+    const k = Math.max(6, Math.round(L / 2));
+    for (const [width, colour, amp, salt] of [[Math.max(4, 0.5 * c.zoom), "rgba(140, 200, 255, 0.35)", 0.7, 0], [Math.max(1.5, 0.12 * c.zoom), "#eaf6ff", 0.7, 0], [Math.max(1, 0.08 * c.zoom), "#b9dcff", 0.45, 7]] as const) {
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      for (let i = 0; i <= k; i++) {
+        const f = i / k;
+        const off = i === 0 || i === k ? 0 : amp * jitter(world.tick + salt, i);
+        const q = toScreen(c, vp, { x: a.x + d.x * f + n.x * off, y: a.y + d.y * f + n.y * off });
+        if (i === 0) ctx.moveTo(q.x, q.y);
+        else ctx.lineTo(q.x, q.y);
+      }
+      ctx.stroke();
+    }
+  }
+}
+
 function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport): void {
   const h = stripeHeight(view.pitch, c.zoom);
   ctx.fillStyle = view.colour;
@@ -1054,7 +1126,10 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   const game = !!opts.arcade || !!opts.thrust;
   ctx.fillStyle = game ? "#000" : COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
-  if (opts.thrust) drawStripedGround(ctx, opts.thrust, c, vp);
+  if (opts.thrust) {
+    drawStripedGround(ctx, opts.thrust, c, vp);
+    drawPowerLines(ctx, world, c, vp);
+  }
   else if (opts.stars) drawStars(ctx, opts.stars === "still" ? { x: 0, y: 0 } : c, vp);
   if (opts.overlays.has("grid")) drawGrid(ctx, c, vp);
   // A wrapped world (FLT-012): its neighbouring copies first, plain, so the seam doesn't show.
@@ -1113,7 +1188,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       const rock = opts.arcade && !!b.gravity && !gold;
       const cockpit = game && COCKPIT.test(b.id);
       const pod = !!opts.thrust && b.id === world.thrust?.spec.pod;
-      const fill = b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : cockpit ? COCKPIT_FILL : pod ? POD_FILL : b.fixed ? COLORS.fixed : COLORS.body;
+      const lamp = !!opts.thrust && b.id === world.thrust?.spec.plant?.light && !!world.thrust.state.plant;
+      const fill = lamp ? (plantOn(world.thrust!.state.plant!, world.time) ? LAMP_ON : LAMP_OFF) : b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : cockpit ? COCKPIT_FILL : pod ? POD_FILL : b.fixed ? COLORS.fixed : COLORS.body;
       // In Mammoth Asteroids a slug is too small to see at the arena's scale: a white dot, 2 px at least.
       if (game && b.id.includes("-shell-")) {
         const at = toScreen(cam, vp, b.position);
@@ -1140,7 +1216,9 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       // A ship that is protected flashes (MAS-034).
       const dim = flashing !== null && b.id.startsWith(flashing);
       if (dim) ctx.globalAlpha = 0.3;
-      bodyPath(ctx, cam, vp, b);
+      // An electric turret's outer barrel folds back into the breech when the gun fires, and slides out again.
+      const fold = b.recoil ? recoilOf(world, b) : 0;
+      bodyPath(ctx, cam, vp, fold > 0 ? { ...b, position: add(b.position, rotate(sinCos(b.angle), { x: 0, y: -fold })) } : b);
       ctx.fillStyle = fill;
       ctx.fill();
       ctx.lineWidth = selected ? 3 : hover ? 2 : 1.25;
@@ -1185,7 +1263,10 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     drawBeams(ctx, world, c, vp);
     maskOutside(ctx, world, c, vp);
   }
-  if (opts.thrust) drawBeams(ctx, world, c, vp);
+  if (opts.thrust) {
+    drawBeams(ctx, world, c, vp);
+    drawShocks(ctx, world, c, vp);
+  }
   drawTractors(ctx, world, c, vp);
   // Several pads, each with its multiplier (Mammoth Lander, LND-010); or the one pad.
   const goal = world.challenge?.goal;

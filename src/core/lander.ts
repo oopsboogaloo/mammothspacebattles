@@ -77,6 +77,8 @@ const SPUTTER = 0.5;
 
 /** The control a player sets to give up on the ship flying (it is then stranded). */
 export const ABANDON = "abandon";
+/** The control that destroys the ship flying, as Mammoth Asteroids' (MAS-039): it then counts as a crash. */
+export const LANDER_DESTRUCT = "destruct";
 
 const withN = <T>(x: T, n: number): T => JSON.parse(JSON.stringify(x).replaceAll("{n}", String(n))) as T;
 
@@ -124,6 +126,17 @@ export function landerCommands(world: World): Command[] {
   if (sputter && world.time >= sputter.until - 1e-9) {
     game.state.sputter = undefined;
     return [{ type: "control.set", channel: sputter.channel, value: 0 }];
+  }
+  // Self-destruct (LND-036): the cockpit and everything on the ship that explodes when destroyed go
+  // at once. The judge then sees a broken ship: a crash.
+  if ((world.controls[LANDER_DESTRUCT] ?? 0) > 0) {
+    const hull = withN(game.spec.hull, game.state.n);
+    if (game.state.phase === "flying" && world.bodies.some((b) => b.id === hull)) {
+      const ship = new Set(assemblyOf(world, hull));
+      for (const b of world.bodies) if (ship.has(b.id) && (b.id === hull || b.explosive?.whenDestroyed)) b.integrity = 0;
+      world.events.push({ tick: world.tick, type: "lander.destruct", data: { n: game.state.n } });
+    }
+    return [{ type: "control.set", channel: LANDER_DESTRUCT, value: 0 }];
   }
   if (game.state.phase !== "between" || world.time < (game.state.next ?? 0) - 1e-9) return [];
   // Every ship has flown, and the last one's verdict has played out (an explosion included): the game is over.

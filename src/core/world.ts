@@ -76,6 +76,12 @@ export interface Body {
   integrity: number;
   /** Where it leaks once damaged, if it holds gas (DMG-004). */
   breach?: Breach;
+  /**
+   * Holes it vents gas through (DMG-009), each at a steady `rate` (kg/s) while the store it draws on
+   * holds gas: its own, or `from`'s (a body welded to it). Unlike a breach (DMG-004) a hole doesn't
+   * depend on damage, and there may be many. Mammoth Thrust's power plant leaks coolant this way.
+   */
+  vents?: { from?: string; rate: number; holes: Breach[] };
   /** Shells it carries and loads into place one at a time (WPN, first look). */
   magazine?: Magazine;
   /** An explosive charge that detonates on impact (WPN): see explosive.ts. */
@@ -95,6 +101,11 @@ export interface Body {
   anchored?: { mass: number; group?: string };
   /** A tractor's siphon may draw this body's propellant through its beam (TRC-008): see tractor.ts. */
   siphon?: boolean;
+  /**
+   * Drawn folded back along its -y by up to `travel` m just after `gun` fires, and sliding out again
+   * (an electric turret's outer barrel). Only the drawing moves: the body stays where it is.
+   */
+  recoil?: { gun: string; travel: number };
   /** A base's cargo collector, on a fixed body (BAS): see collector.ts. */
   collector?: Collector;
   /** An AI pilot flying this body's assembly (AIP): for now a computer built into the ship. See pilot.ts. */
@@ -205,7 +216,8 @@ export function injectorStatus(world: World, body: Body): { firing: boolean; rea
   const inj = body.injector;
   if (!inj) return { firing: false, reason: "Not an injector" };
   if (body.integrity <= 0) return { firing: false, reason: "Destroyed" };
-  const hasLink = world.links.some((l) => l.kind === "control" && l.to === body.id && l.channel === inj.channel);
+  // A link switched off carries nothing (Mammoth Thrust's shock takes a ship's controls for a moment).
+  const hasLink = world.links.some((l) => l.kind === "control" && l.to === body.id && l.channel === inj.channel && !l.off);
   if (!hasLink) return { firing: false, reason: `No control link for channel "${inj.channel}"` };
   const command = world.controls[inj.channel] ?? 0;
   if (!(command > 0)) return { firing: false, reason: `Idle: ${inj.channel} = 0` };
@@ -284,6 +296,8 @@ export type Link = (
 ) & {
   /** 1 whole, 0 broken (DMG-001). It falls with damage to either end. Absent in a scenario: 1. */
   integrity: number;
+  /** A control link switched off for now carries nothing, though whole (Mammoth Thrust's shock, plant.ts). */
+  off?: boolean;
 };
 
 /** A link as written in scenarios: integrity defaults to 1. */
@@ -991,8 +1005,56 @@ function bodiesNearGas(world: World, dt: number, keep: string[]): Body[] {
   return wanted.size === 0 ? [] : world.bodies.filter((b) => wanted.has(rootOf(b.id)));
 }
 
+/**
+ * Holes vent gas (DMG-009): each at its body's steady rate, drawn from the store of the body named
+ * (or its own), as parcels moving out of the hole. Mass, momentum and energy as a leak's (DMG-004):
+ * the store's body gives each parcel its push. A hole pressed against something stays shut.
+ */
+function runVents(world: World, dt: number, limit: number): void {
+  for (const b of world.bodies) {
+    const v = b.vents;
+    if (!v?.holes.length) continue;
+    const src = v.from ? world.bodies.find((o) => o.id === v.from) : b;
+    if (!src || src.fixed) continue;
+    const roots = v.from ? assemblyRoots(world) : null;
+    if (roots && roots.get(src.id) !== roots.get(b.id)) continue;
+    const q = sinCos(b.angle);
+    for (const hole of v.holes) {
+      if (hole.count === 0 && hole.credit === 0) pushEvent(world, { tick: world.tick, type: "vent", data: { id: b.id } });
+      hole.credit += v.rate * dt;
+      while (hole.credit >= LEAK_PARCEL && world.gas.count < limit) {
+        const gasses = (src.contents ?? []).filter((s) => SPECIES[s.resource] && s.mass > 0);
+        const total = gasses.reduce((t, s) => t + s.mass, 0);
+        if (total < LEAK_PARCEL) {
+          hole.credit = 0;
+          break;
+        }
+        const parts: [string, number][] = gasses.map((s) => [s.resource, s.mass / total]);
+        const n = rotate(q, hole.normal);
+        const speed = hole.speed ?? LEAK_SPEED;
+        const ahead = LEAK_RADIUS + 0.01 + ((hole.credit - LEAK_PARCEL) / v.rate) * speed;
+        const point = add(b.position, add(rotate(q, hole.point), scale(n, ahead)));
+        const near = world.bodies.filter((o) => {
+          const dx = point.x - o.position.x;
+          const dy = point.y - o.position.y;
+          const reach = boundingRadiusOf(o.shape) + LEAK_RADIUS + 1e-6;
+          return dx * dx + dy * dy <= reach * reach;
+        });
+        if (!clearOf(wallBodies(near))(point.x, point.y, LEAK_RADIUS)) break;
+        const r = sub(point, b.position);
+        const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
+        addParcel(world.gas, emitParcel(world, src, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, speed)), LEAK_RADIUS));
+        hole.credit -= LEAK_PARCEL;
+        hole.count += 1;
+      }
+      hole.credit = Math.min(hole.credit, LEAK_PARCEL);
+    }
+  }
+}
+
 function runLeaks(world: World, dt: number, profile?: Profile): void {
   const limit = profile?.limit.gasParcels ?? Infinity;
+  runVents(world, dt, limit);
   for (const b of world.bodies) {
     const rate = leakRate(b);
     if (!(rate > 0)) continue;
@@ -1361,7 +1423,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Mass, momentum and energy are unchanged; angular momentum may change as mass moves from a
   // store at the body's centre to the outlet (recorded, not checked, as for feeds), and so may
   // gravitational potential energy, by the height of the outlet above the centre.
-  if (world.bodies.some((b) => b.injector || b.breach || (b.integrity < 1 && b.contents?.length)) || world.gas.count) {
+  if (world.bodies.some((b) => b.injector || b.breach || b.vents?.holes.length || (b.integrity < 1 && b.contents?.length)) || world.gas.count) {
     const t0 = before;
     runInjectors(world, dt, profile);
     runLeaks(world, dt, profile);

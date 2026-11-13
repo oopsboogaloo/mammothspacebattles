@@ -652,6 +652,67 @@ keeps firing; the pod's stand too.
 - **Not done:** a tank looks like a plain box. A turret drained by the ship falls quiet only when
   its battery is flat (5 shots), as before.
 
+## 15. Level 3 and the electric turret (13 November 2026)
+
+- **The level** is traced from Chloe's drawing (`IMG_0508`, 2048 px square) at 0.1 m a pixel:
+  the green stripes are closed into rock, the open space joined to the sky is traced round, and
+  the outline is simplified to within 1 m. Each turret, tank and the pod is snapped to the outline
+  where it was drawn (all within 1.3 m), and the outline under it is made a straight pad: a
+  turret's along the slope (its tilt as drawn, within a few degrees), a tank's and the pod's level.
+  The traced points are written into `scripts/thrust.ts` as the other levels' are.
+- **Width.** The generator's check leaves out the tips of two dead-end alcoves (`alcoves`), and
+  takes 18 m for this level: over the pod the roof is 19 m up, as drawn.
+- **The electric turret** (`electricTurret` in `scripts/turretParts.ts`): base 7.6 by 0.4 m; arc a
+  segment 5.8 m across and 1.9 m high (radius 3.16 m); nodes 0.85 m trapezoids at its feet,
+  0.3 kg TNT each (as the fuel turret's tank); breech 0.5 by 1 m and outer barrel 0.28 by 1 m,
+  radial from the arc's centre. The turned joint (ASM-008) is at that centre, so the barrel rides
+  the arc, 0.87 rad (50°) either way. Turret code is the existing one with no battery
+  (`turretWorks`: the arc is the joint's mount, the outer barrel is `barrel`).
+- **Materials, measured** (`tests/core/thrust.test.ts` MTH-071, on the floor and the roof
+  turrets): the arc is the fuel turret's HULL, left at 0.37 after one slug and destroyed by the
+  second. The barrel is thinner (threshold 30 J, toughness 150 J) and the outer part's weld is
+  Lander's: a slug that only glanced off the first version (threshold 60, toughness 500) left it
+  working.
+- **Recoil** is drawn only (`recoil` on the outer barrel; `recoilOf` in `render.ts`): 0.7 m back
+  at the shot, out again over 0.35 game s, from the gun's magazine timer. We have no sliding
+  joint, and the drawing is what the drawing asked for.
+- **Not done:** power (Chloe's plan comes next); the factory; turret colours (drawn as any body).
+  The magazine holds 40 bolts, as the fuel turret's: ammunition, not power.
+
+## 16. The power plant (13 November 2026)
+
+Chloe's design and two drawings (`IMG_0512`, `IMG_0513`): plant on, lines white, the shock
+between the antennae; plant off, lines dark, no shock. Her answers: critical counts down and then
+blows (as MTH-034); coolant lasts 2 minutes for one hole; the leak is real gas; level 3 only.
+
+- **Rules** (`src/core/plant.ts`, run by `runThrust` each step). A hit is a new contact between a
+  player's slug (`p{n}-…-shell-…`) and any plant body, each shell counted once. Offline until
+  `offlineUntil`: 2.5 game s after the first hit, +1 for each while down (5 s and 2 s on screen).
+  A hit in a dome adds a hole where it struck (the contact point, in the dome's frame, pointing
+  out from its centre). Coolant below one leak parcel (2 g): critical, 5 game s, then the charge
+  body's integrity is set to 0 and its explosive goes off (3 kg, reach 14 m); the game is over if
+  it isn't won. Won while critical: `bonus.plant`, 2000.
+- **Coolant** (DMG-009, `vents` in `world.ts`): 1.2 kg of steam in the middle dome; every dome
+  vents it from there at 0.02 kg/s a hole. Each parcel is a leak's (2 g at 10 m/s), so the push is
+  0.2 N a hole: real, and small.
+- **Power** (WPN-011): each turret is `powered` while the plant is on and its transmitters are up.
+  `enabled` is left alone, for tests and the factory to come.
+- **Transmitter**: up while every piece of both antennae (mast and dish, thin metal, one slug) is
+  whole and still on its mount. The shock is the segment between the masts' tips, 1 m wide: any
+  part of the ship flying within it switches the ship's control links off (ASM-009) for 0.5 game s
+  (1 s on screen). Integrity couldn't be used: the damage model removes links at 0. A ship still in
+  the shock when it ends is shocked again.
+- **Drawing** (`render.ts`): lines over the rock's stripes, white or near-black; the lamp body's
+  fill green or red; the shock a jagged three-stroke line that changes every step.
+- **The level**: re-traced from the second drawing, whose surface right of the mouth changed (a
+  flat for the plant, the hill moved right); the rest is the first drawing's. The plant's base is
+  21.7 m, on a pad snapped to the flat; the antennae are snapped to the walls (within 1 m). The
+  lines are Chloe's, read off the drawing to about 1 m and joined to each turret's base.
+- **Coolant gauge** (asked for by Chloe, 13 November 2026): a bar like the fuel's, blue, red
+  under a quarter; its tooltip gives the share and the holes (`coolantStatus` in `thrustHud.ts`).
+- **Not done:** destructible lines; a plant on levels
+  1 and 2; what the blast does to the surface beyond the crater (it is the explosive's own).
+
 ## 7. To decide or measure, in order of when it bites
 
 | When | What | Who |

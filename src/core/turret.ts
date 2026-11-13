@@ -47,6 +47,8 @@ export interface Turret {
   seed: number;
   /** Off, it turns and fires nothing (Mammoth Thrust's factory stops its turrets this way). */
   enabled: boolean;
+  /** Without power (Mammoth Thrust's power plant off, or its line cut) it turns and fires nothing, as when off. */
+  powered?: boolean;
   /** The body it watches for, by id: set by the scenario, or by a game each step. */
   target?: string;
   /** State. */
@@ -196,7 +198,7 @@ export function runTurrets(world: World, dt: number): number {
     if (t.firing && channel) setChannel(world, channel, 0);
     t.firing = false;
     const joint: Joint | undefined = world.joints.find((j) => j.id === t.joint);
-    if (!gun || !channel || !joint?.turn || !t.enabled || !turretWorks(world, c)) {
+    if (!gun || !channel || !joint?.turn || !t.enabled || t.powered === false || !turretWorks(world, c)) {
       t.sees = false;
       if (t.phase !== "idle" && t.phase !== "waiting") t.phase = "turning"; // it starts again from a fresh bearing
       continue;

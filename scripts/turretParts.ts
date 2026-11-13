@@ -134,3 +134,138 @@ export function turret(name: string, at: Vec, angle: number, t: TurretTuning, se
   links.push({ id: id("ctl-fire"), kind: "control", channel: `${name}.fire`, to: id("carriage") });
   return { bodies, joints, links, carriage: id("carriage"), tank: id("tank") };
 }
+
+/**
+ * Thin metal for a power node (J): one of the ship's slugs sets it off. The barrel is thinner
+ * still, and its outer part is held by a light weld: a slug that only glances off it still
+ * destroys it or knocks it off. The arc is the turret's HULL: two slugs.
+ */
+const NODE = { name: "node", threshold: 60, toughness: 500 };
+const BARREL = { name: "barrel", threshold: 30, toughness: 150 };
+
+export interface ElectricTuning {
+  /** As the fuel turret's (TurretTuning): sight, timing, aim, bolt and gun. */
+  range: number;
+  wait: number;
+  hold: number;
+  aim: "random" | "ship";
+  /** The barrel's travel either side of straight up, along the arc, rad, and how fast it moves, rad/s. */
+  arc: number;
+  rate: number;
+  bolt: Json;
+  speed: number;
+  reload: number;
+  bolts: number;
+}
+
+/** The electric turret's shape (m): its base, the arc over it, and the barrel that rides the arc. */
+export const ELECTRIC = {
+  /** The base plate. */
+  base: { width: 7.6, height: 0.4 },
+  /** The arc: a circular segment on the base, its chord this wide and this high at the middle. */
+  arc: { chord: 5.8, height: 1.9 },
+  /** The barrel: the breech (which turns on the arc and carries the bolts) and the outer barrel, each this long. */
+  breech: { width: 0.5, length: 1 },
+  outer: { width: 0.28, length: 1 },
+  /** How far the outer barrel folds back into the breech when it fires, m (drawn: see render.ts). */
+  recoil: 0.7,
+};
+
+/**
+ * An electric turret standing at `at` (the middle of its base's underside), its up turned by
+ * `angle` from +y (Chloe's drawing, 13 November 2026). A fixed base on the rock; on it a neat arc,
+ * welded; at each end of the arc a power node, which explodes when it is destroyed; and a barrel in
+ * two parts that rides along the arc, turning about the arc's centre on a joint that turns
+ * (ASM-008). Until the power design comes it needs no power (no battery). One slug on the barrel
+ * destroys it; two on the arc; one on a node sets it off, and the blast puts the turret out of action.
+ *
+ *            ||  barrel (outer, breech)
+ *        .-''''''-.     arc
+ *      /|          |\   nodes at the arc's feet
+ *    ====================  base
+ */
+export function electricTurret(name: string, at: Vec, angle: number, t: ElectricTuning, seed: number) {
+  const bodies: Json[] = [];
+  const joints: Json[] = [];
+  const links: Json[] = [];
+  const id = (part: string) => `${name}-${part}`;
+  const place = (p: Vec): Vec => {
+    const r = rot(p, angle);
+    return { x: round(at.x + r.x), y: round(at.y + r.y) };
+  };
+  const centre = new Map<string, Vec>();
+  const local = (part: string, p: Vec) => ({ x: round(p.x - centre.get(part)!.x), y: round(p.y - centre.get(part)!.y) });
+  /** A body whose outline is `vertices` in the turret's frame: placed at their centroid. */
+  const polygon = (part: string, vertices: Vec[], mass: number, extra: Json, turn = 0) => {
+    let a = 0;
+    let cx = 0;
+    let cy = 0;
+    for (let k = 0; k < vertices.length; k++) {
+      const p = vertices[k];
+      const q = vertices[(k + 1) % vertices.length];
+      const c = p.x * q.y - q.x * p.y;
+      a += c;
+      cx += (p.x + q.x) * c;
+      cy += (p.y + q.y) * c;
+    }
+    const c = { x: cx / (3 * a), y: cy / (3 * a) };
+    centre.set(part, c);
+    const shape = { kind: "polygon", vertices: vertices.map((p) => { const r = rot({ x: p.x - c.x, y: p.y - c.y }, -turn); return { x: round(r.x), y: round(r.y) }; }) };
+    bodies.push({ id: id(part), shape, mass, position: place(c), velocity: { x: 0, y: 0 }, angle: round(angle + turn), angularVelocity: 0, restitution: 0, friction: 0.4, material: HULL, ...extra });
+  };
+  const weld = (n: string, a: string, b: string, p: Vec, limits = WELD, extra: Json = {}) => {
+    joints.push({ id: id(`w-${n}`), a: id(a), b: id(b), anchorA: local(a, p), anchorB: local(b, p), limits, ...extra });
+  };
+
+  const E = ELECTRIC;
+  const top = E.base.height;
+  // The base: a fixed plate on the rock, anchored to it (TER-006), as the fuel turret's.
+  centre.set("base", { x: 0, y: top / 2 });
+  bodies.push({ id: id("base"), fixed: true, shape: { kind: "box", width: E.base.width, height: top }, mass: 1, position: place({ x: 0, y: top / 2 }), velocity: { x: 0, y: 0 }, angle: round(angle), angularVelocity: 0, friction: 0.9, anchored: { mass: 100 } });
+
+  // The arc: a segment of a circle of radius R about `pivot`, its chord on the base.
+  const half = E.arc.chord / 2;
+  const R = (half * half + E.arc.height * E.arc.height) / (2 * E.arc.height);
+  const pivot = { x: 0, y: top + E.arc.height - R };
+  const reach = Math.asin(half / R);
+  const arc: Vec[] = [];
+  for (let k = 0; k <= 12; k++) {
+    const a = reach - (2 * reach * k) / 12; // right to left: counter-clockwise
+    arc.push({ x: pivot.x + R * Math.sin(a), y: pivot.y + R * Math.cos(a) });
+  }
+  polygon("arc", arc, 4, {});
+  weld("arc-a", "base", "arc", { x: -half * 0.6, y: top }, GUN_WELD);
+  weld("arc-b", "base", "arc", { x: half * 0.6, y: top }, GUN_WELD);
+
+  // The power nodes: small trapezoids at the arc's feet. Destroyed, a node explodes.
+  for (const [side, s] of [["l", -1], ["r", 1]] as const) {
+    const inner = half - 0.05;
+    const v = [
+      { x: s * inner, y: top },
+      { x: s * (inner + 0.85), y: top },
+      { x: s * (inner + 0.65), y: top + 0.6 },
+      { x: s * (inner + 0.2), y: top + 0.6 },
+    ];
+    polygon(`node-${side}`, s < 0 ? v.reverse() : v, 1, { material: NODE, explosive: { charge: 0.3, arm: 1e6, fragments: 6, radius: 4, whenDestroyed: true } });
+    weld(`node-${side}`, "base", `node-${side}`, { x: s * (inner + 0.42), y: top });
+  }
+
+  // The barrel, radial from the pivot, standing on the arc: the breech turns on the joint and holds
+  // the bolts; the outer barrel is welded to it.
+  const r0 = R - 0.1;
+  const r1 = r0 + E.breech.length;
+  const r2 = r1 + E.outer.length;
+  const box = (part: string, w: number, from: number, to: number, mass: number, extra: Json) =>
+    polygon(part, [{ x: w / 2, y: pivot.y + from }, { x: w / 2, y: pivot.y + to }, { x: -w / 2, y: pivot.y + to }, { x: -w / 2, y: pivot.y + from }].reverse(), mass, { material: BARREL, ...extra });
+  const breech = (r0 + r1) / 2;
+  box("breech", E.breech.width, r0, r1, 1, {
+    turret: { joint: id("w-pivot"), gun: id("breech"), barrel: id("barrel"), range: t.range, wait: t.wait, hold: t.hold, aim: t.aim, seed },
+    magazine: { count: t.bolts, reload: t.reload, at: { x: 0, y: round(r2 + 0.15 - breech) }, angle: 0, shell: t.bolt, railgun: { channel: `${name}.fire`, speed: t.speed } },
+  });
+  box("barrel", E.outer.width, r1, r2, 0.5, { recoil: { gun: id("breech"), travel: E.recoil } });
+  weld("pivot", "arc", "breech", pivot, GUN_WELD, { turn: { rate: t.rate, min: round(-t.arc), max: round(t.arc), target: 0 } });
+  weld("barrel", "breech", "barrel", { x: 0, y: pivot.y + r1 }, LANDER_WELD);
+
+  links.push({ id: id("ctl-fire"), kind: "control", channel: `${name}.fire`, to: id("breech") });
+  return { bodies, joints, links, carriage: id("breech"), tank: undefined as string | undefined };
+}

@@ -288,6 +288,7 @@ button { cursor: pointer; }
 .lander-btn { min-height: 48px; padding: 0 22px; border-radius: 10px; border: 1px solid #5aa9ff; background: #5aa9ff; color: #04101f; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
 .lander-btn.ghost { background: transparent; color: #e8ecf5; border-color: #2a3550; }
 .lander-btn.small { min-height: 36px; padding: 0 14px; font-size: 13px; }
+.lander-btn.danger { background: #ff6b6b; border-color: #ff6b6b; color: #000; }
 .lander-btn:disabled { opacity: 0.4; }
 .lander-play { position: absolute; inset: 0; }
 .lander-play .view, .lander-play > div:first-child { position: absolute; inset: 0; }
@@ -353,6 +354,8 @@ button { cursor: pointer; }
 .mas-fuel { position: relative; display: inline-block; width: 120px; height: 16px; border: 1px solid #fff; }
 .mas-fuel i { position: absolute; inset: 0 auto 0 0; background: #fff; }
 .mas-fuel i.low { background: #ff6b6b; }
+.mth-coolant { border-color: #67a9cf; }
+.mth-coolant i { background: #67a9cf; }
 .mas-fuel em { position: relative; padding-left: 6px; font-style: normal; font-size: 11px; line-height: 16px; mix-blend-mode: difference; }
 .mas-banner { position: absolute; top: 24%; left: 50%; transform: translateX(-50%); padding: 12px 22px; border: 2px solid #fff; background: #000; font-size: 26px; font-weight: 700; letter-spacing: 0.08em; text-align: center; pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
 .mas-banner small { font-size: 16px; font-weight: 400; }
@@ -374,10 +377,12 @@ button { cursor: pointer; }
 /* Mammoth Thrust: the tractor's button, over Fire. */
 .mas-thrust.tractor { right: calc(max(18px, env(safe-area-inset-right)) + 104px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px); width: 76px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
 .mth-note { position: absolute; top: 22%; left: 0; right: 0; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 0.12em; pointer-events: none; }
+.mth-levels { align-items: center; gap: 8px; font-size: 13px; opacity: 0.7; }
+.mth-note.mth-critical { color: #ff6b6b; top: 12%; }
 .mth-note small { display: block; margin-top: 6px; font-size: 13px; font-weight: 400; letter-spacing: 0.04em; }
 .mas-title.over { background: transparent; pointer-events: none; }
 .mas-title.over h1 { text-shadow: 0 0 12px #000, 0 0 4px #000; }
-.mas-title.over .mas-col, .mas-title.over .mas-credit { pointer-events: auto; }
+.mas-title.over .mas-col, .mas-title.over .mas-row, .mas-title.over .mas-credit { pointer-events: auto; }
 .mas-page { justify-content: flex-start; gap: 18px; user-select: text; -webkit-user-select: text; touch-action: pan-y; }
 .mas-text { width: min(760px, 100%); text-align: left; font-size: 15px; line-height: 1.5; }
 .mas-text h3 { margin: 18px 0 6px; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; }

@@ -457,4 +457,30 @@ describe("Mammoth Lander", () => {
     lines.world.lander.lines = [[{ x: 0, y: 0 }]];
     expect(() => parseScenario(lines)).toThrow(/lines/);
   });
+  it("LND-036 self-destruct destroys the ship flying: the cockpit and tank go at once, it counts as a crash, and the next ship comes", () => {
+    const scn = structuredClone(raw);
+    const s = parseScenario(scn);
+    const prof = getProfile(s.profile);
+    const w = initialWorld(s);
+    const step = (secs: number, cmds: Parameters<typeof stepInPlace>[1] = []) => {
+      for (let k = 0; k < secs * 240; k++) stepInPlace(w, k === 0 ? cmds : [], prof);
+    };
+    step(0.5);
+    expect(w.lander!.state).toMatchObject({ n: 1, phase: "flying", crashes: 0 });
+    const hull = w.lander!.spec.hull.replaceAll("{n}", "1");
+    expect(w.bodies.some((b) => b.id === hull)).toBe(true);
+    step(0.1, [{ type: "control.set", channel: "destruct", value: 1 }]);
+    expect(w.bodies.some((b) => b.id === hull)).toBe(false);
+    expect(w.events.filter((e) => e.type === "lander.destruct")).toHaveLength(1);
+    expect(w.events.some((e) => e.type === "detonation")).toBe(true);
+    expect(w.controls.destruct).toBe(0);
+    step(1);
+    expect(w.events.some((e) => e.type === "crashed")).toBe(true);
+    expect(w.lander!.state.crashes).toBe(1);
+    expect(w.lander!.state.score).toBe(0);
+    // The next ship comes, and the control does nothing between ships.
+    step(8);
+    expect(w.lander!.state.n).toBe(2);
+    expect(w.ledger.violations).toBe(0);
+  });
 });

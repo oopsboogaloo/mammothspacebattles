@@ -5,12 +5,12 @@
 import { signal } from "@preact/signals";
 import { useEffect, useState } from "preact/hooks";
 import { scenarioFile } from "./scenarios.ts";
-import { camera, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
+import { camera, GAME_PACE, openScenario, overlays, playing, sandbox, screen, setFollow, timeScale, version, viewport } from "./state.ts";
 import { shown } from "./smooth.ts";
 import { View } from "./View.tsx";
 import { usePad, type PadGame, type PadState } from "./gamepad.ts";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
-import { easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
+import { coolantStatus, easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
 import { THRUST_DESTRUCT } from "../core/index.ts";
 
 export const thrustScreen = signal<"title" | "play">("title");
@@ -32,9 +32,18 @@ function openLevel(n: number, run: boolean, carry?: { score: number; lives: numb
   return true;
 }
 
-export function startThrust(): void {
-  if (!openLevel(1, true)) return;
+/**
+ * Play: from level 1, or from the level the page's address names (`thrust.html?level=3`), to try a
+ * level without flying the ones before it.
+ */
+export function startThrust(level = firstLevel()): void {
+  if (!openLevel(level, true)) return;
   thrustScreen.value = "play";
+}
+
+function firstLevel(): number {
+  const n = Number(new URLSearchParams(window.location.search).get("level"));
+  return Number.isInteger(n) && n >= 1 && n <= LEVELS ? n : 1;
 }
 
 /** The view follows the ship (and leans toward a pod on its tether), at a zoom set by the screen's height. */
@@ -127,6 +136,8 @@ const KEYS: Record<string, string[]> = {
   KeyE: ["right"],
   ArrowRight: ["right"],
   ShiftRight: ["right"],
+  ControlLeft: ["left"],
+  ControlRight: ["right"],
   ArrowUp: ["left", "right"],
   KeyS: ["reverse"],
   ArrowDown: ["reverse"],
@@ -153,8 +164,9 @@ const ended = (): boolean => {
 };
 
 export function thrustKeyDown(e: KeyboardEvent): void {
-  if (thrustScreen.value !== "play" || !sandbox.value || e.ctrlKey || e.metaKey) return;
-  if (!e.code.startsWith("Shift")) dropShifts(e);
+  // A game key works with Ctrl held too: Ctrl is itself a control.
+  if (thrustScreen.value !== "play" || !sandbox.value || e.metaKey) return;
+  if (!e.code.startsWith("Shift") && !e.code.startsWith("Control")) dropShifts(e);
   const channels = KEYS[e.code];
   if (channels) {
     e.preventDefault();
@@ -179,13 +191,12 @@ function release(code: string): void {
 }
 
 /**
- * Windows sends no release for a Shift let go while the other Shift is still down. So when an
- * event says no Shift is held, neither is: both are let go.
+ * Windows sends no release for a Shift let go while the other Shift is still down (and the same
+ * for Ctrl). So when an event says no Shift is held, neither is: both are let go.
  */
 function dropShifts(e: KeyboardEvent): void {
-  if (e.shiftKey) return;
-  release("ShiftLeft");
-  release("ShiftRight");
+  if (!e.shiftKey) for (const code of ["ShiftLeft", "ShiftRight"]) release(code);
+  if (!e.ctrlKey) for (const code of ["ControlLeft", "ControlRight"]) release(code);
 }
 
 export function thrustKeyUp(e: KeyboardEvent): void {
@@ -261,9 +272,18 @@ function Title() {
       <div class="mas-title over">
         <h1>MAMMOTH THRUST</h1>
         <div class="mas-col">
-          <button class="mas-btn" onClick={startThrust} data-testid="mth-start">
+          <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-start">
             Play
           </button>
+        </div>
+        {/* For testing (Chloe, 13 November 2026): start at any level. Not for players; to go before release. */}
+        <div class="mas-row mth-levels" data-testid="mth-levels">
+          <span>Test: start at</span>
+          {Array.from({ length: LEVELS }, (_, k) => (
+            <button key={k} class="mas-btn small" onClick={() => startThrust(k + 1)} data-testid={`mth-level-${k + 1}`}>
+              Level {k + 1}
+            </button>
+          ))}
         </div>
         <p class="mas-credit">by Chloe Bolland © 2026</p>
       </div>
@@ -301,6 +321,7 @@ function Play() {
   const over = s.phase === "over";
   const won = s.phase === "won";
   const ship = shipStatus(sb.world);
+  const coolant = coolantStatus(sb.world);
   const back = s.backAt !== undefined && sb.world.time - s.backAt < BACK_NOTE;
   return (
     <div class="mas-play" data-testid="mth-play">
@@ -327,6 +348,12 @@ function Play() {
         <span class={ship.slugs === 0 ? "bad" : ""} data-testid="mth-slugs">
           SHELLS <b>{ship.slugs}</b>
         </span>
+        {coolant && (
+          <span class="mas-fuel mth-coolant" data-testid="mth-coolant" title={`Coolant: ${(100 * coolant.share).toFixed(0)}%, ${coolant.holes} hole${coolant.holes === 1 ? "" : "s"}`}>
+            <i class={coolant.share < 0.25 ? "low" : ""} style={{ width: `${(100 * coolant.share).toFixed(1)}%` }} />
+            <em>COOLANT</em>
+          </span>
+        )}
         <span class={ship.damage > 0.005 ? "bad" : ""} data-testid="mth-damage">
           DAMAGE <b>{(100 * ship.damage).toFixed(0)}</b>%
         </span>
@@ -350,6 +377,12 @@ function Play() {
           REFUELLING
         </div>
       )}
+      {s.plant?.critical !== undefined && !s.plant.blown && (s.phase === "flying" || s.phase === "between") && (
+        <div class="mth-note mth-critical" data-testid="mth-critical">
+          REACTOR CRITICAL {Math.max(0, Math.ceil((s.plant.critical - sb.world.time) / GAME_PACE))}
+          <small>Get the pod out before it blows.</small>
+        </div>
+      )}
       {s.phase === "flying" && back && (
         <div class="mth-note" data-testid="mth-back">
           BACK YOU GO
@@ -369,7 +402,7 @@ function Play() {
           </button>
         </div>
       )}
-      {won && <Won level={level} score={s.score} lives={s.lives} pod={s.bonus?.pod ?? 0} fuel={s.bonus?.fuel ?? 0} />}
+      {won && <Won level={level} score={s.score} lives={s.lives} pod={s.bonus?.pod ?? 0} fuel={s.bonus?.fuel ?? 0} plant={s.bonus?.plant} />}
       {over && <GameOver score={s.score} level={level} reason={s.reason} />}
       {!over && !won && (
         <>
@@ -390,20 +423,26 @@ function quit(): void {
 }
 
 /** The pod is out: what it scored, and on to the next level with the score and ships carried over. */
-function Won({ level, score, lives, pod, fuel }: { level: number; score: number; lives: number; pod: number; fuel: number }) {
+function Won({ level, score, lives, pod, fuel, plant }: { level: number; score: number; lives: number; pod: number; fuel: number; plant?: number }) {
   const last = level >= LEVELS;
   return (
     <div class="mas-modal" data-testid="mth-won">
       <h2>{last ? "Mission complete" : `Level ${level} complete`}</h2>
       <p>
         The pod <b>+{pod}</b> · fuel left <b>+{fuel}</b>
+        {plant ? (
+          <>
+            {" "}
+            · out before the plant blew <b>+{plant}</b>
+          </>
+        ) : null}
       </p>
       <p>
         Score <b>{score}</b>
       </p>
       {last ? (
         <div class="mas-row">
-          <button class="mas-btn" onClick={startThrust} data-testid="mth-again">
+          <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-again">
             Play again
           </button>
           <button class="mas-btn" onClick={quit}>
@@ -419,16 +458,16 @@ function Won({ level, score, lives, pod, fuel }: { level: number; score: number;
   );
 }
 
-function GameOver({ score, level, reason }: { score: number; level: number; reason?: "ships" | "pod" }) {
+function GameOver({ score, level, reason }: { score: number; level: number; reason?: "ships" | "pod" | "plant" }) {
   return (
     <div class="mas-modal" data-testid="mth-over">
       <h2>Game over</h2>
-      <p>{reason === "pod" ? "The pod was destroyed." : "No ships left."}</p>
+      <p>{reason === "pod" ? "The pod was destroyed." : reason === "plant" ? "The power plant blew with the pod still down." : "No ships left."}</p>
       <p>
         Score <b>{score}</b> · level <b>{level}</b>
       </p>
       <div class="mas-row">
-        <button class="mas-btn" onClick={startThrust} data-testid="mth-again">
+        <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-again">
           Play again
         </button>
         <button class="mas-btn" onClick={quit}>

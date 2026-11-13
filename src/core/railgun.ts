@@ -23,7 +23,7 @@ export interface Railgun {
 
 /** A railgun's channel is on, through a working control link. */
 function triggered(world: World, b: Body, channel: string): boolean {
-  const linked = world.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === channel && l.integrity > 0);
+  const linked = world.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === channel && l.integrity > 0 && !l.off);
   return linked && (world.controls[channel] ?? 0) > 0;
 }
 

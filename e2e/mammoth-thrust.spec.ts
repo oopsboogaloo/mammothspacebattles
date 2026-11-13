@@ -250,6 +250,8 @@ test("MTH-060 a ship destroyed on the ground leaves a crater there, and the view
     const d = 12.6 - hull.position.y;
     return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x, y: b.position.y + d }, velocity: { x: 0, y: 0 } } })));
   });
+  // The view has followed the ship down before it is destroyed (it stays where it last saw a ship).
+  await expect.poll(() => hook(page, (m) => Math.abs(m.camera().y - 12.6))).toBeLessThan(3);
   await page.getByTestId("mth-destruct").click();
   await page.getByTestId("mth-destruct").click();
   await expect.poll(() => hook(page, (m) => m.sandbox().world.terrain.holes.length), { timeout: 30_000 }).toBeGreaterThanOrEqual(1);
@@ -355,4 +357,78 @@ test("MTH-021 a Shift let go while the other is still down doesn't stick, though
   await expect.poll(engines).not.toBe("00000");
   await key("keyup", "ShiftLeft", false);
   await expect.poll(engines).toBe("00000");
+});
+
+test("MTH-021 the Ctrl keys turn as the Shift keys do, the other keys still work while one is held, and a Ctrl let go unseen doesn't stick", async ({ page }) => {
+  await start(page);
+  const engines = () => hook(page, (m) => ["main", "bl", "br", "fl", "fr"].map((c) => m.sandbox().world.controls[c] ?? 0).join(""));
+  await page.keyboard.down("ShiftLeft");
+  await expect.poll(engines).not.toBe("00000");
+  const left = await engines();
+  await page.keyboard.up("ShiftLeft");
+  await expect.poll(engines).toBe("00000");
+  await page.keyboard.down("ControlLeft");
+  await expect.poll(engines).toBe(left);
+  // Space fires with Ctrl held.
+  await page.keyboard.down("Space");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.controls.fire ?? 0)).toBe(1);
+  await page.keyboard.up("Space");
+  await page.keyboard.up("ControlLeft");
+  await expect.poll(engines).toBe("00000");
+  await page.keyboard.down("ControlRight");
+  await expect.poll(engines).not.toBe("00000");
+  expect(await engines()).not.toBe(left);
+  await page.keyboard.up("ControlRight");
+  await expect.poll(engines).toBe("00000");
+  // Both down, the left one let go with no release sent, then the right one: neither is held.
+  const key = (type: string, code: string, ctrlKey: boolean) => page.evaluate(([t, c, s]) => void window.dispatchEvent(new KeyboardEvent(t as string, { code: c as string, key: "Control", ctrlKey: s as boolean, bubbles: true })), [type, code, ctrlKey] as const);
+  await key("keydown", "ControlLeft", true);
+  await key("keydown", "ControlRight", true);
+  await key("keyup", "ControlRight", false);
+  await expect.poll(engines).toBe("00000");
+});
+
+test("MTH-014 thrust.html?level=3 plays from level 3, the winding cave, with its six electric turrets", async ({ page }) => {
+  await page.goto("./thrust.html?level=3");
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 3");
+  expect(await hook(page, (m) => m.level())).toBe(3);
+  expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(6);
+  // Without the address, Play starts at level 1.
+  await page.goto("./thrust.html");
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 1");
+  await expect(page.getByTestId("mth-coolant")).toHaveCount(0);
+});
+
+test("MTH-082 level 3's power plant: with its coolant gone it goes critical, the page counts down, and when it blows with the pod still down the game is over", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("./thrust.html?level=3");
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 3");
+  expect(await hook(page, (m) => (m.thrust() as unknown as { plant: { up: { tx: boolean } } }).plant.up.tx)).toBe(true);
+  await expect(page.getByTestId("mth-critical")).toHaveCount(0);
+  // The coolant gauge, full (MTH-086); level 1 has none.
+  await expect(page.getByTestId("mth-coolant")).toHaveAttribute("title", "Coolant: 100%, 0 holes");
+  expect(
+    await hook(page, (m) => {
+      const core = m.sandbox().world.bodies.find((b) => b.id === "plant-core") as unknown as { contents: { resource: string; mass: number; capacity: number }[] };
+      return m.edit([{ type: "body.set", id: "plant-core", patch: { contents: core.contents.map((c) => ({ ...c, mass: 0 })) } }]);
+    }),
+  ).toBe(true);
+  await expect(page.getByTestId("mth-critical")).toContainText("REACTOR CRITICAL", { timeout: 15_000 });
+  await expect(page.getByTestId("mth-coolant")).toHaveAttribute("title", "Coolant: 0%, 0 holes");
+  await expect(page.getByTestId("mth-over")).toContainText("The power plant blew with the pod still down.", { timeout: 90_000 });
+});
+
+test("MTH-087 for testing, the title has a button for each level that starts the game there", async ({ page }) => {
+  await page.goto("./thrust.html");
+  for (const n of [3, 2, 1]) {
+    await page.getByTestId(`mth-level-${n}`).click();
+    await expect(page.getByTestId("mth-level")).toHaveText(`LEVEL ${n}`);
+    expect(await hook(page, (m) => m.level())).toBe(n);
+    await page.keyboard.press("p");
+    await page.getByTestId("mth-quit").click();
+    await expect(page.getByTestId("mth-start")).toBeVisible();
+  }
 });

@@ -1,8 +1,8 @@
 // Mammoth Thrust's page: the HUD's readings, where the view looks, and how the level is drawn.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { insideOutline, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
-import { easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
+import { insideOutline, LAMP_OFF, LAMP_ON, LINE_OFF, LINE_ON, RECOIL_TIME, recoilOf, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
+import { coolantStatus, easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
 import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -14,7 +14,7 @@ function recorder(): { ctx: Ctx; calls: string[] } {
   const calls: string[] = [];
   const state: Record<string, unknown> = {};
   const ctx = new Proxy(state, {
-    get: (t, k: string) => (k in t ? t[k] : (...args: unknown[]) => void calls.push(`${k}(${args.map((a) => (typeof a === "number" ? Math.round(a) : String(a))).join(",")})|fill=${String(t.fillStyle)}`)),
+    get: (t, k: string) => (k in t ? t[k] : (...args: unknown[]) => void calls.push(`${k}(${args.map((a) => (typeof a === "number" ? Math.round(a) : String(a))).join(",")})|stroke=${String(t.strokeStyle)}|fill=${String(t.fillStyle)}`)),
     set: (t, k: string, v) => ((t[k] = v), true),
   }) as unknown as Ctx;
   return { ctx, calls };
@@ -38,7 +38,7 @@ describe("Mammoth Thrust's page", () => {
     expect(shipStatus(w).damage).toBe(1); // a lost ship is lost
     expect(Object.keys(POD_LABEL).sort()).toEqual(["gone", "loose", "stand", "tether"]);
     expect(shipStatus(initialWorld(parseScenario(JSON.parse(readFileSync(new URL("../../scenarios/empty.json", import.meta.url), "utf8")))))).toEqual({ fuel: 0, slugs: 0, damage: 0 });
-    expect(LEVELS).toBe(2);
+    expect(LEVELS).toBe(3);
     for (let n = 1; n <= LEVELS; n++) expect(raw(n).world.thrust.level).toBe(n);
   });
 
@@ -137,5 +137,57 @@ describe("Mammoth Thrust's page", () => {
     for (let i = 0; i < 700; i++) stepInPlace(w, [], sandbox);
     expect(w.thrust!.state.n).toBe(2);
     expect(w.thrust!.state.graceUntil).toBeDefined();
+  });
+  it("MTH-072 an electric turret's outer barrel is drawn folded back into the breech when it fires, and slides out again", () => {
+    const w = world(3);
+    const barrel = w.bodies.find((b) => b.id === "t6-barrel")!;
+    const mag = w.bodies.find((b) => b.id === "t6-breech")!.magazine!;
+    expect(barrel.recoil).toEqual({ gun: "t6-breech", travel: 0.7 });
+    // Before its first shot it is out.
+    expect(recoilOf(w, barrel)).toBe(0);
+    // At the shot it is all the way back; halfway through, half; then out.
+    mag.loaded = 1;
+    mag.timer = 0;
+    expect(recoilOf(w, barrel)).toBeCloseTo(0.7, 9);
+    mag.timer = RECOIL_TIME / 2;
+    expect(recoilOf(w, barrel)).toBeCloseTo(0.35, 9);
+    mag.timer = RECOIL_TIME * 2;
+    expect(recoilOf(w, barrel)).toBe(0);
+  });
+  it("MTH-085 the power lines are white while they carry power and dark while they don't; the plant's light is green or red; the shock shows only while it carries power", () => {
+    const w = world(3);
+    const strokes = (calls: string[]) => calls.filter((c) => c.startsWith("stroke(")).map((c) => c.split("|stroke=")[1].split("|fill=")[0]);
+    const fills = (calls: string[]) => calls.filter((c) => c.startsWith("fill(")).map((c) => c.split("|fill=")[1]);
+    // Over the antennae: both lines there, and the shock between them.
+    const cam = { x: -18, y: -50, zoom: 8 };
+    let calls = draw(w, cam);
+    expect(strokes(calls).filter((c) => c === LINE_ON).length).toBe(7);
+    expect(strokes(calls)).not.toContain(LINE_OFF);
+    expect(strokes(calls)).toContain("#eaf6ff");
+    // The plant offline: every line dark, no shock, and its light red.
+    w.thrust!.state.plant!.offlineUntil = w.time + 10;
+    calls = draw(w, cam);
+    expect(strokes(calls).filter((c) => c === LINE_OFF).length).toBe(7);
+    expect(strokes(calls)).not.toContain("#eaf6ff");
+    const plant = { x: 61, y: 10, zoom: 8 };
+    expect(fills(draw(w, plant))).toContain(LAMP_OFF);
+    w.thrust!.state.plant!.offlineUntil = 0;
+    expect(fills(draw(w, plant))).toContain(LAMP_ON);
+    // The transmitter down: only the line beyond it is dark.
+    w.thrust!.state.plant!.up = { tx: false };
+    calls = draw(w, cam);
+    expect(strokes(calls).filter((c) => c === LINE_OFF).length).toBe(1);
+    expect(strokes(calls)).not.toContain("#eaf6ff");
+  });
+  it("MTH-086 the HUD's coolant gauge reads the share of the reactor's coolant left, on a level with a plant only", () => {
+    expect(coolantStatus(world(1))).toBeNull();
+    const w = world(3);
+    expect(coolantStatus(w)).toEqual({ share: 1, holes: 0 });
+    const core = w.bodies.find((b) => b.id === "plant-core")!;
+    core.contents![0].mass = 0.3;
+    w.thrust!.state.plant!.holes = 4;
+    const c = coolantStatus(w)!;
+    expect(c.share).toBeCloseTo(0.25, 9);
+    expect(c.holes).toBe(4);
   });
 });

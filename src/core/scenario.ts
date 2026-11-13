@@ -235,6 +235,20 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
   if (b.turret !== undefined) validateTurret(v, b.turret, `${path}.turret`);
   if (b.siphon !== undefined && typeof b.siphon !== "boolean") err(v, `${path}.siphon`, "must be true or false");
+  if (b.vents !== undefined) {
+    if (!isObj(b.vents) || !Array.isArray(b.vents.holes)) err(v, `${path}.vents`, "must be {from?, rate, holes}");
+    else {
+      num(v, b.vents.rate, `${path}.vents.rate`, { positive: true });
+      if (b.vents.from !== undefined) str(v, b.vents.from, `${path}.vents.from`);
+    }
+  }
+  if (b.recoil !== undefined) {
+    if (!isObj(b.recoil)) err(v, `${path}.recoil`, "must be {gun, travel}");
+    else {
+      str(v, b.recoil.gun, `${path}.recoil.gun`);
+      num(v, b.recoil.travel, `${path}.recoil.travel`, { min: 0 });
+    }
+  }
   if (b.anchored !== undefined) {
     if (!isObj(b.anchored)) err(v, `${path}.anchored`, "must be {mass, group?}");
     else {
@@ -462,6 +476,7 @@ function validateTurret(v: V, t: unknown, path: string): void {
   if (t.seed !== undefined) num(v, t.seed, `${path}.seed`, { int: true });
   if (t.aim !== undefined && t.aim !== "random" && t.aim !== "ship") err(v, `${path}.aim`, 'must be "random" or "ship"');
   if (t.enabled !== undefined && typeof t.enabled !== "boolean") err(v, `${path}.enabled`, "must be true or false");
+  if (t.powered !== undefined && typeof t.powered !== "boolean") err(v, `${path}.powered`, "must be true or false");
 }
 
 function validateLimits(v: V, l: unknown, path: string): void {

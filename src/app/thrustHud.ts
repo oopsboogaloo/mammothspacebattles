@@ -1,5 +1,5 @@
 // Mammoth Thrust: what its page works out from the screen and the world (no drawing here).
-import type { Vec2, World } from "../core/index.ts";
+import { plantCoolant, type Vec2, type World } from "../core/index.ts";
 
 /** How much of the level the view shows from top to bottom, m: enough for the ship and a pod on its 12 m tether, with the ground round them. */
 export const VIEW_HEIGHT = 90;
@@ -7,7 +7,7 @@ export const VIEW_HEIGHT = 90;
 export const zoomFor = (height: number): number => Math.min(12, Math.max(3.5, height / VIEW_HEIGHT));
 
 /** The levels, in order: the scenario files `thrust-{n}`. */
-export const LEVELS = 2;
+export const LEVELS = 3;
 
 /** What the HUD shows of the ship flying: its fuel (0–1), slugs left, and its worst-hit part or weld (0–1). */
 export function shipStatus(world: World): { fuel: number; slugs: number; damage: number } {
@@ -71,3 +71,16 @@ export function easeLean(from: Vec2, to: Vec2, dt: number): Vec2 {
 
 /** What the HUD calls the pod's state. */
 export const POD_LABEL = { stand: "ON ITS STAND", loose: "LOOSE", tether: "ON THE TETHER", gone: "LOST" } as const;
+
+/**
+ * The power plant's coolant (MTH-086), for the HUD: the share of the reactor's coolant left (0–1),
+ * and the holes it leaks from. Null on a level without a plant.
+ */
+export function coolantStatus(world: World): { share: number; holes: number } | null {
+  const spec = world.thrust?.spec.plant;
+  const state = world.thrust?.state.plant;
+  if (!spec || !state) return null;
+  const core = world.bodies.find((b) => b.id === spec.core);
+  const capacity = (core?.contents ?? []).reduce((m, c) => m + c.capacity, 0);
+  return { share: capacity > 0 ? Math.max(0, Math.min(1, plantCoolant(world, spec) / capacity)) : 0, holes: state.holes };
+}

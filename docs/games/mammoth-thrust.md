@@ -102,11 +102,15 @@ other sources in §12):
 - **Level 2 (MVP): one chamber.** The factory, a building and a turret on the surface. One shaft,
   about 30 m wide and 80 m deep, opens into a single chamber about 120 m across. Two turrets on
   the chamber's walls, the pod and a fuel tank on its floor. It teaches flying the pod up a shaft.
-- **Level 3 (after the MVP): the twisting cave.** Mountains across about 600 m; a cave that turns
-  four or five times on its way about 300 m down; two turrets on the surface and three or four in
-  the cave; two fuel tanks; the pod in a chamber at the bottom.
+- **Level 3: the winding cave** (Chloe's drawing, 13 November 2026, traced at 0.1 m a pixel). About
+  200 m across. A cave mouth 38 m wide between hills winds down past ledges into a wide chamber
+  about 135 m down. Six electric turrets: two on the ledge under the mouth, one on a ledge on the
+  left, one hanging from the right wall, one from the chamber's roof, and one on the chamber's
+  floor. The pod stands at the chamber's left end with two fuel tanks beside it; one more fuel
+  tank is on the surface. Play can start here: `thrust.html?level=3`.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
-  through).
+  through). Level 3 is drawn tighter at the chamber's left end, where the roof is 19 m over the pod;
+  the tips of its two dead-end alcoves narrow to nothing.
 - The level doesn't wrap. Its sides are high rock walls beyond the mountains.
 
 ### The ship
@@ -193,7 +197,49 @@ other sources in §12):
   Its charge gives mostly gas and little damage: the Asteroids gunship shell made weaker and
   gassier. Bolts don't damage turrets, the factory or the pod's stand.
 
+### Electric turrets
+
+From Chloe's drawing (13 November 2026). A turret of a second kind, on level 3:
+
+- **Pieces.** A **base**, a rigid plate fixed on the rock. On it a **neat arc** (a segment of a
+  circle, not a full half-disc), welded. At each end of the arc, on the base, a **power node**.
+  The **barrel**, in two parts (the breech and the outer barrel), stands on the arc and rides
+  along it as it aims: it turns about the arc's centre, so the arc itself stays still.
+- **Power.** From the level's power plant, along its power lines (below). It has no battery,
+  generator or fuel tank of its own.
+- **Firing.** As the fuel turret: it waits from first sight, picks a random bearing (here within
+  50° either way along the arc), turns to it and fires a bolt. The outer barrel folds back into
+  the breech with the recoil and slides out again (drawn; the body itself doesn't move).
+- **Damage.** One slug on the barrel knocks it off (or destroys it): the turret is out of
+  action. The arc takes two slugs. A power node is the weak point: one slug sets it off, and its
+  blast alone puts the turret out of action.
+
+### The power plant
+
+From Chloe's drawings (13 November 2026), on level 3. It takes the place of the original's
+reactor and of our factory below.
+
+- **The plant.** Three tall domes, a tower with a light, and an annex, on a base on the surface.
+  The light is green while the plant is on, red while it is off. Bullets don't wear it down.
+- **Offline.** A slug that hits any part of it takes it offline: 5 s for the first hit, and each
+  hit while it is offline adds 2 s. Offline, it powers nothing.
+- **Coolant.** The reactor holds a quantity of coolant. A slug that hits a dome makes a hole
+  there, and coolant leaks from every hole as gas (real gas: it pushes what flies through it).
+  One hole empties it in 2 minutes, two in 1, ten in 12 s: holed enough, it goes critical almost
+  at once. A COOLANT gauge on the HUD shows what is left (red under a quarter).
+- **Critical.** With no coolant left, a 10 s countdown on the page, then it explodes. Out above the
+  top with the pod before then: 2000 more. If it blows with the pod still down, the game is over.
+  Critical, it powers nothing.
+- **Power lines** run from the plant through the rock to every turret it powers: white while they
+  carry power, dark while they don't. They can't be destroyed (for now: we may come back to that).
+- **Transmitter.** Where a line has to cross the open, two antennae, one either side, carry the
+  power across as a moving electric shock. A ship that touches the shock loses all control for
+  1 s. Each antenna is destructible (one slug): with either gone there's no shock, and the turret
+  beyond it has no power.
+
 ### The factory
+
+From before Chloe's power design; level 3's plant does this. Levels 1 and 2 have none yet.
 
 - Each slug that hits the factory stops all turrets: 4 s for the first hit, 2 s longer for each
   one after (first values).
@@ -238,7 +284,7 @@ First values, to tune. Top 10 with initials, as Asteroids (`scores.ts`).
 
 ## 4. Controls, HUD and view
 
-- **Controls.** Turn left and right, thrust, fire, as Asteroids (Q/E, Space, and the option to
+- **Controls.** Turn left and right, thrust, fire, as Asteroids (Q/E, either Shift or Ctrl, Space, and the option to
   swap). New: **tractor** on **Z** and **shield** on **X** (beside the left Shift), or **/** and **.** (beside the right Shift), and a touch button each.
 - **Controller.** As PAD-002 in `docs/spec.md`: stick or D-pad turns, A or right trigger forward,
   B or left trigger reverse, X or right bumper fires, Y or left bumper the tractor, Start pauses.
@@ -300,6 +346,8 @@ Priority: **M** must, **S** should.
 - **MTH-012** `[M]` The generator fails if the cave is anywhere narrower than its declared
   least width.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
+- **MTH-014** `[M]` Level 3 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
+  and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=3` plays from it.
 
 **Ship, tether and pod**
 - **MTH-020** `[M]` The ship is the Asteroids ship with a tractor unit, a tether unit, turning of
@@ -337,6 +385,33 @@ Priority: **M** must, **S** should.
   hit.
 - **MTH-034** `[M]` Past its damage total the factory counts down 10 s and explodes. If the pod is
   still on the planet then, the game is over.
+
+**Electric turrets**
+- **MTH-070** `[M]` An electric turret is a fixed base, an arc welded to it, a power node at each
+  end of the arc, and a barrel in two parts that rides along the arc, turning about its centre. It
+  needs no power, and fires at the ship as the fuel turret does.
+- **MTH-071** `[M]` One slug on the barrel puts it out of action. The arc takes two. One slug on a
+  power node sets it off, and the blast alone puts the turret out of action.
+- **MTH-072** `[S]` When it fires, the outer barrel is drawn folded back into the breech, and slides
+  out again.
+
+**Power plant**
+- **MTH-080** `[M]` A level's power plant powers its turrets. A slug on it takes it offline 5 s,
+  and each slug while it is offline 2 s more; offline, no turret it powers fires.
+- **MTH-081** `[M]` A slug in a dome holes it. The reactor's coolant leaks from every hole as gas
+  at a steady rate: 2 minutes for one hole, that divided by the holes for more.
+- **MTH-082** `[M]` With no coolant left the plant goes critical: the page counts down 10 s, then
+  it explodes. With the pod still down the game is over; out with it first, 2000 more.
+- **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond
+  them have no power, and the others still do.
+- **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s.
+- **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to
+  start at any level. Not meant for players: to go before release.
+- **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the
+  reactor's coolant left, red under a quarter.
+- **MTH-085** `[M]` Power lines are drawn white while they carry power and dark while they don't;
+  the plant's light green while it is on and red while it is off; the shock, moving like
+  electricity, only while it carries power.
 
 **Shield and fuel**
 - **MTH-040** `[M]` While the shield is held, a bolt bursting at the field neither damages the
