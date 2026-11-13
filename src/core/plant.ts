@@ -9,6 +9,7 @@
 import { assemblyRoots } from "./joints.ts";
 import { add, invRotate, length, rotate, sinCos, sub, type Vec2 } from "./math.ts";
 import { localVertices } from "./shapes.ts";
+import type { Breach } from "./damage.ts";
 import type { Body, World } from "./world.ts";
 
 /** One side of a transmitter: an antenna fixed to the rock, the parts that must be on it, and its tip. */
@@ -52,13 +53,18 @@ export interface PlantSpec {
   turrets: { id: string; needs?: string[] }[];
   /** Points for leaving with the pod while it is critical (default 2000). */
   bonus?: number;
+  /** Slugs in its domes per leak: the first opens a leak where it strikes, the rest make that leak bigger (default 3). */
+  perLeak?: number;
+  /** How fast a leak's gas leaves, m/s. */
+  leakSpeed?: number;
 }
 
 export interface PlantState {
   /** Offline until this time, s (on before it). */
   offlineUntil: number;
-  /** Slugs that have hit it, and the holes in its domes. */
+  /** Slugs that have hit it, slugs that have hit its domes, and the leaks in its domes. */
   hits: number;
+  domeHits?: number;
   holes: number;
   /** The shells already counted (a shell's later contacts aren't new hits). */
   seen: string[];
@@ -69,10 +75,12 @@ export interface PlantState {
   up: Record<string, boolean>;
   /** The ship flying has no control until this time, s. */
   shockUntil?: number;
+  /** The newest leak, which the next slugs make bigger: its dome and its place in the dome's holes. */
+  leak?: { dome: string; index: number };
 }
 
 export const PLANT_BONUS = 2000;
-/** A store holding less than one leak parcel can vent no more (damage.ts LEAK_PARCEL): the coolant is gone. */
+/** A store holding less than one leak parcel can vent no more (damage.ts LEAK_PARCEL, or the vents' own): the coolant is gone. */
 const EMPTY = 0.002;
 /** The most shells remembered as counted. */
 const SEEN = 64;
@@ -158,15 +166,25 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       // Offline: the first hit for a while, each hit while it is down for a little longer.
       s.offlineUntil = now >= s.offlineUntil - 1e-9 ? now + spec.offline.first : s.offlineUntil + spec.offline.more;
     }
-    // A slug in a dome holes it, where it struck: the coolant vents from there.
+    // A slug in a dome: every `perLeak`th opens a new leak where it struck; the others make the
+    // newest leak bigger. Each slug adds the same to the flow, wherever it lands.
     const dome = domes.has(hit) ? world.bodies.find((x) => x.id === hit) : undefined;
-    if (dome?.vents) {
+    const per = spec.perLeak ?? 3;
+    const newest = s.leak ? world.bodies.find((x) => x.id === s.leak!.dome)?.vents?.holes[s.leak.index] : undefined;
+    if (dome?.vents && newest && (s.domeHits ?? 0) % per !== 0) {
+      newest.size = (newest.size ?? 1) + 1;
+      s.domeHits = (s.domeHits ?? 0) + 1;
+      changed = true;
+    } else if (dome?.vents) {
       const touch = world.contacts.find((c) => (c.a === a && c.b === b) || (c.a === b && c.b === a));
       const shellBody = world.bodies.find((x) => x.id === shell);
       const at = touch?.point ?? shellBody?.position ?? dome.position;
       const local = invRotate(sinCos(dome.angle), sub(at, dome.position));
       const d = length(local);
-      dome.vents.holes.push({ point: local, normal: d > 1e-9 ? { x: local.x / d, y: local.y / d } : { x: 0, y: 1 }, credit: 0, count: 0 });
+      const hole: Breach = { point: local, normal: d > 1e-9 ? { x: local.x / d, y: local.y / d } : { x: 0, y: 1 }, credit: 0, count: 0, size: 1, ...(spec.leakSpeed ? { speed: spec.leakSpeed } : {}) };
+      dome.vents.holes.push(hole);
+      s.leak = { dome: dome.id, index: dome.vents.holes.length - 1 };
+      s.domeHits = (s.domeHits ?? 0) + 1;
       s.holes += 1;
       changed = true;
     }
@@ -174,7 +192,8 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
   }
 
   // Coolant gone: critical, then the explosion.
-  if (s.critical === undefined && !s.blown && plantCoolant(world, spec) < EMPTY) {
+  const parcel = Math.max(EMPTY, ...spec.domes.map((id) => world.bodies.find((x) => x.id === id)?.vents?.parcel ?? EMPTY));
+  if (s.critical === undefined && !s.blown && plantCoolant(world, spec) < parcel) {
     s.critical = now + spec.countdown;
     world.events.push({ tick: world.tick, type: "plant.critical", data: { at: s.critical } });
   }

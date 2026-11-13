@@ -69,10 +69,13 @@ const ELECTRIC_TURRET: ElectricTuning = { range: 80, wait: 1.5, hold: 0.25, aim:
 /**
  * The power plant (Chloe, 13 November 2026). Times are game seconds (half of screen seconds): a hit
  * takes it offline 5 s on screen, and each hit while it is down 2 s more; critical, it blows 10 s
- * later. Each hole vents 0.02 kg/s of its 1.2 kg of coolant: one hole empties it in 2 minutes on
- * screen, two in one, and so on. A ship in the transmitter's shock has no control for 1 s.
+ * later. Its 12 kg of coolant leaks 0.1 kg/s for each slug in its domes: one slug empties it in 4
+ * minutes on screen, two in two, and so on. Every third slug opens a new leak where it strikes; the
+ * others make the newest leak bigger (Chloe: fewer, stronger leaks that show). The gas leaves at
+ * 20 m/s, so each slug's share pushes 2 N. A ship in the transmitter's shock has no control for 1 s.
  */
-const PLANT: PlantTuning = { coolant: 1.2, rate: 0.02, charge: 3, radius: 14 };
+const PLANT: PlantTuning = { coolant: 12, rate: 0.1, parcel: 0.01, puff: 0.12, charge: 3, radius: 14 };
+const PLANT_LEAK = { perLeak: 3, leakSpeed: 20 };
 const PLANT_OFFLINE = { first: 2.5, more: 1 };
 const PLANT_COUNTDOWN = 5;
 const SHOCK = 0.5;
@@ -237,6 +240,7 @@ function write(l: Level) {
                 light: plant.light,
                 offline: PLANT_OFFLINE,
                 countdown: PLANT_COUNTDOWN,
+                ...PLANT_LEAK,
                 lines: l.plant.lines,
                 transmitters: [{ id: "tx", sides: aerials.map((a) => ({ mount: a.mount, parts: a.parts, tip: a.tip })), width: 1, shock: SHOCK }],
                 turrets: turrets.map((t, k) => ({ id: t.carriage, ...(l.plant!.beyond.includes(k + 1) ? { needs: ["tx"] } : {}) })),

@@ -81,7 +81,7 @@ export interface Body {
    * holds gas: its own, or `from`'s (a body welded to it). Unlike a breach (DMG-004) a hole doesn't
    * depend on damage, and there may be many. Mammoth Thrust's power plant leaks coolant this way.
    */
-  vents?: { from?: string; rate: number; holes: Breach[] };
+  vents?: { from?: string; rate: number; holes: Breach[]; parcel?: number; radius?: number };
   /** Shells it carries and loads into place one at a time (WPN, first look). */
   magazine?: Magazine;
   /** An explosive charge that detonates on impact (WPN): see explosive.ts. */
@@ -1019,35 +1019,39 @@ function runVents(world: World, dt: number, limit: number): void {
     const roots = v.from ? assemblyRoots(world) : null;
     if (roots && roots.get(src.id) !== roots.get(b.id)) continue;
     const q = sinCos(b.angle);
+    const parcel = v.parcel ?? LEAK_PARCEL;
+    const radius = v.radius ?? LEAK_RADIUS;
     for (const hole of v.holes) {
       if (hole.count === 0 && hole.credit === 0) pushEvent(world, { tick: world.tick, type: "vent", data: { id: b.id } });
-      hole.credit += v.rate * dt;
-      while (hole.credit >= LEAK_PARCEL && world.gas.count < limit) {
+      // A hole's size scales its rate: a hole made bigger vents faster.
+      const rate = v.rate * (hole.size ?? 1);
+      hole.credit += rate * dt;
+      while (hole.credit >= parcel && world.gas.count < limit) {
         const gasses = (src.contents ?? []).filter((s) => SPECIES[s.resource] && s.mass > 0);
         const total = gasses.reduce((t, s) => t + s.mass, 0);
-        if (total < LEAK_PARCEL) {
+        if (total < parcel) {
           hole.credit = 0;
           break;
         }
         const parts: [string, number][] = gasses.map((s) => [s.resource, s.mass / total]);
         const n = rotate(q, hole.normal);
         const speed = hole.speed ?? LEAK_SPEED;
-        const ahead = LEAK_RADIUS + 0.01 + ((hole.credit - LEAK_PARCEL) / v.rate) * speed;
+        const ahead = radius + 0.01 + ((hole.credit - parcel) / rate) * speed;
         const point = add(b.position, add(rotate(q, hole.point), scale(n, ahead)));
         const near = world.bodies.filter((o) => {
           const dx = point.x - o.position.x;
           const dy = point.y - o.position.y;
-          const reach = boundingRadiusOf(o.shape) + LEAK_RADIUS + 1e-6;
+          const reach = boundingRadiusOf(o.shape) + radius + 1e-6;
           return dx * dx + dy * dy <= reach * reach;
         });
-        if (!clearOf(wallBodies(near))(point.x, point.y, LEAK_RADIUS)) break;
+        if (!clearOf(wallBodies(near))(point.x, point.y, radius)) break;
         const r = sub(point, b.position);
         const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
-        addParcel(world.gas, emitParcel(world, src, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, speed)), LEAK_RADIUS));
-        hole.credit -= LEAK_PARCEL;
+        addParcel(world.gas, emitParcel(world, src, parts, parcel, parcel, point, add(vPoint, scale(n, speed)), radius));
+        hole.credit -= parcel;
         hole.count += 1;
       }
-      hole.credit = Math.min(hole.credit, LEAK_PARCEL);
+      hole.credit = Math.min(hole.credit, parcel);
     }
   }
 }

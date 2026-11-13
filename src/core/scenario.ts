@@ -239,6 +239,8 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
     if (!isObj(b.vents) || !Array.isArray(b.vents.holes)) err(v, `${path}.vents`, "must be {from?, rate, holes}");
     else {
       num(v, b.vents.rate, `${path}.vents.rate`, { positive: true });
+      if (b.vents.parcel !== undefined) num(v, b.vents.parcel, `${path}.vents.parcel`, { positive: true });
+      if (b.vents.radius !== undefined) num(v, b.vents.radius, `${path}.vents.radius`, { positive: true });
       if (b.vents.from !== undefined) str(v, b.vents.from, `${path}.vents.from`);
     }
   }

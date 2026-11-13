@@ -27,7 +27,12 @@ export interface Wisp {
   temperature: number;
   /** How long it lasts, s, where that is not `WISP_LIFE` (Mammoth Asteroids). */
   life?: number;
+  /** Mostly Mammoth Thrust's coolant: drawn as pale vapour, and it lingers. */
+  vapour?: boolean;
 }
+
+/** How long a wisp of coolant vapour lasts, s: long enough for a leak's cloud to show. */
+export const WISP_LIFE_VAPOUR = 3;
 
 /** How long a wisp lasts, s. */
 export const WISP_LIFE = 1;
@@ -60,6 +65,10 @@ export function spawnWisps(world: World, gone: readonly Parcel[], temperature: (
     if (!inside) continue;
     const wisp: Wisp = { position: { ...p.position }, velocity: { ...p.velocity }, mass: p.mass, radius: p.radius, age: 0, temperature: temperature(p) };
     if (world.arcade) wisp.life = WISP_LIFE_ARCADE;
+    if ((p.composition?.coolant ?? 0) > 0.5) {
+      wisp.vapour = true;
+      wisp.life = WISP_LIFE_VAPOUR;
+    }
     list.push(wisp);
   }
   if (list.length > WISP_LIMIT) list.splice(0, list.length - WISP_LIMIT);

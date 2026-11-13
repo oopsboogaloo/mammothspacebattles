@@ -19,9 +19,12 @@ const LIGHT_WELD = { tension: 7650, compression: 15300, shear: 5350, torque: 184
 const ANTENNA = { name: "antenna", threshold: 30, toughness: 150 };
 
 export interface PlantTuning {
-  /** The reactor's coolant, kg of steam, and how fast each hole vents it, kg/s. */
+  /** The reactor's coolant, kg (a volatile liquid that boils off: vented as steam), and how fast a leak of size 1 vents it, kg/s. */
   coolant: number;
   rate: number;
+  /** Each puff of a leak, kg, and its size, m: bigger than a damage leak's, so the leaks show. */
+  parcel: number;
+  puff: number;
   /** The explosion when it blows: its charge, kg TNT, and its reach, m. */
   charge: number;
   radius: number;
@@ -94,9 +97,9 @@ export function powerPlant(at: Vec, t: PlantTuning) {
     m.weld(`${part}-a`, "base", part, { x: x0 + 0.6, y: top }, FAST);
     m.weld(`${part}-b`, "base", part, { x: x1 - 0.6, y: top }, FAST);
   };
-  const vents = { from: m.id("core"), rate: t.rate, holes: [] };
+  const vents = { from: m.id("core"), rate: t.rate, holes: [], parcel: t.parcel, radius: t.puff };
   dome("dome-l", -8.9, -3.5, { vents });
-  dome("core", -3.1, 2.3, { vents, contents: [{ resource: "h2o", mass: t.coolant, capacity: t.coolant }] });
+  dome("core", -3.1, 2.3, { vents, contents: [{ resource: "coolant", mass: t.coolant, capacity: t.coolant }] });
   dome("dome-r", 2.7, 8.1, { vents });
   // The tower, with its light; the annex beside it.
   m.box("tower", 8.2, 9.4, top, 12, 100);
