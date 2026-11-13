@@ -10,7 +10,7 @@ import { shown } from "./smooth.ts";
 import { View } from "./View.tsx";
 import { usePad, type PadGame, type PadState } from "./gamepad.ts";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
-import { easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
+import { coolantStatus, easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
 import { THRUST_DESTRUCT } from "../core/index.ts";
 
 export const thrustScreen = signal<"title" | "play">("title");
@@ -312,6 +312,7 @@ function Play() {
   const over = s.phase === "over";
   const won = s.phase === "won";
   const ship = shipStatus(sb.world);
+  const coolant = coolantStatus(sb.world);
   const back = s.backAt !== undefined && sb.world.time - s.backAt < BACK_NOTE;
   return (
     <div class="mas-play" data-testid="mth-play">
@@ -338,6 +339,12 @@ function Play() {
         <span class={ship.slugs === 0 ? "bad" : ""} data-testid="mth-slugs">
           SHELLS <b>{ship.slugs}</b>
         </span>
+        {coolant && (
+          <span class="mas-fuel mth-coolant" data-testid="mth-coolant" title={`Coolant: ${(100 * coolant.share).toFixed(0)}%, ${coolant.holes} hole${coolant.holes === 1 ? "" : "s"}`}>
+            <i class={coolant.share < 0.25 ? "low" : ""} style={{ width: `${(100 * coolant.share).toFixed(1)}%` }} />
+            <em>COOLANT</em>
+          </span>
+        )}
         <span class={ship.damage > 0.005 ? "bad" : ""} data-testid="mth-damage">
           DAMAGE <b>{(100 * ship.damage).toFixed(0)}</b>%
         </span>

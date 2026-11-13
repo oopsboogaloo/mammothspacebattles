@@ -398,6 +398,7 @@ test("MTH-014 thrust.html?level=3 plays from level 3, the winding cave, with its
   await page.goto("./thrust.html");
   await page.getByTestId("mth-start").click();
   await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 1");
+  await expect(page.getByTestId("mth-coolant")).toHaveCount(0);
 });
 
 test("MTH-082 level 3's power plant: with its coolant gone it goes critical, the page counts down, and when it blows with the pod still down the game is over", async ({ page }) => {
@@ -407,6 +408,8 @@ test("MTH-082 level 3's power plant: with its coolant gone it goes critical, the
   await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 3");
   expect(await hook(page, (m) => (m.thrust() as unknown as { plant: { up: { tx: boolean } } }).plant.up.tx)).toBe(true);
   await expect(page.getByTestId("mth-critical")).toHaveCount(0);
+  // The coolant gauge, full (MTH-086); level 1 has none.
+  await expect(page.getByTestId("mth-coolant")).toHaveAttribute("title", "Coolant: 100%, 0 holes");
   expect(
     await hook(page, (m) => {
       const core = m.sandbox().world.bodies.find((b) => b.id === "plant-core") as unknown as { contents: { resource: string; mass: number; capacity: number }[] };
@@ -414,5 +417,6 @@ test("MTH-082 level 3's power plant: with its coolant gone it goes critical, the
     }),
   ).toBe(true);
   await expect(page.getByTestId("mth-critical")).toContainText("REACTOR CRITICAL", { timeout: 15_000 });
+  await expect(page.getByTestId("mth-coolant")).toHaveAttribute("title", "Coolant: 0%, 0 holes");
   await expect(page.getByTestId("mth-over")).toContainText("The power plant blew with the pod still down.", { timeout: 90_000 });
 });

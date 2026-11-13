@@ -708,7 +708,9 @@ blows (as MTH-034); coolant lasts 2 minutes for one hole; the leak is real gas; 
   flat for the plant, the hill moved right); the rest is the first drawing's. The plant's base is
   21.7 m, on a pad snapped to the flat; the antennae are snapped to the walls (within 1 m). The
   lines are Chloe's, read off the drawing to about 1 m and joined to each turret's base.
-- **Not done:** a coolant gauge (Chloe expects to need one); destructible lines; a plant on levels
+- **Coolant gauge** (asked for by Chloe, 13 November 2026): a bar like the fuel's, blue, red
+  under a quarter; its tooltip gives the share and the holes (`coolantStatus` in `thrustHud.ts`).
+- **Not done:** destructible lines; a plant on levels
   1 and 2; what the blast does to the surface beyond the crater (it is the explosive's own).
 
 ## 7. To decide or measure, in order of when it bites

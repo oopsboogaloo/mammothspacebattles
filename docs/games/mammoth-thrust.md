@@ -226,7 +226,7 @@ reactor and of our factory below.
 - **Coolant.** The reactor holds a quantity of coolant. A slug that hits a dome makes a hole
   there, and coolant leaks from every hole as gas (real gas: it pushes what flies through it).
   One hole empties it in 2 minutes, two in 1, ten in 12 s: holed enough, it goes critical almost
-  at once. The amount isn't shown yet.
+  at once. A COOLANT gauge on the HUD shows what is left (red under a quarter).
 - **Critical.** With no coolant left, a 10 s countdown on the page, then it explodes. Out above the
   top with the pod before then: 2000 more. If it blows with the pod still down, the game is over.
   Critical, it powers nothing.
@@ -405,6 +405,8 @@ Priority: **M** must, **S** should.
 - **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond
   them have no power, and the others still do.
 - **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s.
+- **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the
+  reactor's coolant left, red under a quarter.
 - **MTH-085** `[M]` Power lines are drawn white while they carry power and dark while they don't;
   the plant's light green while it is on and red while it is off; the shock, moving like
   electricity, only while it carries power.

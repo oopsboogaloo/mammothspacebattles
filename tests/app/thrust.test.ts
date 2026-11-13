@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { insideOutline, LAMP_OFF, LAMP_ON, LINE_OFF, LINE_ON, RECOIL_TIME, recoilOf, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
-import { easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
+import { coolantStatus, easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
 import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -178,5 +178,16 @@ describe("Mammoth Thrust's page", () => {
     calls = draw(w, cam);
     expect(strokes(calls).filter((c) => c === LINE_OFF).length).toBe(1);
     expect(strokes(calls)).not.toContain("#eaf6ff");
+  });
+  it("MTH-086 the HUD's coolant gauge reads the share of the reactor's coolant left, on a level with a plant only", () => {
+    expect(coolantStatus(world(1))).toBeNull();
+    const w = world(3);
+    expect(coolantStatus(w)).toEqual({ share: 1, holes: 0 });
+    const core = w.bodies.find((b) => b.id === "plant-core")!;
+    core.contents![0].mass = 0.3;
+    w.thrust!.state.plant!.holes = 4;
+    const c = coolantStatus(w)!;
+    expect(c.share).toBeCloseTo(0.25, 9);
+    expect(c.holes).toBe(4);
   });
 });

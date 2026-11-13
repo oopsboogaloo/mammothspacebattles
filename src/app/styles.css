@@ -354,6 +354,8 @@ button { cursor: pointer; }
 .mas-fuel { position: relative; display: inline-block; width: 120px; height: 16px; border: 1px solid #fff; }
 .mas-fuel i { position: absolute; inset: 0 auto 0 0; background: #fff; }
 .mas-fuel i.low { background: #ff6b6b; }
+.mth-coolant { border-color: #67a9cf; }
+.mth-coolant i { background: #67a9cf; }
 .mas-fuel em { position: relative; padding-left: 6px; font-style: normal; font-size: 11px; line-height: 16px; mix-blend-mode: difference; }
 .mas-banner { position: absolute; top: 24%; left: 50%; transform: translateX(-50%); padding: 12px 22px; border: 2px solid #fff; background: #000; font-size: 26px; font-weight: 700; letter-spacing: 0.08em; text-align: center; pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
 .mas-banner small { font-size: 16px; font-weight: 400; }
