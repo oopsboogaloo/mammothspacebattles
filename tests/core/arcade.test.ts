@@ -1,7 +1,7 @@
 // Mammoth Asteroids' game in the world (docs/games/mammoth-asteroids.md; src/core/arcade.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ARCADE_SCORES, bodyMass, clearestSpot, orbitVelocities, computeTotals, createWorld, getProfile, gunshipPlan, gunshipSpot, hashValue, initialWorld, parseScenario, stepInPlace, type Body, type Command, type World } from "../../src/core/index.ts";
+import { ARCADE_SCORES, bodyMass, steerValues, clearestSpot, orbitVelocities, computeTotals, createWorld, getProfile, gunshipPlan, gunshipSpot, hashValue, initialWorld, parseScenario, stepInPlace, type Body, type Command, type World } from "../../src/core/index.ts";
 import { disc } from "../helpers.ts";
 
 const raw = JSON.parse(readFileSync(new URL("../../scenarios/asteroids.json", import.meta.url), "utf8"));
@@ -550,6 +550,37 @@ describe("Mammoth Asteroids", () => {
     step(0.25, [set("left", 1), set("right", 1)]);
     step(0.05, [set("left", 0), set("right", 0)]);
     expect(prefixed(w, "p1-").some((b) => b.injector?.firing)).toBe(false);
+  });
+
+  it("MAS-054 forward and a turn: the main engine and the outer back one at full, the inner back one off, the inner front one at half; values between 0 and 1 go through in proportion", () => {
+    const m = raw.world.arcade.mix;
+    const engines = (c: Record<string, number>) => {
+      const v = steerValues(m, c);
+      return [v.main, v.bl, v.br, v.fl, v.fr];
+    };
+    // The keys, as before.
+    expect(engines({ forward: 1 })).toEqual([1, 1, 1, 0, 0]);
+    expect(engines({ left: 1, right: 1 })).toEqual([1, 1, 1, 0, 0]);
+    expect(engines({ right: 1 })).toEqual([0, 1, 0, 0, 1]);
+    expect(engines({ left: 1 })).toEqual([0, 0, 1, 1, 0]);
+    expect(engines({ reverse: 1 })).toEqual([0, 0, 0, 1, 1]);
+    expect(engines({ reverse: 1, right: 1 })).toEqual([0, 1, 0, 1, 1]);
+    // New: forward and a turn.
+    expect(engines({ forward: 1, right: 1 })).toEqual([1, 1, 0, 0, 0.5]);
+    expect(engines({ forward: 1, left: 1 })).toEqual([1, 0, 1, 0.5, 0]);
+    // A pad: half thrust, and a slight turn while going forward.
+    expect(engines({ forward: 0.5 })).toEqual([0.5, 0.5, 0.5, 0, 0]);
+    const slight = engines({ forward: 1, right: 0.4 });
+    expect(slight[0]).toBe(1);
+    expect(slight[1]).toBe(1);
+    expect(slight[2]).toBeCloseTo(0.6, 9);
+    expect(slight[4]).toBeCloseTo(0.2, 9);
+    // In the world: forward and right fire main, back-left and front-right, front-right at half.
+    const { w, step } = alone();
+    step(0.1, [set("forward", 1), set("right", 1)]);
+    expect(["main", "bl", "br", "fl", "fr"].map((c) => w.controls[c] ?? 0)).toEqual([1, 1, 0, 0, 0.5]);
+    const fr = prefixed(w, "p1-").find((b) => b.id === "p1-front-r")!;
+    expect(fr.injector?.firing).toBe(true);
   });
 
   it("MAS-035 it accelerates at about 28.3 m/s² forward and 4.2 m/s² in reverse, and turns at about 3.5 rad/s² where it is, either way", () => {

@@ -303,8 +303,10 @@ First values, to tune. Top 10 with initials, as Asteroids (`scores.ts`).
 
 - **Controls.** Turn left and right, thrust, fire, as Asteroids (Q/E, either Shift or Ctrl, Space, and the option to
   swap). New: **tractor** on **Z** and **shield** on **X** (beside the left Shift), or **/** and **.** (beside the right Shift), and a touch button each.
-- **Controller.** As PAD-002 in `docs/spec.md`: stick or D-pad turns, A or right trigger forward,
-  B or left trigger reverse, X or right bumper fires, Y or left bumper the tractor, Start pauses.
+- **Controller.** As PAD-002 and PAD-003 in `docs/spec.md`: the stick turns as far as it is pushed;
+  stick up or the right trigger is forward as far as it goes (A at full), stick down or the left
+  trigger reverse (B at full); X or right bumper fires, Y or left bumper the tractor, Start pauses.
+  Forward with a turn mixes as Mammoth Asteroids' (MAS-054).
 - **HUD.** Score, lives, fuel, shells, a pod light (on the stand / loose / on the tether), the
   factory's countdown when critical, and "turrets stopped" with its time left.
 - **View.** The camera follows the ship, as Lander's cave levels do, and widens a little to keep

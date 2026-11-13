@@ -263,13 +263,21 @@ date.
 |---|---|---|
 | Left engine | Q, ←, Left Shift, Left Ctrl | bottom-left button |
 | Right engine | E, →, Right Shift, Right Ctrl | bottom-right button |
-| Both engines | both keys, or ↑ | both buttons |
+| Forward | both keys, or ↑ | both buttons |
+| Forward and a turn | ↑ with Q or E | |
 | Fire | Space or W (hold to repeat) | a fire button, bottom centre |
 | Pause | P or Esc | pause button |
 | Self-destruct | | a button beside Pause, pressed twice |
 
-A game controller works too (PAD-002 in `docs/spec.md`): stick or D-pad turns, A or right trigger
-forward, B or left trigger reverse, X or right bumper fires, Start pauses.
+A game controller works too (PAD-002, PAD-003 in `docs/spec.md`): the stick turns as far as it is
+pushed (the D-pad at full); the stick pushed up or the right trigger is forward as far as it goes (A
+or D-pad up at full); pulled down or the left trigger is reverse (B or D-pad down at full); X or
+right bumper fires, Start pauses.
+
+- **MAS-054** `[M]` Forward with a turn (Chloe, 13 November 2026): the main engine and the outer
+  back one at full, the inner back one off, and the inner front one at half, so the ship turns as
+  it goes on accelerating. Before, ↑ was left and right held together, so a turn added nothing.
+  The mix takes values between 0 and 1 (a controller's stick and triggers) in proportion.
 
 As in Lander, the browser must not zoom the game (LND-030's rules).
 

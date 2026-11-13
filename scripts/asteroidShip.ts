@@ -228,17 +228,12 @@ export function asteroidShip(t: ShipTuning) {
 }
 
 /**
- * How the player's three controls drive the five engines (MAS-035). An engine fires when any of its
- * rows holds: every channel in `on` held, and none in `off`.
+ * How the player's controls drive the five engines (MAS-035, MAS-054; the formula in arcade.ts,
+ * steerValues), each control 0 to 1:
  *   right alone: back left and front right, which turn the ship right where it is;
  *   left alone: back right and front left;
- *   both: the main thruster and both back ones;
+ *   forward (↑, or left and right together): the main thruster and both back ones;
+ *   forward and right: main and back left at full, back right off, front right at half;
  *   reverse: both front ones.
  */
-export const SHIP_MIX = [
-  { channel: "bl", any: [{ on: ["right"] }] },
-  { channel: "br", any: [{ on: ["left"] }] },
-  { channel: "fr", any: [{ on: ["right"], off: ["left"] }, { on: ["reverse"] }] },
-  { channel: "fl", any: [{ on: ["left"], off: ["right"] }, { on: ["reverse"] }] },
-  { channel: "main", any: [{ on: ["left", "right"] }] },
-];
+export const SHIP_MIX = { forward: "forward", left: "left", right: "right", reverse: "reverse", main: "main", backLeft: "bl", backRight: "br", frontLeft: "fl", frontRight: "fr", frontTurn: 0.5 };

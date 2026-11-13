@@ -327,6 +327,7 @@ Right-click on any entity opens a context menu with the common actions for that 
 - **SBX-046** `[S · M1 · E]` UI animations shall respect `prefers-reduced-motion`. This does not affect the simulation.
 - **PAD-001** `[S · M10 · U]` A game controller with the browser's standard layout shall be read each frame: its buttons by name, the left stick as the D-pad past half its travel, a trigger past 0.3, every connected pad together.
 - **PAD-002** `[S · M10 · E]` The three games shall be playable with a controller (12 November 2026). In flight the pad holds the game's controls (below) and Start pauses. Out of flight (a title, a menu, paused, game over) the D-pad or stick steps through the buttons on screen, A presses the one chosen, and Start resumes a paused game. A button still held when flight begins does nothing until it is let go.
+- **PAD-003** `[S · M10 · E]` In Mammoth Asteroids and Mammoth Thrust a controller's stick and triggers throttle (Chloe, 13 November 2026): the stick turns as far as it is pushed past a small dead zone, and forward (stick up or right trigger) and reverse (stick down or left trigger) are as strong as they are pushed or pulled; the buttons and D-pad give full. The keys stay on or off.
   - *Lander:* the stick, D-pad, bumpers or triggers are the left and right controls; A is both engines.
   - *Mammoth Asteroids and Mammoth Thrust:* the stick or D-pad turns; A, the right trigger or D-pad up is forward; B, the left trigger or D-pad down is reverse; X or the right bumper fires. In Thrust, Y or the left bumper is the tractor.
 
