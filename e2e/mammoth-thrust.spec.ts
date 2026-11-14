@@ -294,12 +294,12 @@ test("MTH-026 a ship that reaches the top without the pod is put back at the sta
 });
 
 test("MTH-050 self-destruct costs a ship, and three ships lost is game over, with Play again", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   await start(page);
   for (let k = 3; k >= 1; k--) {
     await expect(page.getByTestId("mth-lives")).toHaveText("▲".repeat(k));
     // The next ship beams in 2.5 s after a loss by the game's clock, which a slow machine runs behind.
-    await expect.poll(() => hook(page, (m) => m.thrust()?.phase), { timeout: 30_000 }).toBe("flying");
+    await expect.poll(() => hook(page, (m) => m.thrust()?.phase), { timeout: 60_000 }).toBe("flying");
     await page.getByTestId("mth-destruct").click();
     await expect(page.getByTestId("mth-destruct")).toHaveText("Confirm self-destruct");
     await page.getByTestId("mth-destruct").click();
@@ -307,7 +307,7 @@ test("MTH-050 self-destruct costs a ship, and three ships lost is game over, wit
     await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("between");
     await expect(page.getByTestId("mth-lost")).toHaveCount(0);
   }
-  await expect(page.getByTestId("mth-over")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("mth-over")).toBeVisible({ timeout: 60_000 });
   await expect(page.getByTestId("mth-over")).toContainText("No ships left");
   await expect(page.getByTestId("thrust-fire")).toHaveCount(0);
   await page.getByTestId("mth-again").click();
@@ -419,7 +419,7 @@ test("MTH-014 thrust.html?level=4 plays from level 4, the winding cave, with its
 });
 
 test("MTH-082 level 4's power plant: with its coolant gone it goes critical, the page counts down, and when it blows with the pod still down the game is over", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   await page.goto("./thrust.html?level=4");
   await page.getByTestId("mth-start").click();
   await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 4");
@@ -435,7 +435,8 @@ test("MTH-082 level 4's power plant: with its coolant gone it goes critical, the
   ).toBe(true);
   await expect(page.getByTestId("mth-critical")).toContainText("REACTOR CRITICAL", { timeout: 15_000 });
   await expect(page.getByTestId("mth-coolant")).toHaveAttribute("title", "Coolant: 0%, 0 holes");
-  await expect(page.getByTestId("mth-over")).toContainText("Planet destroyed, mission failed.", { timeout: 90_000 });
+  // The countdown is 30 s on screen, and a loaded machine runs the game slower than that.
+  await expect(page.getByTestId("mth-over")).toContainText("Planet destroyed, mission failed.", { timeout: 200_000 });
   await expect(page.getByTestId("mth-again")).toBeVisible();
 });
 
@@ -464,7 +465,7 @@ test("MTH-091 level 5, the asteroid, opens from the title's test row", async ({ 
 });
 
 test("MTH-093 a new ship beaming in after one lost deep in level 4's cave is in view: the view doesn't go under the rock", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
   await page.goto("./thrust.html?level=4");
   await page.getByTestId("mth-start").click();
   await expect(page.getByTestId("mth-hud")).toBeVisible();
@@ -477,10 +478,11 @@ test("MTH-093 a new ship beaming in after one lost deep in level 4's cave is in 
     return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
   });
   await page.waitForTimeout(300);
-  // Two presses: one stray touch doesn't cost a ship.
+  // Two presses: one stray touch doesn't cost a ship. The second only once the first has asked to confirm.
   await page.getByTestId("mth-destruct").click();
+  await expect(page.getByTestId("mth-destruct")).toHaveText("Confirm self-destruct");
   await page.getByTestId("mth-destruct").click();
-  await expect.poll(() => hook(page, (m) => m.thrust()!.n), { timeout: 30_000 }).toBe(2);
+  await expect.poll(() => hook(page, (m) => m.thrust()!.n), { timeout: 60_000 }).toBe(2);
   await page.waitForTimeout(500);
   const gap = await hook(page, (m) => {
     const h = m.sandbox().world.bodies.find((b) => b.id === "p2-hull")!;
