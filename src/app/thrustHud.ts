@@ -1,5 +1,5 @@
 // Mammoth Thrust: what its page works out from the screen and the world (no drawing here).
-import { plantCoolant, type Vec2, type World } from "../core/index.ts";
+import { nearestOffset, plantCoolant, type Vec2, type World } from "../core/index.ts";
 
 /** How much of the level the view shows from top to bottom, m: enough for the ship and a pod on its 12 m tether, with the ground round them. */
 export const VIEW_HEIGHT = 90;
@@ -60,7 +60,9 @@ export function lookParts(world: World, ahead: number): { ship: Vec2; lean: Vec2
   const pod = game.state.pod === "tether" ? world.bodies.find((b) => b.id === game.spec.pod) : undefined;
   if (!pod) return { ship, lean: { x: 0, y: 0 } };
   const p = { x: pod.position.x + pod.velocity.x * ahead, y: pod.position.y + pod.velocity.y * ahead };
-  return { ship, lean: { x: POD_LEAN * (p.x - ship.x), y: POD_LEAN * (p.y - ship.y) } };
+  // The pod's copy nearest the ship: in a world that wraps (MTH-093) the two can be either side of an edge.
+  const d = nearestOffset(world, ship, p);
+  return { ship, lean: { x: POD_LEAN * d.x, y: POD_LEAN * d.y } };
 }
 
 /** Moves a lean toward where it should be, over `dt` s: never a jump, however long the frame. */

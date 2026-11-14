@@ -42,6 +42,8 @@ export interface ShipTuning {
    * radius, the field just clears the ship.
    */
   shield?: Json;
+  /** The share of Mammoth Asteroids' fuel load its two tanks hold (Mammoth Thrust's: a half). Default 1. */
+  fuel?: number;
 }
 
 const rot = (v: Vec, a: number): Vec => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
@@ -85,9 +87,10 @@ export function asteroidShip(t: ShipTuning) {
   };
 
   // The row across the ship: tank, generator, battery, generator, tank; a magazine on each generator.
+  const load = t.fuel ?? 1;
   const fuel = () => [
-    { resource: "h2", mass: 0.9, capacity: 0.9 },
-    { resource: "o2", mass: 7.2, capacity: 7.2 },
+    { resource: "h2", mass: round(0.9 * load), capacity: round(0.9 * load) },
+    { resource: "o2", mass: round(7.2 * load), capacity: round(7.2 * load) },
   ];
   // A tank's charge is its propellant's stored energy: it goes off when the tank is destroyed (LND-021).
   const tank = { material: TANK, contents: fuel(), explosive: { charge: 0.05, arm: 1e6, fragments: 6, radius: 0.5, whenDestroyed: true } };

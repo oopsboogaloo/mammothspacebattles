@@ -25,7 +25,7 @@ const MAIN = 7.776;
 const ECONOMY = 66;
 /** No passage is narrower than this, m (MTH-012): the tether is 12 m and the pod must swing through. */
 const LEAST_WIDTH = 25;
-/** The sides of the level are walls this far above its top, m: nothing flies that high (MTH-026). */
+/** The rock closes over the sky this far above the level's top, m: nothing flies that high (MTH-026). The sides wrap round. */
 const WALL = 60;
 /** The sky's outline is closed this high, m: far above any view. */
 const SKY = 3000;
@@ -56,7 +56,9 @@ function ship() {
   // Chloe to tune. The field weighs 2 kg while it is up: lighter, and the weld that holds it to the
   // ship soaks up its bounce (a 1 kg rock at 10 m/s came back at 0 m/s off a 0.5 kg field, 4 m/s off 2 kg).
   const shield = { channel: "shield", grow: 14, burn: 0.8, hitBurn: 0.005, minHit: 0.1, mass: 2 };
-  return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor, shield });
+  // Half Mammoth Asteroids' fuel (Chloe, 14 November 2026: with a full load you never needed to
+  // refuel): 8.1 kg in the two tanks, as much as one fuel tank on the ground holds.
+  return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor, shield, fuel: 0.5 });
 }
 
 /**
@@ -210,7 +212,23 @@ interface Level {
   plant?: { at: Vec; antennae: [{ at: Vec; angle: number }, { at: Vec; angle: number }]; lines: { points: Vec[]; needs?: string[] }[]; beyond: number[] };
 }
 
-function write(l: Level) {
+/**
+ * The levels wrap round (Chloe, 14 November 2026: no walls). A level's two ends meet at the same
+ * height: each end is taken to the height halfway between the two, flat for its last few metres, so
+ * flying off one side the ground goes on smoothly into the other.
+ */
+function joinEnds(ground: Vec[]): Vec[] {
+  const r = ground[0];
+  const l = ground[ground.length - 1];
+  const h = Math.round(((r.y + l.y) / 2) * 10) / 10;
+  const flat = (end: Vec, next: Vec, dir: number): Vec => ({ x: Math.round((end.x + dir * Math.min(LINK, Math.abs(next.x - end.x) / 2)) * 10) / 10, y: h });
+  return [P(r.x, h), flat(r, ground[1], -1), ...ground.slice(1, -1), flat(l, ground[ground.length - 2], 1), P(l.x, h)];
+}
+/** How far each end of a level runs flat to meet the other, m. */
+const LINK = 6;
+
+function write(l0: Level) {
+  const l = l0.asteroid ? l0 : { ...l0, ground: joinEnds(l0.ground) };
   const ast = l.asteroid;
   const left = ast ? -ast.box : l.ground[l.ground.length - 1].x;
   const right = ast ? ast.box : l.ground[0].x;
@@ -239,7 +257,9 @@ function write(l: Level) {
     seed: 1,
     world: {
       gravity: ast ? { x: 0, y: 0 } : { x: 0, y: -GRAVITY },
-      bounds: ast ? { min: { x: -ast.box - 20, y: -ast.box - 20 }, max: { x: ast.box + 20, y: ast.box + 20 }, wrap: false, farField: 10, depth: 2 } : { min: { x: left - 20, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right + 20, y: l.top + WALL + 20 }, wrap: false, farField: 10, depth: 2 },
+      // The world wraps round at its sides (FLT-012, TER-008): the outline's sides lie on them, so
+      // they are open, not rock. An asteroid's square wraps on all four sides.
+      bounds: ast ? { min: { x: -ast.box, y: -ast.box }, max: { x: ast.box, y: ast.box }, wrap: true, farField: 10, depth: 2 } : { min: { x: left, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right, y: l.top + WALL + 20 }, wrap: true, farField: 10, depth: 2 },
       // The rock is made from the outline when the world is (TER-001), and explosions and shells crater it.
       terrain: { outline: air, ...(ast ? { islands: [ast.island] } : {}), prefix: "rock-", craters: CRATERS },
       bodies: [
@@ -509,12 +529,13 @@ write({
 }
 
 // Level 5, the asteroid (13 November 2026; level 4 until 14 November; a first design to try, before Chloe draws one): a round
-// asteroid 180 m across floating in a box of open space 340 m across, its gravity a uniform ball's
+// asteroid 180 m across floating in a square of open space 340 m across that wraps round on every
+// side (no walls; Chloe, 14 November 2026), its gravity a uniform ball's
 // (FLT-015): 4 m/s² at the surface, falling as 1/r² outside and in a straight line to nothing at
 // its centre. A tunnel winds down from a mouth on its upper left into a chamber above its centre,
 // where the pod stands (gravity there 0.5 m/s²). Eight electric turrets round the tunnel and
-// chamber, five fuel turrets round the surface (one hanging underneath). Escape: 150 m from the
-// centre. Generated from shapes (disc, chamber, tunnel) traced as level 3 was; the points are below.
+// chamber, five fuel turrets round the surface (one hanging underneath). Escape: 130 m from the
+// centre, 40 m over the surface (150 until Chloe asked for it lower, 14 November 2026). Generated from shapes (disc, chamber, tunnel) traced as level 3 was; the points are below.
 {
   // The asteroid's rock, counter-clockwise (rock on the left), cave included.
   const island = [
@@ -542,7 +563,7 @@ write({
     n: 5,
     seed: 400,
     title: "The asteroid",
-    description: "A round asteroid with a winding tunnel into a chamber where the pod stands. Its gravity pulls toward its centre. Fly in, take the pod on the tether, and carry it 150 m out from the centre.",
+    description: "A round asteroid with a winding tunnel into a chamber where the pod stands. Its gravity pulls toward its centre. Fly in, take the pod on the tether, and carry it 130 m out from the centre.",
     colour: "#8a7bd8",
     top: 150,
     ground: [],
@@ -565,6 +586,6 @@ write({
       { at: P(-48.0, 63.0), angle: 1.55, electric: true },
     ],
     tanks: [P(0.0, 90.0), P(10.0, 12.0)],
-    asteroid: { island, radius: 90, gravity: 4, box: 170, escape: 150 },
+    asteroid: { island, radius: 90, gravity: 4, box: 170, escape: 130 },
   });
 }

@@ -60,6 +60,11 @@ export interface Terrain {
   craters?: Required<NonNullable<TerrainSpec["craters"]>>;
   /** The craters so far, in the order they were made. */
   holes: Crater[];
+  /**
+   * A wrapped world's edges (FLT-012, TER-008): stretches of the outline that lie along them are
+   * where the open space goes on round to the other side, not rock, so they get no crust.
+   */
+  edges?: { min: Vec2; max: Vec2 };
 }
 
 export const TERRAIN_DEFAULTS = { blast: 0.6, bullet: 0.5, least: 0.5, most: 8, limit: 250, small: 150 };
@@ -256,9 +261,16 @@ function pieces(a: Vec2, b: Vec2, cutters: Seg[], keep: (mid: Vec2) => boolean):
   return out;
 }
 
+/** Whether stretch a→b lies along one of a wrapped world's edges. */
+function onEdge(e: { min: Vec2; max: Vec2 }, a: Vec2, b: Vec2): boolean {
+  const at = (u: number, v: number, k: number) => Math.abs(u - k) < 1e-6 && Math.abs(v - k) < 1e-6;
+  return at(a.x, b.x, e.min.x) || at(a.x, b.x, e.max.x) || at(a.y, b.y, e.min.y) || at(a.y, b.y, e.max.y);
+}
+
 /** The crust along stretch i of the outline: what is left of it outside every crater. */
 function outlineCrust(t: Terrain, i: number): BodyInput[] {
   const [a, b] = segments(t)[i];
+  if (t.edges && onEdge(t.edges, a, b)) return [];
   const mid = lerp(a, b, 0.5);
   const n = near(t, mid, length(sub(b, a)) / 2 + CRUST + 1);
   const own = (s: Seg) => s[0] === a && s[1] === b;
@@ -306,6 +318,7 @@ export function startTerrain(world: World, spec: TerrainSpec, ops: TerrainOps): 
     prefix: spec.prefix ?? "rock-",
     ...(spec.craters ? { craters: { ...TERRAIN_DEFAULTS, ...spec.craters } } : {}),
     holes: [],
+    ...(world.bounds.wrap ? { edges: { min: { ...world.bounds.min }, max: { ...world.bounds.max } } } : {}),
   };
   const n = segments(t).length;
   for (let i = 0; i < n; i++) for (const b of outlineCrust(t, i)) ops.addBody(world, b);

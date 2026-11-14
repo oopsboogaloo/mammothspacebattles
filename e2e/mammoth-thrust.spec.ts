@@ -163,7 +163,7 @@ test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the 
   await expect(page.getByTestId("mth-won")).toContainText("Level 1 complete");
   await expect(page.getByTestId("mth-won")).toContainText("+2000");
   const score = await hook(page, (m) => m.thrust()!.score);
-  expect(score).toBeGreaterThan(3000);
+  expect(score).toBeGreaterThan(2500); // 2000 for the pod, and most of the 8.1 kg of fuel the ship carries (MTH-094)
   // The world rests while the level's result is up.
   const t0 = await hook(page, (m) => m.sandbox().world.time);
   await page.waitForTimeout(400);

@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "thrust-5",
   "title": "Mammoth Thrust: The asteroid",
-  "description": "A round asteroid with a winding tunnel into a chamber where the pod stands. Its gravity pulls toward its centre. Fly in, take the pod on the tether, and carry it 150 m out from the centre.",
+  "description": "A round asteroid with a winding tunnel into a chamber where the pod stands. Its gravity pulls toward its centre. Fly in, take the pod on the tether, and carry it 130 m out from the centre.",
   "profile": "sandbox",
   "seed": 1,
   "world": {
@@ -12,14 +12,14 @@
     },
     "bounds": {
       "min": {
-        "x": -190,
-        "y": -190
+        "x": -170,
+        "y": -170
       },
       "max": {
-        "x": 190,
-        "y": 190
+        "x": 170,
+        "y": 170
       },
-      "wrap": false,
+      "wrap": true,
       "farField": 10,
       "depth": 2
     },
@@ -7575,13 +7575,13 @@
             "contents": [
               {
                 "resource": "h2",
-                "mass": 0.9,
-                "capacity": 0.9
+                "mass": 0.45,
+                "capacity": 0.45
               },
               {
                 "resource": "o2",
-                "mass": 7.2,
-                "capacity": 7.2
+                "mass": 3.6,
+                "capacity": 3.6
               }
             ],
             "explosive": {
@@ -7620,13 +7620,13 @@
             "contents": [
               {
                 "resource": "h2",
-                "mass": 0.9,
-                "capacity": 0.9
+                "mass": 0.45,
+                "capacity": 0.45
               },
               {
                 "resource": "o2",
-                "mass": 7.2,
-                "capacity": 7.2
+                "mass": 3.6,
+                "capacity": 3.6
               }
             ],
             "explosive": {
@@ -9698,7 +9698,7 @@
           "x": 0,
           "y": 0
         },
-        "radius": 150
+        "radius": 130
       },
       "pod": "pod",
       "turrets": [

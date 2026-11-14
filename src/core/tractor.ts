@@ -256,7 +256,7 @@ function siphon(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs:
     if (!r.body.siphon || roots.get(r.body.id) === own) continue;
     const held = (r.body.contents ?? []).reduce((m, s) => m + s.mass, 0);
     if (!(held > 1e-9)) continue;
-    const d = sub(r.body.position, origin);
+    const d = sub(nearCopy(world, origin, r.body.position), origin);
     const dist = length(d);
     if (dist > t.range || dist < 1e-6 || dot(d, axis) < dist * half) continue;
     if (!best || dist < best.dist) best = { r, dist, held };
@@ -301,7 +301,7 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
     if (t.only && !t.pullAny && !t.only.includes(r.body.id)) continue;
     // What its siphon draws from isn't pulled (TRC-008): a fuel tank stays where it stands.
     if (t.siphon && r.body.siphon) continue;
-    const d = sub(r.body.position, origin);
+    const d = sub(nearCopy(world, origin, r.body.position), origin);
     const dist = length(d);
     if (dist > t.range || dist < 1e-6 || dot(d, axis) < dist * half) continue;
     const root = roots.get(r.body.id)!;
@@ -321,9 +321,10 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
     if (!named.length) continue;
     const g = groupOf(rbs, roots, root);
     if (g.mass > shipGroup.mass * t.capture || g.extent > shipGroup.extent * (1 + 1e-9)) continue;
-    const dist = length(sub(g.com, shipGroup.com));
+    const dist = length(sub(nearCopy(world, shipGroup.com, g.com), shipGroup.com));
     if (dist > (t.tether.reach ?? t.tether.length) || (best && dist >= best.dist)) continue;
-    const near = named.reduce((m, r) => (length(sub(r.body.position, origin)) < length(sub(m.body.position, origin)) ? r : m));
+    const gap = (r: RB) => length(sub(nearCopy(world, origin, r.body.position), origin));
+    const near = named.reduce((m, r) => (gap(r) < gap(m) ? r : m));
     best = { r: near, dist };
   }
   if (best) {
@@ -342,20 +343,29 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
     let k = 1;
     if (shipV && t.maxSpeed !== undefined) {
       const g = groupOf(rbs, roots, root);
-      const toward = sub(origin, g.com);
+      const toward = sub(origin, nearCopy(world, origin, g.com));
       const L = length(toward);
       const closing = L > 1e-9 ? dot(sub(groupVelocity(g), shipV), toward) / L : 0;
       k = t.maxSpeed > 0 ? Math.max(0, Math.min(1, 1 - closing / t.maxSpeed)) : 0;
     }
     if (k <= 0) continue;
     for (const r of pieces) {
-      const d = sub(origin, r.body.position);
+      const d = sub(origin, nearCopy(world, origin, r.body.position));
       const J = scale(d, (k * share * (r.mass / m) * dt) / length(d));
       push(r, J, r.body.position);
       push(ship, scale(J, -1), origin);
       t.targets.push(r.body.id);
     }
   }
+}
+
+/** In a wrapped world (FLT-012), the copy of `p` nearest `from`; elsewhere `p` itself. */
+function nearCopy(world: World, from: Vec2, p: Vec2): Vec2 {
+  const b = world.bounds;
+  if (!b.wrap) return p;
+  const w = b.max.x - b.min.x;
+  const h = b.max.y - b.min.y;
+  return { x: p.x - w * Math.round((p.x - from.x) / w), y: p.y - h * Math.round((p.y - from.y) / h) };
 }
 
 /** An assembly's velocity: its momentum over its mass. */
@@ -374,7 +384,7 @@ function tether(world: World, ship: RB, cargo: RB, roots: ReadonlyMap<string, st
   const t = ship.body.tractor!;
   const a = groupOf(rbs, roots, roots.get(ship.body.id)!);
   const c = groupOf(rbs, roots, roots.get(cargo.body.id)!);
-  const d = sub(c.com, a.com);
+  const d = sub(nearCopy(world, a.com, c.com), a.com);
   const dist = length(d);
   if (dist < 1e-9) return;
   const n = scale(d, 1 / dist);

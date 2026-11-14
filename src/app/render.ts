@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, fieldId, turretOnline, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, fieldId, nearestOffset, turretOnline, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
@@ -555,6 +555,28 @@ export function wrapImages(world: World, c: Camera, vp: Viewport): [number, numb
   return out;
 }
 
+/**
+ * The copies of a wrapping Mammoth Thrust level the view reaches, as offsets, less the level itself
+ * (MTH-093). The view may have gone on round past an edge more than once, so as many as it needs;
+ * up and down only on a level that wraps that way (an asteroid's).
+ */
+export function levelCopies(world: World, c: Camera, vp: Viewport, vertical: boolean): [number, number][] {
+  const b = world.bounds;
+  const w = b.max.x - b.min.x;
+  const h = b.max.y - b.min.y;
+  const halfW = vp.width / 2 / c.zoom;
+  const halfH = vp.height / 2 / c.zoom;
+  const range = (lo: number, hi: number, min: number, size: number) => {
+    const out: number[] = [];
+    for (let k = Math.floor((lo - min) / size); k <= Math.floor((hi - min) / size); k++) out.push(k);
+    return out;
+  };
+  const out: [number, number][] = [];
+  for (const i of range(c.x - halfW, c.x + halfW, b.min.x, w))
+    for (const j of vertical ? range(c.y - halfH, c.y + halfH, b.min.y, h) : [0]) if (i !== 0 || j !== 0) out.push([i * w, j * h]);
+  return out;
+}
+
 /** The edges of a wrapped world, faint and dashed, so you can see where it wraps. */
 function drawSeam(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   const b = world.bounds;
@@ -789,7 +811,7 @@ function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   }
 }
 
-function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport): void {
+function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport, copies: [number, number][] = [[0, 0]], bounds?: World["bounds"]): void {
   const h = stripeHeight(view.pitch, c.zoom);
   ctx.fillStyle = view.colour;
   if (view.pitch * c.zoom < 3) {
@@ -806,35 +828,45 @@ function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>,
     }
   }
   ctx.fillStyle = "#000";
-  const trace = (outline: Vec2[]) => {
-    outline.forEach((p, i) => {
-      const q = toScreen(c, vp, p);
-      if (i === 0) ctx.moveTo(q.x, q.y);
-      else ctx.lineTo(q.x, q.y);
-    });
-    ctx.closePath();
+  for (const [ox, oy] of copies) {
+    const at = (p: Vec2) => toScreen(c, vp, { x: p.x + ox, y: p.y + oy });
+    const trace = (outline: Vec2[]) => {
+      outline.forEach((p, i) => {
+        const q = at(p);
+        if (i === 0) ctx.moveTo(q.x, q.y);
+        else ctx.lineTo(q.x, q.y);
+      });
+      ctx.closePath();
+    };
+    // The sky, with any island of rock in it (an asteroid, TER-007) left as rock: filled even-odd.
+    ctx.beginPath();
+    trace(view.sky);
+    for (const island of view.islands ?? []) trace(island);
+    ctx.fill("evenodd");
+    for (const outline of view.caves) {
+      ctx.beginPath();
+      trace(outline);
+      ctx.fill();
+    }
+    // Craters (TER-004): open space cut into the rock, plain black like the caves.
+    for (const h of view.craters ?? []) {
+      const q = at(h);
+      const r = h.r * c.zoom;
+      if (q.x + r < 0 || q.x - r > vp.width || q.y + r < 0 || q.y - r > vp.height) continue;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  // A point of the view, as the copy of the world it falls in.
+  const W = bounds ? bounds.max.x - bounds.min.x : 0;
+  const H = bounds ? bounds.max.y - bounds.min.y : 0;
+  const home = (p: Vec2): Vec2 => {
+    const k = copies.find(([ox, oy]) => ox !== 0 || oy !== 0 ? p.x - ox >= bounds!.min.x && p.x - ox < bounds!.max.x && (oy === 0 || (p.y - oy >= bounds!.min.y && p.y - oy < bounds!.max.y)) : false);
+    return k && W && H ? { x: p.x - k[0], y: p.y - k[1] } : p;
   };
-  // The sky, with any island of rock in it (an asteroid, TER-007) left as rock: filled even-odd.
-  ctx.beginPath();
-  trace(view.sky);
-  for (const island of view.islands ?? []) trace(island);
-  ctx.fill("evenodd");
-  for (const outline of view.caves) {
-    ctx.beginPath();
-    trace(outline);
-    ctx.fill();
-  }
-  // Craters (TER-004): open space cut into the rock, plain black like the caves.
-  for (const h of view.craters ?? []) {
-    const q = toScreen(c, vp, h);
-    const r = h.r * c.zoom;
-    if (q.x + r < 0 || q.x - r > vp.width || q.y + r < 0 || q.y - r > vp.height) continue;
-    ctx.beginPath();
-    ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
   drawStars(ctx, c, vp, (x, y) => {
-    const p = toWorld(c, vp, { x, y });
+    const p = home(toWorld(c, vp, { x, y }));
     return insideOutline(view.sky, p) && !(view.islands ?? []).some((o) => insideOutline(o, p)) && !view.caves.some((o) => insideOutline(o, p));
   });
 }
@@ -1019,7 +1051,8 @@ function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
     const ends = [assemblyTotals(world, b.id), assemblyTotals(world, cargo.id)];
     if (!ends[0] || !ends[1]) continue;
     const o2 = toScreen(c, vp, ends[0].centre);
-    const p = toScreen(c, vp, ends[1].centre);
+    // The cargo's copy nearest the ship: in a world that wraps they can be either side of an edge.
+    const p = toScreen(c, vp, add(ends[0].centre, nearestOffset(world, ends[0].centre, ends[1].centre)));
     const f = Math.min(1, Math.abs(t.tension) / t.tether.maxTension);
     // Teal (slack or light) through amber to red (about to break).
     const r = Math.round(92 + f * (255 - 92));
@@ -1181,9 +1214,13 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   const game = !!opts.arcade || !!opts.thrust;
   ctx.fillStyle = game ? "#000" : COLORS.background;
   ctx.fillRect(0, 0, vp.width, vp.height);
+  // Mammoth Thrust's levels wrap round (MTH-093): the ground, its lines and everything on it are
+  // drawn again one level's width (and an asteroid's square's height) either way, where the view
+  // reaches. A level of ground doesn't wrap up and down in play (rock closes over it), so only its sides.
+  const copies: [number, number][] = [[0, 0], ...(opts.thrust && world.bounds.wrap ? levelCopies(world, c, vp, !!opts.thrust.islands?.length) : [])];
   if (opts.thrust) {
-    drawStripedGround(ctx, opts.thrust, c, vp);
-    drawPowerLines(ctx, world, c, vp);
+    drawStripedGround(ctx, opts.thrust, c, vp, copies, world.bounds);
+    for (const [ox, oy] of copies) drawPowerLines(ctx, world, { ...c, x: c.x - ox, y: c.y - oy }, vp);
   }
   else if (opts.stars) drawStars(ctx, opts.stars === "still" ? { x: 0, y: 0 } : c, vp);
   if (opts.overlays.has("grid")) drawGrid(ctx, c, vp);
@@ -1198,8 +1235,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
         const g = world.challenge?.goal;
         if (g?.pads) for (const p of g.pads) drawPad(ctx, world, ci, vp, p.id, `×${p.multiplier}`, g.used?.includes(p.id));
       }
-      // The game's copies are the same drawing as the originals, below (MAS-011).
-      if (opts.arcade) continue;
+      // The game's copies are the same drawing as the originals, below (MAS-011, MTH-093).
+      if (opts.arcade || opts.thrust) continue;
       for (const b of world.bodies) {
         if (opts.groundLine && isGround(b)) continue; // drawn as ground above; ships and debris still show
         bodyPath(ctx, ci, vp, b);
@@ -1211,7 +1248,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       }
     }
     // The seam is the sandbox's: the games hide it.
-    if (!opts.groundLine && !opts.arcade) drawSeam(ctx, world, c, vp);
+    if (!opts.groundLine && !opts.arcade && !opts.thrust) drawSeam(ctx, world, c, vp);
   }
   // Gas under bodies, so walls stay crisp.
   drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
@@ -1313,6 +1350,16 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       }
     }
   };
+  if (opts.thrust)
+    for (const [ox, oy] of copies.slice(1)) {
+      const ci = { ...c, x: c.x - ox, y: c.y - oy };
+      drawDust(ctx, world, ci, vp);
+      drawBodies(ci);
+      drawBeams(ctx, world, ci, vp);
+      drawShocks(ctx, world, ci, vp);
+      drawTractors(ctx, world, ci, vp);
+      drawFields(ctx, world, ci, vp, fields);
+    }
   if (opts.arcade && world.bounds.wrap)
     for (const [ox, oy] of wrapImages(world, c, vp)) {
       const ci = { ...c, x: c.x - ox, y: c.y - oy };

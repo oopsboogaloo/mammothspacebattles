@@ -123,12 +123,16 @@ other sources in §12):
   its upper left into a chamber above the centre, where the pod and a fuel tank stand (gravity
   there about 0.5 m/s²); another tank stands on the top, under the start. Eight electric turrets
   round the tunnel and chamber (no plant: unlimited power), five fuel turrets round the surface.
-  The level is left by getting 150 m from the centre with the pod; without it, the ship is beamed
+  The level is left by getting 130 m from the centre with the pod; without it, the ship is beamed
   back, as at a level's top.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
   through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
-- The level doesn't wrap. Its sides are high rock walls beyond the mountains.
+- The level wraps round at its sides (Chloe, 14 November 2026: no walls; MTH-093). Fly off the
+  right and you come in at the left. Where a drawing's two ends are at different heights, each
+  end is taken to the height halfway between them, flat for its last few metres (up to 6 m), so
+  the ground runs on smoothly. Rock still closes over the sky 60 m above the level's top. The
+  asteroid's square of open space wraps round on all four sides.
 
 ### The ship
 
@@ -296,7 +300,9 @@ plan below (a cheat that turned shells and gas back and let rock through).
 
 ### Fuel
 
-- One tank load is about 2 minutes of full thrust, as in Asteroids. Out of fuel, the ship falls.
+- The ship carries half Asteroids' load (Chloe, 14 November 2026, MTH-094: with a full load you
+  never needed to refuel): 8.1 kg, about a minute of full thrust, as much as one fuel tank holds.
+  Out of fuel, the ship falls. Lighter, it turns faster (about 9 rad/s² against 7).
 - A fuel tank stands on a pad on the ground. While the beam is held with one in its wedge, fuel
   moves to the ship until the tank is empty or the ship is full, and the game says REFUELLING.
   First values: a tank holds 8.1 kg, half a ship's load, and gives 2 kg a game second, so a full
@@ -454,8 +460,12 @@ Priority: **M** must, **S** should.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
   often the less coolant is left.
 - **MTH-091** `[M]` Level 5 is an asteroid: rock as an island in open space, gravity toward its
-  centre as a uniform ball's (inverse square outside, linear inside), left by getting 150 m from
-  its centre.
+  centre as a uniform ball's (inverse square outside, linear inside), left by getting 130 m from
+  its centre (40 m over its surface; 150 m until 14 November 2026).
+- **MTH-093** `[M]` Every level wraps round at its sides, with no walls: the ground's two ends meet
+  at one height, a ship (and the pod on its tether) flown off one side comes in at the other, and
+  the view goes on across the edge without a jump. The asteroid's square wraps on all four sides.
+- **MTH-094** `[M]` The ship carries half Mammoth Asteroids' fuel: 8.1 kg.
 - **MTH-090** `[S]` For testing (Chloe, 13 November 2026), the page shows the simulation's step
   time (mean and slowest) against its budget, with the gas parcels and bodies. To go before release.
 - **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to

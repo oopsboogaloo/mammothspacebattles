@@ -51,11 +51,19 @@ function withPod(n = 1, edit?: (scn: ReturnType<typeof raw>) => void) {
 const types = (w: World) => new Set(w.events.map((e) => e.type));
 
 describe("Mammoth Thrust", () => {
-  it("MTH-010 MTH-011 a level is fixed ground that can't be damaged under 4 m/s² of gravity, with no wrap, the pod on its stand and the ship at the start", () => {
+  it("MTH-010 MTH-011 MTH-093 a level is fixed ground that can't be damaged under 4 m/s² of gravity, wrapping round at its sides with no walls, the pod on its stand and the ship at the start", () => {
     for (const n of [1, 2, 3]) {
       const { w } = game(n);
       expect(w.gravity).toEqual({ x: 0, y: -4 });
-      expect(w.bounds.wrap).toBeFalsy();
+      // It wraps round at its sides (MTH-093): the ground's two ends meet at one height, and there is
+      // no rock at either side above it.
+      expect(w.bounds.wrap).toBe(true);
+      const ground = raw(n).world.terrain.outline.slice(2);
+      expect(ground[0].x).toBe(w.bounds.max.x);
+      expect(ground[ground.length - 1].x).toBe(w.bounds.min.x);
+      expect(ground[0].y).toBe(ground[ground.length - 1].y);
+      const side = w.bodies.filter((b) => b.id.startsWith("rock-") && b.shape.kind === "polygon" && b.shape.vertices.some((v) => Math.min(Math.abs(b.position.x + v.x - w.bounds.min.x), Math.abs(b.position.x + v.x - w.bounds.max.x)) < 0.5 && b.position.y + v.y > ground[0].y + 1 && b.position.y + v.y < w.thrust!.spec.top));
+      expect(side.map((b) => b.id)).toEqual([]);
       const rock = w.bodies.filter((b) => b.id.startsWith("rock-"));
       expect(rock.length).toBeGreaterThan(20);
       expect(rock.every((b) => b.fixed && !b.material)).toBe(true);
@@ -99,6 +107,32 @@ describe("Mammoth Thrust", () => {
     expect(narrowest([...l2.caves[0]], 15)).toBeGreaterThanOrEqual(25);
   });
 
+  it("MTH-093 flown off one side the ship comes back in at the other, the pod on its tether with it", () => {
+    const g = withPod(1, (sc) => (sc.world.gravity = { x: 0, y: 0 }));
+    const { w } = g;
+    // The ship and pod high over the right side (the ground there is 61 m up), moving right at 15 m/s.
+    const shift = (ids: World["bodies"], dx: number, dy: number) => {
+      for (const b of ids) {
+        b.position = { x: b.position.x + dx, y: b.position.y + dy };
+        b.velocity = { x: 15, y: 0 };
+      }
+    };
+    const ship = parts(w, 1);
+    const h = hull(w);
+    shift([...ship, pod(w)], w.bounds.max.x - 4 - h.position.x, 100 - h.position.y);
+    settle(w);
+    expect(st(w).pod).toBe("tether");
+    g.step(2);
+    // 30 m on: past the right side and in from the left.
+    expect(hull(w).position.x).toBeGreaterThan(w.bounds.min.x + 20);
+    expect(hull(w).position.x).toBeLessThan(w.bounds.min.x + 30);
+    expect(pod(w).position.x).toBeLessThan(w.bounds.min.x + 30);
+    expect(st(w).pod).toBe("tether");
+    expect(w.events.some((e) => e.type === "tether.break")).toBe(false);
+    expect(Math.abs(hull(w).tractor!.tension)).toBeLessThan(5000);
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("MTH-020 the ship is Mammoth Asteroids' with a tractor unit and a tether unit, turns at about 7 rad/s², and fires slugs with no charge", () => {
     const { w, step } = game(1, (s) => (s.world.gravity = { x: 0, y: 0 }));
     // The cockpit works the beam and holds the tether, through the two units.
@@ -110,8 +144,9 @@ describe("Mammoth Thrust", () => {
     step(0.2);
     step(0.5, [set("left", 1)]);
     const turning = Math.abs(hull(w).angularVelocity) / 0.5;
-    expect(turning).toBeGreaterThan(6.3);
-    expect(turning).toBeLessThan(7.7);
+    // (Faster than Asteroids' ship: it carries half the fuel, MTH-094.)
+    expect(turning).toBeGreaterThan(8);
+    expect(turning).toBeLessThan(10);
     expect(w.ledger.violations).toBe(0);
   });
 
@@ -278,7 +313,7 @@ describe("Mammoth Thrust", () => {
     expect(st(w).bonus!.pod).toBe(2000);
     expect(fuel).toBeGreaterThanOrEqual(Math.floor(now));
     expect(fuel).toBeLessThan(now + 60);
-    expect(fuel).toBeGreaterThan(1000);
+    expect(fuel).toBeGreaterThan(500);
     expect(st(w).score).toBe(2000 + fuel);
     expect(w.events.filter((e) => e.type === "thrust.won")).toHaveLength(1);
     const score = st(w).score;
@@ -615,7 +650,8 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
 
   it("MTH-042 holding the beam on a fuel tank moves its fuel to the ship, the tank where it stood; emptied, it scores 300 once", () => {
     for (const n of [1, 2]) expect(raw(n).world.thrust.tanks.filter((id: string) => id.startsWith("fuel-")).length).toBeGreaterThan(0);
-    const { w, step } = over("fuel-1", 0.25);
+    // The ship's tanks empty: they hold 8.1 kg, as much as the fuel tank.
+    const { w, step } = over("fuel-1", 0);
     const mass = computeTotals(w).mass;
     const at = { ...body(w, "fuel-1")!.position };
     const before = thrustFuel(w).mass;
@@ -656,7 +692,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   });
 
   it("MTH-038 a turret's fuel tank gives up its fuel to the beam too, and the turret then has only its battery", () => {
-    const { w, step } = over("t1-tank", 0.25);
+    const { w, step } = over("t1-tank", 0);
     // The beam pulls the turret's other pieces too (TRC-013), and they drag the ship down onto it:
     // here only the siphon is under test, so the beam pulls the pod alone.
     hull(w).tractor!.pullAny = false;
@@ -679,7 +715,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(body(full.w, "fuel-1")).toBeUndefined();
     expect(full.w.events.some((e) => e.type === "detonation")).toBe(true);
     // Emptied first, it only breaks.
-    const empty = over("fuel-1", 0.25);
+    const empty = over("fuel-1", 0);
     empty.step(5, [set("tractor", 1)]);
     expect(body(empty.w, "fuel-1")!.explosive).toBeUndefined();
     body(empty.w, "fuel-1")!.integrity = 0;
@@ -1078,16 +1114,18 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(quarter).toBeGreaterThan(0);
     expect(little).toBeGreaterThan(quarter);
   }, 120_000);
-  it("MTH-091 FLT-015 TER-007 level 5 is an asteroid: rock as an island in open space, pulling toward its centre as a uniform ball, left by getting 150 m from its centre", () => {
+  it("MTH-091 FLT-015 TER-007 level 5 is an asteroid: rock as an island in open space, pulling toward its centre as a uniform ball, left by getting 130 m from its centre", () => {
     const s = raw(5);
     expect(s.world.gravity).toEqual({ x: 0, y: 0 });
     expect(s.world.terrain.islands).toHaveLength(1);
     const { w, step } = game(5);
-    expect(w.thrust!.spec.escape).toEqual({ centre: { x: 0, y: 0 }, radius: 150 });
+    expect(w.thrust!.spec.escape).toEqual({ centre: { x: 0, y: 0 }, radius: 130 });
     // Rock all round the asteroid's surface, none in the open beside it.
     const rock = w.bodies.filter((b) => b.id.startsWith("rock-s"));
     expect(rock.length).toBeGreaterThan(30);
-    expect(rock.every((b) => Math.hypot(b.position.x, b.position.y) < 90 + 5 || Math.max(Math.abs(b.position.x), Math.abs(b.position.y)) > 170 - 1)).toBe(true);
+    // No walls: the square of open space wraps round on every side (MTH-093).
+    expect(rock.every((b) => Math.hypot(b.position.x, b.position.y) < 90 + 5)).toBe(true);
+    expect(w.bounds).toMatchObject({ min: { x: -170, y: -170 }, max: { x: 170, y: 170 }, wrap: true });
     // The pull on a 1 kg ball held still at 135 m, 90 m (the surface, over the sea of rock: a probe in
     // the open beside it) and 45 m from the centre, in the tunnel's direction where needed.
     const pullAt = (x: number, y: number) => {
