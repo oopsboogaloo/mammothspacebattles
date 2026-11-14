@@ -38,7 +38,7 @@ describe("Mammoth Thrust's page", () => {
     expect(shipStatus(w).damage).toBe(1); // a lost ship is lost
     expect(Object.keys(POD_LABEL).sort()).toEqual(["gone", "loose", "stand", "tether"]);
     expect(shipStatus(initialWorld(parseScenario(JSON.parse(readFileSync(new URL("../../scenarios/empty.json", import.meta.url), "utf8")))))).toEqual({ fuel: 0, slugs: 0, damage: 0 });
-    expect(LEVELS).toBe(5);
+    expect(LEVELS).toBe(6);
     for (let n = 1; n <= LEVELS; n++) expect(raw(n).world.thrust.level).toBe(n);
   });
 

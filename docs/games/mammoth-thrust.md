@@ -138,6 +138,14 @@ other sources in §12):
   until Chloe asked for twice the room, 14 November 2026); without the pod, the ship is beamed back,
   as at a level's top. Its square of open space is 680 m across.
   The way in is about 19 m wide.
+- **Level 6: the warren** (Chloe's sketch, 14 November 2026, "a much rougher sketch": traced at
+  0.15 m a pixel and approximated). Layers of rock with caves between them, full of stalactites: a
+  roof over the top, a middle shelf, a lower shelf and the floor, where the pod stands at the right.
+  The power plant stands on the lower shelf's right end; its lines (traced from the sketch's white
+  lines) feed the right-hand rock and the lower shelf directly, the middle shelf (and the floor past
+  its left end) through any of three transmitters, and the roof through any of three more. Eighteen
+  electric turrets, six fuel tanks. Its passages aren't held to a least width: some gaps between
+  stalactites are tight, as sketched. A step takes about 4.7 ms (557 bodies; level 5: 2.8 ms).
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
   through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
@@ -429,6 +437,8 @@ Priority: **M** must, **S** should.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
 - **MTH-014** `[M]` Level 4 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
   and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=4` plays from it.
+- **MTH-101** `[M]` Level 6 is Chloe's warren (§3): eighteen electric turrets, six fuel tanks, the
+  plant on the lower shelf and six transmitters. Nothing on it moves as it starts.
 - **MTH-099** `[M]` No turret fires within 10° of a bearing whose bolt would land on the plant
   (WPN-014). Worked out for every level as it is built; as built on 14 November 2026: level 4's three
   turrets under its mouth and two of level 5's (its 9th and 10th) have bearings they avoid; no
