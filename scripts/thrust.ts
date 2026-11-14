@@ -35,7 +35,9 @@ const SKY = 3000;
 function ship() {
   // A solid slug: no blast, so a shot at a wall beside the ship does nothing to it (MTH-020).
   const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05 };
-  const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
+  // Twice Mammoth Asteroids' rate of fire (Chloe, 14 November 2026: the cannon "needs to be more
+  // effective"): a slug every 0.125 game s.
+  const magazine = { count: 120, reload: 0.125, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
   // The beam is a 30° wedge down the ship's tail. It pulls whatever is free in it (TRC-013: Chloe,
   // 13 November 2026, to try again), but the tether takes only the pod (TRC-011): not the wreckage
   // of the ships before. It draws nothing toward the ship faster than 3 m/s (TRC-014; Chloe, 14
@@ -50,7 +52,8 @@ function ship() {
   // (TRC-008), 2 kg a game second: a full 8.1 kg tank in 8 s on screen. The tank isn't pulled.
   const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, maxSpeed: 3, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
   // The shield (SHD-001…SHD-006; Chloe, 14 November 2026): held on, a field grows round the ship
-  // in a quarter of a game second and stays up while there is fuel: 0.4 kg a game second (half the
+  // at 28 m/s, in about a sixth of a game second (twice the first 14 m/s: Chloe, 14 November
+  // 2026), and stays up while there is fuel: 0.4 kg a game second (half the
   // first 0.8, which Chloe found drained it far too fast), so full tanks (8.1 kg) last 40 s on
   // screen. Each hit costs more: 0.00125 kg for each N·s of its impulse, at least 0.025 kg (half
   // the first 0.0025 and 0.05: Chloe, 14 November 2026). The
@@ -61,7 +64,7 @@ function ship() {
   // gravity, the test level): undamaged up to 25 m/s and bouncing back at two thirds of its speed;
   // 2 welds broken at 30 m/s and 4 at 40, where the spring bottoms out and the ship's parts meet
   // the rock. Without a shield 4 welds break at 20 m/s; with the first, rigid field 2 at 20 and 7 at 30.
-  const shield = { channel: "shield", grow: 14, burn: 0.4, hitBurn: 0.00125, minHit: 0.025, mass: 2, margin: 1.5, spring: { stiffness: 3000, damping: 0.15 } };
+  const shield = { channel: "shield", grow: 28, burn: 0.4, hitBurn: 0.00125, minHit: 0.025, mass: 2, margin: 1.5, spring: { stiffness: 3000, damping: 0.15 } };
   // Half Mammoth Asteroids' fuel (Chloe, 14 November 2026: with a full load you never needed to
   // refuel): 8.1 kg in the two tanks, as much as one fuel tank on the ground holds.
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor, shield, fuel: 0.5 });
@@ -99,8 +102,16 @@ const PLANT: PlantTuning = { coolant: 12, rate: 0.1, parcel: 0.01, puff: 0.12, c
  * power fails for 2 to 3 s on screen at a time, more often as the coolant falls: on average once
  * every 8 s on screen at a quarter left, every 4 s near empty (0.5 a game second).
  */
-const PLANT_LEAK = { perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31 };
-const PLANT_OFFLINE = { first: 2.5, more: 1 };
+// Knocks on the domes (Chloe, 14 November 2026: debris, a ship or a shielded ship striking a dome
+// hard enough punch a leak in it). The domes are as tough as the ship's hull (threshold 150 J, the
+// hull material's): measured head-on into a dome (no gravity), a ship holes it from about 10 m/s
+// (293 J), a shielded ship from about 20 m/s (208 J; 75 J at 15), a 0.6 kg piece of debris from
+// about 40 m/s (234 J). Every 1,000 J more makes the leak one size bigger, up to 3.
+const PLANT_KNOCK = { threshold: 150, perSize: 1000, gap: 0.5 };
+const PLANT_LEAK = { impact: PLANT_KNOCK, perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31 };
+// Offline after a slug: 5 game s, and 2 more for each slug while it is down (double the first 2.5
+// and 1: Chloe, 14 November 2026, shooting the reactor should buy more time with the power down).
+const PLANT_OFFLINE = { first: 5, more: 2 };
 /** Turrets don't fire within this of a clear shot at the plant, rad (WPN-014): 10°. */
 const REACTOR_MARGIN = (10 * Math.PI) / 180;
 /** From critical to the blast, game seconds: 30 s on screen (Chloe, 14 November 2026: 10 was really tough). */
@@ -374,7 +385,9 @@ function write(l0: Level) {
               },
             }
           : {}),
-        lives: 3,
+        // Five ships, and one more every 8,000 points (Chloe, 14 November 2026: three wasn't enough).
+        lives: 5,
+        extraLife: 8000,
         respawn: 1.25,
         grace: 1,
         level: l.n,

@@ -9059,7 +9059,7 @@
             },
             "magazine": {
               "count": 120,
-              "reload": 0.25,
+              "reload": 0.125,
               "at": {
                 "x": 0,
                 "y": 0.51
@@ -9936,7 +9936,7 @@
             "shield": {
               "radius": 4.452363,
               "channel": "shield",
-              "grow": 14,
+              "grow": 28,
               "burn": 0.4,
               "hitBurn": 0.00125,
               "minHit": 0.025,
@@ -10903,10 +10903,15 @@
         "charge": "plant-charge",
         "light": "plant-light",
         "offline": {
-          "first": 2.5,
-          "more": 1
+          "first": 5,
+          "more": 2
         },
         "countdown": 15,
+        "impact": {
+          "threshold": 150,
+          "perSize": 1000,
+          "gap": 0.5
+        },
         "perLeak": 3,
         "leakSpeed": 20,
         "blastLeaks": 3,
@@ -11346,7 +11351,8 @@
           }
         ]
       },
-      "lives": 3,
+      "lives": 5,
+      "extraLife": 8000,
       "respawn": 1.25,
       "grace": 1,
       "level": 5,

@@ -34,7 +34,7 @@ other sources in §12):
 | Question | Decision |
 |---|---|
 | Ship | The Mammoth Asteroids ship (67 kg), with a **tractor unit** under the belly and a **tether unit** beside it (two new parts, each can be knocked off). About twice the turning power (3.5 → about 7 rad/s²). |
-| Gun | The same cannon, firing **solid slugs with no charge**: no blast, so a shot at a wall beside you does nothing to you. Turrets, the factory and fuel tanks are damaged by the impact alone. Speed, mass, rate and magazine to be tuned. |
+| Gun | The same cannon, firing **solid slugs with no charge**: no blast, so a shot at a wall beside you does nothing to you. Turrets, the factory and fuel tanks are damaged by the impact alone. Speed, mass, rate and magazine to be tuned. Fires twice as fast as Mammoth Asteroids' gun: a slug every 0.25 s on screen (Chloe, 14 November 2026). |
 | Gravity | Uniform, **4 m/s²** down (Lander: 1.6), for the first tuning pass. |
 | Landscape | Lander's kind: a polyline (later Chloe's hand-drawn outlines, as Cave 2), fixed rock that can't be damaged. The levels grow as the original's do: an open surface first, then one chamber, then twisting caves. All layouts are our own. |
 | On the surface | A small **factory** (the reactor) and a couple of other buildings. |
@@ -48,7 +48,7 @@ other sources in §12):
 | Crashes | Physical, as in Lander and Asteroids: gentle scrapes are survived, hard hits break parts off. The pod is damaged the same way. |
 | Life lost | The cockpit destroyed, or no working engine still welded to it (the duel's rule, DUEL-001). |
 | Nothing resets | When a life is lost the level stays exactly as it is: the wreck, the pod wherever it lies, destroyed turrets, emptied tanks, the factory's damage. Only a new ship comes in. |
-| Lives | 3. |
+| Lives | 5, and one more every 8,000 points (Chloe, 14 November 2026; 3 until then). |
 | Game over | The third ship lost, the factory blowing while the pod is still on the planet, or the pod destroyed. The pod is made very, very hard to destroy. |
 | The top without the pod | The ship is beamed back to the start, as it is, to finish the mission. No life is lost. No exception: with the factory counting down it is beamed back too, and the game is lost when the factory blows. |
 | Out of fuel | The ship falls and crashes: a life lost in the usual way, and a new ship. |
@@ -266,8 +266,8 @@ reactor and of our factory below.
 
 - **The plant.** Three tall domes, a tower with a light, and an annex, on a base on the surface.
   The light is green while the plant is on, red while it is off. Bullets don't wear it down.
-- **Offline.** A slug that hits any part of it takes it offline: 5 s for the first hit, and each
-  hit while it is offline adds 2 s. Offline, it powers nothing.
+- **Offline.** A slug that hits any part of it takes it offline: 10 s for the first hit, and each
+  hit while it is offline adds 4 s (double the first 5 and 2: Chloe, 14 November 2026). Offline, it powers nothing.
 - **Coolant.** The reactor holds a volatile liquid coolant that boils off as it leaks. The first
   slug in a dome opens a leak where it strikes; the next two make that leak bigger; the fourth
   opens a second leak where it strikes, and so on: a new leak every 3 slugs (Chloe, 13 November
@@ -278,6 +278,13 @@ reactor and of our factory below.
 - **Explosions** (Chloe, 13 November 2026). An explosion that reaches a dome (a ship
   self-destructing, a turret's power node, a fuel tank) punches leaks in it: up to 3 at point-blank
   range, fewer further off, none beyond its reach. It also knocks the plant offline, as a hit does.
+- **Knocks** (Chloe, 14 November 2026: "model it like a normal object"). Anything else that strikes
+  a dome (debris, the ship, the shielded ship's field) delivers the energy the collision loses,
+  shared as the damage model shares it. Over 150 J (the ship hull's threshold) in a step it punches
+  a leak where it struck, a size bigger for every 1,000 J more (up to 3), and knocks the plant
+  offline. Measured head-on (no gravity): the ship holes it from about 10 m/s, the shielded ship
+  from about 20 m/s, a 0.6 kg piece of debris from about 40 m/s. Before, only slugs and explosions
+  holed it.
 - **Outages** (Chloe). Below half its coolant the power fails now and then, for 2 to 3 s, more
   often the less is left: on average every 8 s at a quarter, every 4 s near empty.
 - **Critical.** With no coolant left, a 30 s countdown on the page (10 s until 14 November 2026), then it explodes. Out above the
@@ -309,7 +316,8 @@ plan below (a cheat that turned shells and gas back and let rock through).
 
 - A small, light generator on the ship: a 0.3 kg collar round the gun's foot, on the centre line.
 - Held (X or ., the left bumper, or SHIELD on screen): a disc grows from nothing round the ship's
-  centre of mass to just past its farthest corner (3.35 m) in a quarter of a game second.
+  centre of mass to just past its farthest corner at 28 m/s, about a sixth of a game second
+  (twice the first 14 m/s: Chloe, 14 November 2026).
 - It doesn't touch its own ship; everything else meets it as a surface. Rocks, wreckage, slugs and
   bolts bounce off; gas is turned back and pushed out as it grows; the pod too, when not on the
   tether. The field is welded rigidly to the cockpit, so the ship is pushed by what hits it and
@@ -500,8 +508,8 @@ Priority: **M** must, **S** should.
   out again.
 
 **Power plant**
-- **MTH-080** `[M]` A level's power plant powers its turrets. A slug on it takes it offline 5 s,
-  and each slug while it is offline 2 s more; offline, no turret it powers fires.
+- **MTH-080** `[M]` A level's power plant powers its turrets. A slug on it takes it offline 10 s,
+  and each slug while it is offline 4 s more; offline, no turret it powers fires.
 - **MTH-081** `[M]` Slugs in the domes leak the reactor's coolant as gas: each adds the same to
   the flow (4 minutes for one, that divided by the slugs for more). Every third opens a new leak
   where it strikes; the others make the newest leak bigger. The gas pushes what is in it.
@@ -518,6 +526,9 @@ Priority: **M** must, **S** should.
   November 2026).
 - **MTH-088** `[M]` An explosion that reaches a dome punches leaks in it, more the nearer it went
   off (up to 3), and knocks the plant offline.
+- **MTH-102** `[M]` Debris, the ship or its shield striking a dome with more than 150 J of
+  collision energy punches a leak where it struck and knocks the plant offline; a gentler knock
+  does nothing.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
   often the less coolant is left.
 - **MTH-091** `[M]` Level 5 is Chloe's asteroid (§3): rock as an island in open space, gravity
@@ -563,8 +574,11 @@ Priority: **M** must, **S** should.
   it holds and is dead, and its tank leaks where the line left it. A wing lost whole burns on until
   its tank is empty. A gun knocked off doesn't fire.
 - **MTH-050** `[M]` A life is lost when the cockpit is destroyed or no working engine is welded to
-  it. Three lives. Running out of fuel costs nothing by itself.
+  it. Five lives, and one more every 8,000 points (Chloe, 14 November 2026; three until then).
+  Running out of fuel costs nothing by itself.
 - **MTH-051** `[M]` Scoring as §3.
+- **MTH-103** `[M]` A ship more every 8,000 points, as the score passes each; ships already
+  earned by the score brought from the level before aren't given again.
 - **MTH-053** `[M]` The ground is filled with horizontal coloured lines fixed to the world. Stars
   show only in the sky; open space inside the cave is a plain block colour.
 - **MTH-052** `[M]` The HUD shows score, lives, fuel, shells, the pod's state, the turrets' stop
@@ -614,7 +628,7 @@ ship and its damage model, the cannon (WPN-008), explosive shells and gas, the t
 | The factory | The original's reactor rules in full: stops the turrets, goes critical, countdown. |
 | Tether | The existing springy tether, retuned. |
 | Fuel and shield | Both: fuel tanks refilled from with the beam, and a shield. |
-| Crashes and lives | Physical damage; 3 lives. |
+| Crashes and lives | Physical damage; 3 lives (5, and one every 8,000 points, from 14 November 2026). |
 | Shield | Turns away bolts and gas; burns fuel; engines and gun off; no help against rock; its own button. |
 | Turret aim | At the ship's present position, with spread, slowly. |
 | Gravity | About 4 m/s². |

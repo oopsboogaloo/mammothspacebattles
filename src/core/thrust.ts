@@ -37,6 +37,8 @@ export interface ThrustSpec {
   pod: string;
   /** Ships a game (default 3). */
   lives?: number;
+  /** A ship more for every this many points (Chloe, 14 November 2026: every 8,000). */
+  extraLife?: number;
   /** Game seconds between losing a ship and the next (default 1.25). */
   respawn?: number;
   /** Game seconds a new ship takes no damage after a loss (default 1). */
@@ -71,6 +73,8 @@ export interface ThrustState {
   phase: ThrustPhase;
   /** Ships left, the one flying included. */
   lives: number;
+  /** How many `extraLife`s of the score have already been paid out as ships. */
+  extraLives?: number;
   /** The ship flying, or the last one (1, 2, …): its parts are `p{n}-…`. */
   n: number;
   score: number;
@@ -217,6 +221,8 @@ export function startThrust(world: World, spec: ThrustSpec, ops: ThrustOps): Thr
       lives: spec.carry?.lives ?? spec.lives ?? THRUST_DEFAULTS.lives,
       n: 1,
       score: spec.carry?.score ?? 0,
+      // Ships already earned by the score brought from the level before (they came with it).
+      ...(spec.extraLife ? { extraLives: Math.floor((spec.carry?.score ?? 0) / spec.extraLife) } : {}),
       pod: "stand",
       stand: pod ? { ...pod.position } : { x: 0, y: 0 },
       beams: [],
@@ -247,7 +253,16 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
   let changed = false;
 
   if (s.beams.length) s.beams = s.beams.filter((b) => world.tick - b.at < Math.round(BEAM / dt));
-  if (s.phase === "won" || s.phase === "over") return false;
+  // A ship more for every `extraLife` points (Chloe, 14 November 2026), whenever the score passes one.
+  if (spec.extraLife && s.phase !== "over") {
+    const earned = Math.floor(s.score / spec.extraLife);
+    if (earned > (s.extraLives ?? 0)) {
+      s.lives += earned - (s.extraLives ?? 0);
+      s.extraLives = earned;
+      world.events.push({ tick: world.tick, type: "thrust.extraLife", data: { lives: s.lives, score: s.score } });
+    }
+  }
+  if (s.phase === "won" || s.phase === "over") return changed;
 
   const hullId = idOf(spec.hull, s.n);
 
