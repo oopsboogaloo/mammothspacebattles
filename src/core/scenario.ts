@@ -642,6 +642,7 @@ function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
   if (isObj(g.start) && typeof g.start.y === "number" && typeof g.top === "number" && g.start.y >= g.top) err(v, `${path}.start`, "must be below the level's top");
   if (typeof g.pod !== "string" || !Array.isArray(bodies) || !bodies.some((b) => isObj(b) && b.id === g.pod)) err(v, `${path}.pod`, "must be the id of one of the world's bodies");
   if (g.lives !== undefined) num(v, g.lives, `${path}.lives`, { int: true, min: 1, max: 99 });
+  if (g.extraLife !== undefined) num(v, g.extraLife, `${path}.extraLife`, { positive: true });
   if (g.level !== undefined) num(v, g.level, `${path}.level`, { int: true, min: 1 });
   for (const k of ["respawn", "grace", "watch"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });
   if (g.scores !== undefined) {

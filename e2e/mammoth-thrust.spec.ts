@@ -60,7 +60,7 @@ test("MTH-001 MTH-002 Mammoth Thrust on its own page: the title over a still map
   await play.click();
   await expect(page.getByTestId("mth-score")).toHaveText("SCORE 0");
   await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 1");
-  await expect(page.getByTestId("mth-lives")).toHaveText("▲▲▲");
+  await expect(page.getByTestId("mth-lives")).toHaveText("▲▲▲▲▲");
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON ITS STAND");
   await expect(page.getByTestId("mth-slugs")).toHaveText("SHELLS 120");
   await expect(page.getByTestId("mth-damage")).toHaveText("DAMAGE 0%");
@@ -171,7 +171,7 @@ test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the 
   await page.getByTestId("mth-next").click();
   await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 2");
   await expect(page.getByTestId("mth-score")).toHaveText(`SCORE ${score}`);
-  await expect(page.getByTestId("mth-lives")).toHaveText("▲▲▲");
+  await expect(page.getByTestId("mth-lives")).toHaveText("▲▲▲▲▲");
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON ITS STAND");
   await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("flying");
   expect(await hook(page, (m) => m.level())).toBe(2);
@@ -289,14 +289,14 @@ test("MTH-026 a ship that reaches the top without the pod is put back at the sta
   await page.keyboard.up("ArrowUp");
   await expect(page.getByTestId("mth-back")).toContainText("Finish the mission");
   expect(await hook(page, (m) => m.thrust()!.stats.back)).toBeGreaterThanOrEqual(1);
-  await expect(page.getByTestId("mth-lives")).toHaveText("▲▲▲");
+  await expect(page.getByTestId("mth-lives")).toHaveText("▲▲▲▲▲");
   await expect(page.getByTestId("mth-back")).toBeHidden({ timeout: 20_000 });
 });
 
-test("MTH-050 self-destruct costs a ship, and three ships lost is game over, with Play again", async ({ page }) => {
-  test.setTimeout(240_000);
+test("MTH-050 self-destruct costs a ship, and five ships lost is game over, with Play again", async ({ page }) => {
+  test.setTimeout(400_000);
   await start(page);
-  for (let k = 3; k >= 1; k--) {
+  for (let k = 5; k >= 1; k--) {
     await expect(page.getByTestId("mth-lives")).toHaveText("▲".repeat(k));
     // The next ship beams in 2.5 s after a loss by the game's clock, which a slow machine runs behind.
     await expect.poll(() => hook(page, (m) => m.thrust()?.phase), { timeout: 60_000 }).toBe("flying");
@@ -311,7 +311,7 @@ test("MTH-050 self-destruct costs a ship, and three ships lost is game over, wit
   await expect(page.getByTestId("mth-over")).toContainText("No ships left");
   await expect(page.getByTestId("thrust-fire")).toHaveCount(0);
   await page.getByTestId("mth-again").click();
-  await expect(page.getByTestId("mth-lives")).toHaveText("▲▲▲");
+  await expect(page.getByTestId("mth-lives")).toHaveText("▲▲▲▲▲");
   await expect(page.getByTestId("mth-score")).toHaveText("SCORE 0");
 });
 

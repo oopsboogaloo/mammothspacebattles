@@ -35,7 +35,9 @@ const SKY = 3000;
 function ship() {
   // A solid slug: no blast, so a shot at a wall beside the ship does nothing to it (MTH-020).
   const slug = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05 };
-  const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
+  // Twice Mammoth Asteroids' rate of fire (Chloe, 14 November 2026: the cannon "needs to be more
+  // effective"): a slug every 0.125 game s.
+  const magazine = { count: 120, reload: 0.125, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
   // The beam is a 30° wedge down the ship's tail. It pulls whatever is free in it (TRC-013: Chloe,
   // 13 November 2026, to try again), but the tether takes only the pod (TRC-011): not the wreckage
   // of the ships before. It draws nothing toward the ship faster than 3 m/s (TRC-014; Chloe, 14
@@ -106,7 +108,9 @@ const PLANT: PlantTuning = { coolant: 12, rate: 0.1, parcel: 0.01, puff: 0.12, c
 // about 40 m/s (234 J). Every 1,000 J more makes the leak one size bigger, up to 3.
 const PLANT_KNOCK = { threshold: 150, perSize: 1000, gap: 0.5 };
 const PLANT_LEAK = { impact: PLANT_KNOCK, perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31 };
-const PLANT_OFFLINE = { first: 2.5, more: 1 };
+// Offline after a slug: 5 game s, and 2 more for each slug while it is down (double the first 2.5
+// and 1: Chloe, 14 November 2026, shooting the reactor should buy more time with the power down).
+const PLANT_OFFLINE = { first: 5, more: 2 };
 /** Turrets don't fire within this of a clear shot at the plant, rad (WPN-014): 10°. */
 const REACTOR_MARGIN = (10 * Math.PI) / 180;
 /** From critical to the blast, game seconds: 30 s on screen (Chloe, 14 November 2026: 10 was really tough). */
@@ -380,7 +384,9 @@ function write(l0: Level) {
               },
             }
           : {}),
-        lives: 3,
+        // Five ships, and one more every 8,000 points (Chloe, 14 November 2026: three wasn't enough).
+        lives: 5,
+        extraLife: 8000,
         respawn: 1.25,
         grace: 1,
         level: l.n,

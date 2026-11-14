@@ -1395,7 +1395,7 @@
             },
             "magazine": {
               "count": 120,
-              "reload": 0.25,
+              "reload": 0.125,
               "at": {
                 "x": 0,
                 "y": 0.51
@@ -3198,7 +3198,8 @@
         "fuel-1",
         "t1-tank"
       ],
-      "lives": 3,
+      "lives": 5,
+      "extraLife": 8000,
       "respawn": 1.25,
       "grace": 1,
       "level": 1,

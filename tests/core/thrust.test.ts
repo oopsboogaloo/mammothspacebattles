@@ -69,7 +69,7 @@ describe("Mammoth Thrust", () => {
       const rock = w.bodies.filter((b) => b.id.startsWith("rock-"));
       expect(rock.length).toBeGreaterThan(20);
       expect(rock.every((b) => b.fixed && !b.material)).toBe(true);
-      expect(st(w)).toMatchObject({ phase: "flying", lives: 3, n: 1, score: 0, pod: "stand" });
+      expect(st(w)).toMatchObject({ phase: "flying", lives: 5, n: 1, score: 0, pod: "stand" });
       expect(hull(w).position.x).toBeCloseTo(w.thrust!.spec.start.x, 6);
       expect(hull(w).position.y).toBeCloseTo(w.thrust!.spec.start.y, 6);
       expect(pod(w).mass).toBe(34);
@@ -367,7 +367,7 @@ describe("Mammoth Thrust", () => {
     expect(types(w).has("thrust.destruct")).toBe(true);
     expect(w.controls.destruct).toBe(0);
     step(0.1);
-    expect(st(w)).toMatchObject({ phase: "between", lives: 2, n: 1 });
+    expect(st(w)).toMatchObject({ phase: "between", lives: 4, n: 1 });
     expect(w.links.some((l) => l.kind === "control" && l.to.startsWith("p1-"))).toBe(false); // the keys fly only the next ship
     // After any loss there are 3 s on screen (1.5 game s) to watch it go before the page says the
     // ship is lost, and then the usual wait for the next one.
@@ -376,7 +376,7 @@ describe("Mammoth Thrust", () => {
     step(1.5);
     expect(st(w).phase).toBe("between");
     step(1.2);
-    expect(st(w)).toMatchObject({ phase: "flying", lives: 2, n: 2, pod: "loose" });
+    expect(st(w)).toMatchObject({ phase: "flying", lives: 4, n: 2, pod: "loose" });
     expect(hull(w).position.x).toBeCloseTo(w.thrust!.spec.start.x, 6);
     expect(parts(w, 1).length).toBeGreaterThan(5); // the wreck is still there
     expect(pod(w).integrity).toBe(1);
@@ -392,17 +392,17 @@ describe("Mammoth Thrust", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("MTH-050 three ships lost and the game is over, with no fourth ship", () => {
+  it("MTH-050 five ships lost and the game is over, with no sixth ship", () => {
     const { w, step } = game();
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; k < 5; k++) {
       step(2 / 240, [set("destruct", 1)]);
       step(2.9);
     }
-    expect(st(w)).toMatchObject({ phase: "over", reason: "ships", lives: 0, n: 3 });
-    expect(w.events.filter((e) => e.type === "thrust.ship")).toHaveLength(3);
+    expect(st(w)).toMatchObject({ phase: "over", reason: "ships", lives: 0, n: 5 });
+    expect(w.events.filter((e) => e.type === "thrust.ship")).toHaveLength(5);
     expect(w.events.filter((e) => e.type === "thrust.over")).toHaveLength(1);
     step(0.5, [set("destruct", 1)]);
-    expect(st(w).n).toBe(3);
+    expect(st(w).n).toBe(5);
   });
 
   it("MTH-024 MTH-051 the level is complete when the ship is above the top with the pod on its tether: 2,000 for the pod and 100 for each kg of fuel left", () => {
@@ -427,6 +427,26 @@ describe("Mammoth Thrust", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("MTH-103 a ship more every 8,000 points, whenever the score passes one, and none again for points brought from the level before", () => {
+    const { w, step } = game();
+    step(0.1);
+    st(w).score = 7900;
+    step(0.05);
+    expect(st(w).lives).toBe(5);
+    st(w).score = 8100;
+    step(0.05);
+    expect(st(w).lives).toBe(6);
+    st(w).score = 24500; // past two more at once
+    step(0.05);
+    expect(st(w).lives).toBe(8);
+    expect(w.events.filter((e) => e.type === "thrust.extraLife")).toHaveLength(2);
+    const next = game("test", (s) => (s.world.thrust.carry = { score: 24500, lives: 8 }));
+    next.step(0.1);
+    expect(st(next.w).lives).toBe(8);
+    st(next.w).score = 32000;
+    next.step(0.05);
+    expect(st(next.w).lives).toBe(9);
+  });
   it("MTH-026 a ship above the top without the pod is beamed back to the start as it is, upright and at rest, with no life lost", () => {
     const { w, step } = game();
     const top = w.thrust!.spec.top;
@@ -437,7 +457,7 @@ describe("Mammoth Thrust", () => {
     const before = thrustFuel(w).mass;
     step(0.3);
     expect(w.events.filter((e) => e.type === "thrust.back")).toHaveLength(1);
-    expect(st(w)).toMatchObject({ phase: "flying", lives: 3, n: 1 });
+    expect(st(w)).toMatchObject({ phase: "flying", lives: 5, n: 1 });
     expect(st(w).stats.back).toBe(1);
     const start = w.thrust!.spec.start;
     expect(Math.abs(hull(w).position.x - start.x)).toBeLessThan(0.5);
@@ -473,7 +493,7 @@ describe("Mammoth Thrust", () => {
     const gone = game();
     pod(gone.w).integrity = 0;
     gone.step(0.1);
-    expect(st(gone.w)).toMatchObject({ phase: "over", reason: "pod", pod: "gone", lives: 3 });
+    expect(st(gone.w)).toMatchObject({ phase: "over", reason: "pod", pod: "gone", lives: 5 });
     expect(gone.w.events.filter((e) => e.type === "thrust.over")).toHaveLength(1);
   });
 
@@ -487,7 +507,7 @@ describe("Mammoth Thrust", () => {
     for (let k = 0; k < 25 && st(w).phase === "flying"; k++) step(0.1);
     expect(hull(w)).toBeDefined(); // it set down in one piece
     expect(w.events.filter((e) => e.type === "thrust.lost")).toHaveLength(1);
-    expect(st(w).lives).toBe(2);
+    expect(st(w).lives).toBe(4);
     // Lost this way too, there are 3 s on screen to watch before the page says so.
     expect(st(w).noteAt! - w.time).toBeGreaterThan(1.3);
     expect(st(w).next! - st(w).noteAt!).toBeCloseTo(1.25, 6);
@@ -1005,7 +1025,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     settle(w);
   }
 
-  it("MTH-080 WPN-011 the power plant powers the level's turrets; a slug takes it offline 5 s on screen, each more while it is down 2 s more, and the turrets stop meanwhile", () => {
+  it("MTH-080 WPN-011 the power plant powers the level's turrets; a slug takes it offline 10 s on screen, each more while it is down 4 s more, and the turrets stop meanwhile", () => {
     const { w, step } = game(4);
     step(0.5);
     expect(plantState(w)).toMatchObject({ hits: 0, holes: 0, up: { tx: true } });
@@ -1017,14 +1037,14 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(plantState(w)).toMatchObject({ hits: 1, holes: 0 });
     const first = plantState(w).offlineUntil;
     const hitAt = w.events.find((e) => e.type === "plant.hit")!.tick / 240;
-    expect(first - hitAt).toBeCloseTo(2.5, 1); // 5 s on screen
+    expect(first - hitAt).toBeCloseTo(5, 1); // 10 s on screen
     expect(poweredTurrets(w)).toBe("t1:off t2:off t3:off t4:off t5:off t6:off");
     w.bodies = w.bodies.filter((b) => b.id !== "p1-gun-shell-t1"); // out of the way of the next
     settle(w);
     slugAtPoint(w, { x: tower.position.x, y: tower.position.y + 4 }, 2, { x: 0, y: 6 });
     step(0.2);
-    expect(plantState(w).offlineUntil - first).toBeCloseTo(1, 6); // 2 s more on screen
-    step(first + 1 - w.time + 0.1);
+    expect(plantState(w).offlineUntil - first).toBeCloseTo(2, 6); // 4 s more on screen
+    step(first + 2 - w.time + 0.1);
     expect(poweredTurrets(w)).toBe("t1:on t2:on t3:on t4:on t5:on t6:on");
     expect(w.ledger.violations).toBe(0);
   }, 60_000);
