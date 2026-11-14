@@ -381,7 +381,9 @@ Priority: **M** must, **S** should.
 - **MTH-026** `[M]` A ship above the level's top without the pod on its tether is beamed back to the
   start as it is, with no life lost.
 - **MTH-027** `[M]` The tether takes the pod and nothing else. The beam pulls anything free in its
-  wedge (Chloe, 13 November 2026, to try again; until then it pulled the pod alone).
+  wedge (Chloe, 13 November 2026, to try again; until then it pulled the pod alone), but draws
+  nothing toward the ship faster than 3 m/s (TRC-014, 14 November 2026), so what it brings in
+  arrives gently.
 - **MTH-024** `[M]` The level is complete when the ship is above the level's top with the pod
   on its tether.
 

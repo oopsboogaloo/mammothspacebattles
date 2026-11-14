@@ -7810,6 +7810,7 @@
               "range": 40,
               "arc": 0.5235987755982988,
               "force": 1200,
+              "maxSpeed": 3,
               "capture": 1.2,
               "only": [
                 "pod"

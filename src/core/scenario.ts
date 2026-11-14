@@ -393,6 +393,7 @@ function validateTractor(v: V, t: unknown, path: string): void {
   if (t.range !== undefined) num(v, t.range, `${path}.range`, { positive: true });
   if (t.arc !== undefined) num(v, t.arc, `${path}.arc`, { positive: true, max: Math.PI });
   if (t.force !== undefined) num(v, t.force, `${path}.force`, { min: 0 });
+  if (t.maxSpeed !== undefined) num(v, t.maxSpeed, `${path}.maxSpeed`, { min: 0 });
   if (t.capture !== undefined) num(v, t.capture, `${path}.capture`, { min: 0 });
   if (t.tetherFrom !== undefined) str(v, t.tetherFrom, `${path}.tetherFrom`);
   if (t.beamFrom !== undefined) str(v, t.beamFrom, `${path}.beamFrom`);

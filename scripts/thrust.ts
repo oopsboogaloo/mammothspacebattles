@@ -37,7 +37,9 @@ function ship() {
   const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
   // The beam is a 30° wedge down the ship's tail. It pulls whatever is free in it (TRC-013: Chloe,
   // 13 November 2026, to try again), but the tether takes only the pod (TRC-011): not the wreckage
-  // of the ships before. Its pull is three times the engine's default (asked for by Chloe after
+  // of the ships before. It draws nothing toward the ship faster than 3 m/s (TRC-014; Chloe, 14
+  // November 2026: pulled wreckage was arriving fast enough to wreck the ship): its pull fades to
+  // nothing as the closing speed reaches that. Its pull is three times the engine's default (asked for by Chloe after
   // playing, 12 November 2026: picking the pod up was too hard).
   // The tether is the TRC spring between the two centres of mass (TRC-004), 12 m long. It takes the
   // pod from up to 22 m off, starts at the distance it took it at, and reels it in (or pays out) to
@@ -45,7 +47,7 @@ function ship() {
   // the pull it did: Chloe had it let go under thrust.
   // Held on a fuel tank in its wedge, the beam draws the tank's fuel into the ship's two tanks
   // (TRC-008), 2 kg a game second: a full 8.1 kg tank in 8 s on screen. The tank isn't pulled.
-  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
+  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, maxSpeed: 3, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor });
 }
 

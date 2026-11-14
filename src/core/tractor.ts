@@ -58,6 +58,12 @@ export interface Tractor {
   arc: number;
   /** Total pull, shared between what is in the beam, N. */
   force: number;
+  /**
+   * The fastest the beam draws anything toward the ship, m/s (TRC-014): its pull on an assembly fades
+   * in a straight line from full, while it isn't closing on the ship, to nothing at this closing
+   * speed, and its reaction on the ship with it. What it brings in arrives no faster. Absent: no limit.
+   */
+  maxSpeed?: number;
   /** Heaviest cargo the tether takes, as a multiple of the ship's mass (its size must not exceed the ship's). */
   capture: number;
   tether: Tether;
@@ -329,11 +335,22 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
     return;
   }
   const share = t.force / inBeam.size;
-  for (const pieces of inBeam.values()) {
+  const shipV = t.maxSpeed !== undefined ? groupVelocity(shipGroup) : null;
+  for (const [root, pieces] of inBeam) {
     const m = pieces.reduce((s, r) => s + r.mass, 0);
+    // How fast this assembly is closing on the beam's origin, and so how much of the pull it gets (TRC-014).
+    let k = 1;
+    if (shipV && t.maxSpeed !== undefined) {
+      const g = groupOf(rbs, roots, root);
+      const toward = sub(origin, g.com);
+      const L = length(toward);
+      const closing = L > 1e-9 ? dot(sub(groupVelocity(g), shipV), toward) / L : 0;
+      k = t.maxSpeed > 0 ? Math.max(0, Math.min(1, 1 - closing / t.maxSpeed)) : 0;
+    }
+    if (k <= 0) continue;
     for (const r of pieces) {
       const d = sub(origin, r.body.position);
-      const J = scale(d, (share * (r.mass / m) * dt) / length(d));
+      const J = scale(d, (k * share * (r.mass / m) * dt) / length(d));
       push(r, J, r.body.position);
       push(ship, scale(J, -1), origin);
       t.targets.push(r.body.id);
