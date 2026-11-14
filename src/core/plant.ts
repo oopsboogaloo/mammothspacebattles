@@ -68,6 +68,14 @@ export interface PlantSpec {
   outages?: { below: number; rate: number; last: [number, number] };
   /** Seeds its outages. */
   seed?: number;
+  /**
+   * Knocks (Chloe, 14 November 2026: "model it like a normal object"): anything else striking a dome
+   * (debris, a ship, a shielded ship's field) delivers the energy the collision loses, shared between
+   * the two as the damage model shares it (DMG-002). A share over `threshold` J in one step punches
+   * a leak where it struck, `perSize` J more making it one size bigger (up to 3), and knocks the
+   * plant offline as a hit does. One knock per body and dome in `gap` game seconds.
+   */
+  impact?: { threshold: number; perSize: number; gap: number };
 }
 
 export interface PlantState {
@@ -90,6 +98,8 @@ export interface PlantState {
   rng?: RngState;
   /** The newest leak, which the next slugs make bigger: its dome and its place in the dome's holes. */
   leak?: { dome: string; index: number };
+  /** The latest knocks (spec.impact): what struck which dome, and when, s. */
+  knocks?: { by: string; dome: string; at: number }[];
 }
 
 export const PLANT_BONUS = 2000;
@@ -265,6 +275,45 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       }
       if (struck && s.critical === undefined) s.offlineUntil = now >= s.offlineUntil - 1e-9 ? now + spec.offline.first : s.offlineUntil + spec.offline.more;
     }
+  }
+
+  // Knocks (spec.impact): debris, a ship or a shield's field striking a dome hard enough punches a
+  // leak in it. The player's slugs are counted above, and the plant's own parts don't knock it.
+  const imp = spec.impact;
+  if (imp && !s.blown) {
+    const knocks = (s.knocks ?? []).filter((k) => now - k.at < imp.gap - 1e-9);
+    const pairs = new Map<string, { dome: string; by: string; energy: number; x: number; y: number; w: number }>();
+    for (const c of world.contacts) {
+      if (!(c.energyLost > 0)) continue;
+      const dome = domes.has(c.a) ? c.a : domes.has(c.b) ? c.b : null;
+      const by = dome === c.a ? c.b : c.a;
+      if (!dome || parts.has(by) || isPlayerShell(by)) continue;
+      const k = `${dome}\u0000${by}`;
+      let p = pairs.get(k);
+      if (!p) pairs.set(k, (p = { dome, by, energy: 0, x: 0, y: 0, w: 0 }));
+      p.energy += c.energyLost;
+      const w = Math.max(c.normalImpulse, 1e-12);
+      p.x += w * c.point.x;
+      p.y += w * c.point.y;
+      p.w += w;
+    }
+    let knocked = false;
+    for (const p of pairs.values()) {
+      const share = p.energy / 2;
+      if (share <= imp.threshold || knocks.some((k) => k.by === p.by && k.dome === p.dome)) continue;
+      const dome = world.bodies.find((b) => b.id === p.dome);
+      if (!dome?.vents) continue;
+      const index = addLeak(dome, { x: p.x / p.w, y: p.y / p.w }, spec.leakSpeed);
+      const hole = dome.vents.holes[index];
+      hole.size = Math.min(3, 1 + Math.floor((share - imp.threshold) / imp.perSize));
+      s.holes += 1;
+      knocks.push({ by: p.by, dome: p.dome, at: now });
+      knocked = true;
+      changed = true;
+      world.events.push({ tick: world.tick, type: "plant.knock", data: { dome: p.dome, by: p.by, energy: share, size: hole.size } });
+    }
+    s.knocks = knocks;
+    if (knocked && s.critical === undefined) s.offlineUntil = now >= s.offlineUntil - 1e-9 ? now + spec.offline.first : s.offlineUntil + spec.offline.more;
   }
 
   // Outages (Chloe): below half its coolant, the power fails now and then, more often as it falls.

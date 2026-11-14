@@ -7106,6 +7106,11 @@
           "more": 1
         },
         "countdown": 15,
+        "impact": {
+          "threshold": 150,
+          "perSize": 1000,
+          "gap": 0.5
+        },
         "perLeak": 3,
         "leakSpeed": 20,
         "blastLeaks": 3,

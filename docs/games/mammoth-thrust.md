@@ -278,6 +278,13 @@ reactor and of our factory below.
 - **Explosions** (Chloe, 13 November 2026). An explosion that reaches a dome (a ship
   self-destructing, a turret's power node, a fuel tank) punches leaks in it: up to 3 at point-blank
   range, fewer further off, none beyond its reach. It also knocks the plant offline, as a hit does.
+- **Knocks** (Chloe, 14 November 2026: "model it like a normal object"). Anything else that strikes
+  a dome (debris, the ship, the shielded ship's field) delivers the energy the collision loses,
+  shared as the damage model shares it. Over 150 J (the ship hull's threshold) in a step it punches
+  a leak where it struck, a size bigger for every 1,000 J more (up to 3), and knocks the plant
+  offline. Measured head-on (no gravity): the ship holes it from about 10 m/s, the shielded ship
+  from about 20 m/s, a 0.6 kg piece of debris from about 40 m/s. Before, only slugs and explosions
+  holed it.
 - **Outages** (Chloe). Below half its coolant the power fails now and then, for 2 to 3 s, more
   often the less is left: on average every 8 s at a quarter, every 4 s near empty.
 - **Critical.** With no coolant left, a 30 s countdown on the page (10 s until 14 November 2026), then it explodes. Out above the
@@ -518,6 +525,9 @@ Priority: **M** must, **S** should.
   November 2026).
 - **MTH-088** `[M]` An explosion that reaches a dome punches leaks in it, more the nearer it went
   off (up to 3), and knocks the plant offline.
+- **MTH-102** `[M]` Debris, the ship or its shield striking a dome with more than 150 J of
+  collision energy punches a leak where it struck and knocks the plant offline; a gentler knock
+  does nothing.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
   often the less coolant is left.
 - **MTH-091** `[M]` Level 5 is Chloe's asteroid (§3): rock as an island in open space, gravity

@@ -1199,6 +1199,26 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(up.events.some((e) => e.type === "plant.shock")).toBe(false);
     expect(fly(false).events.some((e) => e.type === "plant.shock")).toBe(true);
   }, 60_000);
+  it("MTH-102 debris striking a dome hard enough punches a leak in it and knocks the plant offline; gently, nothing", () => {
+    const knock = (v: number) => {
+      const { w, step } = game(4, (s) => (s.world.gravity = { x: 0, y: 0 }));
+      step(0.1);
+      const dome = body(w, "plant-dome-l")!;
+      const holes = dome.vents!.holes.length;
+      addBody(w, { id: "junk", shape: { kind: "box", width: 0.8, height: 0.15 }, mass: 0.6, position: { x: dome.position.x - 5.7, y: dome.position.y + 1 }, velocity: { x: v, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.3, material: { name: "hull", threshold: 150, toughness: 3000 } } as never);
+      settle(w);
+      step(1);
+      return { leaks: body(w, "plant-dome-l")!.vents!.holes.length - holes, knocks: w.events.filter((e) => e.type === "plant.knock").length, offline: plantState(w).offlineUntil > w.time, w };
+    };
+    const soft = knock(20);
+    expect(soft.leaks).toBe(0);
+    expect(soft.knocks).toBe(0);
+    const hard = knock(40);
+    expect(hard.knocks).toBe(1);
+    expect(hard.leaks).toBe(1);
+    expect(hard.offline).toBe(true);
+    expect(hard.w.ledger.violations).toBe(0);
+  }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
       const { w, step } = game(4);

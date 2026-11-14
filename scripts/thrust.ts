@@ -99,7 +99,13 @@ const PLANT: PlantTuning = { coolant: 12, rate: 0.1, parcel: 0.01, puff: 0.12, c
  * power fails for 2 to 3 s on screen at a time, more often as the coolant falls: on average once
  * every 8 s on screen at a quarter left, every 4 s near empty (0.5 a game second).
  */
-const PLANT_LEAK = { perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31 };
+// Knocks on the domes (Chloe, 14 November 2026: debris, a ship or a shielded ship striking a dome
+// hard enough punch a leak in it). The domes are as tough as the ship's hull (threshold 150 J, the
+// hull material's): measured head-on into a dome (no gravity), a ship holes it from about 10 m/s
+// (293 J), a shielded ship from about 20 m/s (208 J; 75 J at 15), a 0.6 kg piece of debris from
+// about 40 m/s (234 J). Every 1,000 J more makes the leak one size bigger, up to 3.
+const PLANT_KNOCK = { threshold: 150, perSize: 1000, gap: 0.5 };
+const PLANT_LEAK = { impact: PLANT_KNOCK, perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31 };
 const PLANT_OFFLINE = { first: 2.5, more: 1 };
 /** Turrets don't fire within this of a clear shot at the plant, rad (WPN-014): 10°. */
 const REACTOR_MARGIN = (10 * Math.PI) / 180;
