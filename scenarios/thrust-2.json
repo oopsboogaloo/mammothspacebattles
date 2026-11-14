@@ -12,14 +12,14 @@
     },
     "bounds": {
       "min": {
-        "x": -170,
+        "x": -150,
         "y": -152
       },
       "max": {
-        "x": 170,
+        "x": 150,
         "y": 210
       },
-      "wrap": false,
+      "wrap": true,
       "farField": 10,
       "depth": 2
     },
@@ -35,7 +35,11 @@
         },
         {
           "x": 150,
-          "y": 56
+          "y": 53
+        },
+        {
+          "x": 144,
+          "y": 53
         },
         {
           "x": 134,
@@ -142,8 +146,12 @@
           "y": 46
         },
         {
+          "x": -144,
+          "y": 53
+        },
+        {
           "x": -150,
-          "y": 50
+          "y": 53
         }
       ],
       "prefix": "rock-",
@@ -2358,13 +2366,13 @@
             "contents": [
               {
                 "resource": "h2",
-                "mass": 0.9,
-                "capacity": 0.9
+                "mass": 0.45,
+                "capacity": 0.45
               },
               {
                 "resource": "o2",
-                "mass": 7.2,
-                "capacity": 7.2
+                "mass": 3.6,
+                "capacity": 3.6
               }
             ],
             "explosive": {
@@ -2403,13 +2411,13 @@
             "contents": [
               {
                 "resource": "h2",
-                "mass": 0.9,
-                "capacity": 0.9
+                "mass": 0.45,
+                "capacity": 0.45
               },
               {
                 "resource": "o2",
-                "mass": 7.2,
-                "capacity": 7.2
+                "mass": 3.6,
+                "capacity": 3.6
               }
             ],
             "explosive": {
@@ -2625,6 +2633,7 @@
               "range": 40,
               "arc": 0.5235987755982988,
               "force": 1200,
+              "maxSpeed": 3,
               "capture": 1.2,
               "only": [
                 "pod"
@@ -3532,6 +3541,58 @@
               "threshold": 150,
               "toughness": 3000
             }
+          },
+          {
+            "id": "p{n}-shield",
+            "shape": {
+              "kind": "box",
+              "width": 0.9,
+              "height": 0.12
+            },
+            "mass": 0.3,
+            "position": {
+              "x": 0,
+              "y": 0.710388
+            },
+            "velocity": {
+              "x": 0,
+              "y": 0
+            },
+            "angle": 0,
+            "angularVelocity": 0,
+            "restitution": 0,
+            "friction": 0.3,
+            "material": {
+              "name": "hull",
+              "threshold": 150,
+              "toughness": 3000
+            },
+            "shield": {
+              "radius": 3.352363,
+              "channel": "shield",
+              "grow": 14,
+              "burn": 0.8,
+              "hitBurn": 0.005,
+              "minHit": 0.1,
+              "mass": 2,
+              "from": [
+                "p{n}-tank-l",
+                "p{n}-tank-r"
+              ],
+              "blocks": [
+                "main",
+                "bl",
+                "br",
+                "fl",
+                "fr",
+                "fire"
+              ],
+              "to": "p{n}-hull",
+              "at": {
+                "x": 0,
+                "y": -0.446495
+              }
+            }
           }
         ],
         "joints": [
@@ -4214,6 +4275,46 @@
               "torque": 5520
             },
             "yield": 0.3
+          },
+          {
+            "id": "p{n}-w-shield-a",
+            "a": "p{n}-hull",
+            "b": "p{n}-shield",
+            "anchorA": {
+              "x": -0.25,
+              "y": 0.650388
+            },
+            "anchorB": {
+              "x": -0.25,
+              "y": -0.06
+            },
+            "limits": {
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
+            },
+            "yield": 0.3
+          },
+          {
+            "id": "p{n}-w-shield-b",
+            "a": "p{n}-hull",
+            "b": "p{n}-shield",
+            "anchorA": {
+              "x": 0.25,
+              "y": 0.650388
+            },
+            "anchorB": {
+              "x": 0.25,
+              "y": -0.06
+            },
+            "limits": {
+              "tension": 22950,
+              "compression": 45900,
+              "shear": 16050,
+              "torque": 5520
+            },
+            "yield": 0.3
           }
         ],
         "links": [
@@ -4354,6 +4455,12 @@
             "kind": "control",
             "channel": "tractor",
             "to": "p{n}-hull"
+          },
+          {
+            "id": "p{n}-ctl-shield",
+            "kind": "control",
+            "channel": "shield",
+            "to": "p{n}-shield"
           }
         ]
       },
@@ -4408,7 +4515,11 @@
           },
           {
             "x": 150,
-            "y": 56
+            "y": 53
+          },
+          {
+            "x": 144,
+            "y": 53
           },
           {
             "x": 134,
@@ -4475,8 +4586,12 @@
             "y": 46
           },
           {
+            "x": -144,
+            "y": 53
+          },
+          {
             "x": -150,
-            "y": 50
+            "y": 53
           }
         ],
         "caves": [

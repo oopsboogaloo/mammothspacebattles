@@ -33,6 +33,8 @@ export interface Turret {
   barrel?: string;
   /** The body that holds its shots (`charge`). Without one, it needs no power. */
   battery?: string;
+  /** Parts its power comes in through (an electric turret's power nodes, WPN-012): any one destroyed or knocked off, it can't fire. */
+  nodes?: string[];
   /** How far it sees, m. */
   range: number;
   /** Seconds from first sight to its first shot. */
@@ -141,6 +143,15 @@ function clearLine(world: World, a: Vec2, b: Vec2): boolean {
  * Whether a turret can still fire: its carriage, its gun (and barrel) and its joint whole and joined,
  * its mount fit to turn, and its battery if it has one.
  */
+/**
+ * Whether a turret is online (WPN-012): switched on, powered, and able to work (turretWorks): its
+ * aim can turn, it has its gun, barrel, nodes and battery. What an electric turret's nodes show.
+ */
+export function turretOnline(world: World, carriage: Body): boolean {
+  const t = carriage.turret;
+  return !!t && t.enabled && t.powered !== false && turretWorks(world, carriage);
+}
+
 export function turretWorks(world: World, carriage: Body): boolean {
   const t = carriage.turret;
   if (!t || carriage.integrity <= 0) return false;
@@ -155,6 +166,10 @@ export function turretWorks(world: World, carriage: Body): boolean {
   if (t.barrel !== undefined) {
     const barrel = world.bodies.find((b) => b.id === t.barrel);
     if (!barrel || barrel.integrity <= 0 || roots.get(barrel.id) !== root) return false;
+  }
+  for (const n of t.nodes ?? []) {
+    const node = world.bodies.find((b) => b.id === n);
+    if (!node || node.integrity <= 0 || roots.get(node.id) !== root) return false;
   }
   if (t.battery !== undefined) {
     const battery = world.bodies.find((b) => b.id === t.battery);

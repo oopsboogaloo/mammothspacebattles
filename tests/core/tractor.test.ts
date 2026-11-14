@@ -281,6 +281,35 @@ describe("tractor beam", () => {
     expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ pullAny: "yes" })] } })).toThrow(ScenarioError);
   });
 
+  it("TRC-014 a beam with a top speed draws nothing in faster than it: the pull fades to nothing at that closing speed, and momentum is kept", () => {
+    const pull = (maxSpeed?: number) => {
+      const w = world([ball("rock", 0.5, 20, 0, -45)], { range: 50, ...(maxSpeed !== undefined ? { maxSpeed } : {}), tether: { length: 1, reach: 1 } });
+      let fastest = 0;
+      for (let i = 0; i < 240 * 6; i++) {
+        stepInPlace(w, i === 0 ? set(1) : [], sandbox);
+        fastest = Math.max(fastest, at(w, "rock").velocity.y - at(w, "ship").velocity.y);
+      }
+      return { fastest, w };
+    };
+    const limited = pull(3);
+    expect(limited.fastest).toBeGreaterThan(2.9);
+    expect(limited.fastest).toBeLessThan(3.1);
+    expect(limited.w.ledger.violations).toBe(0);
+    // Without one it comes in much faster.
+    expect(pull().fastest).toBeGreaterThan(10);
+    // A light piece (a slug, 0.17 kg) doesn't pass the top speed in its first step either.
+    const w = world([ball("slug", 0.1, 0.166667, 0, -20)], { range: 50, maxSpeed: 3, tether: { length: 1, reach: 1 } });
+    let fastest = 0;
+    for (let i = 0; i < 240 * 2; i++) {
+      stepInPlace(w, i === 0 ? set(1) : [], sandbox);
+      fastest = Math.max(fastest, at(w, "slug").velocity.y - at(w, "ship").velocity.y);
+    }
+    expect(fastest).toBeGreaterThan(2.9);
+    expect(fastest).toBeLessThan(3.05);
+    expect(w.ledger.violations).toBe(0);
+    expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ maxSpeed: -1 })] } })).toThrow(ScenarioError);
+  });
+
   it("TRC-012 a tractor that names its beam's generator has no beam, and holds nothing, once that part is off the ship", () => {
     const gen = { ...box("gen", 1, 1, { mass: 2, position: { x: 0, y: 2.5 } }) } as BodyInput;
     const make = () =>

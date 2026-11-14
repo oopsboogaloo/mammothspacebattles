@@ -79,8 +79,8 @@ function machine(name: string, at: Vec, angle: number) {
  * have no material: bullets don't wear it down. A slug takes it offline, and one in a dome holes it
  * (plant.ts); the middle dome holds the coolant, which every hole vents.
  */
-export function powerPlant(at: Vec, t: PlantTuning) {
-  const m = machine("plant", at, 0);
+export function powerPlant(at: Vec, t: PlantTuning, angle = 0) {
+  const m = machine("plant", at, angle);
   const top = 1;
   m.polygon("base", [{ x: -10.85, y: 0 }, { x: 10.85, y: 0 }, { x: 9.7, y: top }, { x: -9.7, y: top }], 1);
   m.fix("base", 5000);

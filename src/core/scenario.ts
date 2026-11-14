@@ -235,6 +235,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
   if (b.turret !== undefined) validateTurret(v, b.turret, `${path}.turret`);
+  if (b.shield !== undefined) validateShield(v, b.shield, `${path}.shield`);
   if (b.siphon !== undefined && typeof b.siphon !== "boolean") err(v, `${path}.siphon`, "must be true or false");
   if (b.vents !== undefined) {
     if (!isObj(b.vents) || !Array.isArray(b.vents.holes)) err(v, `${path}.vents`, "must be {from?, rate, holes}");
@@ -384,6 +385,19 @@ function validateRoute(v: V, r: Record<string, unknown>, path: string): void {
   if (r.speed !== undefined) num(v, r.speed, `${path}.speed`, { positive: true });
 }
 
+/** A shield generator (SHD-001…SHD-005, shield.ts). */
+function validateShield(v: V, s: unknown, path: string): void {
+  if (!isObj(s)) return err(v, path, "must be {channel, radius, grow, burn, from, hitBurn, minHit, blocks, mass, to, at}");
+  str(v, s.channel, `${path}.channel`);
+  str(v, s.to, `${path}.to`);
+  vec(v, s.at, `${path}.at`);
+  num(v, s.radius, `${path}.radius`, { positive: true });
+  num(v, s.grow, `${path}.grow`, { positive: true });
+  num(v, s.mass, `${path}.mass`, { positive: true });
+  for (const k of ["burn", "hitBurn", "minHit"] as const) num(v, s[k], `${path}.${k}`, { min: 0 });
+  for (const k of ["from", "blocks"] as const) if (!Array.isArray(s[k]) || !(s[k] as unknown[]).every((x) => typeof x === "string")) err(v, `${path}.${k}`, "must be a list of names");
+}
+
 function validateTractor(v: V, t: unknown, path: string): void {
   if (!isObj(t)) return err(v, path, "must be {channel, origin, direction, range?, arc?, force?, tether?}");
   str(v, t.channel, `${path}.channel`);
@@ -393,6 +407,7 @@ function validateTractor(v: V, t: unknown, path: string): void {
   if (t.range !== undefined) num(v, t.range, `${path}.range`, { positive: true });
   if (t.arc !== undefined) num(v, t.arc, `${path}.arc`, { positive: true, max: Math.PI });
   if (t.force !== undefined) num(v, t.force, `${path}.force`, { min: 0 });
+  if (t.maxSpeed !== undefined) num(v, t.maxSpeed, `${path}.maxSpeed`, { min: 0 });
   if (t.capture !== undefined) num(v, t.capture, `${path}.capture`, { min: 0 });
   if (t.tetherFrom !== undefined) str(v, t.tetherFrom, `${path}.tetherFrom`);
   if (t.beamFrom !== undefined) str(v, t.beamFrom, `${path}.beamFrom`);
@@ -475,6 +490,7 @@ function validateTurret(v: V, t: unknown, path: string): void {
   str(v, t.joint, `${path}.joint`);
   str(v, t.gun, `${path}.gun`);
   for (const k of ["battery", "barrel", "target"]) if (t[k] !== undefined) str(v, t[k], `${path}.${k}`);
+  if (t.nodes !== undefined && (!Array.isArray(t.nodes) || !t.nodes.every((x: unknown) => typeof x === "string"))) err(v, `${path}.nodes`, "must be a list of body ids");
   if (t.range !== undefined) num(v, t.range, `${path}.range`, { positive: true });
   for (const k of ["wait", "hold", "spread"]) if (t[k] !== undefined) num(v, t[k], `${path}.${k}`, { min: 0 });
   if (t.seed !== undefined) num(v, t.seed, `${path}.seed`, { int: true });

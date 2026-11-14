@@ -8,8 +8,8 @@ levels, look and sound are our own; only the idea and the rules of play follow t
 
 Status: agreed 12 November 2026, from Chloe's brief and several rounds of questions (§10). **The
 MVP is built** (milestones 1 and the playable part of 4, §9): two levels, the ship, the pod, lives,
-the level's top and the page. **Turrets are built too** (the MVP1 turret, firing at random bearings). The factory, fuel and the
-shield are not built yet, so the rules for them below are still plans. What the build measured and changed is in
+the level's top and the page. **Turrets are built too** (the MVP1 turret, firing at random bearings). Fuel and the
+shield are built (the shield to Chloe's design of 14 November 2026: see Shield, which supersedes the older rules for it below); the factory is not yet. What the build measured and changed is in
 `mammoth-thrust-design.md` §8 and §9. The requirement IDs (MTH-…) are this game's own. The
 engine changes the game needs (§8) become requirements in `docs/spec.md` once agreed. Design and plan:
 `mammoth-thrust-design.md`.
@@ -102,25 +102,41 @@ other sources in §12):
 - **Level 2 (MVP): one chamber.** The factory, a building and a turret on the surface. One shaft,
   about 30 m wide and 80 m deep, opens into a single chamber about 120 m across. Two turrets on
   the chamber's walls, the pod and a fuel tank on its floor. It teaches flying the pod up a shaft.
-- **Level 3: the winding cave** (Chloe's drawing, 13 November 2026, traced at 0.1 m a pixel). About
+- **Level 3: the canyon** (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel). A canyon
+  about 200 m across and 150 m deep, with caves under its walls. The power plant stands on a ledge
+  high on the left wall; its lines run through the rock to the four turrets on the left (one
+  hanging under the antenna's ledge, one under the fuel ledge, two on the floor) and cross the
+  canyon between two antennae to the four on the right (the right wall's top, a shelf, and both
+  faces of a spit). Eight electric turrets. The pod stands on a pillar in the middle of the floor.
+  Four fuel tanks: two on the surface at the right, one on the left ledge, one on the floor.
+  Two dead ends narrow to nothing (the cave's tip at the top right, a crevice at the pillar's foot).
+- **Level 4: the winding cave** (Chloe's drawing, 13 November 2026, traced at 0.1 m a pixel; level 3 until 14 November). About
   200 m across. A cave mouth 38 m wide between hills winds down past ledges into a wide chamber
   about 135 m down. Six electric turrets: two on the ledge under the mouth, one on a ledge on the
   left, one hanging from the right wall, one from the chamber's roof, and one on the chamber's
   floor. The pod stands at the chamber's left end with two fuel tanks beside it; one more fuel
-  tank is on the surface. Play can start here: `thrust.html?level=3`.
-- **Level 4: the asteroid** (13 November 2026, a first design to try before Chloe draws one). A
-  round asteroid 180 m across floating in open space 340 m across, its gravity pulling toward its
-  centre as a uniform ball's: 4 m/s² at the surface, falling as 1/r² further out and in a straight
-  line to nothing at its centre (its caves aren't counted). A tunnel winds down from a mouth on
-  its upper left into a chamber above the centre, where the pod and a fuel tank stand (gravity
-  there about 0.5 m/s²); another tank stands on the top, under the start. Eight electric turrets
-  round the tunnel and chamber (no plant: unlimited power), five fuel turrets round the surface.
-  The level is left by getting 150 m from the centre with the pod; without it, the ship is beamed
-  back, as at a level's top.
+  tank is on the surface. Play can start here: `thrust.html?level=4`.
+- **Level 5: the asteroid** (Chloe's drawing, 14 November 2026, traced at 0.13 m a pixel; it
+  replaces the first design of 13 November). An asteroid about 200 m across, curled round on
+  itself, with one way in on its left into a ring of caves. The power plant stands on the floor of
+  the lower cave. Its lines run through the rock to the turrets of the lower and right parts, and
+  reach the upper part across the open by either of two transmitters: it keeps its power while
+  either stands (MTH-095). Thirteen electric turrets, inside and out. The pod stands on a ledge in
+  the right-hand cave, its stand level to the pull (on the ledge's slope it rolled out of its cup);
+  four fuel tanks stand round the rock, each upright to it. Gravity pulls toward the asteroid's
+  middle as a uniform ball's: 4 m/s² at 84 m (the asteroid's area as a disc), falling as 1/r²
+  further out and in a straight line to nothing at the middle (its caves aren't counted). The level
+  is left by getting 150 m from the middle with the pod, about 25 m past its furthest rock; without
+  the pod, the ship is beamed back, as at a level's top. Its square of open space is 380 m across.
+  The way in is about 19 m wide.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
-  through). Level 3 is drawn tighter at the chamber's left end, where the roof is 19 m over the pod;
+  through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
-- The level doesn't wrap. Its sides are high rock walls beyond the mountains.
+- The level wraps round at its sides (Chloe, 14 November 2026: no walls; MTH-093). Fly off the
+  right and you come in at the left. Where a drawing's two ends are at different heights, each
+  end is taken to the height halfway between them, flat for its last few metres (up to 6 m), so
+  the ground runs on smoothly. Rock still closes over the sky 60 m above the level's top. The
+  asteroid's square of open space wraps round on all four sides.
 
 ### The ship
 
@@ -208,7 +224,7 @@ other sources in §12):
 
 ### Electric turrets
 
-From Chloe's drawing (13 November 2026). A turret of a second kind, on level 3:
+From Chloe's drawing (13 November 2026). A turret of a second kind, on levels 3 and 4:
 
 - **Pieces.** A **base**, a rigid plate fixed on the rock. On it a **neat arc** (a segment of a
   circle, not a full half-disc), welded. At each end of the arc, on the base, a **power node**.
@@ -222,10 +238,13 @@ From Chloe's drawing (13 November 2026). A turret of a second kind, on level 3:
 - **Damage.** One slug on the barrel knocks it off (or destroys it): the turret is out of
   action. The arc takes two slugs. A power node is the weak point: one slug sets it off, and its
   blast alone puts the turret out of action.
+- **Online or offline** (Chloe, 14 November 2026; WPN-012). The power nodes are green while the
+  turret is online and red while it isn't: switched off, without power, or unable to work (its
+  aim can't turn, its barrel or gun is gone, or a node is).
 
 ### The power plant
 
-From Chloe's drawings (13 November 2026), on level 3. It takes the place of the original's
+From Chloe's drawings (13 November 2026), on levels 3 and 4. It takes the place of the original's
 reactor and of our factory below.
 
 - **The plant.** Three tall domes, a tower with a light, and an annex, on a base on the surface.
@@ -256,7 +275,7 @@ reactor and of our factory below.
 
 ### The factory
 
-From before Chloe's power design; level 3's plant does this. Levels 1 and 2 have none yet.
+From before Chloe's power design; the plant on levels 3 and 4 does this. Levels 1 and 2 have none yet.
 
 - Each slug that hits the factory stops all turrets: 4 s for the first hit, 2 s longer for each
   one after (first values).
@@ -268,17 +287,26 @@ From before Chloe's power design; level 3's plant does this. Levels 1 and 2 have
 
 ### Shield
 
-- Held: a field of fixed radius round the ship's centre of mass. Shells and bolts that reach it
-  bounce off it without bursting; gas parcels are turned back at it. The push goes into the field
-  and not the ship (a cheat with momentum, recorded by the ledger).
-- It burns fuel at a fixed rate (first value: as much as the main engine at half thrust).
-- While it is up the engines and the gun don't work, and the tractor beam lets go of nothing but
-  takes nothing new.
-- It never covers the pod, however close, and it does nothing against rock or buildings.
+Chloe's design, 14 November 2026 (built; docs/spec.md §9.12, SHD-001…005). It replaces the first
+plan below (a cheat that turned shells and gas back and let rock through).
+
+- A small, light generator on the ship: a 0.3 kg collar round the gun's foot, on the centre line.
+- Held (X or ., the left bumper, or SHIELD on screen): a disc grows from nothing round the ship's
+  centre of mass to just past its farthest corner (3.35 m) in a quarter of a game second.
+- It doesn't touch its own ship; everything else meets it as a surface. Rocks, wreckage, slugs and
+  bolts bounce off; gas is turned back and pushed out as it grows; the pod too, when not on the
+  tether. The field is welded rigidly to the cockpit, so the ship is pushed by what hits it and
+  comes down on it against rock. A blast outside it doesn't damage what is inside.
+- It burns fuel fast: 0.8 kg a game second (full tanks in 40 s on screen), and each hit more:
+  0.005 kg for each N·s, at least 0.1 kg.
+- While it is up the five engines and the gun don't work. The tractor still does.
+- The field weighs 2 kg while up (0.5 kg lost its bounce in the weld).
 
 ### Fuel
 
-- One tank load is about 2 minutes of full thrust, as in Asteroids. Out of fuel, the ship falls.
+- The ship carries half Asteroids' load (Chloe, 14 November 2026, MTH-094: with a full load you
+  never needed to refuel): 8.1 kg, about a minute of full thrust, as much as one fuel tank holds.
+  Out of fuel, the ship falls. Lighter, it turns faster (about 9 rad/s² against 7).
 - A fuel tank stands on a pad on the ground. While the beam is held with one in its wedge, fuel
   moves to the ship until the tank is empty or the ship is full, and the game says REFUELLING.
   First values: a tank holds 8.1 kg, half a ship's load, and gives 2 kg a game second, so a full
@@ -365,8 +393,11 @@ Priority: **M** must, **S** should.
 - **MTH-012** `[M]` The generator fails if the cave is anywhere narrower than its declared
   least width.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
-- **MTH-014** `[M]` Level 3 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
-  and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=3` plays from it.
+- **MTH-014** `[M]` Level 4 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
+  and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=4` plays from it.
+- **MTH-092** `[M]` Level 3 is Chloe's canyon (§3): eight electric turrets, the power plant on the
+  left ledge with its line across the canyon to the four turrets on the right, four fuel tanks,
+  and the pod on its pillar. Nothing on it moves as it starts.
 
 **Ship, tether and pod**
 - **MTH-020** `[M]` The ship is the Asteroids ship with a tractor unit, a tether unit, turning of
@@ -381,7 +412,9 @@ Priority: **M** must, **S** should.
 - **MTH-026** `[M]` A ship above the level's top without the pod on its tether is beamed back to the
   start as it is, with no life lost.
 - **MTH-027** `[M]` The tether takes the pod and nothing else. The beam pulls anything free in its
-  wedge (Chloe, 13 November 2026, to try again; until then it pulled the pod alone).
+  wedge (Chloe, 13 November 2026, to try again; until then it pulled the pod alone), but draws
+  nothing toward the ship faster than 3 m/s (TRC-014, 14 November 2026), so what it brings in
+  arrives gently.
 - **MTH-024** `[M]` The level is complete when the ship is above the level's top with the pod
   on its tether.
 
@@ -430,9 +463,16 @@ Priority: **M** must, **S** should.
   off (up to 3), and knocks the plant offline.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
   often the less coolant is left.
-- **MTH-091** `[M]` Level 4 is an asteroid: rock as an island in open space, gravity toward its
-  centre as a uniform ball's (inverse square outside, linear inside), left by getting 150 m from
-  its centre.
+- **MTH-091** `[M]` Level 5 is Chloe's asteroid (§3): rock as an island in open space, gravity
+  toward its middle as a uniform ball's (inverse square outside, linear inside), left by getting
+  150 m from its middle, about 25 m past its furthest rock. Thirteen electric turrets, four fuel
+  tanks, the plant in its lower cave; nothing on it moves as it starts.
+- **MTH-095** `[M]` A turret or power line may take power through any one of several transmitters
+  (`"tx1|tx2"`): it keeps power while one of them stands.
+- **MTH-093** `[M]` Every level wraps round at its sides, with no walls: the ground's two ends meet
+  at one height, a ship (and the pod on its tether) flown off one side comes in at the other, and
+  the view goes on across the edge without a jump. The asteroid's square wraps on all four sides.
+- **MTH-094** `[M]` The ship carries half Mammoth Asteroids' fuel: 8.1 kg.
 - **MTH-090** `[S]` For testing (Chloe, 13 November 2026), the page shows the simulation's step
   time (mean and slowest) against its budget, with the gas parcels and bodies. To go before release.
 - **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to

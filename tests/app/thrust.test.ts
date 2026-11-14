@@ -38,7 +38,7 @@ describe("Mammoth Thrust's page", () => {
     expect(shipStatus(w).damage).toBe(1); // a lost ship is lost
     expect(Object.keys(POD_LABEL).sort()).toEqual(["gone", "loose", "stand", "tether"]);
     expect(shipStatus(initialWorld(parseScenario(JSON.parse(readFileSync(new URL("../../scenarios/empty.json", import.meta.url), "utf8")))))).toEqual({ fuel: 0, slugs: 0, damage: 0 });
-    expect(LEVELS).toBe(4);
+    expect(LEVELS).toBe(5);
     for (let n = 1; n <= LEVELS; n++) expect(raw(n).world.thrust.level).toBe(n);
   });
 
@@ -155,7 +155,7 @@ describe("Mammoth Thrust's page", () => {
     expect(recoilOf(w, barrel)).toBe(0);
   });
   it("MTH-085 the power lines are white while they carry power and dark while they don't; the plant's light is green or red; the shock shows only while it carries power", () => {
-    const w = world(3);
+    const w = world(4); // the winding cave
     const strokes = (calls: string[]) => calls.filter((c) => c.startsWith("stroke(")).map((c) => c.split("|stroke=")[1].split("|fill=")[0]);
     const fills = (calls: string[]) => calls.filter((c) => c.startsWith("fill(")).map((c) => c.split("|fill=")[1]);
     // Over the antennae: both lines there, and the shock between them.

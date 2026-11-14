@@ -143,9 +143,12 @@ export function plantCoolant(world: World, spec: PlantSpec): number {
   return (core?.contents ?? []).reduce((m, s) => m + s.mass, 0);
 }
 
-/** Whether a power line (or turret) with these needs has power now. */
+/**
+ * Whether a power line (or turret) with these needs has power now. Each need is a transmitter's id,
+ * or several joined by "|": power through any one of them will do (two links into the same rock).
+ */
 export function powered(state: PlantState, now: number, needs: string[] | undefined): boolean {
-  return plantOn(state, now) && (needs ?? []).every((id) => state.up[id]);
+  return plantOn(state, now) && (needs ?? []).every((need) => need.split("|").some((id) => state.up[id]));
 }
 
 /** A transmitter's two tips, in the world, if both antennae are there. */
@@ -318,7 +321,7 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
   // The shock: a ship part near a live transmitter's line loses the ship its control for a moment.
   if (s.shockUntil !== undefined && now >= s.shockUntil - 1e-9) {
     s.shockUntil = undefined;
-    for (const l of world.links) if (l.off) delete l.off;
+    for (const l of world.links) if (l.off === "shock") delete l.off;
   }
   if (ship && s.shockUntil === undefined) {
     for (const t of spec.transmitters) {
@@ -328,7 +331,7 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       const struck = world.bodies.some((b) => b.id.startsWith(ship) && !b.id.includes("-shell-") && toSegment(b.position, tips[0], tips[1]) < reach(b) + t.width / 2);
       if (!struck) continue;
       s.shockUntil = now + t.shock;
-      for (const l of world.links) if (l.kind === "control" && l.to.startsWith(ship)) l.off = true;
+      for (const l of world.links) if (l.kind === "control" && l.to.startsWith(ship)) l.off = "shock";
       world.events.push({ tick: world.tick, type: "plant.shock", data: { id: t.id } });
       break;
     }

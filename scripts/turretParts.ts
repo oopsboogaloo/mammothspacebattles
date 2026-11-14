@@ -259,7 +259,7 @@ export function electricTurret(name: string, at: Vec, angle: number, t: Electric
     polygon(part, [{ x: w / 2, y: pivot.y + from }, { x: w / 2, y: pivot.y + to }, { x: -w / 2, y: pivot.y + to }, { x: -w / 2, y: pivot.y + from }].reverse(), mass, { material: BARREL, ...extra });
   const breech = (r0 + r1) / 2;
   box("breech", E.breech.width, r0, r1, 1, {
-    turret: { joint: id("w-pivot"), gun: id("breech"), barrel: id("barrel"), range: t.range, wait: t.wait, hold: t.hold, aim: t.aim, seed },
+    turret: { joint: id("w-pivot"), gun: id("breech"), barrel: id("barrel"), nodes: [id("node-l"), id("node-r")], range: t.range, wait: t.wait, hold: t.hold, aim: t.aim, seed },
     magazine: { count: t.bolts, reload: t.reload, at: { x: 0, y: round(r2 + 0.15 - breech) }, angle: 0, shell: t.bolt, railgun: { channel: `${name}.fire`, speed: t.speed } },
   });
   box("barrel", E.outer.width, r1, r2, 0.5, { recoil: { gun: id("breech"), travel: E.recoil } });

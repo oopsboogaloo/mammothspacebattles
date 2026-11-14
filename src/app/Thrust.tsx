@@ -56,6 +56,9 @@ function useFollowCamera(): void {
     let last: { x: number; y: number } | null = null;
     // The view's lean toward the pod on the tether: eased in and out, so taking or dropping the pod never jumps it.
     let lean = { x: 0, y: 0 };
+    // How far the view has gone on round a wrapping level, and where it last looked before that.
+    let shift = { x: 0, y: 0 };
+    let seen: { x: number; y: number } | null = null;
     let then = performance.now();
     const tick = () => {
       raf = requestAnimationFrame(tick);
@@ -71,7 +74,20 @@ function useFollowCamera(): void {
       const ship = look && { x: look.ship.x + lean.x, y: look.ship.y + lean.y };
       if (ship) last = ship;
       else if (w.time < 0.05) last = null; // a new level
-      const at = ship ?? last ?? w.thrust.spec.start;
+      const raw = ship ?? last ?? w.thrust.spec.start;
+      // The level wraps round (MTH-093): when the ship goes off one side and comes in at the other,
+      // the view goes on past the edge (the renderer draws the world's copies there) rather than
+      // jumping back across the level, so the stars behind don't jump either.
+      const b = w.bounds;
+      if (b.wrap && seen) {
+        const W = b.max.x - b.min.x;
+        const H = b.max.y - b.min.y;
+        if (Math.abs(raw.x - seen.x) > W / 2) shift.x -= Math.sign(raw.x - seen.x) * W;
+        if (Math.abs(raw.y - seen.y) > H / 2) shift.y -= Math.sign(raw.y - seen.y) * H;
+      }
+      if (w.time < 0.05) shift = { x: 0, y: 0 };
+      seen = raw;
+      const at = { x: raw.x + shift.x, y: raw.y + shift.y };
       const zoom = zoomFor(vp.height);
       const c = camera.value;
       if (c.x !== at.x || c.y !== at.y || c.zoom !== zoom) camera.value = { x: at.x, y: at.y, zoom };
@@ -91,7 +107,7 @@ function useTitleCamera(): void {
       const b = sandbox.value?.world.bounds;
       const vp = viewport.value;
       if (!b || !vp.width || !vp.height) return;
-      const zoom = vp.width / (b.max.x - b.min.x - 40);
+      const zoom = vp.width / (b.max.x - b.min.x);
       const x = (b.min.x + b.max.x) / 2;
       const y = 20 + (0.12 * vp.height) / zoom;
       const c = camera.value;
@@ -127,7 +143,7 @@ function SelfDestruct() {
 
 /**
  * The keys: each holds its channels on while it is down. ↑ is left and right together: forward.
- * The tractor is beside either Shift: Z on the left, / on the right. (X and . are kept for the shield.)
+ * The tractor is beside either Shift: Z on the left, / on the right; the shield beside that: X or . (SHD-001).
  */
 const KEYS: Record<string, string[]> = {
   KeyQ: ["left"],
@@ -145,6 +161,8 @@ const KEYS: Record<string, string[]> = {
   KeyW: ["fire"],
   KeyZ: ["tractor"],
   Slash: ["tractor"],
+  KeyX: ["shield"],
+  Period: ["shield"],
 };
 /** The keys held, each with the channels it went to: they are let go on the same ones. */
 const down = new Map<string, string[]>();
@@ -208,12 +226,14 @@ export function thrustKeyUp(e: KeyboardEvent): void {
  * A game controller (gamepad.ts). The ship's movement takes values between 0 and 1: the stick turns
  * as far as it is pushed, and forward is the stick pushed up, the right trigger as far as it is
  * pulled, or A or D-pad up at full; reverse the stick pulled down, the left trigger, or B or D-pad
- * down. The rest by the keys it stands for: X or the right bumper fires, Y or the left bumper is the tractor.
+ * down. The rest by the keys it stands for: X or the right bumper fires, Y is the tractor, the left
+ * bumper the shield.
  */
 function padControls(p: PadState): string[] {
   const out: string[] = [];
   if (p.x || p.rb) out.push("Space");
-  if (p.y || p.lb) out.push("KeyZ");
+  if (p.y) out.push("KeyZ");
+  if (p.lb) out.push("KeyX");
   return out;
 }
 function padMovement(p: PadState, a: PadAnalog): Record<string, number> {
@@ -436,6 +456,7 @@ function Play() {
           <Thrust channel={asteroidsSide("left")} label="L" side="left" className="mas-thrust" />
           <Thrust channel="reverse" label="REV" side="reverse" className="mas-thrust" />
           <Thrust channel="tractor" label="BEAM" side="tractor" className="mas-thrust" />
+          <Thrust channel="shield" label="SHIELD" side="shield" className="mas-thrust" />
           <Thrust channel="fire" label="FIRE" side="fire" className="mas-thrust" />
           <Thrust channel={asteroidsSide("right")} label="R" side="right" className="mas-thrust" />
         </>

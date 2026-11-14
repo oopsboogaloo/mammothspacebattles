@@ -1,7 +1,7 @@
 // Mammoth Thrust's levels (docs/games/mammoth-thrust.md §3, -design.md §4): the ground from an
 // outline of its open space, the ship (Mammoth Asteroids' ship with a tractor unit and a tether
 // unit), and the pod on its stand. The game itself is in the world (src/core/thrust.ts).
-//   node scripts/thrust.ts            writes scenarios/thrust-1.json, thrust-2.json and thrust-3.json
+//   node scripts/thrust.ts            writes scenarios/thrust-1.json … thrust-5.json
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
@@ -25,7 +25,7 @@ const MAIN = 7.776;
 const ECONOMY = 66;
 /** No passage is narrower than this, m (MTH-012): the tether is 12 m and the pod must swing through. */
 const LEAST_WIDTH = 25;
-/** The sides of the level are walls this far above its top, m: nothing flies that high (MTH-026). */
+/** The rock closes over the sky this far above the level's top, m: nothing flies that high (MTH-026). The sides wrap round. */
 const WALL = 60;
 /** The sky's outline is closed this high, m: far above any view. */
 const SKY = 3000;
@@ -37,7 +37,9 @@ function ship() {
   const magazine = { count: 120, reload: 0.25, at: { x: 0, y: 0.51 }, angle: 0, shell: slug, railgun: { channel: "fire", speed: 144 } };
   // The beam is a 30° wedge down the ship's tail. It pulls whatever is free in it (TRC-013: Chloe,
   // 13 November 2026, to try again), but the tether takes only the pod (TRC-011): not the wreckage
-  // of the ships before. Its pull is three times the engine's default (asked for by Chloe after
+  // of the ships before. It draws nothing toward the ship faster than 3 m/s (TRC-014; Chloe, 14
+  // November 2026: pulled wreckage was arriving fast enough to wreck the ship): its pull fades to
+  // nothing as the closing speed reaches that. Its pull is three times the engine's default (asked for by Chloe after
   // playing, 12 November 2026: picking the pod up was too hard).
   // The tether is the TRC spring between the two centres of mass (TRC-004), 12 m long. It takes the
   // pod from up to 22 m off, starts at the distance it took it at, and reels it in (or pays out) to
@@ -45,8 +47,18 @@ function ship() {
   // the pull it did: Chloe had it let go under thrust.
   // Held on a fuel tank in its wedge, the beam draws the tank's fuel into the ship's two tanks
   // (TRC-008), 2 kg a game second: a full 8.1 kg tank in 8 s on screen. The tank isn't pulled.
-  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
-  return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor });
+  const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, maxSpeed: 3, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
+  // The shield (SHD-001…SHD-005; Chloe, 14 November 2026): held on, a field grows round the ship
+  // in a quarter of a game second and stays up while there is fuel, burning it fast: 0.8 kg a game
+  // second, full tanks (16.2 kg) in 40 s on screen. Each hit costs more: 0.005 kg for each N·s of
+  // its impulse, and at least 0.1 kg (a slug or a 1 kg rock: 0.1 kg; the ship falling onto rock at
+  // 20 m/s: about 3.5 kg). The engines and the gun don't work while it is up. First values, for
+  // Chloe to tune. The field weighs 2 kg while it is up: lighter, and the weld that holds it to the
+  // ship soaks up its bounce (a 1 kg rock at 10 m/s came back at 0 m/s off a 0.5 kg field, 4 m/s off 2 kg).
+  const shield = { channel: "shield", grow: 14, burn: 0.8, hitBurn: 0.005, minHit: 0.1, mass: 2 };
+  // Half Mammoth Asteroids' fuel (Chloe, 14 November 2026: with a full load you never needed to
+  // refuel): 8.1 kg in the two tanks, as much as one fuel tank on the ground holds.
+  return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor, shield, fuel: 0.5 });
 }
 
 /**
@@ -97,25 +109,28 @@ const TURRET: TurretTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", 
  */
 const CRATERS = { blast: 0.6, bullet: 0, least: 1, most: 8, limit: 250, small: 150 };
 
+/** To a millionth, as the scenarios are written. */
+const r6 = (n: number) => Math.round(n * 1e6) / 1e6 + 0;
 const fixed = (id: string, shape: Json, position: Vec): Json => ({ id, fixed: true, mass: 1, friction: 0.9, position, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape });
 
 /**
  * The pod on its stand, on flat floor at `at`: a disc of 1 m radius and about half the ship's mass,
  * very hard to destroy (MTH-025), in a shallow cup so it doesn't roll off.
  */
-function pod(at: Vec): Json[] {
+function pod(at: Vec, angle = 0): Json[] {
   // The stand is anchored to the rock (TER-006): cut the rock at its foot and its three parts come
-  // loose as one, 30 kg, and the pod goes with it.
-  const part = (id: string, shape: Json, position: Vec, mass: number): Json => ({ ...fixed(id, shape, position), anchored: { mass, group: "stand" } });
+  // loose as one, 30 kg, and the pod goes with it. On an asteroid it stands at `angle` from upright.
+  const off = (x: number, y: number): Vec => ({ x: r6(at.x + x * Math.cos(angle) - y * Math.sin(angle)), y: r6(at.y + x * Math.sin(angle) + y * Math.cos(angle)) });
+  const part = (id: string, shape: Json, position: Vec, mass: number): Json => ({ ...fixed(id, shape, position), angle: r6(angle), anchored: { mass, group: "stand" } });
   return [
-    part("stand", { kind: "box", width: 2.3, height: 0.3 }, { x: at.x, y: at.y + 0.15 }, 20),
-    part("stand-l", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x - 1, y: at.y + 0.475 }, 5),
-    part("stand-r", { kind: "box", width: 0.3, height: 0.35 }, { x: at.x + 1, y: at.y + 0.475 }, 5),
+    part("stand", { kind: "box", width: 2.3, height: 0.3 }, off(0, 0.15), 20),
+    part("stand-l", { kind: "box", width: 0.3, height: 0.35 }, off(-1, 0.475), 5),
+    part("stand-r", { kind: "box", width: 0.3, height: 0.35 }, off(1, 0.475), 5),
     {
       id: "pod",
       shape: { kind: "disc", radius: 1 },
       mass: 34,
-      position: { x: at.x, y: at.y + 1.3 },
+      position: off(0, 1.3),
       velocity: { x: 0, y: 0 },
       angle: 0,
       angularVelocity: 0,
@@ -137,17 +152,18 @@ const TANK_FUEL = 8.1;
  * anchored to the rock. The ship draws its fuel through the beam (MTH-042). While it holds fuel it
  * explodes when destroyed (MTH-043).
  */
-function fuelTank(name: string, at: Vec) {
+function fuelTank(name: string, at: Vec, angle = 0) {
   const store = (resource: string, mass: number) => ({ resource, mass: Math.round(mass * 1e6) / 1e6, capacity: Math.round(mass * 1e6) / 1e6 });
+  const off = (y: number): Vec => ({ x: r6(at.x - y * Math.sin(angle)), y: r6(at.y + y * Math.cos(angle)) });
   const bodies: Json[] = [
-    { ...fixed(`${name}-pad`, { kind: "box", width: 2, height: 0.3 }, { x: at.x, y: at.y + 0.15 }), anchored: { mass: 30 } },
+    { ...fixed(`${name}-pad`, { kind: "box", width: 2, height: 0.3 }, off(0.15)), angle: r6(angle), anchored: { mass: 30 } },
     {
       id: name,
       shape: { kind: "box", width: 1.4, height: 1.6 },
       mass: 2,
-      position: { x: at.x, y: at.y + 1.1 },
+      position: off(1.1),
       velocity: { x: 0, y: 0 },
-      angle: 0,
+      angle: r6(angle),
       angularVelocity: 0,
       restitution: 0,
       friction: 0.4,
@@ -181,8 +197,10 @@ interface Level {
   pod: Vec;
   /** The turrets: where each stands (the middle of its base, on flat rock) and which way is up for it, rad from +y. */
   turrets: { at: Vec; angle: number; electric?: boolean }[];
-  /** The fuel tanks: where each stands, on flat rock. */
-  tanks: Vec[];
+  /** The fuel tanks: where each stands, on flat rock (and on an asteroid, turned by `angle` from upright). */
+  tanks: (Vec | { at: Vec; angle: number })[];
+  /** The pod's stand's turn from upright, rad (an asteroid's). */
+  podAngle?: number;
   /**
    * The power plant, if the level has one (plant.ts): where it stands; its two antennae (where each
    * stands and which way it points); its power lines, each needing the transmitter (`"tx"`) or not;
@@ -194,11 +212,39 @@ interface Level {
    * `radius` with `gravity` m/s² at the surface (FLT-015), pulling toward the centre (0, 0); and the
    * level is left by getting `escape` m from the centre. `ground` and `top` aren't used.
    */
-  asteroid?: { island: Vec[]; radius: number; gravity: number; box: number; escape: number };
-  plant?: { at: Vec; antennae: [{ at: Vec; angle: number }, { at: Vec; angle: number }]; lines: { points: Vec[]; needs?: string[] }[]; beyond: number[] };
+  asteroid?: { island: Vec[]; radius: number; gravity: number; box: number; escape: number; core?: Vec };
+  /** Seeds the turrets' generators: the level's number × 100 if not given (a renumbered level keeps its own). */
+  seed?: number;
+  plant?: {
+    at: Vec;
+    /** The plant's turn from upright, rad (on an asteroid's sloping floor). */
+    angle?: number;
+    /** One transmitter's two antennae ("tx"); or several transmitters, each its own pair. */
+    antennae?: [{ at: Vec; angle: number }, { at: Vec; angle: number }];
+    transmitters?: { id: string; antennae: [{ at: Vec; angle: number }, { at: Vec; angle: number }] }[];
+    lines: { points: Vec[]; needs?: string[] }[];
+    /** The turrets (by number) fed through the transmitter; or what each of those needs, by number. */
+    beyond: number[] | Record<number, string[]>;
+  };
 }
 
-function write(l: Level) {
+/**
+ * The levels wrap round (Chloe, 14 November 2026: no walls). A level's two ends meet at the same
+ * height: each end is taken to the height halfway between the two, flat for its last few metres, so
+ * flying off one side the ground goes on smoothly into the other.
+ */
+function joinEnds(ground: Vec[]): Vec[] {
+  const r = ground[0];
+  const l = ground[ground.length - 1];
+  const h = Math.round(((r.y + l.y) / 2) * 10) / 10;
+  const flat = (end: Vec, next: Vec, dir: number): Vec => ({ x: Math.round((end.x + dir * Math.min(LINK, Math.abs(next.x - end.x) / 2)) * 10) / 10, y: h });
+  return [P(r.x, h), flat(r, ground[1], -1), ...ground.slice(1, -1), flat(l, ground[ground.length - 2], 1), P(l.x, h)];
+}
+/** How far each end of a level runs flat to meet the other, m. */
+const LINK = 6;
+
+function write(l0: Level) {
+  const l = l0.asteroid ? l0 : { ...l0, ground: joinEnds(l0.ground) };
   const ast = l.asteroid;
   const left = ast ? -ast.box : l.ground[l.ground.length - 1].x;
   const right = ast ? ast.box : l.ground[0].x;
@@ -213,10 +259,17 @@ function write(l: Level) {
   // The sky, for the stars: the open space above the ground, closed across each cave's mouth.
   const inCave = (p: Vec) => l.caves.some((c) => c.slice(1, -1).some((q) => q.x === p.x && q.y === p.y));
   const sky = ast ? air : [{ x: left, y: SKY }, { x: right, y: SKY }, ...l.ground.filter((p) => !inCave(p))];
-  const turrets = l.turrets.map((t, k) => (t.electric ? electricTurret : turret)(`t${k + 1}`, t.at, t.angle, (t.electric ? ELECTRIC_TURRET : TURRET) as never, 100 * l.n + k + 1));
-  const tanks = l.tanks.map((at, k) => fuelTank(`fuel-${k + 1}`, at));
-  const plant = l.plant ? powerPlant(l.plant.at, PLANT) : undefined;
-  const aerials = l.plant ? l.plant.antennae.map((a, k) => antenna(`aerial-${k + 1}`, a.at, a.angle)) : [];
+  const turrets = l.turrets.map((t, k) => (t.electric ? electricTurret : turret)(`t${k + 1}`, t.at, t.angle, (t.electric ? ELECTRIC_TURRET : TURRET) as never, (l.seed ?? 100 * l.n) + k + 1));
+  const tanks = l.tanks.map((t, k) => ("at" in t ? fuelTank(`fuel-${k + 1}`, t.at, t.angle) : fuelTank(`fuel-${k + 1}`, t)));
+  const plant = l.plant ? powerPlant(l.plant.at, PLANT, l.plant.angle ?? 0) : undefined;
+  const txs = l.plant ? (l.plant.transmitters ?? [{ id: "tx", antennae: l.plant.antennae! }]) : [];
+  const aerials = txs.flatMap((t) => t.antennae).map((a, k) => antenna(`aerial-${k + 1}`, a.at, a.angle));
+  const needsOf = (k: number): string[] | undefined => {
+    const b = l.plant?.beyond;
+    if (!b) return undefined;
+    if (Array.isArray(b)) return b.includes(k) ? ["tx"] : undefined;
+    return b[k];
+  };
   const name = `thrust-${l.n}`;
   const scenario = {
     schema: 1,
@@ -227,13 +280,15 @@ function write(l: Level) {
     seed: 1,
     world: {
       gravity: ast ? { x: 0, y: 0 } : { x: 0, y: -GRAVITY },
-      bounds: ast ? { min: { x: -ast.box - 20, y: -ast.box - 20 }, max: { x: ast.box + 20, y: ast.box + 20 }, wrap: false, farField: 10, depth: 2 } : { min: { x: left - 20, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right + 20, y: l.top + WALL + 20 }, wrap: false, farField: 10, depth: 2 },
+      // The world wraps round at its sides (FLT-012, TER-008): the outline's sides lie on them, so
+      // they are open, not rock. An asteroid's square wraps on all four sides.
+      bounds: ast ? { min: { x: -ast.box, y: -ast.box }, max: { x: ast.box, y: ast.box }, wrap: true, farField: 10, depth: 2 } : { min: { x: left, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right, y: l.top + WALL + 20 }, wrap: true, farField: 10, depth: 2 },
       // The rock is made from the outline when the world is (TER-001), and explosions and shells crater it.
       terrain: { outline: air, ...(ast ? { islands: [ast.island] } : {}), prefix: "rock-", craters: CRATERS },
       bodies: [
         // An asteroid's gravity: a source at its centre that pulls as a uniform ball (FLT-015), hidden in the rock.
-        ...(ast ? [{ ...fixed("rock-core", { kind: "disc", radius: 0.5 }, P(0, 0)), gravity: { mu: ast.gravity * ast.radius * ast.radius, core: 1, radius: ast.radius } }] : []),
-        ...pod(l.pod), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies)],
+        ...(ast ? [{ ...fixed("rock-core", { kind: "disc", radius: 0.5 }, ast.core ?? P(0, 0)), gravity: { mu: ast.gravity * ast.radius * ast.radius, core: 1, radius: ast.radius } }] : []),
+        ...pod(l.pod, l.podAngle ?? 0), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies)],
       joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints), ...(plant?.joints ?? []), ...aerials.flatMap((a) => a.joints)],
       links: turrets.flatMap((t) => t.links),
       thrust: {
@@ -261,8 +316,8 @@ function write(l: Level) {
                 countdown: PLANT_COUNTDOWN,
                 ...PLANT_LEAK,
                 lines: l.plant.lines,
-                transmitters: [{ id: "tx", sides: aerials.map((a) => ({ mount: a.mount, parts: a.parts, tip: a.tip })), width: 1, shock: SHOCK }],
-                turrets: turrets.map((t, k) => ({ id: t.carriage, ...(l.plant!.beyond.includes(k + 1) ? { needs: ["tx"] } : {}) })),
+                transmitters: txs.map((t, k) => ({ id: t.id, sides: aerials.slice(2 * k, 2 * k + 2).map((a) => ({ mount: a.mount, parts: a.parts, tip: a.tip })), width: 1, shock: SHOCK })),
+                turrets: turrets.map((t, k) => ({ id: t.carriage, ...(needsOf(k + 1) ? { needs: needsOf(k + 1) } : {}) })),
               },
             }
           : {}),
@@ -344,7 +399,84 @@ write({
   });
 }
 
-// Level 3, the winding cave (Chloe's drawing, 13 November 2026, traced at 0.1 m a pixel): a cave
+// Level 3, the canyon (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel: the open space
+// found by its colour, its outline simplified to 0.5 m, and flat under each turret, tank and the
+// pod): a wide canyon 200 m across
+// opens into caves under its walls. The power plant stands on a ledge high on the left wall; its
+// lines run through the rock to the four turrets on the left, and cross the canyon between two
+// antennae to the four on the right (a shelf, both faces of a spit, and the right wall's top). The
+// pod stands on a pillar in the middle of the floor. Fuel: two tanks on the surface at the right,
+// one on the left ledge, one on the floor.
+{
+  // Right to left: the open space is above (the caves start under the antennae, at P(44.1, -36.4) and P(-19.6, -52.7)).
+  const ground = [
+    P(102.3, -1.1), P(93.2, -1.5), P(89.2, -1.5), P(87.0, -1.7), P(83.0, -1.7), P(79.0, -1.6), P(77.3, -9.0), P(72.5, -10.5), P(69.3, -17.4), P(66.9, -19.0),
+    P(63.8, -24.2), P(59.6, -25.5), P(59.0, -27.4), P(50.2, -27.4), P(44.7, -30.7), P(44.1, -36.4), P(60.6, -39.0), P(62.5, -42.0), P(68.9, -43.9), P(73.7, -49.5),
+    P(79.1, -52.1), P(80.2, -54.9), P(80.3, -59.6), P(70.1, -61.3), P(67.8, -64.2), P(61.0, -64.7), P(55.4, -68.3), P(46.6, -68.3), P(37.0, -68.7), P(30.9, -70.8),
+    P(21.7, -70.6), P(12.9, -70.6), P(10.4, -70.1), P(8.5, -70.8), P(7.5, -72.2), P(8.1, -74.4), P(13.0, -75.2), P(21.8, -75.2), P(22.0, -75.8), P(33.3, -76.6),
+    P(35.5, -78.0), P(41.0, -79.2), P(44.7, -82.1), P(58.3, -85.5), P(61.0, -95.3), P(62.9, -98.7), P(66.3, -102.0), P(67.6, -106.6), P(67.9, -115.4), P(67.2, -118.5),
+    P(67.8, -122.7), P(66.5, -126.8), P(64.1, -127.6), P(61.6, -130.1), P(53.8, -130.6), P(50.4, -131.6), P(48.3, -133.9), P(46.9, -138.7), P(45.4, -139.7), P(40.4, -140.1),
+    P(31.6, -140.1), P(26.8, -139.2), P(24.2, -135.7), P(25.5, -133.6), P(25.3, -129.5), P(22.3, -127.3), P(21.8, -123.6), P(19.3, -122.5), P(18.3, -116.7), P(15.1, -116.7),
+    P(12.1, -124.9), P(12.4, -126.5), P(14.1, -127.6), P(14.1, -131.7), P(15.1, -134.3), P(12.5, -136.1), P(12.5, -138.5), P(10.5, -142.6), P(7.7, -143.5), P(-1.2, -143.5),
+    P(-19.0, -142.8), P(-23.0, -142.8), P(-37.2, -139.4), P(-41.0, -134.4), P(-48.0, -133.7), P(-52.5, -132.0), P(-53.9, -130.5), P(-54.5, -120.3), P(-53.3, -116.0), P(-41.0, -112.0),
+    P(-39.5, -109.8), P(-37.3, -102.3), P(-36.1, -101.0), P(-33.0, -100.6), P(-24.2, -100.6), P(-20.5, -100.9), P(-16.2, -97.6), P(-16.6, -91.8), P(-18.0, -87.4), P(-20.4, -86.9),
+    P(-21.0, -86.1), P(-25.0, -86.1), P(-28.9, -85.2), P(-34.3, -81.0), P(-42.9, -79.5), P(-44.7, -78.4), P(-45.2, -75.5), P(-44.3, -72.2), P(-38.3, -67.4), P(-37.8, -61.9),
+    P(-36.7, -59.2), P(-32.0, -58.5), P(-23.2, -58.5), P(-19.7, -58.1), P(-19.6, -52.7), P(-20.5, -51.0), P(-23.7, -48.9), P(-25.0, -43.7), P(-27.7, -42.7), P(-28.9, -34.2),
+    P(-30.3, -33.0), P(-32.5, -33.2), P(-32.7, -39.1), P(-34.6, -42.7), P(-56.4, -42.5), P(-58.6, -38.2), P(-58.8, -33.6), P(-60.5, -30.4), P(-61.0, -18.4), P(-63.6, -17.5),
+    P(-64.6, -14.2), P(-71.3, -9.6), P(-76.6, -0.5), P(-78.4, 0.9), P(-102.4, 1.3),
+  ];
+  const mouth = [ground.findIndex((p) => p.x === 44.1 && p.y === -36.4), ground.findIndex((p) => p.x === -19.6 && p.y === -52.7)];
+  write({
+    n: 3,
+    title: "The canyon",
+    description: "The pod stands on a pillar at the bottom of a canyon, under eight electric turrets and a power plant. Fly down, take it on the tether, and carry it back up and past the top.",
+    colour: "#2f74c0",
+    top: 70,
+    ground,
+    caves: [ground.slice(mouth[0], mouth[1] + 1)],
+    caveBelow: -30,
+    // Two dead ends that narrow to nothing, as drawn: the tip of the cave at the top right, and the
+    // crevice at the pillar's right foot.
+    alcoves: [[P(66, -64), P(82, -45)], [P(20, -140), P(30, -125)]],
+    leastWidth: 18,
+    start: P(-88, 35),
+    pod: P(16.7, -116.7),
+    turrets: [
+      // The right wall's top; under the left ledge (hanging); the right shelf; the spit, on top and
+      // underneath (hanging); under the left ledge lower down (hanging); the floor, right and left.
+      { at: P(54.6, -27.4), angle: 0, electric: true },
+      { at: P(-27.6, -58.5), angle: Math.PI, electric: true },
+      { at: P(51.0, -68.3), angle: 0, electric: true },
+      { at: P(17.3, -70.6), angle: 0, electric: true },
+      { at: P(17.4, -75.2), angle: Math.PI, electric: true },
+      { at: P(-28.6, -100.6), angle: Math.PI, electric: true },
+      { at: P(36.0, -140.1), angle: 0, electric: true },
+      { at: P(3.2, -143.5), angle: 0, electric: true },
+    ],
+    tanks: [P(91.2, -1.5), P(85.0, -1.7), P(-23.0, -86.1), P(-21.0, -142.8)],
+    plant: {
+      at: P(-45.6, -43.0),
+      antennae: [
+        { at: P(-19.7, -53.0), angle: -Math.PI / 2 },
+        { at: P(44.1, -34.0), angle: Math.PI / 2 },
+      ],
+      lines: [
+        { points: [P(-45.4, -43.0), P(-45.4, -52.0), P(-58.8, -79.4), P(-64.4, -93.0), P(-64.4, -140.0), P(-46.8, -150.6), P(3.0, -150.6), P(3.2, -143.5)] },
+        { points: [P(3.0, -150.6), P(36.2, -150.6), P(36.0, -140.1)] },
+        { points: [P(-45.4, -52.0), P(-28.4, -52.0), P(-27.6, -58.5)] },
+        { points: [P(-28.4, -52.0), P(-19.7, -53.0)] },
+        { points: [P(-58.8, -79.4), P(-28.8, -97.0), P(-28.6, -100.6)] },
+        { points: [P(44.1, -34.0), P(53.2, -32.0), P(54.6, -27.4)], needs: ["tx"] },
+        { points: [P(53.2, -32.0), P(67.2, -32.0), P(86.4, -49.4), P(86.4, -73.4), P(51.2, -73.4), P(51.0, -68.3)], needs: ["tx"] },
+        { points: [P(51.2, -73.4), P(17.2, -73.4), P(17.3, -70.6)], needs: ["tx"] },
+        { points: [P(17.2, -73.4), P(17.4, -75.2)], needs: ["tx"] },
+      ],
+      beyond: [1, 3, 4, 5],
+    },
+  });
+}
+
+// Level 4, the winding cave (Chloe's drawing, 13 November 2026; level 3 until 14 November, traced at 0.1 m a pixel): a cave
 // that winds down from a mouth 38 m wide, past ledges, into a wide chamber 135 m down. The pod
 // stands on the chamber's floor at the left, two fuel tanks beside it, one more on the surface.
 // Six electric turrets: two on a ledge under the mouth, one on the left ledge, one on the right
@@ -369,7 +501,8 @@ write({
   ];
   const mouth = [ground.findIndex((p) => p.x === 50.2 && p.y === 4), ground.findIndex((p) => p.x === 11.6 && p.y === 2.8)];
   write({
-    n: 3,
+    n: 4,
+    seed: 300,
     title: "The winding cave",
     description: "The pod is at the bottom of a winding cave, past six electric turrets. Fly down, take it on the tether, and carry it back up and past the top.",
     colour: "#3fa35a",
@@ -418,62 +551,115 @@ write({
   });
 }
 
-// Level 4, the asteroid (13 November 2026, a first design to try, before Chloe draws one): a round
-// asteroid 180 m across floating in a box of open space 340 m across, its gravity a uniform ball's
-// (FLT-015): 4 m/s² at the surface, falling as 1/r² outside and in a straight line to nothing at
-// its centre. A tunnel winds down from a mouth on its upper left into a chamber above its centre,
-// where the pod stands (gravity there 0.5 m/s²). Eight electric turrets round the tunnel and
-// chamber, five fuel turrets round the surface (one hanging underneath). Escape: 150 m from the
-// centre. Generated from shapes (disc, chamber, tunnel) traced as level 3 was; the points are below.
+// Level 5, the asteroid (Chloe's drawing, 14 November 2026, traced at 0.13 m a pixel as level 3 was;
+// it replaces the first design of 13 November): an asteroid about 200 m across, curled round on
+// itself, with one way in on its left into a ring of caves. The power plant stands on the floor of
+// the lower cave; its lines run through the rock to the turrets of the lower and right parts, and
+// reach the upper part across the open by either of two transmitters. Thirteen electric turrets,
+// inside and out; the pod stands on a ledge in the right-hand cave, its stand level to the pull
+// (on the ledge's slope it rolled out of its cup). Gravity is a uniform ball's (FLT-015), 4 m/s² at
+// 84 m (the asteroid's area as a disc), from its middle; the level is left 150 m from there, about
+// 25 m beyond its furthest point, in a square 380 m across that wraps round.
 {
-  // The asteroid's rock, counter-clockwise (rock on the left), cave included.
+  // The asteroid's rock, counter-clockwise (rock on the left), its caves included.
   const island = [
-      P(60.2, 67), P(53.2, 72.8), P(46.5, 77.2), P(32.8, 84), P(24.5, 86.8), P(15.8, 88.8), P(8.2, 89.8), P(1.6, 90), P(-1.6, 90), P(-8.2, 89.8),
-      P(-19.5, 88), P(-30.8, 84.8), P(-38, 81.8), P(-40.2, 80.2), P(-47.8, 69), P(-47.9, 67), P(-48.1, 59), P(-48, 56.8), P(-42.8, 52.4), P(-35.2, 50.1),
-      P(-24.4, 52.3), P(-16.6, 53.7), P(-13.8, 54), P(-9.8, 56.2), P(-4, 58), P(4, 58), P(6.8, 57.2), P(11.5, 55.5), P(16.7, 52.6), P(21.8, 46.4),
-      P(23.5, 43.5), P(25.5, 37.8), P(26, 34.5), P(25.9, 27.8), P(23.6, 20.2), P(20.5, 15.8), P(16.8, 12), P(11.6, 12), P(8.4, 12), P(-4.4, 12),
-      P(-7.6, 12), P(-16.8, 12), P(-18, 13), P(-20.5, 15.8), P(-23.2, 20), P(-25.2, 25.2), P(-25.8, 28), P(-34, 26.4), P(-42, 26.1), P(-46.5, 27.8),
-      P(-67.2, 40.2), P(-69.8, 42.8), P(-71.2, 45.5), P(-72, 48.2), P(-68.9, 51.2), P(-75.1, 56.3), P(-72.5, 53.5), P(-79.2, 43), P(-83.5, 34), P(-86, 27.1),
-      P(-88, 19.4), P(-90, 4.8), P(-90, -4.8), P(-88.8, -15.8), P(-86.8, -24.5), P(-84, -32.8), P(-79.2, -43), P(-76.1, -48.2), P(-71.4, -54.8), P(-67.8, -59.5),
-      P(-65, -62.5), P(-59, -67.8), P(-57.2, -69.2), P(-51.5, -74), P(-43, -79.2), P(-34, -83.5), P(-24.5, -86.8), P(-14.2, -89), P(-4, -90), P(4, -90),
-      P(14.2, -89), P(24.5, -86.8), P(34, -83.5), P(43, -79.2), P(51.5, -74), P(57.8, -69.2), P(59.5, -67.8), P(65, -62), P(67.8, -59), P(71.4, -54.8),
-      P(76.1, -48.2), P(79.2, -43), P(84, -32.8), P(86.8, -24.5), P(88.8, -15.8), P(90, -4.8), P(90, 4.8), P(88, 19.4), P(86, 27.1), P(81.8, 38),
-      P(76, 48.5), P(69.2, 57.8),
+    P(31.85, 97.5), P(18.98, 94.64), P(13.91, 92.56), P(11.57, 92.04), P(11.22, 92.82), P(2.45, 93.53), P(-19.24, 96.2), P(-21.97, 95.42),
+    P(-32.89, 88.01), P(-42.43, 88.03), P(-45.03, 88.14), P(-53.17, 88.01), P(-75.4, 73.58), P(-76.81, 66.85), P(-78.32, 58.18), P(-79.56, 52.91),
+    P(-91.0, 42.25), P(-90.87, 38.74), P(-89.83, 36.4), P(-84.5, 34.32), P(-83.33, 26.91), P(-86.45, 22.62), P(-81.38, 15.99), P(-78.26, 14.56),
+    P(-69.21, 16.33), P(-60.59, 18.13), P(-46.28, 21.06), P(-33.02, 18.46), P(-28.34, 17.03), P(-18.85, 8.84), P(-16.9, 8.58), P(2.21, 21.06),
+    P(13.52, 30.55), P(13.52, 35.23), P(5.61, 38.31), P(-2.52, 41.68), P(-8.71, 44.72), P(-11.18, 50.57), P(-4.16, 60.71), P(0.91, 66.56),
+    P(2.86, 67.47), P(7.93, 67.34), P(29.38, 58.63), P(31.33, 58.24), P(43.42, 61.49), P(48.1, 61.1), P(49.4, 59.15), P(48.87, 58.2),
+    P(53.96, 51.02), P(56.8, 45.73), P(60.99, 38.0), P(63.31, 33.41), P(63.44, 30.68), P(49.01, 13.91), P(46.02, 11.57), P(39.01, 13.23),
+    P(36.47, 13.82), P(28.86, 15.73), P(27.28, 15.18), P(25.29, 18.19), P(21.45, 17.29), P(-0.39, 0.78), P(-8.06, -16.25), P(-7.15, -24.44),
+    P(-0.65, -26.78), P(5.98, -27.82), P(7.78, -34.69), P(10.09, -43.18), P(11.57, -47.71), P(11.83, -53.56), P(-8.84, -72.8), P(-9.62, -73.06),
+    P(-10.22, -71.81), P(-12.79, -72.15), P(-13.13, -72.8), P(-14.31, -72.62), P(-36.44, -68.02), P(-39.65, -65.78), P(-52.91, -44.72), P(-51.87, -41.99),
+    P(-41.64, -30.08), P(-37.01, -22.6), P(-35.36, -20.93), P(-36.92, -9.36), P(-59.93, -4.29), P(-65.2, -7.5), P(-72.88, -11.8), P(-98.93, -27.43),
+    P(-101.53, -38.74), P(-95.29, -48.49), P(-92.56, -50.96), P(-91.83, -54.86), P(-90.32, -63.53), P(-90.35, -66.56), P(-89.31, -68.9), P(-74.88, -78.39),
+    P(-64.61, -87.49), P(-49.01, -87.49), P(-42.53, -92.54), P(-40.61, -94.29), P(-33.93, -100.36), P(-29.64, -101.92), P(-24.96, -100.88), P(-24.89, -102.03),
+    P(-16.74, -105.35), P(-14.82, -107.12), P(-9.36, -107.64), P(0.39, -104.52), P(2.34, -103.61), P(11.96, -94.38), P(13.52, -93.73), P(23.66, -96.2),
+    P(29.9, -96.85), P(43.94, -94.9), P(49.01, -93.21), P(55.51, -84.63), P(60.23, -81.86), P(67.3, -76.62), P(68.77, -76.96), P(70.2, -75.01),
+    P(67.21, -54.34), P(65.52, -49.27), P(54.73, -42.38), P(44.98, -37.96), P(43.68, -36.01), P(40.95, -24.7), P(52.39, -12.35), P(56.29, -10.53),
+    P(63.7, -11.44), P(83.59, -16.77), P(85.93, -16.77), P(94.51, -13.13), P(95.16, -9.62), P(93.86, 0.91), P(103.74, 14.04), P(104.52, 15.6),
+    P(104.25, 18.25), P(103.91, 27.04), P(104.26, 28.86), P(95.42, 46.41), P(87.62, 53.17), P(76.31, 54.08), P(67.47, 64.48), P(69.55, 71.89),
+    P(80.6, 78.78), P(83.59, 85.8), P(80.47, 93.86), P(74.62, 95.29), P(67.21, 91.39), P(63.31, 91.78), P(57.07, 85.41), P(52.0, 82.94),
+    P(41.86, 91.13), P(32.11, 97.5),
   ];
-  // The cave, for the view: the island's points inside the surface, closed across the mouth.
+  // Its caves, for the view: the island's outline from the upper part's lower tip round inside to
+  // the lower part's upper tip, closed across the way in.
   const cave = [
-      P(-40.2, 80.2), P(-47.8, 69), P(-47.9, 67), P(-48.1, 59), P(-48, 56.8), P(-42.8, 52.4), P(-35.2, 50.1), P(-24.4, 52.3), P(-16.6, 53.7), P(-13.8, 54),
-      P(-9.8, 56.2), P(-4, 58), P(4, 58), P(6.8, 57.2), P(11.5, 55.5), P(16.7, 52.6), P(21.8, 46.4), P(23.5, 43.5), P(25.5, 37.8), P(26, 34.5),
-      P(25.9, 27.8), P(23.6, 20.2), P(20.5, 15.8), P(16.8, 12), P(11.6, 12), P(8.4, 12), P(-4.4, 12), P(-7.6, 12), P(-16.8, 12), P(-18, 13),
-      P(-20.5, 15.8), P(-23.2, 20), P(-25.2, 25.2), P(-25.8, 28), P(-34, 26.4), P(-42, 26.1), P(-46.5, 27.8), P(-67.2, 40.2), P(-69.8, 42.8), P(-71.2, 45.5),
-      P(-72, 48.2), P(-68.9, 51.2), P(-75.1, 56.3),
+    P(-81.38, 15.99), P(-78.26, 14.56), P(-69.21, 16.33), P(-60.59, 18.13), P(-46.28, 21.06), P(-33.02, 18.46), P(-28.34, 17.03), P(-18.85, 8.84),
+    P(-16.9, 8.58), P(2.21, 21.06), P(13.52, 30.55), P(13.52, 35.23), P(5.61, 38.31), P(-2.52, 41.68), P(-8.71, 44.72), P(-11.18, 50.57),
+    P(-4.16, 60.71), P(0.91, 66.56), P(2.86, 67.47), P(7.93, 67.34), P(29.38, 58.63), P(31.33, 58.24), P(43.42, 61.49), P(48.1, 61.1),
+    P(49.4, 59.15), P(48.87, 58.2), P(53.96, 51.02), P(56.8, 45.73), P(60.99, 38.0), P(63.31, 33.41), P(63.44, 30.68), P(49.01, 13.91),
+    P(46.02, 11.57), P(39.01, 13.23), P(36.47, 13.82), P(28.86, 15.73), P(27.28, 15.18), P(25.29, 18.19), P(21.45, 17.29), P(-0.39, 0.78),
+    P(-8.06, -16.25), P(-7.15, -24.44), P(-0.65, -26.78), P(5.98, -27.82), P(7.78, -34.69), P(10.09, -43.18), P(11.57, -47.71), P(11.83, -53.56),
+    P(-8.84, -72.8), P(-9.62, -73.06), P(-10.22, -71.81), P(-12.79, -72.15), P(-13.13, -72.8), P(-14.31, -72.62), P(-36.44, -68.02), P(-39.65, -65.78),
+    P(-52.91, -44.72), P(-51.87, -41.99), P(-41.64, -30.08), P(-37.01, -22.6), P(-35.36, -20.93), P(-36.92, -9.36), P(-59.93, -4.29), P(-65.2, -7.5),
+    P(-72.88, -11.8),
   ];
   write({
-    n: 4,
+    n: 5,
+    seed: 500,
     title: "The asteroid",
-    description: "A round asteroid with a winding tunnel into a chamber where the pod stands. Its gravity pulls toward its centre. Fly in, take the pod on the tether, and carry it 150 m out from the centre.",
-    colour: "#8a7bd8",
+    description: "An asteroid curled round on itself, with one way into its caves. Its gravity pulls toward its middle. Fly in, take the pod on the tether, and carry it 150 m out from the middle.",
+    colour: "#8a3cff",
     top: 150,
     ground: [],
     caves: [cave],
-    start: P(0, 118),
-    pod: P(-6.0, 12.0),
+    start: P(0, 135),
+    pod: P(26.28, 16.69),
+    podAngle: -0.986,
     turrets: [
-      { at: P(87.0, 23.2), angle: -1.313 },
-      { at: P(-87.0, 23.2), angle: 1.313 },
-      { at: P(-73.8, -51.5), angle: 2.191 },
-      { at: P(0.0, -90.0), angle: -3.142 },
-      { at: P(73.8, -51.5), angle: -2.191 },
-      { at: P(-20.5, 53.0), angle: -2.972, electric: true },
-      { at: P(19.2, 49.5), angle: 2.273, electric: true },
-      { at: P(24.8, 24.0), angle: 1.282, electric: true },
-      { at: P(0.0, 58.0), angle: -3.142, electric: true },
-      { at: P(-39.0, 51.2), angle: 2.856, electric: true },
-      { at: P(-38.0, 26.2), angle: 0.048, electric: true },
-      { at: P(-72.0, 53.8), angle: -0.686, electric: true },
-      { at: P(-48.0, 63.0), angle: 1.55, electric: true },
+      { at: P(6.84, 93.18), angle: -0.081, electric: true },
+      { at: P(-77.57, 62.52), angle: 1.398, electric: true },
+      { at: P(51.42, 54.61), angle: 2.186, electric: true },
+      { at: P(58.9, 41.86), angle: 2.068, electric: true },
+      { at: P(1.54, 39.99), angle: -0.394, electric: true },
+      { at: P(104.08, 22.65), angle: -1.532, electric: true },
+      { at: P(-64.9, 17.23), angle: -2.936, electric: true },
+      { at: P(-69.04, -9.65), angle: 0.51, electric: true },
+      { at: P(-39.33, -26.34), angle: -2.125, electric: true },
+      { at: P(8.93, -38.94), angle: 1.837, electric: true },
+      { at: P(-91.07, -59.19), angle: 1.743, electric: true },
+      { at: P(63.76, -79.24), angle: -2.504, electric: true },
+      { at: P(-20.82, -103.69), angle: 2.755, electric: true },
     ],
-    tanks: [P(0.0, 90.0), P(10.0, 12.0)],
-    asteroid: { island, radius: 90, gravity: 4, box: 170, escape: 150 },
+    tanks: [
+      { at: P(-43.73, 88.08), angle: -0.041 },
+      { at: P(37.74, 13.53), angle: -0.229 },
+      { at: P(-11.51, -71.98), angle: 0.132 },
+      { at: P(-41.57, -93.41), angle: 2.403 },
+    ],
+    asteroid: { island, radius: 84, gravity: 4, box: 190, escape: 150, core: P(2.47, -1.17) },
+    plant: {
+      at: P(-25.37, -70.32),
+      angle: -0.205,
+      transmitters: [
+        { id: "tx1", antennae: [{ at: P(-35.25, 18.6), angle: 2.879 }, { at: P(-42.4, -8.03), angle: -0.262 }] },
+        { id: "tx2", antennae: [{ at: P(-7.04, 14.67), angle: -2.554 }, { at: P(1.36, 2.06), angle: 0.588 }] },
+      ],
+      lines: [
+        { points: [P(-42.4, -8.03), P(-45.2, -21.81), P(-39.33, -26.34)] },
+        { points: [P(-44.78, -16.29), P(-55.26, -14.64), P(-71.38, -25.25), P(-68.62, -65.9), P(-25.37, -70.32)] },
+        { points: [P(-62.42, -19.05), P(-69.04, -9.65)] },
+        { points: [P(-69.31, -56.26), P(-91.07, -59.19)] },
+        { points: [P(-25.37, -70.32), P(-26.59, -75.55), P(-28.66, -83.13), P(-14.88, -96.91), P(-20.82, -103.69)] },
+        { points: [P(-14.88, -96.91), P(23.71, -61.77)] },
+        { points: [P(23.71, -61.77), P(18.88, -36.28), P(18.19, -27.32)] },
+        { points: [P(18.88, -36.28), P(8.93, -38.94)] },
+        { points: [P(18.19, -27.32), P(1.36, 2.06)] },
+        { points: [P(18.19, -27.32), P(72.63, 22.98), P(104.08, 22.65)] },
+        { points: [P(72.63, 22.98), P(62.7, 42.55), P(56.09, 55.64), P(51.42, 54.61)] },
+        { points: [P(62.7, 42.55), P(58.9, 41.86)] },
+        { points: [P(23.71, -61.77), P(49.2, -74.17), P(59.53, -70.04), P(63.76, -79.24)] },
+        { points: [P(-35.25, 18.6), P(-30.73, 29.59)], needs: ["tx1|tx2"] },
+        { points: [P(-64.9, 17.23), P(-67.25, 28.49), P(-1.1, 30.97), P(1.54, 39.99)], needs: ["tx1|tx2"] },
+        { points: [P(-21.08, 30.15), P(-20.39, 82.24), P(6.48, 84.72), P(6.84, 93.18)], needs: ["tx1|tx2"] },
+        { points: [P(-20.39, 51.92), P(-77.57, 62.52)], needs: ["tx1|tx2"] },
+        { points: [P(-15.57, 29.87), P(-7.04, 14.67)], needs: ["tx1|tx2"] },
+      ],
+      // The upper part's turrets: power through either transmitter.
+      beyond: { 1: ["tx1|tx2"], 2: ["tx1|tx2"], 5: ["tx1|tx2"], 7: ["tx1|tx2"] },
+    },
   });
 }

@@ -33,7 +33,7 @@ const tap = async (page: Page, i: number) => {
 };
 const engines = (page: Page) => world(page, (w) => ["main", "bl", "br", "fl", "fr"].map((c) => w.controls[c] ?? 0).join(""));
 
-test("PAD-002 Mammoth Thrust with a controller: A starts, then flies; the stick turns; B reverses; X fires; Y is the beam; Start pauses and resumes", async ({ page }) => {
+test("PAD-002 Mammoth Thrust with a controller: A starts, then flies; the stick turns; B reverses; X fires; Y is the beam; LB the shield; Start pauses and resumes", async ({ page }) => {
   await plugIn(page);
   await page.goto("./thrust.html");
   await expect(page.getByTestId("mth-start")).toBeVisible();
@@ -66,12 +66,15 @@ test("PAD-002 Mammoth Thrust with a controller: A starts, then flies; the stick 
   await expect.poll(() => world(page, (w) => w.controls.fire ?? 0)).toBe(1);
   await button(page, X, false);
   await expect.poll(() => world(page, (w) => w.controls.fire ?? 0)).toBe(0);
-  for (const k of [Y, LB]) {
-    await button(page, k, true);
-    await expect.poll(() => world(page, (w) => w.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("beam");
-    await button(page, k, false);
-    await expect.poll(() => world(page, (w) => w.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("off");
-  }
+  await button(page, Y, true);
+  await expect.poll(() => world(page, (w) => w.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("beam");
+  await button(page, Y, false);
+  await expect.poll(() => world(page, (w) => w.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("off");
+  // The left bumper holds the shield up (SHD-001).
+  await button(page, LB, true);
+  await expect.poll(() => world(page, (w) => w.bodies.some((b) => b.id === "p1-shield-field"))).toBe(true);
+  await button(page, LB, false);
+  await expect.poll(() => world(page, (w) => w.bodies.some((b) => b.id === "p1-shield-field"))).toBe(false);
   // Start pauses, with whatever was held let go; in the menu the D-pad chooses and Start resumes.
   await button(page, RT, true);
   await expect.poll(() => engines(page)).toBe("11100");
