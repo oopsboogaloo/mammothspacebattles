@@ -436,7 +436,8 @@ test("MTH-082 level 4's power plant: with its coolant gone it goes critical, the
   ).toBe(true);
   await expect(page.getByTestId("mth-critical")).toContainText("REACTOR CRITICAL", { timeout: 15_000 });
   await expect(page.getByTestId("mth-coolant")).toHaveAttribute("title", "Coolant: 0%, 0 holes");
-  await expect(page.getByTestId("mth-over")).toContainText("The power plant blew with the pod still down.", { timeout: 90_000 });
+  await expect(page.getByTestId("mth-over")).toContainText("Planet destroyed, mission failed.", { timeout: 90_000 });
+  await expect(page.getByTestId("mth-again")).toBeVisible();
 });
 
 test("MTH-087 for testing, the title has a button for each level that starts the game there", async ({ page }) => {

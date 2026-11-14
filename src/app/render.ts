@@ -902,6 +902,36 @@ function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
       ctx.stroke();
     }
   }
+  // A ship in the shock (MTH-084): electricity fizzing over it for as long as it has no control.
+  const game = world.thrust;
+  if (s.shockUntil !== undefined && world.time < s.shockUntil && game) {
+    const prefix = `p${game.state.n}-`;
+    const ship = world.bodies.filter((b) => b.id.startsWith(prefix) && !b.id.includes("-shell-") && !b.id.endsWith("-field"));
+    if (!ship.length) return;
+    // Jagged sparks between neighbouring parts, and round each, redrawn every step.
+    for (const [width, colour, salt] of [[Math.max(3, 0.3 * c.zoom), "rgba(140, 200, 255, 0.35)", 0], [Math.max(1, 0.08 * c.zoom), "#eaf6ff", 3]] as const) {
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      for (let k = 0; k < ship.length; k++) {
+        const a = ship[k].position;
+        const b = ship[(k * 7 + 3 + world.tick) % ship.length].position;
+        const d = { x: b.x - a.x, y: b.y - a.y };
+        const L = Math.hypot(d.x, d.y);
+        if (L < 0.2 || L > 4) continue;
+        const n = { x: -d.y / L, y: d.x / L };
+        const m = Math.max(3, Math.round(L / 0.4));
+        for (let i = 0; i <= m; i++) {
+          const f = i / m;
+          const off = i === 0 || i === m ? 0 : 0.35 * jitter(world.tick + salt + k * 13, i);
+          const q = toScreen(c, vp, { x: a.x + d.x * f + n.x * off, y: a.y + d.y * f + n.y * off });
+          if (i === 0) ctx.moveTo(q.x, q.y);
+          else ctx.lineTo(q.x, q.y);
+        }
+      }
+      ctx.stroke();
+    }
+  }
 }
 
 function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport, copies: [number, number][] = [[0, 0]], bounds?: World["bounds"]): void {

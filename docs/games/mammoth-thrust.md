@@ -428,8 +428,6 @@ Priority: **M** must, **S** should.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
 - **MTH-014** `[M]` Level 4 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
   and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=4` plays from it.
-- **MTH-098** `[M]` The plant's first 2 hits on its domes (a slug or an explosion) take it offline
-  as any hit does but open no leak (Chloe, 14 November 2026: "you get 2 free hits").
 - **MTH-099** `[M]` No turret fires within 10° of a bearing whose bolt would land on the plant
   (WPN-014). Worked out for every level as it is built; as built on 14 November 2026: level 4's three
   turrets under its mouth and two of level 5's (its 9th and 10th) have bearings they avoid; no
@@ -497,10 +495,13 @@ Priority: **M** must, **S** should.
   the flow (4 minutes for one, that divided by the slugs for more). Every third opens a new leak
   where it strikes; the others make the newest leak bigger. The gas pushes what is in it.
 - **MTH-082** `[M]` With no coolant left the plant goes critical: the page counts down 10 s, then
-  it explodes. With the pod still down the game is over; out with it first, 2000 more.
+  it explodes. With the pod still down the game is over: the screen fades quickly to white and
+  then, with no border, "Planet destroyed, mission failed." (Chloe, 14 November 2026). Out with the
+  pod first, 2000 more.
 - **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond
   them have no power, and the others still do.
-- **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s.
+- **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s, and
+  electricity fizzes over it for as long (Chloe, 14 November 2026).
 - **MTH-088** `[M]` An explosion that reaches a dome punches leaks in it, more the nearer it went
   off (up to 3), and knocks the plant offline.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more

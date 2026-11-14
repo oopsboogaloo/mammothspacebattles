@@ -507,10 +507,31 @@ function Won({ level, score, lives, pod, fuel, plant }: { level: number; score: 
 }
 
 function GameOver({ score, level, reason }: { score: number; level: number; reason?: "ships" | "pod" | "plant" }) {
+  // The plant blew with the pod still down (MTH-082): the screen fades quickly to white, and then,
+  // with no border, the words (Chloe, 14 November 2026).
+  if (reason === "plant")
+    return (
+      <div class="mth-whiteout" data-testid="mth-over">
+        <h2>Planet destroyed, mission failed.</h2>
+        <div class="mth-whiteout-after">
+          <p>
+            Score <b>{score}</b> · level <b>{level}</b>
+          </p>
+          <div class="mas-row">
+            <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-again">
+              Play again
+            </button>
+            <button class="mas-btn" onClick={quit}>
+              Title
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   return (
     <div class="mas-modal" data-testid="mth-over">
       <h2>Game over</h2>
-      <p>{reason === "pod" ? "The pod was destroyed." : reason === "plant" ? "The power plant blew with the pod still down." : "No ships left."}</p>
+      <p>{reason === "pod" ? "The pod was destroyed." : "No ships left."}</p>
       <p>
         Score <b>{score}</b> · level <b>{level}</b>
       </p>

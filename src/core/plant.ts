@@ -67,11 +67,6 @@ export interface PlantSpec {
   outages?: { below: number; rate: number; last: [number, number] };
   /** Seeds its outages. */
   seed?: number;
-  /**
-   * Hits it shrugs off (MTH-098; Chloe, 14 November 2026: "you get 2 free hits"): the first this
-   * many slugs in a dome, or explosions at one, take it offline as any hit does but open no leak.
-   */
-  freeHits?: number;
 }
 
 export interface PlantState {
@@ -81,8 +76,6 @@ export interface PlantState {
   hits: number;
   domeHits?: number;
   holes: number;
-  /** Hits on its domes shrugged off so far (`freeHits`). */
-  shrugged?: number;
   /** The shells already counted (a shell's later contacts aren't new hits). */
   seen: string[];
   /** When it explodes, s, once it is critical; and whether it has. */
@@ -223,12 +216,6 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
     // newest leak bigger. Each slug adds the same to the flow, wherever it lands.
     const dome = domes.has(hit) ? world.bodies.find((x) => x.id === hit) : undefined;
     const per = spec.perLeak ?? 3;
-    // The first few dome hits open no leak (MTH-098).
-    if (dome?.vents && (s.shrugged ?? 0) < (spec.freeHits ?? 0)) {
-      s.shrugged = (s.shrugged ?? 0) + 1;
-      world.events.push({ tick: world.tick, type: "plant.hit", data: { part: hit, hits: s.hits, holes: s.holes, until: s.offlineUntil, free: true } });
-      continue;
-    }
     const newest = s.leak ? world.bodies.find((x) => x.id === s.leak!.dome)?.vents?.holes[s.leak.index] : undefined;
     if (dome?.vents && newest && (s.domeHits ?? 0) % per !== 0) {
       newest.size = (newest.size ?? 1) + 1;
@@ -256,17 +243,6 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       const at = { x: Number(e.data.x), y: Number(e.data.y) };
       const reach = Number(e.data.radius);
       let struck = false;
-      // The first few hits open no leak (MTH-098): an explosion that reaches a dome counts as one.
-      const reaches = spec.domes.some((id) => {
-        const dome = world.bodies.find((x) => x.id === id);
-        return !!dome?.vents && reach > 0 && length(sub(nearestOnOutline(dome, at), at)) < reach;
-      });
-      if (reaches && (s.shrugged ?? 0) < (spec.freeHits ?? 0)) {
-        s.shrugged = (s.shrugged ?? 0) + 1;
-        if (s.critical === undefined) s.offlineUntil = now >= s.offlineUntil - 1e-9 ? now + spec.offline.first : s.offlineUntil + spec.offline.more;
-        world.events.push({ tick: world.tick, type: "plant.blast", data: { leaks: 0, free: true } });
-        continue;
-      }
       for (const id of spec.domes) {
         const dome = world.bodies.find((x) => x.id === id);
         if (!dome?.vents || !(reach > 0)) continue;

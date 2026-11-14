@@ -1017,7 +1017,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
 
   it("MTH-081 DMG-009 slugs in the domes leak the coolant as gas: each adds 0.1 kg/s, 4 minutes for one on screen; every third opens a new leak, the others make the newest bigger", () => {
-    const { w, step } = game(4, (sc) => (sc.world.thrust.plant.freeHits = 0)); // the free hits (MTH-098) aside
+    const { w, step } = game(4);
     const spec = w.thrust!.spec.plant!;
     expect(plantCoolant(w, spec)).toBeCloseTo(12, 9);
     const leaks = () => spec.domes.flatMap((id) => body(w, id)!.vents!.holes.map((h) => h.size ?? 1));
@@ -1155,7 +1155,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
-      const { w, step } = game(4, (sc) => (sc.world.thrust.plant.freeHits = 0)); // the free hits (MTH-098) aside
+      const { w, step } = game(4);
       step(0.2);
       const dome = body(w, "plant-dome-l")!;
       // A charge as a fuel tank's (0.3 kg, reach 4 m), `gap` m off the dome's left side, set off.
@@ -1178,29 +1178,6 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(far.off).toBe(false);
     for (const r of [close, further, far]) expect(r.w.ledger.violations).toBe(0);
   }, 60_000);
-
-  it("MTH-098 the plant's first 2 hits on its domes take it offline but open no leak: a slug or an explosion alike", () => {
-    const { w, step } = game(4);
-    const spec = w.thrust!.spec.plant!;
-    expect(spec.freeHits).toBe(2);
-    step(0.2);
-    const dome = body(w, "plant-dome-l")!;
-    const bomb = (k: number) => {
-      addBody(w, { id: `bomb-${k}`, shape: { kind: "box", width: 0.4, height: 0.4 }, mass: 1, position: { x: dome.position.x - 3.2, y: dome.position.y + k }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.5, explosive: { charge: 0.3, arm: 1e6, fragments: 0, radius: 4, trigger: true } } as never);
-      settle(w);
-      step(0.1);
-    };
-    bomb(0);
-    expect(plantState(w).offlineUntil).toBeGreaterThan(w.time);
-    expect(plantState(w).holes).toBe(0);
-    bomb(1);
-    expect(plantState(w).holes).toBe(0);
-    expect(plantState(w).shrugged).toBe(2);
-    // The third opens leaks as any does.
-    bomb(2);
-    expect(plantState(w).holes).toBeGreaterThan(0);
-    expect(w.ledger.violations).toBe(0);
-  });
 
   it("MTH-099 WPN-014 no turret fires within 10° of a bearing whose bolt would land on the plant: every level's bearings are worked out and set", () => {
     for (const n of [3, 4, 5]) {
