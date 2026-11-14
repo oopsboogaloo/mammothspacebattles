@@ -3706,7 +3706,13 @@
           "wait": 1.5,
           "hold": 0.25,
           "aim": "random",
-          "seed": 509
+          "seed": 509,
+          "avoid": [
+            [
+              -0.87,
+              -0.1937
+            ]
+          ]
         },
         "magazine": {
           "count": 40,
@@ -4037,7 +4043,13 @@
           "wait": 1.5,
           "hold": 0.25,
           "aim": "random",
-          "seed": 510
+          "seed": 510,
+          "avoid": [
+            [
+              0.0376,
+              0.87
+            ]
+          ]
         },
         "magazine": {
           "count": 40,
@@ -10903,6 +10915,7 @@
           ]
         },
         "seed": 31,
+        "freeHits": 2,
         "lines": [
           {
             "points": [

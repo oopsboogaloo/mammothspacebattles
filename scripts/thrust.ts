@@ -4,7 +4,8 @@
 //   node scripts/thrust.ts            writes scenarios/thrust-1.json … thrust-5.json, and thrust-test.json
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseScenario } from "../src/core/index.ts";
+import { initialWorld, parseScenario } from "../src/core/index.ts";
+import { bearingsOnto } from "./aim.ts";
 import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
 import { narrowest, type Vec } from "./terrain.ts";
 import { capacitor, electricTurret, generator, pipe, turret, type ElectricTuning, type TurretTuning } from "./turretParts.ts";
@@ -91,10 +92,13 @@ const PLANT: PlantTuning = { coolant: 12, rate: 0.1, parcel: 0.01, puff: 0.12, c
 /**
  * An explosion that reaches a dome punches up to 3 leaks in it (Chloe). Below half its coolant the
  * power fails for 2 to 3 s on screen at a time, more often as the coolant falls: on average once
- * every 8 s on screen at a quarter left, every 4 s near empty (0.5 a game second).
+ * every 8 s on screen at a quarter left, every 4 s near empty (0.5 a game second). The first 2 hits
+ * on its domes, slugs or explosions, open no leak (MTH-098; Chloe, 14 November 2026).
  */
-const PLANT_LEAK = { perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31 };
+const PLANT_LEAK = { perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31, freeHits: 2 };
 const PLANT_OFFLINE = { first: 2.5, more: 1 };
+/** Turrets don't fire within this of a clear shot at the plant, rad (WPN-014): 10°. */
+const REACTOR_MARGIN = (10 * Math.PI) / 180;
 const PLANT_COUNTDOWN = 5;
 const SHOCK = 0.5;
 const TURRET: TurretTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", arc: Math.PI / 3, rate: 2.1, bolt: BOLT, speed: 40, reload: 1, bolts: 40, shots: 5, charge: 1, burn: 0.02, fuel: 8.1 };
@@ -379,6 +383,18 @@ function write(l0: Level) {
     ui: { keys: { q: "left", e: "right", w: "fire", s: "reverse", z: "tractor" }, overlays: [], labels: false }, // the page adds Space, the arrows, Shifts and the right-hand keys
   };
   parseScenario(scenario); // fails loudly if the scenario is malformed
+  // Turrets never fire within 10° of a bearing whose bolt would land on the power plant (WPN-014;
+  // Chloe, 14 November 2026: they were shredding it). The bolts fly in arcs, so each bearing's
+  // flight is followed on the world as it starts (scripts/aim.ts).
+  if (plant) {
+    const w = initialWorld(parseScenario(scenario));
+    for (const b of scenario.world.bodies as Json[]) {
+      if (!b.turret) continue;
+      const avoid = bearingsOnto(w, w.bodies.find((x) => x.id === b.id)!, plant.parts, { margin: REACTOR_MARGIN, step: Math.PI / 720 });
+      if (avoid.length) b.turret = { ...(b.turret as Json), avoid };
+    }
+    parseScenario(scenario);
+  }
   writeFileSync(join(root, "scenarios", `${name}.json`), JSON.stringify(scenario, null, 2) + "\n");
   console.log(`wrote scenarios/${name}.json`);
 }

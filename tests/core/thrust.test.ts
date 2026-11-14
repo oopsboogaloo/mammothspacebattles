@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, generatorOnline, turretOnline, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
+import { bearingsOnto } from "../../scripts/aim.ts";
 
 /** A level's scenario; "test" is the first level 1, kept for the tests of the ship, the tether and the first turret. */
 const raw = (n: number | "test") => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -1016,7 +1017,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
 
   it("MTH-081 DMG-009 slugs in the domes leak the coolant as gas: each adds 0.1 kg/s, 4 minutes for one on screen; every third opens a new leak, the others make the newest bigger", () => {
-    const { w, step } = game(4);
+    const { w, step } = game(4, (sc) => (sc.world.thrust.plant.freeHits = 0)); // the free hits (MTH-098) aside
     const spec = w.thrust!.spec.plant!;
     expect(plantCoolant(w, spec)).toBeCloseTo(12, 9);
     const leaks = () => spec.domes.flatMap((id) => body(w, id)!.vents!.holes.map((h) => h.size ?? 1));
@@ -1154,7 +1155,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
-      const { w, step } = game(4);
+      const { w, step } = game(4, (sc) => (sc.world.thrust.plant.freeHits = 0)); // the free hits (MTH-098) aside
       step(0.2);
       const dome = body(w, "plant-dome-l")!;
       // A charge as a fuel tank's (0.3 kg, reach 4 m), `gap` m off the dome's left side, set off.
@@ -1176,6 +1177,61 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(far.leaks).toBe(0);
     expect(far.off).toBe(false);
     for (const r of [close, further, far]) expect(r.w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("MTH-098 the plant's first 2 hits on its domes take it offline but open no leak: a slug or an explosion alike", () => {
+    const { w, step } = game(4);
+    const spec = w.thrust!.spec.plant!;
+    expect(spec.freeHits).toBe(2);
+    step(0.2);
+    const dome = body(w, "plant-dome-l")!;
+    const bomb = (k: number) => {
+      addBody(w, { id: `bomb-${k}`, shape: { kind: "box", width: 0.4, height: 0.4 }, mass: 1, position: { x: dome.position.x - 3.2, y: dome.position.y + k }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.5, explosive: { charge: 0.3, arm: 1e6, fragments: 0, radius: 4, trigger: true } } as never);
+      settle(w);
+      step(0.1);
+    };
+    bomb(0);
+    expect(plantState(w).offlineUntil).toBeGreaterThan(w.time);
+    expect(plantState(w).holes).toBe(0);
+    bomb(1);
+    expect(plantState(w).holes).toBe(0);
+    expect(plantState(w).shrugged).toBe(2);
+    // The third opens leaks as any does.
+    bomb(2);
+    expect(plantState(w).holes).toBeGreaterThan(0);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MTH-099 WPN-014 no turret fires within 10° of a bearing whose bolt would land on the plant: every level's bearings are worked out and set", () => {
+    for (const n of [3, 4, 5]) {
+      const s = raw(n);
+      const w = initialWorld(parseScenario(s));
+      const parts = w.thrust!.spec.plant!.parts;
+      for (const c of w.bodies.filter((b) => b.turret)) {
+        // The scenario carries what the bolts' flights give now.
+        expect(c.turret!.avoid ?? [], `level ${n} ${c.id}`).toEqual(bearingsOnto(w, c, parts, { margin: (10 * Math.PI) / 180, step: Math.PI / 720 }));
+        // And outside those ranges no bolt lands on the plant (tried more finely).
+        const hits = bearingsOnto(w, c, parts, { margin: 0, step: Math.PI / 1440 });
+        for (const [lo, hi] of hits) for (const th of [lo, (lo + hi) / 2, hi]) expect((c.turret!.avoid ?? []).some(([a, b]) => th >= a - 1e-6 && th <= b + 1e-6), `level ${n} ${c.id} ${th}`).toBe(true);
+      }
+    }
+    // Level 4's turrets under its mouth have bearings they avoid, and the asteroid's two nearest the plant.
+    const avoid = (n: number, id: string) => raw(n).world.bodies.find((b: { id: string }) => b.id === id).turret.avoid;
+    for (const id of ["t1-breech", "t2-breech", "t3-breech"]) expect(avoid(4, id)?.length, id).toBeGreaterThan(0);
+  }, 120_000);
+
+  it("WPN-014 a turret never fires on a bearing it avoids: a random one picks another", () => {
+    const { w, step } = game(4, (s) => {
+      for (const b of s.world.bodies) if (b.turret) b.turret.avoid = b.id === "t1-breech" ? [[-0.87, 0.6]] : b.turret.avoid;
+    });
+    moveShip(w, { x: 30, y: -10 });
+    for (let k = 0; k < 40; k++) {
+      step(0.25);
+      moveShip(w, { x: 30, y: -10 });
+    }
+    const fired = w.events.filter((e) => e.type === "turret.fire" && e.data.id === "t1-breech");
+    expect(fired.length).toBeGreaterThan(0);
+    for (const f of fired) expect(Number(f.data.angle)).toBeGreaterThan(0.6);
   }, 60_000);
 
   it("MTH-089 below half its coolant the plant's power fails now and then for 2 to 3 s on screen, more often the less is left", () => {

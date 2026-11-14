@@ -490,6 +490,8 @@ function validateTurret(v: V, t: unknown, path: string): void {
   str(v, t.joint, `${path}.joint`);
   str(v, t.gun, `${path}.gun`);
   for (const k of ["battery", "barrel", "target"]) if (t[k] !== undefined) str(v, t[k], `${path}.${k}`);
+  if (t.avoid !== undefined && (!Array.isArray(t.avoid) || !t.avoid.every((r: unknown) => Array.isArray(r) && r.length === 2 && r.every((x) => typeof x === "number" && Number.isFinite(x)) && r[0] <= r[1])))
+    err(v, `${path}.avoid`, "must be a list of [from, to] angle ranges, from ≤ to");
   if (t.cabled !== undefined && typeof t.cabled !== "boolean") err(v, `${path}.cabled`, "must be true or false");
   if (t.nodes !== undefined && (!Array.isArray(t.nodes) || !t.nodes.every((x: unknown) => typeof x === "string"))) err(v, `${path}.nodes`, "must be a list of body ids");
   if (t.range !== undefined) num(v, t.range, `${path}.range`, { positive: true });

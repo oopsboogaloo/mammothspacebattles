@@ -423,6 +423,12 @@ Priority: **M** must, **S** should.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
 - **MTH-014** `[M]` Level 4 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
   and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=4` plays from it.
+- **MTH-098** `[M]` The plant's first 2 hits on its domes (a slug or an explosion) take it offline
+  as any hit does but open no leak (Chloe, 14 November 2026: "you get 2 free hits").
+- **MTH-099** `[M]` No turret fires within 10° of a bearing whose bolt would land on the plant
+  (WPN-014). Worked out for every level as it is built; as built on 14 November 2026: level 4's three
+  turrets under its mouth and two of level 5's (its 9th and 10th) have bearings they avoid; no
+  bolt of level 3's turrets reaches the plant.
 - **MTH-097** `[M]` Level 2 is Chloe's chamber (§3): three electric turrets on their own power, two
   of them on one capacitor; three fuel tanks; the pod on the chamber's floor. Nothing on it moves
   as it starts.
