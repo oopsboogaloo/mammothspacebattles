@@ -3,6 +3,7 @@
 // one only when its own has changed (an edit, undo, scrub). Same code as the page, so same results.
 /// <reference lib="webworker" />
 import { applyCommands, getProfile, type Body, type Command, type World } from "../core/index.ts";
+import { RockStubs, runChangesBodies } from "./rockStubs.ts";
 import { runSteps, type Edit, type Series, type StepRun } from "./controller.ts";
 import { eventDelta, type EventDelta } from "./eventDelta.ts";
 
@@ -35,28 +36,7 @@ export interface RunResult {
 let world: World | null = null;
 let version = -1;
 
-/**
- * The rock already sent (Mammoth Thrust's levels are hundreds of fixed rock pieces): a piece the page
- * holds as it is goes back as a stub, `{ id, kept: true }`, and the page puts its own copy back in its
- * place (simClient.ts). Rock is fixed and has no material, so nothing changes it in place; a crater
- * takes pieces out and adds new ones, which go whole. Each is checked against what was sent all the
- * same: its shape, where it is and how it lies. Forgotten whenever the page sends a world.
- */
-let sentRock = new WeakMap<Body, { shape: Body["shape"]; x: number; y: number; angle: number }>();
-export interface KeptBody {
-  id: string;
-  kept: true;
-}
-const isRock = (w: World, b: Body): boolean => !!w.terrain && b.fixed === true && !b.material && b.id.startsWith(w.terrain.prefix);
-function packBodies(w: World): (Body | KeptBody)[] {
-  return w.bodies.map((b) => {
-    if (!isRock(w, b)) return b;
-    const was = sentRock.get(b);
-    if (was && was.shape === b.shape && was.x === b.position.x && was.y === b.position.y && was.angle === b.angle) return { id: b.id, kept: true };
-    sentRock.set(b, { shape: b.shape, x: b.position.x, y: b.position.y, angle: b.angle });
-    return b;
-  });
-}
+const rock = new RockStubs();
 
 /** The GPU gas spike page (gpu-spike.html) runs its WebGPU passes here, in the simulation worker. */
 export interface GpuSpikeRequest {
@@ -76,7 +56,7 @@ self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
   const req = e.data;
   if (req.world) {
     world = req.world;
-    sentRock = new WeakMap();
+    rock.forget();
   }
   else if (version !== (req.inputs ? req.version - 1 : req.version) || !world) return; // a stale request: the page will resend
   if (req.inputs && !req.world) applyCommands(world, req.inputs, getProfile(req.profile));
@@ -86,9 +66,11 @@ self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
     deadline: () => performance.now() - start > req.budgetMs,
     stopOnVerdict: req.stopOnVerdict,
   });
+  // A command that can change a body in place applied in this run: every body goes whole this time.
+  if (runChangesBodies(req, run.from, run.steps)) rock.forget();
   // The page takes the result as its next version; this copy carries on from it.
   version = req.version + 1;
   const events = eventDelta(before, world.events);
-  const sent: StepRun = { ...run, world: { ...world, events: [], bodies: packBodies(world) as Body[] } };
+  const sent: StepRun = { ...run, world: { ...world, events: [], bodies: rock.pack(world) as Body[] } };
   (self as unknown as Worker).postMessage({ type: "done", version: req.version, run: sent, events } satisfies RunResult);
 };

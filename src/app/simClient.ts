@@ -2,7 +2,8 @@
 // sandbox when nothing has changed meanwhile. Falls back to stepping on the page when there is no
 // worker (tests, old browsers) or the run in flight has gone stale.
 import type { Sandbox } from "./controller.ts";
-import type { KeptBody, RunRequest, RunResult } from "./simWorker.ts";
+import type { RunRequest, RunResult } from "./simWorker.ts";
+import type { KeptBody } from "./rockStubs.ts";
 import type { Body, Command } from "../core/index.ts";
 import { diag } from "./diag.ts";
 import { applyEventDelta } from "./eventDelta.ts";
