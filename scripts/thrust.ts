@@ -52,7 +52,8 @@ function ship() {
   // The shield (SHD-001…SHD-006; Chloe, 14 November 2026): held on, a field grows round the ship
   // in a quarter of a game second and stays up while there is fuel: 0.4 kg a game second (half the
   // first 0.8, which Chloe found drained it far too fast), so full tanks (8.1 kg) last 40 s on
-  // screen. Each hit costs more: 0.0025 kg for each N·s of its impulse, at least 0.05 kg. The
+  // screen. Each hit costs more: 0.00125 kg for each N·s of its impulse, at least 0.025 kg (half
+  // the first 0.0025 and 0.05: Chloe, 14 November 2026). The
   // engines and the gun don't work while it is up. The field weighs 2 kg.
   // It is elastic (SHD-006): it clears the ship by 1.5 m and is held to the ship's centre by a
   // spring of 3,000 N/m, damped at 0.15 of critical, pulling on the cockpit. Struck, it gives, the
@@ -60,7 +61,7 @@ function ship() {
   // gravity, the test level): undamaged up to 25 m/s and bouncing back at two thirds of its speed;
   // 2 welds broken at 30 m/s and 4 at 40, where the spring bottoms out and the ship's parts meet
   // the rock. Without a shield 4 welds break at 20 m/s; with the first, rigid field 2 at 20 and 7 at 30.
-  const shield = { channel: "shield", grow: 14, burn: 0.4, hitBurn: 0.0025, minHit: 0.05, mass: 2, margin: 1.5, spring: { stiffness: 3000, damping: 0.15 } };
+  const shield = { channel: "shield", grow: 14, burn: 0.4, hitBurn: 0.00125, minHit: 0.025, mass: 2, margin: 1.5, spring: { stiffness: 3000, damping: 0.15 } };
   // Half Mammoth Asteroids' fuel (Chloe, 14 November 2026: with a full load you never needed to
   // refuel): 8.1 kg in the two tanks, as much as one fuel tank on the ground holds.
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor, shield, fuel: 0.5 });
