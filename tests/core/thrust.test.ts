@@ -74,9 +74,9 @@ describe("Mammoth Thrust", () => {
       expect(pod(w).mass).toBe(34);
       expect(w.thrust!.spec.level).toBe(n);
     }
-    // The test level (the first level 1) has one turret of the first kind, level 2 three: each a
-    // base, a mount, a carriage with its gun, a battery, a generator, a pipe and a fuel tank (MTH-031).
-    for (const [n, count] of [["test", 1], [2, 3]] as const) {
+    // The test level (the first level 1) has one turret of the first kind: a base, a mount, a
+    // carriage with its gun, a battery, a generator, a pipe and a fuel tank (MTH-031).
+    for (const [n, count] of [["test", 1]] as const) {
       const { w } = game(n);
       expect(w.thrust!.spec.turrets).toHaveLength(count);
       for (let k = 1; k <= count; k++) {
@@ -86,10 +86,10 @@ describe("Mammoth Thrust", () => {
         expect(turretWorks(w, body(w, `t${k}-carriage`)!)).toBe(true);
       }
     }
-    // Level 1 has no cave; level 2's pod is far below its surface.
+    // Level 1 has no cave; level 2's pod is in its chamber, 75 m under the surface.
     expect(raw(1).world.thrust.view.caves).toHaveLength(0);
     expect(raw(2).world.thrust.view.caves).toHaveLength(1);
-    expect(pod(game(2).w).position.y).toBeLessThan(-100);
+    expect(pod(game(2).w).position.y).toBeLessThan(-25);
   });
 
   it("MTH-096 WPN-013 level 1 is Chloe's surface: an electric turret on its own power, a fuel tank feeding a generator through a pipe, the generator charging a capacitor, the capacitor powering the turret; nothing moves as it starts", () => {
@@ -112,6 +112,23 @@ describe("Mammoth Thrust", () => {
     const at = new Map(w.bodies.map((b) => [b.id, { ...b.position }]));
     step(3);
     for (const b of w.bodies.filter((x) => /^(t1|fuel|pod|stand)/.test(x.id))) expect(Math.hypot(b.position.x - at.get(b.id)!.x, b.position.y - at.get(b.id)!.y), b.id).toBeLessThan(0.05);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MTH-097 WPN-013 level 2 is Chloe's chamber: three electric turrets, two of them on one capacitor (the surface's, by a long cable to the chamber's roof), the third on its own down the chamber's wall; nothing moves as it starts", () => {
+    const s = raw(2);
+    expect(s.world.thrust.turrets).toEqual(["t1-breech", "t2-breech", "t3-breech"]);
+    expect(s.world.thrust.tanks).toEqual(["fuel-1", "fuel-2", "fuel-3"]);
+    const { w, step } = game(2);
+    expect(body(w, "t1-breech")!.turret!.battery).toBe("t1-cap");
+    expect(body(w, "t2-breech")!.turret!.battery).toBe("t1-cap");
+    expect(body(w, "t3-breech")!.turret!.battery).toBe("t3-cap");
+    for (const g of ["t1-gen", "t3-gen"]) expect(generatorOnline(w, body(w, g)!), g).toBe(true);
+    for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    const at = new Map(w.bodies.map((b) => [b.id, { ...b.position }]));
+    step(3);
+    for (const b of w.bodies.filter((x) => /^(t\d|fuel|pod|stand)/.test(x.id)))
+      expect(Math.hypot(b.position.x - at.get(b.id)!.x, b.position.y - at.get(b.id)!.y), b.id).toBeLessThan(/barrel|breech/.test(b.id) ? 0.2 : 0.05);
     expect(w.ledger.violations).toBe(0);
   });
 
@@ -176,9 +193,9 @@ describe("Mammoth Thrust", () => {
     const inShaft = (v: { x: number; y: number }) => Math.abs(v.x) < 10 - 1e-6 && v.y > -60 + 1e-6 && v.y < 0;
     expect(rock.every((vs) => !vs.some(inShaft))).toBe(true);
     expect(rock.some((vs) => vs.some((v) => v.y < -70))).toBe(true);
-    // Level 2's shaft is 30 m wide: no narrower than the 25 m the generator insists on.
+    // Level 2's shaft (Chloe's drawing) is about 20 m wide: no narrower than the 18 m it declares.
     const l2 = raw(2).world.thrust.view;
-    expect(narrowest([...l2.caves[0]], 15)).toBeGreaterThanOrEqual(25);
+    expect(narrowest([...l2.caves[0]], 40)).toBeGreaterThanOrEqual(18);
   });
 
   it("MTH-093 flown off one side the ship comes back in at the other, the pod on its tether with it", () => {
@@ -608,18 +625,18 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(st(w).turretsOut).toEqual([]);
     expect(w.ledger.violations).toBe(0);
 
-    // Level 2's third turret hangs from the chamber's roof, 50 m over the floor.
+    // Level 2's third turret hangs from the left of the chamber's roof, 30 m over the floor.
     const roof = game(2);
     roof.step(0.2);
-    expect(cutCrater(roof.w, { x: -30, y: -60.5 }, 2.5, TERRAIN_OPS)).toBe(true);
+    const base = body(roof.w, "t3-base")!.position;
+    expect(cutCrater(roof.w, { x: base.x, y: base.y + 2 }, 4.5, TERRAIN_OPS)).toBe(true);
     settle(roof.w);
     roof.step(1);
     expect(body(roof.w, "t3-base")!.velocity.y).toBeLessThan(-3); // falling
     roof.step(5);
-    expect(body(roof.w, "t3-base")!.position.y).toBeLessThan(-105); // on the floor
-    expect(st(roof.w).turretsOut).toEqual(["t3-carriage"]); // broken by the fall: out of action
+    expect(body(roof.w, "t3-base")!.position.y).toBeLessThan(-25); // on the floor
+    expect(st(roof.w).turretsOut).toEqual(["t3-breech"]); // broken by the fall: out of action
     expect(st(roof.w).score).toBe(750);
-    expect(pod(roof.w).integrity).toBe(1); // it came down on the pod, which is very hard to destroy
   });
 
   it("MTH-061 the pod's stand comes loose with its ground, and the pod with it: loose, not lost", () => {

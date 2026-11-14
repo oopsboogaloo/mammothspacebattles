@@ -103,9 +103,13 @@ other sources in §12):
   fuel tank stands on the plateau to the right. It teaches flying, the beam, the tether and the
   climb out, and taking a turret's power away. (The first level 1, with a turret of the first
   kind, is kept as `scenarios/thrust-test.json` for the tests; it isn't played.)
-- **Level 2 (MVP): one chamber.** The factory, a building and a turret on the surface. One shaft,
-  about 30 m wide and 80 m deep, opens into a single chamber about 120 m across. Two turrets on
-  the chamber's walls, the pod and a fuel tank on its floor. It teaches flying the pod up a shaft.
+- **Level 2: the chamber** (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel; MTH-097).
+  A shaft about 20 m wide drops from the surface into a chamber about 65 m across, where the pod
+  stands on the floor. Three electric turrets on their own power (§ Powered turrets): one on the
+  surface to the right, beside its capacitor, generator and tank, and one hanging from each side of
+  the chamber's roof. The right one takes its power from the surface capacitor by a long cable (so
+  that capacitor feeds two turrets); the left one has its own capacitor, generator and tank down the
+  chamber's left wall. A fuel tank stands on the surface to the left.
 - **Level 3: the canyon** (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel). A canyon
   about 200 m across and 150 m deep, with caves under its walls. The power plant stands on a ledge
   high on the left wall; its lines run through the rock to the four turrets on the left (one
@@ -309,7 +313,7 @@ plan below (a cheat that turned shells and gas back and let rock through).
 ### Powered turrets
 
 Chloe's design, 14 November 2026 (WPN-013): electric turrets that make their own power, replacing
-the first fuel turrets level by level (level 1 now; level 2 when Chloe redraws it). Each part stands
+the first fuel turrets (levels 1 and 2 have them now). One capacitor may power more than one turret. Each part stands
 on its own pad on the rock and can be shot on its own:
 
 - **Fuel tank** (a round FUEL tank): feeds the generator through a **pipe**. One slug breaks a
@@ -419,6 +423,9 @@ Priority: **M** must, **S** should.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
 - **MTH-014** `[M]` Level 4 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
   and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=4` plays from it.
+- **MTH-097** `[M]` Level 2 is Chloe's chamber (§3): three electric turrets on their own power, two
+  of them on one capacitor; three fuel tanks; the pod on the chamber's floor. Nothing on it moves
+  as it starts.
 - **MTH-092** `[M]` Level 3 is Chloe's canyon (§3): eight electric turrets, the power plant on the
   left ledge with its line across the canyon to the four turrets on the right, four fuel tanks,
   and the pod on its pillar. Nothing on it moves as it starts.

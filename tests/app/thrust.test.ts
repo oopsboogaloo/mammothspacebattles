@@ -105,15 +105,15 @@ describe("Mammoth Thrust's page", () => {
     const w = world(2);
     const view = w.thrust!.spec.view!;
     expect(insideOutline(view.sky, { x: 0, y: 100 })).toBe(true);
-    expect(insideOutline(view.sky, { x: 0, y: -80 })).toBe(false); // the chamber
-    expect(insideOutline(view.caves[0], { x: 0, y: -80 })).toBe(true);
-    expect(insideOutline(view.caves[0], { x: 100, y: -80 })).toBe(false); // rock
+    expect(insideOutline(view.sky, { x: 0, y: -15 })).toBe(false); // the chamber
+    expect(insideOutline(view.caves[0], { x: 0, y: -15 })).toBe(true);
+    expect(insideOutline(view.caves[0], { x: 70, y: -15 })).toBe(false); // rock
     const stars = (cam: { x: number; y: number; zoom: number }) => draw(w, cam).filter((c) => c.startsWith("fillRect(") && c.endsWith("fill=#dfe7ff")).length;
     expect(stars({ x: 0, y: 90, zoom: 8 })).toBeGreaterThan(20); // open sky
-    expect(stars({ x: 0, y: -87, zoom: 20 })).toBe(0); // inside the chamber: 40 × 30 m of it
-    expect(stars({ x: 100, y: -87, zoom: 20 })).toBe(0); // inside the rock
+    expect(stars({ x: 0, y: -15, zoom: 20 })).toBe(0); // inside the chamber: 40 × 30 m of it
+    expect(stars({ x: 70, y: -15, zoom: 20 })).toBe(0); // inside the rock
     // The cave and the sky are filled black over the lines.
-    expect(draw(w, { x: 0, y: -87, zoom: 8 }).filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length).toBe(2);
+    expect(draw(w, { x: 0, y: -15, zoom: 8 }).filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length).toBe(2);
   });
 
   it("TER-004 craters are drawn as open space: plain black discs cut into the rock's lines", () => {

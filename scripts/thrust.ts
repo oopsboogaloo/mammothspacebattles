@@ -228,12 +228,12 @@ interface Level {
    */
   asteroid?: { island: Vec[]; radius: number; gravity: number; box: number; escape: number; core?: Vec };
   /**
-   * Electric turrets with their own power (WPN-013; Chloe's drawing, 14 November 2026): turret
-   * number `turret` (from 1) is powered by a capacitor, charged by a generator, fed by fuel tank
-   * number `tank` (from 1) through a pipe along `pipe` (tank to generator). The cables, generator
-   * to capacitor and capacitor to turret, are drawn along `cables`.
+   * Electric turrets with their own power (WPN-013; Chloe's drawings, 14 November 2026): turrets
+   * numbered `turrets` (from 1) are powered by one capacitor, charged by a generator, fed by fuel
+   * tank number `tank` (from 1) through a pipe along `pipe` (tank to generator). The cables are
+   * drawn along `cables`, each lit by the generator or the capacitor it leaves from.
    */
-  powered?: { turret: number; generator: { at: Vec; angle?: number }; capacitor: { at: Vec; angle?: number }; tank: number; pipe: Vec[]; cables: [Vec[], Vec[]] }[];
+  powered?: { turrets: number[]; generator: { at: Vec; angle?: number }; capacitor: { at: Vec; angle?: number }; tank: number; pipe: Vec[]; cables: { points: Vec[]; from: "generator" | "capacitor" }[] }[];
   /** Seeds the turrets' generators: the level's number × 100 if not given (a renumbered level keeps its own). */
   seed?: number;
   plant?: {
@@ -287,24 +287,23 @@ function write(l0: Level) {
   const sky = ast
     ? [P(-ast.box - O, ast.box + O), P(ast.box + O, ast.box + O), P(ast.box + O, -ast.box - O), P(-ast.box - O, -ast.box - O)]
     : [{ x: left - O, y: SKY }, { x: right + O, y: SKY }, { x: right + O, y: g0.y }, ...l.ground.filter((p) => !inCave(p)), { x: left - O, y: g1.y }];
-  const supply = new Map((l.powered ?? []).map((p) => [p.turret, p]));
+  // Each group of powered turrets is named for its first turret: `t{n}-cap`, `t{n}-gen`, `t{n}-pipe`.
+  const group = (p: NonNullable<Level["powered"]>[number]) => `t${p.turrets[0]}`;
+  const supply = new Map((l.powered ?? []).flatMap((p) => p.turrets.map((k) => [k, group(p)] as const)));
   const turrets = l.turrets.map((t, k) =>
     t.electric
-      ? electricTurret(`t${k + 1}`, t.at, t.angle, ELECTRIC_TURRET, (l.seed ?? 100 * l.n) + k + 1, supply.has(k + 1) ? `t${k + 1}-cap` : undefined)
+      ? electricTurret(`t${k + 1}`, t.at, t.angle, ELECTRIC_TURRET, (l.seed ?? 100 * l.n) + k + 1, supply.has(k + 1) ? `${supply.get(k + 1)}-cap` : undefined)
       : turret(`t${k + 1}`, t.at, t.angle, TURRET, (l.seed ?? 100 * l.n) + k + 1),
   );
   // Each powered turret's capacitor, generator and pipe (WPN-013), and the cables drawn between them.
   const machines = (l.powered ?? []).flatMap((p) => {
-    const name = `t${p.turret}`;
+    const name = group(p);
     const gen = generator(`${name}-gen`, p.generator.at, p.generator.angle ?? 0, `${name}-cap`, { burn: TURRET.burn, charge: TURRET.charge });
     const cap = capacitor(`${name}-cap`, p.capacitor.at, p.capacitor.angle ?? 0, TURRET.shots);
     const fuel = pipe(`${name}-pipe`, p.pipe, `fuel-${p.tank}`, `${name}-gen`);
     return [{ bodies: [...gen.bodies, ...cap.bodies, ...fuel.bodies], joints: [...gen.joints, ...cap.joints], links: fuel.links }];
   });
-  const cables = (l.powered ?? []).flatMap((p) => [
-    { points: p.cables[0], from: `t${p.turret}-gen` },
-    { points: p.cables[1], from: `t${p.turret}-cap` },
-  ]);
+  const cables = (l.powered ?? []).flatMap((p) => p.cables.map((c) => ({ points: c.points, from: `${group(p)}-${c.from === "generator" ? "gen" : "cap"}` })));
   const tanks = l.tanks.map((t, k) => ("at" in t ? fuelTank(`fuel-${k + 1}`, t.at, t.angle) : fuelTank(`fuel-${k + 1}`, t)));
   const plant = l.plant ? powerPlant(l.plant.at, PLANT, l.plant.angle ?? 0) : undefined;
   const txs = l.plant ? (l.plant.transmitters ?? [{ id: "tx", antennae: l.plant.antennae! }]) : [];
@@ -423,15 +422,15 @@ write({
   tanks: [P(-57.03, 38.1), P(84.38, 38.4)],
   powered: [
     {
-      turret: 1,
+      turrets: [1],
       tank: 1,
       generator: { at: P(-65.3, 31.0) },
       capacitor: { at: P(-35.94, 18.6) },
       // Down the mesa's side, from the tank's stand to the generator's side.
       pipe: [P(-58.35, 38.3), P(-59.47, 36.29), P(-60.21, 33.96), P(-61.27, 32.9), P(-64.45, 31.55)],
       cables: [
-        [P(-65.3, 31.0), P(-64.24, 19.65), P(-57.03, 15.09), P(-36.68, 16.15), P(-35.94, 18.6)],
-        [P(-35.94, 18.6), P(-34.03, 10.96), P(-23.11, 11.91), P(-22.9, 14.3)],
+        { points: [P(-65.3, 31.0), P(-64.24, 19.65), P(-57.03, 15.09), P(-36.68, 16.15), P(-35.94, 18.6)], from: "generator" },
+        { points: [P(-35.94, 18.6), P(-34.03, 10.96), P(-23.11, 11.91), P(-22.9, 14.3)], from: "capacitor" },
       ],
     },
   ],
@@ -459,38 +458,74 @@ write({
   tanks: [P(104, 16)],
 });
 
-// Level 2, one chamber (MTH-011): a shaft 30 m wide and 80 m deep opens into a single chamber 120 m
-// across. The pod stands on the chamber's floor, to the left of the shaft.
+// Level 2, the chamber (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel as level 3 was;
+// MTH-011): a shaft about 20 m wide drops from the surface into a chamber 65 m across, where the
+// pod stands on the floor. Three electric turrets on their own power (WPN-013): one on the surface
+// to the right, beside its capacitor, generator and tank; and one hanging from each side of the
+// chamber's roof. The right one takes its power from the surface capacitor by a long cable; the
+// left one has its own capacitor, generator and tank down the chamber's left wall. A fuel tank on
+// the surface to the left.
 {
-  // The shaft and chamber, clockwise from the shaft's right lip: down its right wall, round the
-  // chamber (roof, right wall, floor, left wall, roof), and up the shaft's left wall to its left lip.
-  const cave = [
-    P(15, 16), P(15, -62), P(45, -62), P(60, -77), P(60, -100), P(48, -112), P(-48, -112), P(-60, -100), P(-60, -77), P(-45, -62),
-    P(-15, -62), P(-15, 18),
+  // Right to left: the open space is above (the shaft's lips are P(9.4, 43.6) and P(-9.4, 46.2)).
+  const ground = [
+    P(102.2, 66.9), P(94.6, 65.3), P(92.6, 58.9), P(89.5, 53.3), P(87.9, 48.5), P(84.93, 48.4), P(82.25, 47.6), P(81.7, 48.1),
+    P(78.52, 47.81), P(76.12, 47.71), P(72.53, 47.64), P(70.33, 47.67), P(67.35, 47.91), P(58.55, 48.17), P(57.1, 48.3), P(45.7, 55.4),
+    P(41.7, 61.2), P(37.5, 69.1), P(30.9, 70.0), P(26.1, 63.9), P(23.3, 61.9), P(20.0, 48.9), P(9.4, 43.6), P(6.7, 36.2),
+    P(8.3, 21.8), P(6.8, 12.2), P(7.4, 2.6), P(11.6, -0.9), P(15.63, -0.65), P(24.42, -0.52), P(32.0, -1.8), P(37.3, -7.8),
+    P(38.0, -16.0), P(33.4, -26.0), P(27.4, -30.6), P(8.38, -30.49), P(5.18, -30.48), P(-30.8, -30.4), P(-32.57, -29.32), P(-34.88, -27.74),
+    P(-38.9, -20.8), P(-38.23, -13.22), P(-37.43, -10.96), P(-34.6, -6.2), P(-33.22, -5.05), P(-31.48, -3.71), P(-27.5, -1.8), P(-24.67, -1.27),
+    P(-15.88, -0.72), P(-15.3, -1.1), P(-11.7, 1.6), P(-10.9, 4.2), P(-11.3, 12.8), P(-10.1, 23.8), P(-11.7, 29.0), P(-11.9, 32.2),
+    P(-9.8, 40.8), P(-9.4, 46.2), P(-12.1, 52.0), P(-24.5, 52.7), P(-30.7, 54.5), P(-37.3, 50.9), P(-42.7, 50.0), P(-51.4, 43.6),
+    P(-56.67, 44.12), P(-59.45, 44.46), P(-63.4, 44.9), P(-67.5, 48.6), P(-72.5, 51.2), P(-75.9, 59.4), P(-84.7, 65.7), P(-85.7, 68.9),
+    P(-85.9, 74.5), P(-80.4, 79.7), P(-80.2, 80.5), P(-80.9, 81.5), P(-84.5, 82.2), P(-93.1, 82.0), P(-93.9, 79.8), P(-91.8, 77.1),
+    P(-93.1, 68.9), P(-95.2, 67.3), P(-96.6, 64.5), P(-102.2, 64.2),
   ];
+  const mouth = [ground.findIndex((p) => p.x === 9.4 && p.y === 43.6), ground.findIndex((p) => p.x === -9.4 && p.y === 46.2)];
   write({
     n: 2,
     title: "The chamber",
-    description: "The pod is in a chamber at the foot of a shaft. Fly down, take it on the tether, and carry it up the shaft and past the top.",
-    colour: "#3fa35a",
-    top: 130,
-    ground: [
-      P(150, 56), P(134, 44), P(118, 24), P(100, 24), P(80, 26), P(64, 44), P(48, 40), P(30, 22),
-      ...cave,
-      P(-26, 20), P(-40, 34), P(-56, 30), P(-70, 20), P(-96, 20), P(-112, 24), P(-130, 46), P(-150, 50),
-    ],
-    caves: [cave],
-    caveBelow: 15,
-    start: P(-83, 80),
-    pod: P(-30, -112),
-    // One on the surface to the right of the shaft; in the chamber, one on the floor and one hanging from the roof over the pod.
+    description: "The pod is in a chamber at the foot of a shaft, under two turrets. Fly down, take it on the tether, and carry it up the shaft and past the top.",
+    colour: "#9d1ab8",
+    top: 120,
+    ground,
+    caves: [ground.slice(mouth[0], mouth[1] + 1)],
+    caveBelow: 40,
+    leastWidth: 18,
+    start: P(-60, 75),
+    pod: P(6.78, -30.49),
     turrets: [
-      { at: P(109, 24), angle: 0 },
-      { at: P(30, -112), angle: 0 },
-      { at: P(-30, -62), angle: Math.PI },
+      // On the surface to the right; hanging from the chamber's roof, right and left.
+      { at: P(62.95, 48.04), angle: -0.03, electric: true },
+      { at: P(20.02, -0.58), angle: -3.126, electric: true },
+      { at: P(-20.28, -1.0), angle: -3.079, electric: true },
     ],
-    // One on the surface beside the start, one on the chamber's floor at the foot of the shaft.
-    tanks: [P(-91, 20), P(5, -112)],
+    // On the surface to the left; the surface turrets' own; the left roof turret's own, in the chamber's corner.
+    tanks: [P(-58.06, 44.29), { at: P(83.59, 48.0), angle: 0.289 }, { at: P(-33.73, -28.53), angle: -0.599 }],
+    powered: [
+      {
+        turrets: [1, 2],
+        tank: 2,
+        generator: { at: P(77.32, 47.76), angle: 0.04 },
+        capacitor: { at: P(71.43, 47.66), angle: -0.013 },
+        pipe: [P(82.3, 48.45), P(78.12, 48.45)],
+        cables: [
+          { points: [P(77.28, 48.38), P(77.28, 46.26), P(71.98, 46.26), P(71.98, 47.85)], from: "generator" },
+          { points: [P(70.92, 47.85), P(70.92, 46.26), P(62.97, 46.26), P(62.95, 48.04)], from: "capacitor" },
+          { points: [P(70.92, 46.26), P(70.92, 38.31), P(20.56, 8.1), P(20.02, -0.58)], from: "capacitor" },
+        ],
+      },
+      {
+        turrets: [3],
+        tank: 3,
+        generator: { at: P(-37.83, -12.09), angle: -1.914 },
+        capacitor: { at: P(-32.35, -4.38), angle: -2.486 },
+        pipe: [P(-34.56, -26.36), P(-38.27, -20.53), P(-38.59, -14.17), P(-37.74, -13.11)],
+        cables: [
+          { points: [P(-38.27, -11.52), P(-36.15, -5.16), P(-32.35, -4.38)], from: "generator" },
+          { points: [P(-32.35, -4.38), P(-26.08, 0.67), P(-20.56, 0.67), P(-20.28, -1.0)], from: "capacitor" },
+        ],
+      },
+    ],
   });
 }
 
