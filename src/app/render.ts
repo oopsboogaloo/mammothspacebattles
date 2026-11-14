@@ -439,6 +439,8 @@ export type Ctx = Pick<
   | "stroke"
   | "save"
   | "restore"
+  | "translate"
+  | "rotate"
   | "setLineDash"
   | "fillText"
   | "strokeStyle"
@@ -852,12 +854,16 @@ function drawMachineMarks(ctx: Ctx, world: World, c: Camera, vp: Viewport, b: Bo
     const p = at(0, 0);
     const size = 0.6 * b.shape.radius * c.zoom;
     if (size < 4) return;
-    // (Upright on the screen, however the tank stands.)
+    // Along the tank's base, turning as the tank turns (Chloe): never held level on the screen.
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(-b.angle);
     ctx.fillStyle = COLORS.bodyStroke;
     ctx.font = `${Math.round(size)}px 'IBM Plex Mono', monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("FUEL", p.x, p.y);
+    ctx.fillText("FUEL", 0, 0);
+    ctx.restore();
   }
 }
 

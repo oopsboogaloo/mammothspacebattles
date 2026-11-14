@@ -396,6 +396,14 @@ function validateShield(v: V, s: unknown, path: string): void {
   num(v, s.mass, `${path}.mass`, { positive: true });
   for (const k of ["burn", "hitBurn", "minHit"] as const) num(v, s[k], `${path}.${k}`, { min: 0 });
   for (const k of ["from", "blocks"] as const) if (!Array.isArray(s[k]) || !(s[k] as unknown[]).every((x) => typeof x === "string")) err(v, `${path}.${k}`, "must be a list of names");
+  if (s.spring !== undefined) {
+    if (!isObj(s.spring)) err(v, `${path}.spring`, "must be {stiffness, damping, spread?}");
+    else {
+      num(v, s.spring.stiffness, `${path}.spring.stiffness`, { positive: true });
+      num(v, s.spring.damping, `${path}.spring.damping`, { min: 0 });
+      if (s.spring.spread !== undefined && typeof s.spring.spread !== "boolean") err(v, `${path}.spring.spread`, "must be true or false");
+    }
+  }
 }
 
 function validateTractor(v: V, t: unknown, path: string): void {

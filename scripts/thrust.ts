@@ -49,14 +49,18 @@ function ship() {
   // Held on a fuel tank in its wedge, the beam draws the tank's fuel into the ship's two tanks
   // (TRC-008), 2 kg a game second: a full 8.1 kg tank in 8 s on screen. The tank isn't pulled.
   const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, maxSpeed: 3, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
-  // The shield (SHD-001…SHD-005; Chloe, 14 November 2026): held on, a field grows round the ship
-  // in a quarter of a game second and stays up while there is fuel, burning it fast: 0.8 kg a game
-  // second, full tanks (16.2 kg) in 40 s on screen. Each hit costs more: 0.005 kg for each N·s of
-  // its impulse, and at least 0.1 kg (a slug or a 1 kg rock: 0.1 kg; the ship falling onto rock at
-  // 20 m/s: about 3.5 kg). The engines and the gun don't work while it is up. First values, for
-  // Chloe to tune. The field weighs 2 kg while it is up: lighter, and the weld that holds it to the
-  // ship soaks up its bounce (a 1 kg rock at 10 m/s came back at 0 m/s off a 0.5 kg field, 4 m/s off 2 kg).
-  const shield = { channel: "shield", grow: 14, burn: 0.8, hitBurn: 0.005, minHit: 0.1, mass: 2 };
+  // The shield (SHD-001…SHD-006; Chloe, 14 November 2026): held on, a field grows round the ship
+  // in a quarter of a game second and stays up while there is fuel: 0.4 kg a game second (half the
+  // first 0.8, which Chloe found drained it far too fast), so full tanks (8.1 kg) last 40 s on
+  // screen. Each hit costs more: 0.0025 kg for each N·s of its impulse, at least 0.05 kg. The
+  // engines and the gun don't work while it is up. The field weighs 2 kg.
+  // It is elastic (SHD-006): it clears the ship by 1.5 m and is held to the ship's centre by a
+  // spring of 3,000 N/m, damped at 0.15 of critical, pulling on the cockpit. Struck, it gives, the
+  // ship sinking into it over that 1.5 m, and pushes back. Measured falling flat onto rock (no
+  // gravity, the test level): undamaged up to 25 m/s and bouncing back at two thirds of its speed;
+  // 2 welds broken at 30 m/s and 4 at 40, where the spring bottoms out and the ship's parts meet
+  // the rock. Without a shield 4 welds break at 20 m/s; with the first, rigid field 2 at 20 and 7 at 30.
+  const shield = { channel: "shield", grow: 14, burn: 0.4, hitBurn: 0.0025, minHit: 0.05, mass: 2, margin: 1.5, spring: { stiffness: 3000, damping: 0.15 } };
   // Half Mammoth Asteroids' fuel (Chloe, 14 November 2026: with a full load you never needed to
   // refuel): 8.1 kg in the two tanks, as much as one fuel tank on the ground holds.
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor, shield, fuel: 0.5 });

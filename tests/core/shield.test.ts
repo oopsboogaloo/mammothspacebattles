@@ -50,10 +50,10 @@ describe("Shield", () => {
     const spec = w.bodies.find((b) => b.shield)!.shield!;
     expect(radius(w)).toBeCloseTo(spec.radius, 6);
     expect(radius(w)).toBeGreaterThan(reach(w));
-    // 0.5 s at 0.8 kg/s, less what the engines' heads took to fill.
+    // 0.5 s at 0.4 kg/s, less what the engines' heads took to fill.
     const burned = full - tanks(w);
-    expect(burned).toBeGreaterThan(0.4 - 1e-6);
-    expect(burned).toBeLessThan(0.6);
+    expect(burned).toBeGreaterThan(0.2 - 1e-6);
+    expect(burned).toBeLessThan(0.4);
     step(0.1, [set("shield", 0)]);
     expect(body(w, FIELD)).toBeUndefined();
     // Down, it burns nothing: what goes now only tops up the engines' heads.
@@ -94,27 +94,42 @@ describe("Shield", () => {
     expect(body(w, "p1-hull")!.velocity.x).toBeLessThan(-0.1);
     const hits = w.events.filter((e) => e.type === "shield.hit");
     expect(hits).toHaveLength(1);
-    expect(before - tanks(w)).toBeGreaterThan(0.8 * 0.6 + 0.1 - 1e-6);
+    expect(before - tanks(w)).toBeGreaterThan(0.4 * 0.6 + 0.05 - 1e-6);
     expect(w.ledger.violations).toBe(0);
   });
 
-  it("SHD-002 falling onto rock at 8 m/s with it up, the ship comes down on the field: nothing of it touches the rock or breaks", () => {
-    // 8 m over where it comes to rest on the field (the start is 62 m up).
-    const { w, step } = game(-53);
-    const welds = w.joints.length;
-    let fastest = 0;
-    for (let k = 0; k < 40; k++) {
-      step(0.1, k === 0 ? [set("shield", 1)] : []);
-      fastest = Math.min(fastest, body(w, "p1-hull")!.velocity.y);
-    }
-    expect(fastest).toBeLessThan(-7.5);
-    expect(Math.abs(body(w, "p1-hull")!.velocity.y)).toBeLessThan(0.1);
-    expect(w.events.some((e) => e.type === "shield.hit" && String(e.data.by).startsWith("rock-"))).toBe(true);
-    expect(w.contacts.some((c) => c.a.startsWith("p1-") !== c.b.startsWith("p1-") && c.a !== FIELD && c.b !== FIELD)).toBe(false);
-    expect(w.joints.length).toBe(welds + 1);
-    expect(w.bodies.filter((b) => b.id.startsWith("p1-") && b.integrity < 1)).toEqual([]);
-    expect(w.ledger.violations).toBe(0);
-  });
+  it("SHD-006 the field is elastic: crashing onto rock it gives and springs back, so the ship survives a blow that breaks it bare; a harder one still breaks it", () => {
+    /** The ship flying down at `v` m/s onto the flat under the start, gravity off, the field up (or not). */
+    const crash = (v: number, up: boolean) => {
+      const { w, step } = game();
+      w.gravity = { x: 0, y: 0 };
+      const R = up ? w.bodies.find((b) => b.shield)!.shield!.radius : 3;
+      const ship = () => w.bodies.filter((b) => b.id.startsWith("p1-") && b.id !== FIELD);
+      const h = body(w, "p1-hull")!;
+      const d = { x: -63 - h.position.x, y: 10 + R + 1.5 - h.position.y };
+      for (const b of ship()) b.position = { x: b.position.x + d.x, y: b.position.y + d.y };
+      w.ledger.totals = computeTotals(w);
+      if (up) step(0.5, [set("shield", 1)]);
+      for (const b of [...ship(), ...(up ? [body(w, FIELD)!] : [])]) b.velocity = { x: 0, y: -v };
+      w.ledger.totals = computeTotals(w);
+      const welds = w.joints.filter((j) => j.a.startsWith("p1-")).length;
+      let back = 0;
+      for (let k = 0; k < 20; k++) {
+        step(0.1);
+        back = Math.max(back, body(w, "p1-hull")?.velocity.y ?? 0);
+      }
+      expect(w.ledger.violations).toBe(0);
+      // The field passes through its own ship: never a contact between them.
+      expect(w.contacts.some((c) => (c.a === FIELD && c.b.startsWith("p1-")) || (c.b === FIELD && c.a.startsWith("p1-")))).toBe(false);
+      return { broken: welds - w.joints.filter((j) => j.a.startsWith("p1-")).length, back };
+    };
+    expect(crash(20, false).broken).toBeGreaterThan(0); // bare, 20 m/s breaks welds
+    const shielded = crash(20, true);
+    expect(shielded.broken).toBe(0);
+    expect(shielded.back).toBeGreaterThan(8); // and bounces back
+    expect(crash(25, true).broken).toBe(0);
+    expect(crash(40, true).broken).toBeGreaterThan(0); // too hard: the ship's parts meet the rock
+  }, 60_000);
 
   it("SHD-003 gas meets it as a wall: a puff blown at the ship is turned back at the field", () => {
     const { w, step } = game();

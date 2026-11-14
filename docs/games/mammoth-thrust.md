@@ -305,10 +305,15 @@ plan below (a cheat that turned shells and gas back and let rock through).
   bolts bounce off; gas is turned back and pushed out as it grows; the pod too, when not on the
   tether. The field is welded rigidly to the cockpit, so the ship is pushed by what hits it and
   comes down on it against rock. A blast outside it doesn't damage what is inside.
-- It burns fuel fast: 0.8 kg a game second (full tanks in 40 s on screen), and each hit more:
-  0.005 kg for each N·s, at least 0.1 kg.
+- It burns fuel: 0.4 kg a game second (full tanks, 8.1 kg, in 40 s on screen; half the first
+  rate, Chloe, 14 November 2026), and each hit more: 0.0025 kg for each N·s, at least 0.05 kg.
+- It is elastic (SHD-006; Chloe: "shrink and then rebound"): the field clears the ship by 1.5 m and
+  is held to the ship's centre by a spring. Crashing, the ship sinks into it and is pushed back out.
+  Falling flat onto rock: undamaged up to 25 m/s, bouncing back at about two thirds of its speed;
+  2 welds broken at 30 m/s, 3 at 35 and 40, 9 broken and 4 parts destroyed at 50. (Bare: 4 welds
+  broken at 20 m/s.)
 - While it is up the five engines and the gun don't work. The tractor still does.
-- The field weighs 2 kg while up (0.5 kg lost its bounce in the weld).
+- The field weighs 2 kg while up.
 
 ### Powered turrets
 

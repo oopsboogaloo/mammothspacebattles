@@ -256,9 +256,11 @@ export function asteroidShip(t: ShipTuning) {
       for (const c of corners) reach = Math.max(reach, Math.hypot(p.x + rot(c, (b.angle as number) ?? 0).x - com.x, p.y + rot(c, (b.angle as number) ?? 0).y - com.y));
     }
     const gen = bodies.find((b) => b.id === id("shield"))!;
+    // The field clears the ship by `margin` m (default 0.4): an elastic one gives that far.
+    const { margin, ...shield } = t.shield as Json & { margin?: number };
     gen.shield = {
-      radius: round(reach + 0.4),
-      ...t.shield,
+      radius: round(reach + (margin ?? 0.4)),
+      ...shield,
       from: [id("tank-l"), id("tank-r")],
       blocks: ["main", "bl", "br", "fl", "fr", "fire"],
       to: id("hull"),

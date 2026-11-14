@@ -7206,13 +7206,17 @@
               "toughness": 3000
             },
             "shield": {
-              "radius": 3.352363,
+              "radius": 4.452363,
               "channel": "shield",
               "grow": 14,
-              "burn": 0.8,
-              "hitBurn": 0.005,
-              "minHit": 0.1,
+              "burn": 0.4,
+              "hitBurn": 0.0025,
+              "minHit": 0.05,
               "mass": 2,
+              "spring": {
+                "stiffness": 3000,
+                "damping": 0.15
+              },
               "from": [
                 "p{n}-tank-l",
                 "p{n}-tank-r"
