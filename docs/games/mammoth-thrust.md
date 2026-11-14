@@ -222,6 +222,9 @@ From Chloe's drawing (13 November 2026). A turret of a second kind, on level 3:
 - **Damage.** One slug on the barrel knocks it off (or destroys it): the turret is out of
   action. The arc takes two slugs. A power node is the weak point: one slug sets it off, and its
   blast alone puts the turret out of action.
+- **Online or offline** (Chloe, 14 November 2026; WPN-012). The power nodes are green while the
+  turret is online and red while it isn't: switched off, without power, or unable to work (its
+  aim can't turn, its barrel or gun is gone, or a node is).
 
 ### The power plant
 

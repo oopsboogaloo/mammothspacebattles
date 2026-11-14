@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, fieldId, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, fieldId, turretOnline, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
@@ -730,6 +730,9 @@ export const LINE_OFF = "#10151c";
 /** The light on the plant's tower. */
 export const LAMP_ON = "#3fdc5a";
 export const LAMP_OFF = "#ff4040";
+/** An electric turret's power nodes: online, offline (WPN-012). */
+export const NODE_ON = "#3f8f2a";
+export const NODE_OFF = "#8f2a24";
 
 function drawPowerLines(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   const spec = world.thrust?.spec.plant;
@@ -1230,6 +1233,9 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   const flashing = grace ? `p${playing!.n}-` : null;
   // Shield fields (SHD-002) are drawn as fields, after the bodies, not as bodies.
   const fields = new Set(world.bodies.filter((b) => b.shield).map((b) => fieldId(b.id)));
+  // An electric turret's power nodes show whether it is online: green, or red (WPN-012).
+  const nodes = new Map<string, boolean>();
+  for (const c of world.bodies) if (c.turret?.nodes) for (const n of c.turret.nodes) nodes.set(n, turretOnline(world, c));
   const drawBodies = (cam: Camera): void => {
     for (const b of world.bodies) {
       if (opts.groundLine && isGround(b)) continue;
@@ -1244,7 +1250,8 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       const cockpit = game && COCKPIT.test(b.id);
       const pod = !!opts.thrust && b.id === world.thrust?.spec.pod;
       const lamp = !!opts.thrust && b.id === world.thrust?.spec.plant?.light && !!world.thrust.state.plant;
-      const fill = lamp ? (plantOn(world.thrust!.state.plant!, world.time) ? LAMP_ON : LAMP_OFF) : b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : cockpit ? COCKPIT_FILL : pod ? POD_FILL : b.fixed ? COLORS.fixed : COLORS.body;
+      const node = nodes.get(b.id);
+      const fill = lamp ? (plantOn(world.thrust!.state.plant!, world.time) ? LAMP_ON : LAMP_OFF) : node !== undefined && b.integrity > 0 ? (node ? NODE_ON : NODE_OFF) : b.integrity <= 0 ? COLORS.wreck : gold ? COLORS.gold : rock ? ROCK_FILL : cockpit ? COCKPIT_FILL : pod ? POD_FILL : b.fixed ? COLORS.fixed : COLORS.body;
       // In Mammoth Asteroids a slug is too small to see at the arena's scale: a white dot, 2 px at least.
       if (game && b.id.includes("-shell-")) {
         const at = toScreen(cam, vp, b.position);

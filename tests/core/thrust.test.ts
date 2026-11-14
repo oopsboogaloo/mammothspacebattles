@@ -1,7 +1,7 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretOnline, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -794,6 +794,39 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     }
   }, 120_000);
 
+
+  it("WPN-012 an electric turret is online only while on, powered and whole: its nodes, aim, barrel and gun", () => {
+    const fresh = () => {
+      const { w } = game(3);
+      return { w, breech: body(w, "t6-breech")! };
+    };
+    expect(fresh().breech.turret!.nodes).toEqual(["t6-node-l", "t6-node-r"]);
+    let g = fresh();
+    expect(turretOnline(g.w, g.breech)).toBe(true);
+    g.breech.turret!.powered = false;
+    expect(turretOnline(g.w, g.breech)).toBe(false);
+    g = fresh();
+    g.breech.turret!.enabled = false;
+    expect(turretOnline(g.w, g.breech)).toBe(false);
+    // A node destroyed, or knocked off its base.
+    g = fresh();
+    body(g.w, "t6-node-r")!.integrity = 0;
+    expect(turretOnline(g.w, g.breech)).toBe(false);
+    g = fresh();
+    g.w.joints = g.w.joints.filter((j) => j.id !== "t6-w-node-l");
+    expect(turretOnline(g.w, g.breech)).toBe(false);
+    // Its aim can't turn: the pivot damaged past turning.
+    g = fresh();
+    g.w.joints.find((j) => j.id === "t6-w-pivot")!.integrity = 0.2;
+    expect(turretOnline(g.w, g.breech)).toBe(false);
+    // Its barrel lost; its gun destroyed.
+    g = fresh();
+    g.w.joints = g.w.joints.filter((j) => j.id !== "t6-w-barrel");
+    expect(turretOnline(g.w, g.breech)).toBe(false);
+    g = fresh();
+    g.breech.integrity = 0;
+    expect(turretOnline(g.w, g.breech)).toBe(false);
+  });
 
   // ---- The power plant (level 3) ----
   const plantState = (w: World) => st(w).plant!;

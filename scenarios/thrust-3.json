@@ -929,6 +929,10 @@
           "joint": "t1-w-pivot",
           "gun": "t1-breech",
           "barrel": "t1-barrel",
+          "nodes": [
+            "t1-node-l",
+            "t1-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -1256,6 +1260,10 @@
           "joint": "t2-w-pivot",
           "gun": "t2-breech",
           "barrel": "t2-barrel",
+          "nodes": [
+            "t2-node-l",
+            "t2-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -1583,6 +1591,10 @@
           "joint": "t3-w-pivot",
           "gun": "t3-breech",
           "barrel": "t3-barrel",
+          "nodes": [
+            "t3-node-l",
+            "t3-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -1910,6 +1922,10 @@
           "joint": "t4-w-pivot",
           "gun": "t4-breech",
           "barrel": "t4-barrel",
+          "nodes": [
+            "t4-node-l",
+            "t4-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -2237,6 +2253,10 @@
           "joint": "t5-w-pivot",
           "gun": "t5-breech",
           "barrel": "t5-barrel",
+          "nodes": [
+            "t5-node-l",
+            "t5-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -2564,6 +2584,10 @@
           "joint": "t6-w-pivot",
           "gun": "t6-breech",
           "barrel": "t6-barrel",
+          "nodes": [
+            "t6-node-l",
+            "t6-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,

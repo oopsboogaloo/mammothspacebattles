@@ -2552,6 +2552,10 @@
           "joint": "t6-w-pivot",
           "gun": "t6-breech",
           "barrel": "t6-barrel",
+          "nodes": [
+            "t6-node-l",
+            "t6-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -2879,6 +2883,10 @@
           "joint": "t7-w-pivot",
           "gun": "t7-breech",
           "barrel": "t7-barrel",
+          "nodes": [
+            "t7-node-l",
+            "t7-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -3206,6 +3214,10 @@
           "joint": "t8-w-pivot",
           "gun": "t8-breech",
           "barrel": "t8-barrel",
+          "nodes": [
+            "t8-node-l",
+            "t8-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -3533,6 +3545,10 @@
           "joint": "t9-w-pivot",
           "gun": "t9-breech",
           "barrel": "t9-barrel",
+          "nodes": [
+            "t9-node-l",
+            "t9-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -3860,6 +3876,10 @@
           "joint": "t10-w-pivot",
           "gun": "t10-breech",
           "barrel": "t10-barrel",
+          "nodes": [
+            "t10-node-l",
+            "t10-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -4187,6 +4207,10 @@
           "joint": "t11-w-pivot",
           "gun": "t11-breech",
           "barrel": "t11-barrel",
+          "nodes": [
+            "t11-node-l",
+            "t11-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -4514,6 +4538,10 @@
           "joint": "t12-w-pivot",
           "gun": "t12-breech",
           "barrel": "t12-barrel",
+          "nodes": [
+            "t12-node-l",
+            "t12-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
@@ -4841,6 +4869,10 @@
           "joint": "t13-w-pivot",
           "gun": "t13-breech",
           "barrel": "t13-barrel",
+          "nodes": [
+            "t13-node-l",
+            "t13-node-r"
+          ],
           "range": 80,
           "wait": 1.5,
           "hold": 0.25,
