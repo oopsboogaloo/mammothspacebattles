@@ -10,7 +10,7 @@ import { shown } from "./smooth.ts";
 import { View } from "./View.tsx";
 import { usePad, type PadAnalog, type PadGame, type PadState } from "./gamepad.ts";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
-import { coolantStatus, easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
+import { coolantStatus, easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, wrapShift, zoomFor } from "./thrustHud.ts";
 import { THRUST_DESTRUCT } from "../core/index.ts";
 
 export const thrustScreen = signal<"title" | "play">("title");
@@ -58,7 +58,7 @@ function useFollowCamera(): void {
     let lean = { x: 0, y: 0 };
     // How far the view has gone on round a wrapping level, and where it last looked before that.
     let shift = { x: 0, y: 0 };
-    let seen: { x: number; y: number } | null = null;
+    let seen: { n: string; alive: boolean; at: { x: number; y: number } } | null = null;
     let then = performance.now();
     const tick = () => {
       raf = requestAnimationFrame(tick);
@@ -77,16 +77,11 @@ function useFollowCamera(): void {
       const raw = ship ?? last ?? w.thrust.spec.start;
       // The level wraps round (MTH-093): when the ship goes off one side and comes in at the other,
       // the view goes on past the edge (the renderer draws the world's copies there) rather than
-      // jumping back across the level, so the stars behind don't jump either.
-      const b = w.bounds;
-      if (b.wrap && seen) {
-        const W = b.max.x - b.min.x;
-        const H = b.max.y - b.min.y;
-        if (Math.abs(raw.x - seen.x) > W / 2) shift.x -= Math.sign(raw.x - seen.x) * W;
-        if (Math.abs(raw.y - seen.y) > H / 2) shift.y -= Math.sign(raw.y - seen.y) * H;
-      }
-      if (w.time < 0.05) shift = { x: 0, y: 0 };
-      seen = raw;
+      // jumping back across the level, so the stars behind don't jump either (wrapShift).
+      // A new ship, or this one beamed back to the start, is a jump the view mustn't follow round.
+      const view = { n: `${w.thrust.state.n}:${w.thrust.state.stats.back}`, alive: !!ship, at: raw };
+      shift = w.time < 0.05 ? { x: 0, y: 0 } : wrapShift(shift, seen, view, w.bounds, !!w.thrust.spec.escape);
+      seen = view;
       const at = { x: raw.x + shift.x, y: raw.y + shift.y };
       const zoom = zoomFor(vp.height);
       const c = camera.value;
@@ -175,6 +170,9 @@ function hold(channel: string, by: number): void {
   if (was === 0 && held[channel] > 0) sendControl(channel, 1, `Key ${channel}`, ++group);
   else if (was > 0 && held[channel] === 0) sendControl(channel, 0, `Key ${channel}`, group);
 }
+
+/** How long the hyperspace star plays as a ship beams out of a won level, ms on screen, before the result. */
+const BEAM_OUT_MS = 1000;
 
 const ended = (): boolean => {
   const phase = sandbox.value?.world.thrust?.state.phase;
@@ -354,18 +352,31 @@ function Play() {
       releaseKeys();
     };
   }, []);
-  // The level is over, either way: the world rests, and the keys are let go.
+  // The level is over, either way: the world rests, and the keys are let go. Won, the ship's
+  // hyperspace star (beaming out) plays first, the world running on for it.
+  const [shownWon, setShownWon] = useState(false);
   useEffect(() => {
-    if (phase !== "won" && phase !== "over") return;
+    if (phase !== "won" && phase !== "over") {
+      setShownWon(false);
+      return;
+    }
     releaseKeys();
-    playing.value = false;
+    if (phase === "over") {
+      playing.value = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      playing.value = false;
+      setShownWon(true);
+    }, BEAM_OUT_MS);
+    return () => clearTimeout(t);
   }, [phase]);
 
   if (!game) return null;
   const s = game.state;
   const level = game.spec.level ?? 1;
   const over = s.phase === "over";
-  const won = s.phase === "won";
+  const won = s.phase === "won" && shownWon;
   const ship = shipStatus(sb.world);
   const coolant = coolantStatus(sb.world);
   const back = s.backAt !== undefined && sb.world.time - s.backAt < BACK_NOTE;
@@ -412,12 +423,6 @@ function Play() {
           </span>
         )}
       </div>
-      {s.phase === "between" && sb.world.time >= (s.noteAt ?? 0) && (
-        <div class="mth-note" data-testid="mth-lost">
-          SHIP LOST
-          <small>{s.lives > 0 ? "The next one is beaming in. Nothing else has changed." : ""}</small>
-        </div>
-      )}
       {s.phase === "flying" && !back && sb.world.bodies.some((b) => b.id === game.spec.tractor.replaceAll("{n}", String(s.n)) && b.tractor?.siphoning) && (
         <div class="mth-note" data-testid="mth-refuel">
           REFUELLING
@@ -507,10 +512,31 @@ function Won({ level, score, lives, pod, fuel, plant }: { level: number; score: 
 }
 
 function GameOver({ score, level, reason }: { score: number; level: number; reason?: "ships" | "pod" | "plant" }) {
+  // The plant blew with the pod still down (MTH-082): the screen fades quickly to white, and then,
+  // with no border, the words (Chloe, 14 November 2026).
+  if (reason === "plant")
+    return (
+      <div class="mth-whiteout" data-testid="mth-over">
+        <h2>Planet destroyed, mission failed.</h2>
+        <div class="mth-whiteout-after">
+          <p>
+            Score <b>{score}</b> · level <b>{level}</b>
+          </p>
+          <div class="mas-row">
+            <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-again">
+              Play again
+            </button>
+            <button class="mas-btn" onClick={quit}>
+              Title
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   return (
     <div class="mas-modal" data-testid="mth-over">
       <h2>Game over</h2>
-      <p>{reason === "pod" ? "The pod was destroyed." : reason === "plant" ? "The power plant blew with the pod still down." : "No ships left."}</p>
+      <p>{reason === "pod" ? "The pod was destroyed." : "No ships left."}</p>
       <p>
         Score <b>{score}</b> · level <b>{level}</b>
       </p>

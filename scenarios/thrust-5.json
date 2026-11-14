@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "thrust-5",
   "title": "Mammoth Thrust: The asteroid",
-  "description": "An asteroid curled round on itself, with one way into its caves. Its gravity pulls toward its middle. Fly in, take the pod on the tether, and carry it 150 m out from the middle.",
+  "description": "An asteroid curled round on itself, with one way into its caves. Its gravity pulls toward its middle. Fly in, take the pod on the tether, and carry it 300 m out from the middle.",
   "profile": "sandbox",
   "seed": 1,
   "world": {
@@ -12,12 +12,12 @@
     },
     "bounds": {
       "min": {
-        "x": -190,
-        "y": -190
+        "x": -340,
+        "y": -340
       },
       "max": {
-        "x": 190,
-        "y": 190
+        "x": 340,
+        "y": 340
       },
       "wrap": true,
       "farField": 10,
@@ -26,20 +26,20 @@
     "terrain": {
       "outline": [
         {
-          "x": -190,
-          "y": 190
+          "x": -340,
+          "y": 340
         },
         {
-          "x": 190,
-          "y": 190
+          "x": 340,
+          "y": 340
         },
         {
-          "x": 190,
-          "y": -190
+          "x": 340,
+          "y": -340
         },
         {
-          "x": -190,
-          "y": -190
+          "x": -340,
+          "y": -340
         }
       ],
       "islands": [
@@ -3706,7 +3706,13 @@
           "wait": 1.5,
           "hold": 0.25,
           "aim": "random",
-          "seed": 509
+          "seed": 509,
+          "avoid": [
+            [
+              -0.87,
+              -0.1937
+            ]
+          ]
         },
         "magazine": {
           "count": 40,
@@ -4037,7 +4043,13 @@
           "wait": 1.5,
           "hold": 0.25,
           "aim": "random",
-          "seed": 510
+          "seed": 510,
+          "avoid": [
+            [
+              0.0376,
+              0.87
+            ]
+          ]
         },
         "magazine": {
           "count": 40,
@@ -9922,13 +9934,17 @@
               "toughness": 3000
             },
             "shield": {
-              "radius": 3.352363,
+              "radius": 4.452363,
               "channel": "shield",
               "grow": 14,
-              "burn": 0.8,
-              "hitBurn": 0.005,
-              "minHit": 0.1,
+              "burn": 0.4,
+              "hitBurn": 0.0025,
+              "minHit": 0.05,
               "mass": 2,
+              "spring": {
+                "stiffness": 3000,
+                "damping": 0.15
+              },
               "from": [
                 "p{n}-tank-l",
                 "p{n}-tank-r"
@@ -10843,7 +10859,7 @@
           "x": 0,
           "y": 0
         },
-        "radius": 150
+        "radius": 300
       },
       "pod": "pod",
       "turrets": [
@@ -10890,7 +10906,7 @@
           "first": 2.5,
           "more": 1
         },
-        "countdown": 5,
+        "countdown": 15,
         "perLeak": 3,
         "leakSpeed": 20,
         "blastLeaks": 3,
@@ -11339,20 +11355,20 @@
         "pitch": 1,
         "sky": [
           {
-            "x": -191,
-            "y": 191
+            "x": -341,
+            "y": 341
           },
           {
-            "x": 191,
-            "y": 191
+            "x": 341,
+            "y": 341
           },
           {
-            "x": 191,
-            "y": -191
+            "x": 341,
+            "y": -341
           },
           {
-            "x": -191,
-            "y": -191
+            "x": -341,
+            "y": -341
           }
         ],
         "caves": [

@@ -90,7 +90,8 @@ export interface ThrustState {
   /** The power plant (plant.ts), if the level has one. */
   plant?: PlantState;
   /** Rings to draw where something beamed in: the step, the place and the size. */
-  beams: { at: number; x: number; y: number; r: number }[];
+  /** Where ships beam in or out (the hyperspace star: in, it shrinks onto the ship; out, it grows from it). */
+  beams: { at: number; x: number; y: number; r: number; out?: boolean }[];
   /** The flying ship's fuel lines that have been cut, as "tank>engine", and those of a wing lost whole, whose engines burn on from its tank (MTH-062). */
   cut?: string[];
   burning?: string[];
@@ -377,6 +378,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
         if (s.plant?.critical !== undefined && spec.plant) s.bonus.plant = spec.plant.bonus ?? PLANT_BONUS;
         s.score += s.bonus.pod + s.bonus.fuel + (s.bonus.plant ?? 0);
         s.phase = "won";
+        s.beams.push({ at: world.tick, x: hull.position.x, y: hull.position.y, r: 4, out: true });
         world.events.push({ tick: world.tick, type: "thrust.won", data: { score: s.score, pod: s.bonus.pod, fuel: s.bonus.fuel } });
         return changed;
       }
@@ -403,7 +405,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       world.contacts = world.contacts.filter((c) => !ship.has(c.a) && !ship.has(c.b));
       s.stats.back += 1;
       s.backAt = now;
-      s.beams.push({ at: world.tick, x: from.x, y: from.y, r: 4 }, { at: world.tick, x: spec.start.x, y: spec.start.y, r: 4 });
+      s.beams.push({ at: world.tick, x: from.x, y: from.y, r: 4, out: true }, { at: world.tick, x: spec.start.x, y: spec.start.y, r: 4 });
       world.events.push({ tick: world.tick, type: "thrust.back", data: { n: s.n } });
       changed = true;
     }

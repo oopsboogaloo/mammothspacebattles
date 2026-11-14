@@ -4,7 +4,8 @@
 //   node scripts/thrust.ts            writes scenarios/thrust-1.json … thrust-5.json, and thrust-test.json
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseScenario } from "../src/core/index.ts";
+import { initialWorld, parseScenario } from "../src/core/index.ts";
+import { bearingsOnto } from "./aim.ts";
 import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
 import { narrowest, type Vec } from "./terrain.ts";
 import { capacitor, electricTurret, generator, pipe, turret, type ElectricTuning, type TurretTuning } from "./turretParts.ts";
@@ -48,14 +49,18 @@ function ship() {
   // Held on a fuel tank in its wedge, the beam draws the tank's fuel into the ship's two tanks
   // (TRC-008), 2 kg a game second: a full 8.1 kg tank in 8 s on screen. The tank isn't pulled.
   const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, maxSpeed: 3, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
-  // The shield (SHD-001…SHD-005; Chloe, 14 November 2026): held on, a field grows round the ship
-  // in a quarter of a game second and stays up while there is fuel, burning it fast: 0.8 kg a game
-  // second, full tanks (16.2 kg) in 40 s on screen. Each hit costs more: 0.005 kg for each N·s of
-  // its impulse, and at least 0.1 kg (a slug or a 1 kg rock: 0.1 kg; the ship falling onto rock at
-  // 20 m/s: about 3.5 kg). The engines and the gun don't work while it is up. First values, for
-  // Chloe to tune. The field weighs 2 kg while it is up: lighter, and the weld that holds it to the
-  // ship soaks up its bounce (a 1 kg rock at 10 m/s came back at 0 m/s off a 0.5 kg field, 4 m/s off 2 kg).
-  const shield = { channel: "shield", grow: 14, burn: 0.8, hitBurn: 0.005, minHit: 0.1, mass: 2 };
+  // The shield (SHD-001…SHD-006; Chloe, 14 November 2026): held on, a field grows round the ship
+  // in a quarter of a game second and stays up while there is fuel: 0.4 kg a game second (half the
+  // first 0.8, which Chloe found drained it far too fast), so full tanks (8.1 kg) last 40 s on
+  // screen. Each hit costs more: 0.0025 kg for each N·s of its impulse, at least 0.05 kg. The
+  // engines and the gun don't work while it is up. The field weighs 2 kg.
+  // It is elastic (SHD-006): it clears the ship by 1.5 m and is held to the ship's centre by a
+  // spring of 3,000 N/m, damped at 0.15 of critical, pulling on the cockpit. Struck, it gives, the
+  // ship sinking into it over that 1.5 m, and pushes back. Measured falling flat onto rock (no
+  // gravity, the test level): undamaged up to 25 m/s and bouncing back at two thirds of its speed;
+  // 2 welds broken at 30 m/s and 4 at 40, where the spring bottoms out and the ship's parts meet
+  // the rock. Without a shield 4 welds break at 20 m/s; with the first, rigid field 2 at 20 and 7 at 30.
+  const shield = { channel: "shield", grow: 14, burn: 0.4, hitBurn: 0.0025, minHit: 0.05, mass: 2, margin: 1.5, spring: { stiffness: 3000, damping: 0.15 } };
   // Half Mammoth Asteroids' fuel (Chloe, 14 November 2026: with a full load you never needed to
   // refuel): 8.1 kg in the two tanks, as much as one fuel tank on the ground holds.
   return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor, shield, fuel: 0.5 });
@@ -95,7 +100,10 @@ const PLANT: PlantTuning = { coolant: 12, rate: 0.1, parcel: 0.01, puff: 0.12, c
  */
 const PLANT_LEAK = { perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below: 0.5, rate: 0.5, last: [1, 1.5] as [number, number] }, seed: 31 };
 const PLANT_OFFLINE = { first: 2.5, more: 1 };
-const PLANT_COUNTDOWN = 5;
+/** Turrets don't fire within this of a clear shot at the plant, rad (WPN-014): 10°. */
+const REACTOR_MARGIN = (10 * Math.PI) / 180;
+/** From critical to the blast, game seconds: 30 s on screen (Chloe, 14 November 2026: 10 was really tough). */
+const PLANT_COUNTDOWN = 15;
 const SHOCK = 0.5;
 const TURRET: TurretTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", arc: Math.PI / 3, rate: 2.1, bolt: BOLT, speed: 40, reload: 1, bolts: 40, shots: 5, charge: 1, burn: 0.02, fuel: 8.1 };
 
@@ -379,6 +387,18 @@ function write(l0: Level) {
     ui: { keys: { q: "left", e: "right", w: "fire", s: "reverse", z: "tractor" }, overlays: [], labels: false }, // the page adds Space, the arrows, Shifts and the right-hand keys
   };
   parseScenario(scenario); // fails loudly if the scenario is malformed
+  // Turrets never fire within 10° of a bearing whose bolt would land on the power plant (WPN-014;
+  // Chloe, 14 November 2026: they were shredding it). The bolts fly in arcs, so each bearing's
+  // flight is followed on the world as it starts (scripts/aim.ts).
+  if (plant) {
+    const w = initialWorld(parseScenario(scenario));
+    for (const b of scenario.world.bodies as Json[]) {
+      if (!b.turret) continue;
+      const avoid = bearingsOnto(w, w.bodies.find((x) => x.id === b.id)!, plant.parts, { margin: REACTOR_MARGIN, step: Math.PI / 720 });
+      if (avoid.length) b.turret = { ...(b.turret as Json), avoid };
+    }
+    parseScenario(scenario);
+  }
   writeFileSync(join(root, "scenarios", `${name}.json`), JSON.stringify(scenario, null, 2) + "\n");
   console.log(`wrote scenarios/${name}.json`);
 }
@@ -426,8 +446,9 @@ write({
       tank: 1,
       generator: { at: P(-65.3, 31.0) },
       capacitor: { at: P(-35.94, 18.6) },
-      // Down the mesa's side, from the tank's stand to the generator's side.
-      pipe: [P(-58.35, 38.3), P(-59.47, 36.29), P(-60.21, 33.96), P(-61.27, 32.9), P(-64.45, 31.55)],
+      // Down the mesa's side, from the tank's stand to the generator's side, 0.4 m out from the rock
+      // all the way, so a slug can reach every piece of it (it ran inside the rock at first).
+      pipe: [P(-58.35, 38.4), P(-60.18, 38.09), P(-61.01, 34.46), P(-62.35, 33.92), P(-64.28, 31.36), P(-64.45, 31.6)],
       cables: [
         { points: [P(-65.3, 31.0), P(-64.24, 19.65), P(-57.03, 15.09), P(-36.68, 16.15), P(-35.94, 18.6)], from: "generator" },
         { points: [P(-35.94, 18.6), P(-34.03, 10.96), P(-23.11, 11.91), P(-22.9, 14.3)], from: "capacitor" },
@@ -688,8 +709,9 @@ write({
 // reach the upper part across the open by either of two transmitters. Thirteen electric turrets,
 // inside and out; the pod stands on a ledge in the right-hand cave, its stand level to the pull
 // (on the ledge's slope it rolled out of its cup). Gravity is a uniform ball's (FLT-015), 4 m/s² at
-// 84 m (the asteroid's area as a disc), from its middle; the level is left 150 m from there, about
-// 25 m beyond its furthest point, in a square 380 m across that wraps round.
+// 84 m (the asteroid's area as a disc), from its middle; the level is left 300 m from there, about
+// 175 m beyond its furthest point (150 until Chloe asked for twice the room to fly about, 14
+// November 2026), in a square 680 m across that wraps round.
 {
   // The asteroid's rock, counter-clockwise (rock on the left), its caves included.
   const island = [
@@ -731,7 +753,7 @@ write({
     n: 5,
     seed: 500,
     title: "The asteroid",
-    description: "An asteroid curled round on itself, with one way into its caves. Its gravity pulls toward its middle. Fly in, take the pod on the tether, and carry it 150 m out from the middle.",
+    description: "An asteroid curled round on itself, with one way into its caves. Its gravity pulls toward its middle. Fly in, take the pod on the tether, and carry it 300 m out from the middle.",
     colour: "#8a3cff",
     top: 150,
     ground: [],
@@ -760,7 +782,7 @@ write({
       { at: P(-11.51, -71.98), angle: 0.132 },
       { at: P(-41.57, -93.41), angle: 2.403 },
     ],
-    asteroid: { island, radius: 84, gravity: 4, box: 190, escape: 150, core: P(2.47, -1.17) },
+    asteroid: { island, radius: 84, gravity: 4, box: 340, escape: 300, core: P(2.47, -1.17) },
     plant: {
       at: P(-25.37, -70.32),
       angle: -0.205,

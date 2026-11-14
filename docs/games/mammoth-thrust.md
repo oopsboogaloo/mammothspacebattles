@@ -134,8 +134,9 @@ other sources in §12):
   four fuel tanks stand round the rock, each upright to it. Gravity pulls toward the asteroid's
   middle as a uniform ball's: 4 m/s² at 84 m (the asteroid's area as a disc), falling as 1/r²
   further out and in a straight line to nothing at the middle (its caves aren't counted). The level
-  is left by getting 150 m from the middle with the pod, about 25 m past its furthest rock; without
-  the pod, the ship is beamed back, as at a level's top. Its square of open space is 380 m across.
+  is left by getting 300 m from the middle with the pod, about 175 m past its furthest rock (150 m
+  until Chloe asked for twice the room, 14 November 2026); without the pod, the ship is beamed back,
+  as at a level's top. Its square of open space is 680 m across.
   The way in is about 19 m wide.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
   through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
@@ -271,7 +272,7 @@ reactor and of our factory below.
   range, fewer further off, none beyond its reach. It also knocks the plant offline, as a hit does.
 - **Outages** (Chloe). Below half its coolant the power fails now and then, for 2 to 3 s, more
   often the less is left: on average every 8 s at a quarter, every 4 s near empty.
-- **Critical.** With no coolant left, a 10 s countdown on the page, then it explodes. Out above the
+- **Critical.** With no coolant left, a 30 s countdown on the page (10 s until 14 November 2026), then it explodes. Out above the
   top with the pod before then: 2000 more. If it blows with the pod still down, the game is over.
   Critical, it powers nothing.
 - **Power lines** run from the plant through the rock to every turret it powers: white while they
@@ -305,10 +306,15 @@ plan below (a cheat that turned shells and gas back and let rock through).
   bolts bounce off; gas is turned back and pushed out as it grows; the pod too, when not on the
   tether. The field is welded rigidly to the cockpit, so the ship is pushed by what hits it and
   comes down on it against rock. A blast outside it doesn't damage what is inside.
-- It burns fuel fast: 0.8 kg a game second (full tanks in 40 s on screen), and each hit more:
-  0.005 kg for each N·s, at least 0.1 kg.
+- It burns fuel: 0.4 kg a game second (full tanks, 8.1 kg, in 40 s on screen; half the first
+  rate, Chloe, 14 November 2026), and each hit more: 0.0025 kg for each N·s, at least 0.05 kg.
+- It is elastic (SHD-006; Chloe: "shrink and then rebound"): the field clears the ship by 1.5 m and
+  is held to the ship's centre by a spring. Crashing, the ship sinks into it and is pushed back out.
+  Falling flat onto rock: undamaged up to 25 m/s, bouncing back at about two thirds of its speed;
+  2 welds broken at 30 m/s, 3 at 35 and 40, 9 broken and 4 parts destroyed at 50. (Bare: 4 welds
+  broken at 20 m/s.)
 - While it is up the five engines and the gun don't work. The tractor still does.
-- The field weighs 2 kg while up (0.5 kg lost its bounce in the weld).
+- The field weighs 2 kg while up.
 
 ### Powered turrets
 
@@ -423,6 +429,10 @@ Priority: **M** must, **S** should.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
 - **MTH-014** `[M]` Level 4 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
   and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=4` plays from it.
+- **MTH-099** `[M]` No turret fires within 10° of a bearing whose bolt would land on the plant
+  (WPN-014). Worked out for every level as it is built; as built on 14 November 2026: level 4's three
+  turrets under its mouth and two of level 5's (its 9th and 10th) have bearings they avoid; no
+  bolt of level 3's turrets reaches the plant.
 - **MTH-097** `[M]` Level 2 is Chloe's chamber (§3): three electric turrets on their own power, two
   of them on one capacitor; three fuel tanks; the pod on the chamber's floor. Nothing on it moves
   as it starts.
@@ -485,21 +495,28 @@ Priority: **M** must, **S** should.
 - **MTH-081** `[M]` Slugs in the domes leak the reactor's coolant as gas: each adds the same to
   the flow (4 minutes for one, that divided by the slugs for more). Every third opens a new leak
   where it strikes; the others make the newest leak bigger. The gas pushes what is in it.
-- **MTH-082** `[M]` With no coolant left the plant goes critical: the page counts down 10 s, then
-  it explodes. With the pod still down the game is over; out with it first, 2000 more.
+- **MTH-082** `[M]` With no coolant left the plant goes critical: the page counts down 30 s, then
+  it explodes. With the pod still down the game is over: the screen fades quickly to white and
+  then, with no border, "Planet destroyed, mission failed." (Chloe, 14 November 2026). Out with the
+  pod first, 2000 more.
 - **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond
   them have no power, and the others still do.
-- **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s.
+- **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s, and
+  electricity fizzes over it for as long (Chloe, 14 November 2026).
 - **MTH-088** `[M]` An explosion that reaches a dome punches leaks in it, more the nearer it went
   off (up to 3), and knocks the plant offline.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
   often the less coolant is left.
 - **MTH-091** `[M]` Level 5 is Chloe's asteroid (§3): rock as an island in open space, gravity
   toward its middle as a uniform ball's (inverse square outside, linear inside), left by getting
-  150 m from its middle, about 25 m past its furthest rock. Thirteen electric turrets, four fuel
+  300 m from its middle, about 175 m past its furthest rock. Thirteen electric turrets, four fuel
   tanks, the plant in its lower cave; nothing on it moves as it starts.
 - **MTH-095** `[M]` A turret or power line may take power through any one of several transmitters
   (`"tx1|tx2"`): it keeps power while one of them stands.
+- **MTH-100** `[M]` A ship beaming in or out shows a four-pointed hyperspace star (Chloe, 14
+  November 2026): out (leaving with the pod, or beamed back without it), it grows from the ship and
+  fades, and the level's result follows; in, it shrinks onto the ship as it appears. A lost ship is
+  simply replaced: no message.
 - **MTH-093** `[M]` Every level wraps round at its sides, with no walls: the ground's two ends meet
   at one height, a ship (and the pod on its tether) flown off one side comes in at the other, and
   the view goes on across the edge without a jump. The asteroid's square wraps on all four sides.

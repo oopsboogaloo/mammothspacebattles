@@ -396,6 +396,14 @@ function validateShield(v: V, s: unknown, path: string): void {
   num(v, s.mass, `${path}.mass`, { positive: true });
   for (const k of ["burn", "hitBurn", "minHit"] as const) num(v, s[k], `${path}.${k}`, { min: 0 });
   for (const k of ["from", "blocks"] as const) if (!Array.isArray(s[k]) || !(s[k] as unknown[]).every((x) => typeof x === "string")) err(v, `${path}.${k}`, "must be a list of names");
+  if (s.spring !== undefined) {
+    if (!isObj(s.spring)) err(v, `${path}.spring`, "must be {stiffness, damping, spread?}");
+    else {
+      num(v, s.spring.stiffness, `${path}.spring.stiffness`, { positive: true });
+      num(v, s.spring.damping, `${path}.spring.damping`, { min: 0 });
+      if (s.spring.spread !== undefined && typeof s.spring.spread !== "boolean") err(v, `${path}.spring.spread`, "must be true or false");
+    }
+  }
 }
 
 function validateTractor(v: V, t: unknown, path: string): void {
@@ -490,6 +498,8 @@ function validateTurret(v: V, t: unknown, path: string): void {
   str(v, t.joint, `${path}.joint`);
   str(v, t.gun, `${path}.gun`);
   for (const k of ["battery", "barrel", "target"]) if (t[k] !== undefined) str(v, t[k], `${path}.${k}`);
+  if (t.avoid !== undefined && (!Array.isArray(t.avoid) || !t.avoid.every((r: unknown) => Array.isArray(r) && r.length === 2 && r.every((x) => typeof x === "number" && Number.isFinite(x)) && r[0] <= r[1])))
+    err(v, `${path}.avoid`, "must be a list of [from, to] angle ranges, from ≤ to");
   if (t.cabled !== undefined && typeof t.cabled !== "boolean") err(v, `${path}.cabled`, "must be true or false");
   if (t.nodes !== undefined && (!Array.isArray(t.nodes) || !t.nodes.every((x: unknown) => typeof x === "string"))) err(v, `${path}.nodes`, "must be a list of body ids");
   if (t.range !== undefined) num(v, t.range, `${path}.range`, { positive: true });

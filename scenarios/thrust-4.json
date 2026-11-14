@@ -945,7 +945,13 @@
           "wait": 1.5,
           "hold": 0.25,
           "aim": "random",
-          "seed": 301
+          "seed": 301,
+          "avoid": [
+            [
+              -0.87,
+              -0.6518
+            ]
+          ]
         },
         "magazine": {
           "count": 40,
@@ -1276,7 +1282,17 @@
           "wait": 1.5,
           "hold": 0.25,
           "aim": "random",
-          "seed": 302
+          "seed": 302,
+          "avoid": [
+            [
+              -0.87,
+              -0.5035
+            ],
+            [
+              0.2601,
+              0.6397
+            ]
+          ]
         },
         "magazine": {
           "count": 40,
@@ -1607,7 +1623,13 @@
           "wait": 1.5,
           "hold": 0.25,
           "aim": "random",
-          "seed": 303
+          "seed": 303,
+          "avoid": [
+            [
+              -0.87,
+              -0.4162
+            ]
+          ]
         },
         "magazine": {
           "count": 40,
@@ -6126,13 +6148,17 @@
               "toughness": 3000
             },
             "shield": {
-              "radius": 3.352363,
+              "radius": 4.452363,
               "channel": "shield",
               "grow": 14,
-              "burn": 0.8,
-              "hitBurn": 0.005,
-              "minHit": 0.1,
+              "burn": 0.4,
+              "hitBurn": 0.0025,
+              "minHit": 0.05,
               "mass": 2,
+              "spring": {
+                "stiffness": 3000,
+                "damping": 0.15
+              },
               "from": [
                 "p{n}-tank-l",
                 "p{n}-tank-r"
@@ -7079,7 +7105,7 @@
           "first": 2.5,
           "more": 1
         },
-        "countdown": 5,
+        "countdown": 15,
         "perLeak": 3,
         "leakSpeed": 20,
         "blastLeaks": 3,

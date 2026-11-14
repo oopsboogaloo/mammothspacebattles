@@ -298,6 +298,8 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
   const inBeam = new Map<string, RB[]>();
   for (const r of rbs) {
     if (r.invMass === 0 || roots.get(r.body.id) === own) continue;
+    // What passes through the ship is the ship's own (its elastic shield's field, SHD-006).
+    if (r.body.passes?.includes(ship.body.id)) continue;
     if (t.only && !t.pullAny && !t.only.includes(r.body.id)) continue;
     // What its siphon draws from isn't pulled (TRC-008): a fuel tank stays where it stands.
     if (t.siphon && r.body.siphon) continue;

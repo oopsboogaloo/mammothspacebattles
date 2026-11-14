@@ -56,6 +56,11 @@ export interface Turret {
   enabled: boolean;
   /** Without power (Mammoth Thrust's power plant off, or its line cut) it turns and fires nothing, as when off. */
   powered?: boolean;
+  /**
+   * Bearings it never fires on (WPN-014): ranges of its joint's angle, rad, [from, to]. Mammoth
+   * Thrust's turrets don't fire within 10° of a clear shot at the power plant.
+   */
+  avoid?: [number, number][];
   /** The body it watches for, by id: set by the scenario, or by a game each step. */
   target?: string;
   /** State. */
@@ -212,6 +217,9 @@ export function turretWorks(world: World, carriage: Body): boolean {
   return true;
 }
 
+/** Whether a turret avoids this bearing (WPN-014). */
+const avoided = (t: Turret, angle: number): boolean => !!t.avoid?.some(([lo, hi]) => angle >= lo - 1e-9 && angle <= hi + 1e-9);
+
 function setChannel(world: World, channel: string, value: number): void {
   if ((world.controls[channel] ?? 0) !== value) world.controls = { ...world.controls, [channel]: value };
 }
@@ -263,7 +271,16 @@ export function runTurrets(world: World, dt: number): number {
     const pick = (): void => {
       t.phase = "turning";
       t.error = (2 * nextFloat(t.rng) - 1) * t.spread;
-      if (t.aim === "random") joint.turn!.target = joint.turn!.min + (joint.turn!.max - joint.turn!.min) * nextFloat(t.rng);
+      if (t.aim === "random") {
+        // A bearing in its arc, and not one it never fires on (WPN-014): a few tries, then the
+        // nearest end of the range it fell in.
+        const span = joint.turn!.max - joint.turn!.min;
+        let to = joint.turn!.min + span * nextFloat(t.rng);
+        for (let k = 0; k < 8 && avoided(t, to); k++) to = joint.turn!.min + span * nextFloat(t.rng);
+        const r = t.avoid?.find(([lo, hi]) => to >= lo && to <= hi);
+        if (r) to = r[0] - joint.turn!.min > joint.turn!.max - r[1] ? r[0] - 1e-3 : r[1] + 1e-3;
+        joint.turn!.target = Math.min(joint.turn!.max, Math.max(joint.turn!.min, to));
+      }
     };
     if (t.phase === "idle") {
       t.phase = "waiting";
@@ -289,6 +306,11 @@ export function runTurrets(world: World, dt: number): number {
     const a = world.bodies.find((b) => b.id === joint.a);
     const settled = !!a && Math.abs(c.angle - a.angle - joint.referenceAngle) < SETTLED;
     if (!onTarget || !settled || !railgunReady(gun)) continue;
+    // Never on a bearing it avoids (WPN-014): it picks another.
+    if (avoided(t, joint.referenceAngle)) {
+      if (t.aim === "random") pick();
+      continue;
+    }
     const battery = t.battery !== undefined ? world.bodies.find((b) => b.id === t.battery)?.charge : undefined;
     if (t.battery !== undefined && (!battery || battery.shots < 1)) continue; // waiting on power
     if (battery) battery.shots -= 1;

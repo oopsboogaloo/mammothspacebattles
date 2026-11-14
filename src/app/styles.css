@@ -377,6 +377,13 @@ button { cursor: pointer; }
 /* Mammoth Thrust: the tractor's button, over Fire; the shield's, over REV. */
 .mas-thrust.shield { left: calc(max(18px, env(safe-area-inset-left)) + 104px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px); width: 76px; height: 64px; font-size: 14px; letter-spacing: 0.04em; }
 .mas-thrust.tractor { right: calc(max(18px, env(safe-area-inset-right)) + 104px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px); width: 76px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
+/* Mammoth Thrust: the planet destroyed (MTH-082): a quick fade to white, then the words, no border. */
+.mth-whiteout { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #fff; color: #000; text-align: center; animation: mth-white 0.8s ease-in both; }
+.mth-whiteout h2 { margin: 0; font-size: 30px; letter-spacing: 0.08em; animation: mth-fade 1s ease-out 0.8s both; }
+.mth-whiteout-after { display: flex; flex-direction: column; align-items: center; gap: 12px; animation: mth-fade 0.8s ease-out 1.8s both; }
+.mth-whiteout .mas-btn { color: #000; border-color: #000; background: transparent; }
+@keyframes mth-white { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mth-fade { from { opacity: 0; } to { opacity: 1; } }
 .mth-note { position: absolute; top: 22%; left: 0; right: 0; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 0.12em; pointer-events: none; }
 .mth-step { position: absolute; top: 34px; left: 12px; font-size: 11px; opacity: 0.6; pointer-events: none; font-variant-numeric: tabular-nums; }
 .mth-step.behind { color: #ff6b6b; opacity: 1; }

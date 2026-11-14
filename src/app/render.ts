@@ -439,6 +439,8 @@ export type Ctx = Pick<
   | "stroke"
   | "save"
   | "restore"
+  | "translate"
+  | "rotate"
   | "setLineDash"
   | "fillText"
   | "strokeStyle"
@@ -852,12 +854,16 @@ function drawMachineMarks(ctx: Ctx, world: World, c: Camera, vp: Viewport, b: Bo
     const p = at(0, 0);
     const size = 0.6 * b.shape.radius * c.zoom;
     if (size < 4) return;
-    // (Upright on the screen, however the tank stands.)
+    // Along the tank's base, turning as the tank turns (Chloe): never held level on the screen.
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(-b.angle);
     ctx.fillStyle = COLORS.bodyStroke;
     ctx.font = `${Math.round(size)}px 'IBM Plex Mono', monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("FUEL", p.x, p.y);
+    ctx.fillText("FUEL", 0, 0);
+    ctx.restore();
   }
 }
 
@@ -892,6 +898,36 @@ function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
         const q = toScreen(c, vp, { x: a.x + d.x * f + n.x * off, y: a.y + d.y * f + n.y * off });
         if (i === 0) ctx.moveTo(q.x, q.y);
         else ctx.lineTo(q.x, q.y);
+      }
+      ctx.stroke();
+    }
+  }
+  // A ship in the shock (MTH-084): electricity fizzing over it for as long as it has no control.
+  const game = world.thrust;
+  if (s.shockUntil !== undefined && world.time < s.shockUntil && game) {
+    const prefix = `p${game.state.n}-`;
+    const ship = world.bodies.filter((b) => b.id.startsWith(prefix) && !b.id.includes("-shell-") && !b.id.endsWith("-field"));
+    if (!ship.length) return;
+    // Jagged sparks between neighbouring parts, and round each, redrawn every step.
+    for (const [width, colour, salt] of [[Math.max(3, 0.3 * c.zoom), "rgba(140, 200, 255, 0.35)", 0], [Math.max(1, 0.08 * c.zoom), "#eaf6ff", 3]] as const) {
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      for (let k = 0; k < ship.length; k++) {
+        const a = ship[k].position;
+        const b = ship[(k * 7 + 3 + world.tick) % ship.length].position;
+        const d = { x: b.x - a.x, y: b.y - a.y };
+        const L = Math.hypot(d.x, d.y);
+        if (L < 0.2 || L > 4) continue;
+        const n = { x: -d.y / L, y: d.x / L };
+        const m = Math.max(3, Math.round(L / 0.4));
+        for (let i = 0; i <= m; i++) {
+          const f = i / m;
+          const off = i === 0 || i === m ? 0 : 0.35 * jitter(world.tick + salt + k * 13, i);
+          const q = toScreen(c, vp, { x: a.x + d.x * f + n.x * off, y: a.y + d.y * f + n.y * off });
+          if (i === 0) ctx.moveTo(q.x, q.y);
+          else ctx.lineTo(q.x, q.y);
+        }
       }
       ctx.stroke();
     }
@@ -1272,6 +1308,41 @@ function drawBeams(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   const beams = world.arcade?.state.beams ?? world.thrust?.state.beams;
   if (!beams?.length) return;
   const dt = world.tick > 0 ? world.time / world.tick : 1 / 240;
+  // Mammoth Thrust: a four-pointed hyperspace star (Chloe, 14 November 2026). Out, it grows from the
+  // ship and fades; in, the same backwards: it shrinks onto the ship as the ship appears.
+  if (world.thrust) {
+    for (const b of beams as readonly { at: number; x: number; y: number; r: number; out?: boolean }[]) {
+      const age = Math.min(1, Math.max(0, ((world.tick - b.at) * dt) / BEAM_LIFE));
+      const t = b.out ? age : 1 - age;
+      // Its size rises fast and its light falls as it goes (out), or the reverse (in).
+      const size = b.r * 2.5 * Math.sin((Math.PI / 2) * Math.min(1, t * 1.6)) * c.zoom;
+      const light = b.out ? 1 - age : age < 0.85 ? 1 : (1 - age) / 0.15;
+      if (size < 1 || light <= 0) continue;
+      const s = toScreen(c, vp, { x: b.x, y: b.y });
+      const star = (L: number, w: number) => {
+        ctx.beginPath();
+        for (let k = 0; k < 8; k++) {
+          const a = (k * Math.PI) / 4;
+          const r = k % 2 === 0 ? L : w;
+          const x = s.x + r * Math.cos(a);
+          const y = s.y - r * Math.sin(a);
+          if (k === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+      };
+      ctx.globalAlpha = 0.35 * light;
+      ctx.fillStyle = "#9fd8ff";
+      star(size * 1.25, size * 0.22);
+      ctx.fill();
+      ctx.globalAlpha = light;
+      ctx.fillStyle = "#fff";
+      star(size, size * 0.1);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
   for (const b of beams) {
     const age = Math.min(1, Math.max(0, ((world.tick - b.at) * dt) / BEAM_LIFE));
     const s = toScreen(c, vp, { x: b.x, y: b.y });
