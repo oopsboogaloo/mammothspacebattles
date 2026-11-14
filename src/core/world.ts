@@ -20,6 +20,7 @@ import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
+import { takeStrikes } from "./plant.ts";
 import { runTerrain, startTerrain, type Terrain, type TerrainOps, type TerrainSpec } from "./terrain.ts";
 import { runShields, type Shield } from "./shield.ts";
 import { normalizeTurret, runTurrets, turnJoints, type Charge, type Generator, type JointTurn, type Turret, type TurretInput } from "./turret.ts";
@@ -1534,6 +1535,8 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   if (world.joints.length) evaluateJoints(world, dt, rigidImpulse, capped);
   // Contacts damage what they hit (DMG-002); what fails stops working or breaks (DMG-003).
   applyDamage(world);
+  // Mammoth Thrust's reactor domes take their knocks now, while what struck them is still here.
+  if (world.thrust?.spec.plant && world.thrust.state.plant) takeStrikes(world, world.thrust.spec.plant, world.thrust.state.plant);
 
   // Disc pairs that met mid-step move onto their true paths; this is part of the contact.
   before = after;

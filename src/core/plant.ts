@@ -100,6 +100,8 @@ export interface PlantState {
   leak?: { dome: string; index: number };
   /** The latest knocks (spec.impact): what struck which dome, and when, s. */
   knocks?: { by: string; dome: string; at: number }[];
+  /** This step's strikes on the domes, taken as the damage is (takeStrikes), before anything destroyed leaves the world. */
+  strikes?: { dome: string; by: string; energy: number; at: Vec2 }[];
 }
 
 export const PLANT_BONUS = 2000;
@@ -197,6 +199,35 @@ export interface PlantResult {
 }
 
 /**
+ * This step's strikes on the plant's domes (spec.impact): for each dome and what struck it, the
+ * energy the collision lost and an impulse-weighted point, as the damage model takes them (DMG-002).
+ * Called in the step right after the damage, before what was destroyed leaves the world with its
+ * contacts: debris a hard knock destroys still holes the dome. runPlant uses and clears them.
+ */
+export function takeStrikes(world: World, spec: PlantSpec, s: PlantState): void {
+  delete s.strikes;
+  if (!spec.impact || s.blown) return;
+  const domes = new Set(spec.domes);
+  const parts = new Set(spec.parts);
+  const pairs = new Map<string, { dome: string; by: string; energy: number; x: number; y: number; w: number }>();
+  for (const c of world.contacts) {
+    if (!(c.energyLost > 0)) continue;
+    const dome = domes.has(c.a) ? c.a : domes.has(c.b) ? c.b : null;
+    const by = dome === c.a ? c.b : c.a;
+    if (!dome || parts.has(by) || isPlayerShell(by)) continue;
+    const k = `${dome}\u0000${by}`;
+    let p = pairs.get(k);
+    if (!p) pairs.set(k, (p = { dome, by, energy: 0, x: 0, y: 0, w: 0 }));
+    p.energy += c.energyLost;
+    const w = Math.max(c.normalImpulse, 1e-12);
+    p.x += w * c.point.x;
+    p.y += w * c.point.y;
+    p.w += w;
+  }
+  if (pairs.size) s.strikes = [...pairs.values()].map((p) => ({ dome: p.dome, by: p.by, energy: p.energy, at: { x: p.x / p.w, y: p.y / p.w } }));
+}
+
+/**
  * Runs the plant for one step: hits and holes, the coolant, critical and the explosion, the
  * transmitters, the turrets' power, and the shock on the ship flying (prefix `p{n}-`, or null between
  * ships). Called by Mammoth Thrust's game each step.
@@ -282,28 +313,13 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
   const imp = spec.impact;
   if (imp && !s.blown) {
     const knocks = (s.knocks ?? []).filter((k) => now - k.at < imp.gap - 1e-9);
-    const pairs = new Map<string, { dome: string; by: string; energy: number; x: number; y: number; w: number }>();
-    for (const c of world.contacts) {
-      if (!(c.energyLost > 0)) continue;
-      const dome = domes.has(c.a) ? c.a : domes.has(c.b) ? c.b : null;
-      const by = dome === c.a ? c.b : c.a;
-      if (!dome || parts.has(by) || isPlayerShell(by)) continue;
-      const k = `${dome}\u0000${by}`;
-      let p = pairs.get(k);
-      if (!p) pairs.set(k, (p = { dome, by, energy: 0, x: 0, y: 0, w: 0 }));
-      p.energy += c.energyLost;
-      const w = Math.max(c.normalImpulse, 1e-12);
-      p.x += w * c.point.x;
-      p.y += w * c.point.y;
-      p.w += w;
-    }
     let knocked = false;
-    for (const p of pairs.values()) {
+    for (const p of s.strikes ?? []) {
       const share = p.energy / 2;
       if (share <= imp.threshold || knocks.some((k) => k.by === p.by && k.dome === p.dome)) continue;
       const dome = world.bodies.find((b) => b.id === p.dome);
       if (!dome?.vents) continue;
-      const index = addLeak(dome, { x: p.x / p.w, y: p.y / p.w }, spec.leakSpeed);
+      const index = addLeak(dome, p.at, spec.leakSpeed);
       const hole = dome.vents.holes[index];
       hole.size = Math.min(3, 1 + Math.floor((share - imp.threshold) / imp.perSize));
       s.holes += 1;
@@ -313,6 +329,7 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       world.events.push({ tick: world.tick, type: "plant.knock", data: { dome: p.dome, by: p.by, energy: share, size: hole.size } });
     }
     s.knocks = knocks;
+    delete s.strikes;
     if (knocked && s.critical === undefined) s.offlineUntil = now >= s.offlineUntil - 1e-9 ? now + spec.offline.first : s.offlineUntil + spec.offline.more;
   }
 

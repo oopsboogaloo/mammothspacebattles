@@ -1238,6 +1238,12 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(hard.leaks).toBe(1);
     expect(hard.offline).toBe(true);
     expect(hard.w.ledger.violations).toBe(0);
+    // Hard enough to destroy the debris: it still holes the dome (taken before the debris leaves the world).
+    const smashed = knock(200);
+    expect(smashed.w.bodies.some((b) => b.id === "junk")).toBe(false);
+    expect(smashed.knocks).toBe(1);
+    expect(smashed.leaks).toBe(1);
+    expect(smashed.w.ledger.violations).toBe(0);
   }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
