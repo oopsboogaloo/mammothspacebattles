@@ -1,7 +1,7 @@
 // The worker sends rock it has already sent as stubs; the page puts its own copies back (rockStubs.ts, simClient.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { unpackBodies } from "../../src/app/simClient.ts";
+import { unpackBodies, unpackThrust } from "../../src/app/simClient.ts";
 import { RockStubs, runChangesBodies } from "../../src/app/rockStubs.ts";
 import { applyCommands, getProfile, initialWorld, parseScenario, stepInPlace, type Body, type Command, type World } from "../../src/core/index.ts";
 
@@ -10,7 +10,7 @@ const P = getProfile("sandbox");
 /** What the page holds after taking a run: the worker's world, as sent (structuredClone stands in for postMessage), with the stubs filled. */
 function take(sent: World, page: World): World | null {
   const got = structuredClone(sent) as World;
-  return unpackBodies(got as never, page.bodies) ? got : null;
+  return unpackBodies(got as never, page.bodies) && unpackThrust(got, page) ? got : null;
 }
 
 describe("simClient", () => {
@@ -32,10 +32,15 @@ describe("simClient", () => {
     for (let run = 0; run < 3; run++) {
       for (let i = 0; i < 24; i++) stepInPlace(worker, [], P);
       const packed = stubs.pack(worker);
-      if (run > 0) expect(packed.filter((b) => "kept" in b).length).toBeGreaterThan(50);
-      page = take({ ...worker, bodies: packed as Body[] }, page)!;
+      const thrust = stubs.packThrust(worker)!;
+      if (run > 0) {
+        expect(packed.filter((b) => "kept" in b).length).toBeGreaterThan(50);
+        expect(thrust.spec).toEqual({ kept: true }); // the level's spec, sent once
+      }
+      page = take({ ...worker, bodies: packed as Body[], thrust }, page)!;
       expect(page).not.toBeNull();
       expect(JSON.stringify(page.bodies)).toBe(JSON.stringify(worker.bodies));
+      expect(JSON.stringify(page.thrust)).toBe(JSON.stringify(worker.thrust));
     }
   });
 
