@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, fieldId, generatorOnline, nearestOffset, turretOnline, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, fieldId, generatorOnline, nearestOffset, turretOnline, turretLookup, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
@@ -1430,7 +1430,12 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   const fields = new Set(world.bodies.filter((b) => b.shield).map((b) => fieldId(b.id)));
   // An electric turret's power nodes show whether it is online: green, or red (WPN-012).
   const nodes = new Map<string, boolean>();
-  for (const c of world.bodies) if (c.turret?.nodes) for (const n of c.turret.nodes) nodes.set(n, turretOnline(world, c));
+  const lk = world.bodies.some((c) => c.turret?.nodes) ? turretLookup(world) : null;
+  for (const c of world.bodies) {
+    if (!c.turret?.nodes) continue;
+    const on = turretOnline(world, c, lk!);
+    for (const n of c.turret.nodes) nodes.set(n, on);
+  }
   const drawBodies = (cam: Camera): void => {
     for (const b of world.bodies) {
       if (opts.groundLine && isGround(b)) continue;

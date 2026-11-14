@@ -14,7 +14,7 @@ import { cutControl, cutShipLines } from "./arcade.ts";
 import { shipState } from "./duel.ts";
 import { assemblyOf } from "./joints.ts";
 import { invRotate, length, sinCos, sub, type Vec2 } from "./math.ts";
-import { turretWorks } from "./turret.ts";
+import { turretLookup, turretWorks } from "./turret.ts";
 import type { BodyInput, JointInput, LinkInput, World } from "./world.ts";
 
 export interface ThrustSpec {
@@ -206,7 +206,8 @@ function podState(world: World, game: ThrustGame): PodState {
   const { spec, state } = game;
   const pod = world.bodies.find((b) => b.id === spec.pod);
   if (!pod || pod.integrity <= 0) return "gone";
-  const tractor = world.bodies.find((b) => b.id === idOf(spec.tractor, state.n))?.tractor;
+  const tractorId = idOf(spec.tractor, state.n);
+  const tractor = world.bodies.find((b) => b.id === tractorId)?.tractor;
   if (tractor?.mode === "tether" && tractor.cargo === spec.pod) return "tether";
   return length(sub(pod.position, state.stand)) <= ON_STAND ? "stand" : "loose";
 }
@@ -282,10 +283,11 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
 
   // 0. The turrets watch for the ship flying, and for nothing between ships. One that can no longer
   // fire (its gun, carriage or battery gone) is out of action for the level, and scores once (MTH-031).
+  const lk = spec.turrets?.length ? turretLookup(world) : null;
   for (const id of spec.turrets ?? []) {
-    const c = world.bodies.find((b) => b.id === id);
+    const c = lk!.byId.get(id);
     if (c?.turret) c.turret.target = s.phase === "flying" ? hullId : undefined;
-    if (s.turretsOut.includes(id) || (c && turretWorks(world, c))) continue;
+    if (s.turretsOut.includes(id) || (c && turretWorks(world, c, lk!))) continue;
     s.turretsOut = [...s.turretsOut, id];
     s.score += spec.scores?.turret ?? THRUST_SCORES.turret;
     world.events.push({ tick: world.tick, type: "thrust.turret", data: { id } });
@@ -294,7 +296,8 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
   // 0a. Fuel tanks (MTH-042, MTH-043). One the ship is drawing from is noted; emptied by the ship,
   // it scores once. A tank's charge follows what it holds.
   if (spec.tanks?.length) {
-    const from = world.bodies.find((b) => b.id === idOf(spec.tractor, s.n))?.tractor?.siphoning;
+    const tractorId = idOf(spec.tractor, s.n);
+    const from = world.bodies.find((b) => b.id === tractorId)?.tractor?.siphoning;
     if (from !== undefined && spec.tanks.includes(from) && !s.tanksDrawn.includes(from)) s.tanksDrawn = [...s.tanksDrawn, from];
     for (const id of spec.tanks) {
       const tank = world.bodies.find((b) => b.id === id);

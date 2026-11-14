@@ -2,8 +2,8 @@
 // sandbox when nothing has changed meanwhile. Falls back to stepping on the page when there is no
 // worker (tests, old browsers) or the run in flight has gone stale.
 import type { Sandbox } from "./controller.ts";
-import type { RunRequest, RunResult } from "./simWorker.ts";
-import type { Command } from "../core/index.ts";
+import type { KeptBody, RunRequest, RunResult } from "./simWorker.ts";
+import type { Body, Command } from "../core/index.ts";
 import { diag } from "./diag.ts";
 import { applyEventDelta } from "./eventDelta.ts";
 
@@ -117,6 +117,11 @@ export class SimClient {
     if (!f || f.version !== res.version) return;
     // The run began from the page's world at this version, so its log is the one the change is to.
     res.run.world.events = applyEventDelta(f.sb.world.events, res.events);
+    // Rock the worker had already sent comes back as stubs: the page's own copies go in their place.
+    if (!f.cancelled && !unpackBodies(res.run.world, f.sb.world.bodies)) {
+      this.holds = null; // missing one: drop this run, and send the world whole next time
+      return;
+    }
     if (!f.cancelled && f.sb.acceptRun(res.run, res.version)) {
       f.sb.version++;
       // The worker's copy carries on from the world just taken in.
@@ -127,4 +132,18 @@ export class SimClient {
     }
     this.holds = null; // the worker ran on from a world the page has dropped
   }
+}
+
+/** Puts the page's own bodies in place of the worker's stubs (simWorker.ts packBodies). False if one is missing. */
+export function unpackBodies(world: { bodies: (Body | KeptBody)[] }, mine: readonly Body[]): boolean {
+  if (!world.bodies.some((b) => "kept" in b)) return true;
+  const byId = new Map(mine.map((b) => [b.id, b]));
+  for (let i = 0; i < world.bodies.length; i++) {
+    const b = world.bodies[i];
+    if (!("kept" in b)) continue;
+    const have = byId.get(b.id);
+    if (!have) return false;
+    world.bodies[i] = have;
+  }
+  return true;
 }
