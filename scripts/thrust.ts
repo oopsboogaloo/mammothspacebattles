@@ -1,7 +1,7 @@
 // Mammoth Thrust's levels (docs/games/mammoth-thrust.md §3, -design.md §4): the ground from an
 // outline of its open space, the ship (Mammoth Asteroids' ship with a tractor unit and a tether
 // unit), and the pod on its stand. The game itself is in the world (src/core/thrust.ts).
-//   node scripts/thrust.ts            writes scenarios/thrust-1.json, thrust-2.json and thrust-3.json
+//   node scripts/thrust.ts            writes scenarios/thrust-1.json … thrust-5.json
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
@@ -205,6 +205,8 @@ interface Level {
    * level is left by getting `escape` m from the centre. `ground` and `top` aren't used.
    */
   asteroid?: { island: Vec[]; radius: number; gravity: number; box: number; escape: number };
+  /** Seeds the turrets' generators: the level's number × 100 if not given (a renumbered level keeps its own). */
+  seed?: number;
   plant?: { at: Vec; antennae: [{ at: Vec; angle: number }, { at: Vec; angle: number }]; lines: { points: Vec[]; needs?: string[] }[]; beyond: number[] };
 }
 
@@ -223,7 +225,7 @@ function write(l: Level) {
   // The sky, for the stars: the open space above the ground, closed across each cave's mouth.
   const inCave = (p: Vec) => l.caves.some((c) => c.slice(1, -1).some((q) => q.x === p.x && q.y === p.y));
   const sky = ast ? air : [{ x: left, y: SKY }, { x: right, y: SKY }, ...l.ground.filter((p) => !inCave(p))];
-  const turrets = l.turrets.map((t, k) => (t.electric ? electricTurret : turret)(`t${k + 1}`, t.at, t.angle, (t.electric ? ELECTRIC_TURRET : TURRET) as never, 100 * l.n + k + 1));
+  const turrets = l.turrets.map((t, k) => (t.electric ? electricTurret : turret)(`t${k + 1}`, t.at, t.angle, (t.electric ? ELECTRIC_TURRET : TURRET) as never, (l.seed ?? 100 * l.n) + k + 1));
   const tanks = l.tanks.map((at, k) => fuelTank(`fuel-${k + 1}`, at));
   const plant = l.plant ? powerPlant(l.plant.at, PLANT) : undefined;
   const aerials = l.plant ? l.plant.antennae.map((a, k) => antenna(`aerial-${k + 1}`, a.at, a.angle)) : [];
@@ -354,7 +356,84 @@ write({
   });
 }
 
-// Level 3, the winding cave (Chloe's drawing, 13 November 2026, traced at 0.1 m a pixel): a cave
+// Level 3, the canyon (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel: the open space
+// found by its colour, its outline simplified to 0.5 m, and flat under each turret, tank and the
+// pod): a wide canyon 200 m across
+// opens into caves under its walls. The power plant stands on a ledge high on the left wall; its
+// lines run through the rock to the four turrets on the left, and cross the canyon between two
+// antennae to the four on the right (a shelf, both faces of a spit, and the right wall's top). The
+// pod stands on a pillar in the middle of the floor. Fuel: two tanks on the surface at the right,
+// one on the left ledge, one on the floor.
+{
+  // Right to left: the open space is above (the caves start under the antennae, at P(44.1, -36.4) and P(-19.6, -52.7)).
+  const ground = [
+    P(102.3, -1.1), P(93.2, -1.5), P(89.2, -1.5), P(87.0, -1.7), P(83.0, -1.7), P(79.0, -1.6), P(77.3, -9.0), P(72.5, -10.5), P(69.3, -17.4), P(66.9, -19.0),
+    P(63.8, -24.2), P(59.6, -25.5), P(59.0, -27.4), P(50.2, -27.4), P(44.7, -30.7), P(44.1, -36.4), P(60.6, -39.0), P(62.5, -42.0), P(68.9, -43.9), P(73.7, -49.5),
+    P(79.1, -52.1), P(80.2, -54.9), P(80.3, -59.6), P(70.1, -61.3), P(67.8, -64.2), P(61.0, -64.7), P(55.4, -68.3), P(46.6, -68.3), P(37.0, -68.7), P(30.9, -70.8),
+    P(21.7, -70.6), P(12.9, -70.6), P(10.4, -70.1), P(8.5, -70.8), P(7.5, -72.2), P(8.1, -74.4), P(13.0, -75.2), P(21.8, -75.2), P(22.0, -75.8), P(33.3, -76.6),
+    P(35.5, -78.0), P(41.0, -79.2), P(44.7, -82.1), P(58.3, -85.5), P(61.0, -95.3), P(62.9, -98.7), P(66.3, -102.0), P(67.6, -106.6), P(67.9, -115.4), P(67.2, -118.5),
+    P(67.8, -122.7), P(66.5, -126.8), P(64.1, -127.6), P(61.6, -130.1), P(53.8, -130.6), P(50.4, -131.6), P(48.3, -133.9), P(46.9, -138.7), P(45.4, -139.7), P(40.4, -140.1),
+    P(31.6, -140.1), P(26.8, -139.2), P(24.2, -135.7), P(25.5, -133.6), P(25.3, -129.5), P(22.3, -127.3), P(21.8, -123.6), P(19.3, -122.5), P(18.3, -116.7), P(15.1, -116.7),
+    P(12.1, -124.9), P(12.4, -126.5), P(14.1, -127.6), P(14.1, -131.7), P(15.1, -134.3), P(12.5, -136.1), P(12.5, -138.5), P(10.5, -142.6), P(7.7, -143.5), P(-1.2, -143.5),
+    P(-19.0, -142.8), P(-23.0, -142.8), P(-37.2, -139.4), P(-41.0, -134.4), P(-48.0, -133.7), P(-52.5, -132.0), P(-53.9, -130.5), P(-54.5, -120.3), P(-53.3, -116.0), P(-41.0, -112.0),
+    P(-39.5, -109.8), P(-37.3, -102.3), P(-36.1, -101.0), P(-33.0, -100.6), P(-24.2, -100.6), P(-20.5, -100.9), P(-16.2, -97.6), P(-16.6, -91.8), P(-18.0, -87.4), P(-20.4, -86.9),
+    P(-21.0, -86.1), P(-25.0, -86.1), P(-28.9, -85.2), P(-34.3, -81.0), P(-42.9, -79.5), P(-44.7, -78.4), P(-45.2, -75.5), P(-44.3, -72.2), P(-38.3, -67.4), P(-37.8, -61.9),
+    P(-36.7, -59.2), P(-32.0, -58.5), P(-23.2, -58.5), P(-19.7, -58.1), P(-19.6, -52.7), P(-20.5, -51.0), P(-23.7, -48.9), P(-25.0, -43.7), P(-27.7, -42.7), P(-28.9, -34.2),
+    P(-30.3, -33.0), P(-32.5, -33.2), P(-32.7, -39.1), P(-34.6, -42.7), P(-56.4, -42.5), P(-58.6, -38.2), P(-58.8, -33.6), P(-60.5, -30.4), P(-61.0, -18.4), P(-63.6, -17.5),
+    P(-64.6, -14.2), P(-71.3, -9.6), P(-76.6, -0.5), P(-78.4, 0.9), P(-102.4, 1.3),
+  ];
+  const mouth = [ground.findIndex((p) => p.x === 44.1 && p.y === -36.4), ground.findIndex((p) => p.x === -19.6 && p.y === -52.7)];
+  write({
+    n: 3,
+    title: "The canyon",
+    description: "The pod stands on a pillar at the bottom of a canyon, under eight electric turrets and a power plant. Fly down, take it on the tether, and carry it back up and past the top.",
+    colour: "#2f74c0",
+    top: 70,
+    ground,
+    caves: [ground.slice(mouth[0], mouth[1] + 1)],
+    caveBelow: -30,
+    // Two dead ends that narrow to nothing, as drawn: the tip of the cave at the top right, and the
+    // crevice at the pillar's right foot.
+    alcoves: [[P(66, -64), P(82, -45)], [P(20, -140), P(30, -125)]],
+    leastWidth: 18,
+    start: P(-88, 35),
+    pod: P(16.7, -116.7),
+    turrets: [
+      // The right wall's top; under the left ledge (hanging); the right shelf; the spit, on top and
+      // underneath (hanging); under the left ledge lower down (hanging); the floor, right and left.
+      { at: P(54.6, -27.4), angle: 0, electric: true },
+      { at: P(-27.6, -58.5), angle: Math.PI, electric: true },
+      { at: P(51.0, -68.3), angle: 0, electric: true },
+      { at: P(17.3, -70.6), angle: 0, electric: true },
+      { at: P(17.4, -75.2), angle: Math.PI, electric: true },
+      { at: P(-28.6, -100.6), angle: Math.PI, electric: true },
+      { at: P(36.0, -140.1), angle: 0, electric: true },
+      { at: P(3.2, -143.5), angle: 0, electric: true },
+    ],
+    tanks: [P(91.2, -1.5), P(85.0, -1.7), P(-23.0, -86.1), P(-21.0, -142.8)],
+    plant: {
+      at: P(-45.6, -43.0),
+      antennae: [
+        { at: P(-19.7, -53.0), angle: -Math.PI / 2 },
+        { at: P(44.1, -34.0), angle: Math.PI / 2 },
+      ],
+      lines: [
+        { points: [P(-45.4, -43.0), P(-45.4, -52.0), P(-58.8, -79.4), P(-64.4, -93.0), P(-64.4, -140.0), P(-46.8, -150.6), P(3.0, -150.6), P(3.2, -143.5)] },
+        { points: [P(3.0, -150.6), P(36.2, -150.6), P(36.0, -140.1)] },
+        { points: [P(-45.4, -52.0), P(-28.4, -52.0), P(-27.6, -58.5)] },
+        { points: [P(-28.4, -52.0), P(-19.7, -53.0)] },
+        { points: [P(-58.8, -79.4), P(-28.8, -97.0), P(-28.6, -100.6)] },
+        { points: [P(44.1, -34.0), P(53.2, -32.0), P(54.6, -27.4)], needs: ["tx"] },
+        { points: [P(53.2, -32.0), P(67.2, -32.0), P(86.4, -49.4), P(86.4, -73.4), P(51.2, -73.4), P(51.0, -68.3)], needs: ["tx"] },
+        { points: [P(51.2, -73.4), P(17.2, -73.4), P(17.3, -70.6)], needs: ["tx"] },
+        { points: [P(17.2, -73.4), P(17.4, -75.2)], needs: ["tx"] },
+      ],
+      beyond: [1, 3, 4, 5],
+    },
+  });
+}
+
+// Level 4, the winding cave (Chloe's drawing, 13 November 2026; level 3 until 14 November, traced at 0.1 m a pixel): a cave
 // that winds down from a mouth 38 m wide, past ledges, into a wide chamber 135 m down. The pod
 // stands on the chamber's floor at the left, two fuel tanks beside it, one more on the surface.
 // Six electric turrets: two on a ledge under the mouth, one on the left ledge, one on the right
@@ -379,7 +458,8 @@ write({
   ];
   const mouth = [ground.findIndex((p) => p.x === 50.2 && p.y === 4), ground.findIndex((p) => p.x === 11.6 && p.y === 2.8)];
   write({
-    n: 3,
+    n: 4,
+    seed: 300,
     title: "The winding cave",
     description: "The pod is at the bottom of a winding cave, past six electric turrets. Fly down, take it on the tether, and carry it back up and past the top.",
     colour: "#3fa35a",
@@ -428,7 +508,7 @@ write({
   });
 }
 
-// Level 4, the asteroid (13 November 2026, a first design to try, before Chloe draws one): a round
+// Level 5, the asteroid (13 November 2026; level 4 until 14 November; a first design to try, before Chloe draws one): a round
 // asteroid 180 m across floating in a box of open space 340 m across, its gravity a uniform ball's
 // (FLT-015): 4 m/s² at the surface, falling as 1/r² outside and in a straight line to nothing at
 // its centre. A tunnel winds down from a mouth on its upper left into a chamber above its centre,
@@ -459,7 +539,8 @@ write({
       P(-72, 48.2), P(-68.9, 51.2), P(-75.1, 56.3),
   ];
   write({
-    n: 4,
+    n: 5,
+    seed: 400,
     title: "The asteroid",
     description: "A round asteroid with a winding tunnel into a chamber where the pod stands. Its gravity pulls toward its centre. Fly in, take the pod on the tether, and carry it 150 m out from the centre.",
     colour: "#8a7bd8",

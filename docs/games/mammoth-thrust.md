@@ -102,13 +102,21 @@ other sources in §12):
 - **Level 2 (MVP): one chamber.** The factory, a building and a turret on the surface. One shaft,
   about 30 m wide and 80 m deep, opens into a single chamber about 120 m across. Two turrets on
   the chamber's walls, the pod and a fuel tank on its floor. It teaches flying the pod up a shaft.
-- **Level 3: the winding cave** (Chloe's drawing, 13 November 2026, traced at 0.1 m a pixel). About
+- **Level 3: the canyon** (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel). A canyon
+  about 200 m across and 150 m deep, with caves under its walls. The power plant stands on a ledge
+  high on the left wall; its lines run through the rock to the four turrets on the left (one
+  hanging under the antenna's ledge, one under the fuel ledge, two on the floor) and cross the
+  canyon between two antennae to the four on the right (the right wall's top, a shelf, and both
+  faces of a spit). Eight electric turrets. The pod stands on a pillar in the middle of the floor.
+  Four fuel tanks: two on the surface at the right, one on the left ledge, one on the floor.
+  Two dead ends narrow to nothing (the cave's tip at the top right, a crevice at the pillar's foot).
+- **Level 4: the winding cave** (Chloe's drawing, 13 November 2026, traced at 0.1 m a pixel; level 3 until 14 November). About
   200 m across. A cave mouth 38 m wide between hills winds down past ledges into a wide chamber
   about 135 m down. Six electric turrets: two on the ledge under the mouth, one on a ledge on the
   left, one hanging from the right wall, one from the chamber's roof, and one on the chamber's
   floor. The pod stands at the chamber's left end with two fuel tanks beside it; one more fuel
-  tank is on the surface. Play can start here: `thrust.html?level=3`.
-- **Level 4: the asteroid** (13 November 2026, a first design to try before Chloe draws one). A
+  tank is on the surface. Play can start here: `thrust.html?level=4`.
+- **Level 5: the asteroid** (13 November 2026, a first design to try before Chloe draws one; level 4 until 14 November). A
   round asteroid 180 m across floating in open space 340 m across, its gravity pulling toward its
   centre as a uniform ball's: 4 m/s² at the surface, falling as 1/r² further out and in a straight
   line to nothing at its centre (its caves aren't counted). A tunnel winds down from a mouth on
@@ -118,7 +126,7 @@ other sources in §12):
   The level is left by getting 150 m from the centre with the pod; without it, the ship is beamed
   back, as at a level's top.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
-  through). Level 3 is drawn tighter at the chamber's left end, where the roof is 19 m over the pod;
+  through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
 - The level doesn't wrap. Its sides are high rock walls beyond the mountains.
 
@@ -208,7 +216,7 @@ other sources in §12):
 
 ### Electric turrets
 
-From Chloe's drawing (13 November 2026). A turret of a second kind, on level 3:
+From Chloe's drawing (13 November 2026). A turret of a second kind, on levels 3 and 4:
 
 - **Pieces.** A **base**, a rigid plate fixed on the rock. On it a **neat arc** (a segment of a
   circle, not a full half-disc), welded. At each end of the arc, on the base, a **power node**.
@@ -228,7 +236,7 @@ From Chloe's drawing (13 November 2026). A turret of a second kind, on level 3:
 
 ### The power plant
 
-From Chloe's drawings (13 November 2026), on level 3. It takes the place of the original's
+From Chloe's drawings (13 November 2026), on levels 3 and 4. It takes the place of the original's
 reactor and of our factory below.
 
 - **The plant.** Three tall domes, a tower with a light, and an annex, on a base on the surface.
@@ -259,7 +267,7 @@ reactor and of our factory below.
 
 ### The factory
 
-From before Chloe's power design; level 3's plant does this. Levels 1 and 2 have none yet.
+From before Chloe's power design; the plant on levels 3 and 4 does this. Levels 1 and 2 have none yet.
 
 - Each slug that hits the factory stops all turrets: 4 s for the first hit, 2 s longer for each
   one after (first values).
@@ -375,8 +383,11 @@ Priority: **M** must, **S** should.
 - **MTH-012** `[M]` The generator fails if the cave is anywhere narrower than its declared
   least width.
 - **MTH-013** `[S]` A level may be built from a hand-drawn outline file, as Lander's Cave 2.
-- **MTH-014** `[M]` Level 3 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
-  and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=3` plays from it.
+- **MTH-014** `[M]` Level 4 is Chloe's winding cave (§3): six electric turrets, three fuel tanks,
+  and the pod at the bottom. Nothing on it moves as it starts. `thrust.html?level=4` plays from it.
+- **MTH-092** `[M]` Level 3 is Chloe's canyon (§3): eight electric turrets, the power plant on the
+  left ledge with its line across the canyon to the four turrets on the right, four fuel tanks,
+  and the pod on its pillar. Nothing on it moves as it starts.
 
 **Ship, tether and pod**
 - **MTH-020** `[M]` The ship is the Asteroids ship with a tractor unit, a tether unit, turning of
@@ -442,7 +453,7 @@ Priority: **M** must, **S** should.
   off (up to 3), and knocks the plant offline.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
   often the less coolant is left.
-- **MTH-091** `[M]` Level 4 is an asteroid: rock as an island in open space, gravity toward its
+- **MTH-091** `[M]` Level 5 is an asteroid: rock as an island in open space, gravity toward its
   centre as a uniform ball's (inverse square outside, linear inside), left by getting 150 m from
   its centre.
 - **MTH-090** `[S]` For testing (Chloe, 13 November 2026), the page shows the simulation's step

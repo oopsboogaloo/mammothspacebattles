@@ -406,11 +406,11 @@ test("MTH-021 the Ctrl keys turn as the Shift keys do, the other keys still work
   await expect.poll(engines).toBe("00000");
 });
 
-test("MTH-014 thrust.html?level=3 plays from level 3, the winding cave, with its six electric turrets", async ({ page }) => {
-  await page.goto("./thrust.html?level=3");
+test("MTH-014 thrust.html?level=4 plays from level 4, the winding cave, with its six electric turrets", async ({ page }) => {
+  await page.goto("./thrust.html?level=4");
   await page.getByTestId("mth-start").click();
-  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 3");
-  expect(await hook(page, (m) => m.level())).toBe(3);
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 4");
+  expect(await hook(page, (m) => m.level())).toBe(4);
   expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(6);
   // Without the address, Play starts at level 1.
   await page.goto("./thrust.html");
@@ -419,11 +419,11 @@ test("MTH-014 thrust.html?level=3 plays from level 3, the winding cave, with its
   await expect(page.getByTestId("mth-coolant")).toHaveCount(0);
 });
 
-test("MTH-082 level 3's power plant: with its coolant gone it goes critical, the page counts down, and when it blows with the pod still down the game is over", async ({ page }) => {
+test("MTH-082 level 4's power plant: with its coolant gone it goes critical, the page counts down, and when it blows with the pod still down the game is over", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto("./thrust.html?level=3");
+  await page.goto("./thrust.html?level=4");
   await page.getByTestId("mth-start").click();
-  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 3");
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 4");
   expect(await hook(page, (m) => (m.thrust() as unknown as { plant: { up: { tx: boolean } } }).plant.up.tx)).toBe(true);
   await expect(page.getByTestId("mth-critical")).toHaveCount(0);
   // The coolant gauge, full (MTH-086); level 1 has none.
@@ -441,7 +441,7 @@ test("MTH-082 level 3's power plant: with its coolant gone it goes critical, the
 
 test("MTH-087 for testing, the title has a button for each level that starts the game there", async ({ page }) => {
   await page.goto("./thrust.html");
-  for (const n of [3, 2, 1]) {
+  for (const n of [5, 3, 1]) {
     await page.getByTestId(`mth-level-${n}`).click();
     await expect(page.getByTestId("mth-level")).toHaveText(`LEVEL ${n}`);
     expect(await hook(page, (m) => m.level())).toBe(n);
@@ -456,9 +456,9 @@ test("MTH-090 for testing, the page shows the simulation's step time against its
   await expect(page.getByTestId("mth-step")).toContainText(/step \d+\.\d \/ 8\.3 ms · worst \d+ ms · gas \d+ · bodies \d+/, { timeout: 15_000 });
 });
 
-test("MTH-091 level 4, the asteroid, opens from the title's test row", async ({ page }) => {
+test("MTH-091 level 5, the asteroid, opens from the title's test row", async ({ page }) => {
   await page.goto("./thrust.html");
-  await page.getByTestId("mth-level-4").click();
-  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 4");
+  await page.getByTestId("mth-level-5").click();
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 5");
   expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(13);
 });

@@ -686,9 +686,9 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     empty.step(0.1, [set("tractor", 0)]);
     expect(empty.w.events.some((e) => e.type === "detonation")).toBe(false);
   });
-  /** Level 3 with every turret off, after `settle` game seconds. */
+  /** Level 4 with every turret off, after `settle` game seconds. */
   function cave(settle = 0.5) {
-    const g = game(3);
+    const g = game(4);
     for (const b of g.w.bodies) if (b.turret) b.turret.enabled = false;
     g.step(settle);
     return g;
@@ -707,12 +707,37 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     settle(w);
   }
 
-  it("MTH-014 level 3 is Chloe's winding cave: six electric turrets, three fuel tanks and the pod 130 m down, and nothing moves as it starts", () => {
+  it("MTH-092 level 3 is Chloe's canyon: eight electric turrets, the power plant on the left ledge and its line across the canyon to the four on the right, four fuel tanks and the pod on its pillar; nothing moves as it starts", () => {
     const s = raw(3);
+    expect(s.world.thrust.title ?? s.title).toContain("canyon");
+    expect(s.world.thrust.view.caves).toHaveLength(1);
+    expect(s.world.thrust.turrets).toHaveLength(8);
+    expect(s.world.thrust.tanks).toEqual(["fuel-1", "fuel-2", "fuel-3", "fuel-4"]);
+    const plant = s.world.thrust.plant;
+    expect(plant.turrets.filter((t: { needs?: string[] }) => t.needs?.includes("tx")).map((t: { id: string }) => t.id)).toEqual(["t1-breech", "t3-breech", "t4-breech", "t5-breech"]);
+    const g = game(3);
+    const { w } = g;
+    expect(pod(w).position.y).toBeLessThan(-110);
+    const hanging = [1, 2, 3, 4, 5, 6, 7, 8].filter((k) => Math.cos(body(w, `t${k}-base`)!.angle) < 0);
+    expect(hanging).toEqual([2, 5, 6]);
+    expect(st(w).plant!.up.tx).toBe(true);
+    const at = new Map(w.bodies.map((b) => [b.id, { ...b.position }]));
+    for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    g.step(3);
+    const moved = (id: string) => Math.hypot(body(w, id)!.position.x - at.get(id)!.x, body(w, id)!.position.y - at.get(id)!.y);
+    for (let k = 1; k <= 8; k++) for (const part of ["arc", "node-l", "node-r", "breech", "barrel"]) expect(moved(`t${k}-${part}`), `t${k}-${part}`).toBeLessThan(0.1);
+    for (let k = 1; k <= 4; k++) expect(moved(`fuel-${k}`), `fuel-${k}`).toBeLessThan(0.05);
+    for (const id of ["pod", "plant-core", "plant-tower", "aerial-1-mast", "aerial-2-mast"]) expect(moved(id), id).toBeLessThan(0.05);
+    expect(st(w).phase).toBe("flying");
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("MTH-014 level 4 is Chloe's winding cave: six electric turrets, three fuel tanks and the pod 130 m down, and nothing moves as it starts", () => {
+    const s = raw(4);
     expect(s.world.thrust.view.caves).toHaveLength(1);
     expect(s.world.thrust.turrets).toHaveLength(6);
     expect(s.world.thrust.tanks).toEqual(["fuel-1", "fuel-2", "fuel-3"]);
-    const { w } = game(3);
+    const { w } = game(4);
     expect(pod(w).position.y).toBeLessThan(-125);
     // Two hang from the rock: one on the right wall, one from the roof.
     const hanging = [1, 2, 3, 4, 5, 6].filter((k) => Math.cos(body(w, `t${k}-base`)!.angle) < 0);
@@ -730,7 +755,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   });
 
   it("MTH-070 an electric turret is a base, an arc, two power nodes and a two-part barrel that rides the arc; it needs no power, and fires at the ship", () => {
-    const { w, step } = game(3, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    const { w, step } = game(4, (s) => (s.world.gravity = { x: 0, y: 0 }));
     for (const k of [1, 2, 3, 4, 5, 6]) {
       for (const part of ["base", "arc", "node-l", "node-r", "breech", "barrel"]) expect(body(w, `t${k}-${part}`), `t${k}-${part}`).toBeDefined();
       for (const part of ["battery", "gen", "tank"]) expect(body(w, `t${k}-${part}`)).toBeUndefined();
@@ -797,7 +822,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
 
   it("WPN-012 an electric turret is online only while on, powered and whole: its nodes, aim, barrel and gun", () => {
     const fresh = () => {
-      const { w } = game(3);
+      const { w } = game(4);
       return { w, breech: body(w, "t6-breech")! };
     };
     expect(fresh().breech.turret!.nodes).toEqual(["t6-node-l", "t6-node-r"]);
@@ -828,7 +853,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(turretOnline(g.w, g.breech)).toBe(false);
   });
 
-  // ---- The power plant (level 3) ----
+  // ---- The power plant (level 4, the winding cave) ----
   const plantState = (w: World) => st(w).plant!;
   const poweredTurrets = (w: World) => w.bodies.filter((b) => b.turret).map((b) => `${b.id.split("-")[0]}:${b.turret!.powered ? "on" : "off"}`).join(" ");
   /** A slug from the ship's gun at `at`, from 6 m off along (-1, 1): the plant's left and top face the open. */
@@ -840,7 +865,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }
 
   it("MTH-080 WPN-011 the power plant powers the level's turrets; a slug takes it offline 5 s on screen, each more while it is down 2 s more, and the turrets stop meanwhile", () => {
-    const { w, step } = game(3);
+    const { w, step } = game(4);
     step(0.5);
     expect(plantState(w)).toMatchObject({ hits: 0, holes: 0, up: { tx: true } });
     expect(poweredTurrets(w)).toBe("t1:on t2:on t3:on t4:on t5:on t6:on");
@@ -864,7 +889,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
 
   it("MTH-081 DMG-009 slugs in the domes leak the coolant as gas: each adds 0.1 kg/s, 4 minutes for one on screen; every third opens a new leak, the others make the newest bigger", () => {
-    const { w, step } = game(3);
+    const { w, step } = game(4);
     const spec = w.thrust!.spec.plant!;
     expect(plantCoolant(w, spec)).toBeCloseTo(12, 9);
     const leaks = () => spec.domes.flatMap((id) => body(w, id)!.vents!.holes.map((h) => h.size ?? 1));
@@ -901,7 +926,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
 
   it("MTH-081 a leak's gas pushes what is in it: a body held in the jet is pushed away from the dome", () => {
-    const { w, step } = game(3, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    const { w, step } = game(4, (s) => (s.world.gravity = { x: 0, y: 0 }));
     const dome = body(w, "plant-dome-l")!;
     slugAtPoint(w, { x: dome.position.x - 2.7, y: dome.position.y }, 0);
     step(0.3);
@@ -922,7 +947,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
 
   it("MTH-082 with no coolant left the plant goes critical: 10 s on screen, then it blows; with the pod still down the game is over", () => {
-    const { w, step } = game(3);
+    const { w, step } = game(4);
     step(0.2);
     body(w, "plant-core")!.contents![0].mass = 0.001;
     settle(w);
@@ -940,7 +965,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
 
   it("MTH-082 out with the pod while the plant is critical: 2000 more", () => {
-    const g = withPod(3, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    const g = withPod(4, (s) => (s.world.gravity = { x: 0, y: 0 }));
     expect(st(g.w).pod).toBe("tether");
     body(g.w, "plant-core")!.contents![0].mass = 0.001;
     settle(g.w);
@@ -956,7 +981,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
 
   it("MTH-083 the antennae carry the power across the cave: one destroyed, the turret beyond them (the left ledge's) has no power, and the rest do", () => {
-    const { w, step } = game(3);
+    const { w, step } = game(4);
     step(0.2);
     expect(plantState(w).up.tx).toBe(true);
     const mast = body(w, "aerial-1-mast")!;
@@ -970,7 +995,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
 
   it("MTH-084 ASM-009 a ship in the shock between the antennae loses all control for 1 s on screen; with the antennae down there is no shock", () => {
     const fly = (down: boolean) => {
-      const { w, step } = game(3, (s) => (s.world.gravity = { x: 0, y: 0 }));
+      const { w, step } = game(4, (s) => (s.world.gravity = { x: 0, y: 0 }));
       step(0.1);
       const [a, b] = transmitterTips(w, w.thrust!.spec.plant!.transmitters[0])!;
       if (down) {
@@ -1002,7 +1027,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
-      const { w, step } = game(3);
+      const { w, step } = game(4);
       step(0.2);
       const dome = body(w, "plant-dome-l")!;
       // A charge as a fuel tank's (0.3 kg, reach 4 m), `gap` m off the dome's left side, set off.
@@ -1030,7 +1055,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     // The plant's own rules (plant.ts), run step by step for 40 game seconds with the world held still:
     // a whole level for that long is more than a slow machine's test time allows.
     const outages = (share: number) => {
-      const { w } = game(3);
+      const { w } = game(4);
       const core = body(w, "plant-core")!;
       core.contents![0].mass = core.contents![0].capacity * share;
       const dt = 1 / 240;
@@ -1053,11 +1078,11 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(quarter).toBeGreaterThan(0);
     expect(little).toBeGreaterThan(quarter);
   }, 120_000);
-  it("MTH-091 FLT-015 TER-007 level 4 is an asteroid: rock as an island in open space, pulling toward its centre as a uniform ball, left by getting 150 m from its centre", () => {
-    const s = raw(4);
+  it("MTH-091 FLT-015 TER-007 level 5 is an asteroid: rock as an island in open space, pulling toward its centre as a uniform ball, left by getting 150 m from its centre", () => {
+    const s = raw(5);
     expect(s.world.gravity).toEqual({ x: 0, y: 0 });
     expect(s.world.terrain.islands).toHaveLength(1);
-    const { w, step } = game(4);
+    const { w, step } = game(5);
     expect(w.thrust!.spec.escape).toEqual({ centre: { x: 0, y: 0 }, radius: 150 });
     // Rock all round the asteroid's surface, none in the open beside it.
     const rock = w.bodies.filter((b) => b.id.startsWith("rock-s"));
@@ -1066,7 +1091,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     // The pull on a 1 kg ball held still at 135 m, 90 m (the surface, over the sea of rock: a probe in
     // the open beside it) and 45 m from the centre, in the tunnel's direction where needed.
     const pullAt = (x: number, y: number) => {
-      const g = game(4, (sc) => {
+      const g = game(5, (sc) => {
         sc.world.thrust.turrets = [];
         sc.world.bodies.push({ id: "probe", shape: { kind: "disc", radius: 0.1 }, mass: 1, position: { x, y }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
       });
@@ -1093,7 +1118,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   }, 120_000);
 
   it("MTH-091 on the asteroid, a ship with the pod 150 m from the centre wins, and one without it is sent back", () => {
-    const g = withPod(4, (s) => {
+    const g = withPod(5, (s) => {
       s.world.thrust.turrets = [];
     });
     expect(st(g.w).pod).toBe("tether");
@@ -1103,7 +1128,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     settle(g.w);
     g.step(0.05);
     expect(st(g.w).phase).toBe("won");
-    const alone = game(4, (s) => (s.world.thrust.turrets = []));
+    const alone = game(5, (s) => (s.world.thrust.turrets = []));
     moveShip(alone.w, { x: -152, y: 10 });
     alone.step(0.05);
     expect(st(alone.w).phase).toBe("flying");
