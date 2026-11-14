@@ -315,7 +315,7 @@ plan below (a cheat that turned shells and gas back and let rock through).
   tether. The field is welded rigidly to the cockpit, so the ship is pushed by what hits it and
   comes down on it against rock. A blast outside it doesn't damage what is inside.
 - It burns fuel: 0.4 kg a game second (full tanks, 8.1 kg, in 40 s on screen; half the first
-  rate, Chloe, 14 November 2026), and each hit more: 0.0025 kg for each N·s, at least 0.05 kg.
+  rate, Chloe, 14 November 2026), and each hit more: 0.00125 kg for each N·s, at least 0.025 kg (halved, Chloe, 14 November 2026).
 - It is elastic (SHD-006; Chloe: "shrink and then rebound"): the field clears the ship by 1.5 m and
   is held to the ship's centre by a spring. Crashing, the ship sinks into it and is pushed back out.
   Falling flat onto rock: undamaged up to 25 m/s, bouncing back at about two thirds of its speed;
@@ -513,8 +513,9 @@ Priority: **M** must, **S** should.
   them have no power, and the others still do.
 - **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s, and
   electricity fizzes over it for as long (Chloe, 14 November 2026). Only the ship counts (its
-  parts still joined to its hull, and its shield's field): a piece it has lost, lying in a beam,
-  doesn't shock it elsewhere.
+  parts still joined to its hull): a piece it has lost, lying in a beam, doesn't shock it
+  elsewhere. A ship with its shield up isn't shocked: it passes through the beams (Chloe, 14
+  November 2026).
 - **MTH-088** `[M]` An explosion that reaches a dome punches leaks in it, more the nearer it went
   off (up to 3), and knocks the plant offline.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more

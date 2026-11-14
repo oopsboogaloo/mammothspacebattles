@@ -7,6 +7,7 @@
 // for a moment.
 
 import { assemblyRoots } from "./joints.ts";
+import { fieldId } from "./shield.ts";
 import { add, invRotate, length, rotate, sinCos, sub, type Vec2 } from "./math.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { localVertices } from "./shapes.ts";
@@ -324,12 +325,14 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
     for (const l of world.links) if (l.off === "shock") delete l.off;
   }
   if (ship && s.shockUntil === undefined) {
-    // Only what is still the ship: its parts still joined to its hull, and the field of a shield
-    // generator among them. Pieces it has lost (a leg knocked off, a tank's fragments) keep its
-    // prefix but are debris: one lying in a beam doesn't shock the ship wherever it is.
+    // Only what is still the ship: its parts still joined to its hull. Pieces it has lost (a leg
+    // knocked off, a tank's fragments) keep its prefix but are debris: one lying in a beam doesn't
+    // shock the ship wherever it is. And a ship with its shield up isn't shocked: it passes through
+    // the beams (Chloe, 14 November 2026).
     const root = roots.get(`${ship}hull`);
     const own = new Set(world.bodies.filter((b) => root !== undefined && roots.get(b.id) === root).map((b) => b.id));
-    const onShip = (b: Body) => own.has(b.id) || (b.id.endsWith("-field") && own.has(b.id.slice(0, -"-field".length)) && !!world.bodies.find((g) => g.id === b.id.slice(0, -"-field".length))?.shield);
+    const shielded = world.bodies.some((b) => b.shield && own.has(b.id) && world.bodies.some((f) => f.id === fieldId(b.id)));
+    const onShip = (b: Body) => !shielded && own.has(b.id);
     for (const t of spec.transmitters) {
       if (!powered(s, now, [t.id])) continue;
       const tips = transmitterTips(world, t);

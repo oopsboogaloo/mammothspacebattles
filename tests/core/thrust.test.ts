@@ -1183,6 +1183,22 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     step(0.05);
     expect(w.events.filter((e) => e.type === "plant.shock")).toHaveLength(1);
   }, 60_000);
+  it("MTH-084 a ship with its shield up passes through the shock; with it down it is shocked", () => {
+    const fly = (shield: boolean) => {
+      const { w, step } = game(4, (s) => (s.world.gravity = { x: 0, y: 0 }));
+      step(0.1);
+      const [a, b] = transmitterTips(w, w.thrust!.spec.plant!.transmitters[0])!;
+      moveShip(w, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + 10 });
+      if (shield) step(0.3, [set("shield", 1)]);
+      moveShip(w, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      step(0.2);
+      return w;
+    };
+    const up = fly(true);
+    expect(up.bodies.some((b) => b.id === "p1-shield-field")).toBe(true);
+    expect(up.events.some((e) => e.type === "plant.shock")).toBe(false);
+    expect(fly(false).events.some((e) => e.type === "plant.shock")).toBe(true);
+  }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
       const { w, step } = game(4);

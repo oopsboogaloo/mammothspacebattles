@@ -4257,8 +4257,8 @@
               "channel": "shield",
               "grow": 14,
               "burn": 0.4,
-              "hitBurn": 0.0025,
-              "minHit": 0.05,
+              "hitBurn": 0.00125,
+              "minHit": 0.025,
               "mass": 2,
               "spring": {
                 "stiffness": 3000,
