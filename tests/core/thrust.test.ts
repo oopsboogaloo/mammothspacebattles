@@ -1192,8 +1192,36 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     for (const r of [close, further, far]) expect(r.w.ledger.violations).toBe(0);
   }, 60_000);
 
+  it("MTH-101 level 6 is Chloe's warren: eighteen electric turrets, six fuel tanks, the plant on the lower shelf and six transmitters; the roof's turrets need one of three links and then one of three more; nothing moves as it starts", () => {
+    const s = raw(6);
+    expect(s.world.thrust.turrets).toHaveLength(18);
+    expect(s.world.thrust.tanks).toHaveLength(6);
+    expect(s.world.thrust.plant.transmitters).toHaveLength(6);
+    const { w, step } = game(6);
+    step(0.1);
+    expect(w.bodies.filter((b) => b.turret).every((b) => b.turret!.powered)).toBe(true);
+    const needs = new Map<string, string[]>(s.world.thrust.plant.turrets.map((t: { id: string; needs?: string[] }) => [t.id, t.needs ?? []]));
+    const roof = [...needs].filter(([, n]) => n.length === 2).map(([id]) => id);
+    const middle = [...needs].filter(([, n]) => n.length === 1).map(([id]) => id);
+    expect(roof).toHaveLength(6);
+    expect(middle).toHaveLength(7);
+    // The three links from the lower shelf down: the middle shelf and the roof go dark; the rest don't.
+    w.bodies = w.bodies.filter((b) => !/^aerial-(5|6|7|8|9|10)-/.test(b.id));
+    settle(w);
+    step(0.1);
+    for (const b of w.bodies.filter((x) => x.turret)) expect(b.turret!.powered, b.id).toBe(needs.get(b.id)!.length === 0);
+    // Settled, with every turret off, nothing on the rock moves.
+    const g = game(6);
+    for (const b of g.w.bodies) if (b.turret) b.turret.enabled = false;
+    const at = new Map(g.w.bodies.map((b) => [b.id, { ...b.position }]));
+    g.step(3);
+    for (const b of g.w.bodies.filter((x) => /^(t\d|fuel|pod|stand|plant|aerial)/.test(x.id)))
+      expect(Math.hypot(b.position.x - at.get(b.id)!.x, b.position.y - at.get(b.id)!.y), b.id).toBeLessThan(/barrel|breech/.test(b.id) ? 0.2 : 0.1);
+    expect(g.w.ledger.violations).toBe(0);
+  }, 120_000);
+
   it("MTH-099 WPN-014 no turret fires within 10° of a bearing whose bolt would land on the plant: every level's bearings are worked out and set", () => {
-    for (const n of [3, 4, 5]) {
+    for (const n of [3, 4, 5, 6]) {
       const s = raw(n);
       const w = initialWorld(parseScenario(s));
       const parts = w.thrust!.spec.plant!.parts;
