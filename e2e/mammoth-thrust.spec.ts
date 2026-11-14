@@ -463,3 +463,30 @@ test("MTH-091 level 5, the asteroid, opens from the title's test row", async ({ 
   await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 5");
   expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(13);
 });
+
+test("MTH-093 a new ship beaming in after one lost deep in level 4's cave is in view: the view doesn't go under the rock", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("./thrust.html?level=4");
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-hud")).toBeVisible();
+  expect(await quiet(page)).toBe(true);
+  // The ship down in the chamber, 180 m under the start, and lost there.
+  await hook(page, (m) => {
+    const w = m.sandbox().world;
+    const hull = w.bodies.find((b) => b.id === "p1-hull")!;
+    const d = { x: 20 - hull.position.x, y: -125 - hull.position.y };
+    return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
+  });
+  await page.waitForTimeout(300);
+  // Two presses: one stray touch doesn't cost a ship.
+  await page.getByTestId("mth-destruct").click();
+  await page.getByTestId("mth-destruct").click();
+  await expect.poll(() => hook(page, (m) => m.thrust()!.n), { timeout: 30_000 }).toBe(2);
+  await page.waitForTimeout(500);
+  const gap = await hook(page, (m) => {
+    const h = m.sandbox().world.bodies.find((b) => b.id === "p2-hull")!;
+    const c = m.camera();
+    return Math.hypot(c.x - h.position.x, c.y - h.position.y);
+  });
+  expect(gap).toBeLessThan(15);
+});

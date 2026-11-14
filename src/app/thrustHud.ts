@@ -86,3 +86,31 @@ export function coolantStatus(world: World): { share: number; holes: number } | 
   const capacity = (core?.contents ?? []).reduce((m, c) => m + c.capacity, 0);
   return { share: capacity > 0 ? Math.max(0, Math.min(1, plantCoolant(world, spec) / capacity)) : 0, holes: state.holes };
 }
+
+/**
+ * How far the view has gone on round a wrapping level (MTH-093), given where it looked last frame
+ * and now: a ship that crosses an edge jumps a whole width (or, on an asteroid's square, height) in
+ * one frame, and the view goes on with it instead. Only the same ship's jump counts (`n`: which
+ * ship, and how many times it has been beamed back): a new ship beaming in at the start, however
+ * far from where the last one was lost, starts the view afresh (it was read as a wrap, and the view
+ * went a whole level's height under the rock). A level of
+ * ground doesn't wrap up and down in play, so only an asteroid's (`vertical`) is followed that way.
+ */
+export function wrapShift(
+  shift: Vec2,
+  before: { n: string; alive: boolean; at: Vec2 } | null,
+  now: { n: string; alive: boolean; at: Vec2 },
+  bounds: { min: Vec2; max: Vec2; wrap?: boolean },
+  vertical: boolean,
+): Vec2 {
+  if (before && before.n !== now.n) return { x: 0, y: 0 };
+  if (!bounds.wrap || !before || !before.alive || !now.alive) return shift;
+  const W = bounds.max.x - bounds.min.x;
+  const H = bounds.max.y - bounds.min.y;
+  const dx = now.at.x - before.at.x;
+  const dy = now.at.y - before.at.y;
+  return {
+    x: Math.abs(dx) > W / 2 ? shift.x - Math.sign(dx) * W : shift.x,
+    y: vertical && Math.abs(dy) > H / 2 ? shift.y - Math.sign(dy) * H : shift.y,
+  };
+}

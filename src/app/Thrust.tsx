@@ -10,7 +10,7 @@ import { shown } from "./smooth.ts";
 import { View } from "./View.tsx";
 import { usePad, type PadAnalog, type PadGame, type PadState } from "./gamepad.ts";
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
-import { coolantStatus, easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, zoomFor } from "./thrustHud.ts";
+import { coolantStatus, easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, wrapShift, zoomFor } from "./thrustHud.ts";
 import { THRUST_DESTRUCT } from "../core/index.ts";
 
 export const thrustScreen = signal<"title" | "play">("title");
@@ -58,7 +58,7 @@ function useFollowCamera(): void {
     let lean = { x: 0, y: 0 };
     // How far the view has gone on round a wrapping level, and where it last looked before that.
     let shift = { x: 0, y: 0 };
-    let seen: { x: number; y: number } | null = null;
+    let seen: { n: string; alive: boolean; at: { x: number; y: number } } | null = null;
     let then = performance.now();
     const tick = () => {
       raf = requestAnimationFrame(tick);
@@ -77,16 +77,11 @@ function useFollowCamera(): void {
       const raw = ship ?? last ?? w.thrust.spec.start;
       // The level wraps round (MTH-093): when the ship goes off one side and comes in at the other,
       // the view goes on past the edge (the renderer draws the world's copies there) rather than
-      // jumping back across the level, so the stars behind don't jump either.
-      const b = w.bounds;
-      if (b.wrap && seen) {
-        const W = b.max.x - b.min.x;
-        const H = b.max.y - b.min.y;
-        if (Math.abs(raw.x - seen.x) > W / 2) shift.x -= Math.sign(raw.x - seen.x) * W;
-        if (Math.abs(raw.y - seen.y) > H / 2) shift.y -= Math.sign(raw.y - seen.y) * H;
-      }
-      if (w.time < 0.05) shift = { x: 0, y: 0 };
-      seen = raw;
+      // jumping back across the level, so the stars behind don't jump either (wrapShift).
+      // A new ship, or this one beamed back to the start, is a jump the view mustn't follow round.
+      const view = { n: `${w.thrust.state.n}:${w.thrust.state.stats.back}`, alive: !!ship, at: raw };
+      shift = w.time < 0.05 ? { x: 0, y: 0 } : wrapShift(shift, seen, view, w.bounds, !!w.thrust.spec.escape);
+      seen = view;
       const at = { x: raw.x + shift.x, y: raw.y + shift.y };
       const zoom = zoomFor(vp.height);
       const c = camera.value;

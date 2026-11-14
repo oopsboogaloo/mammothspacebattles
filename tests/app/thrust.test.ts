@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { insideOutline, LAMP_OFF, LAMP_ON, LINE_OFF, LINE_ON, RECOIL_TIME, recoilOf, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
-import { coolantStatus, easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
+import { coolantStatus, wrapShift, easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
 import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
@@ -179,6 +179,20 @@ describe("Mammoth Thrust's page", () => {
     expect(strokes(calls).filter((c) => c === LINE_OFF).length).toBe(1);
     expect(strokes(calls)).not.toContain("#eaf6ff");
   });
+  it("MTH-093 the view goes on round a wrapping level with the ship, but starts afresh for a new ship (it went under the rock on level 4)", () => {
+    const b = { min: { x: -100, y: -170 }, max: { x: 100, y: 170 }, wrap: true };
+    const at = (x: number, y: number) => ({ x, y });
+    // The same ship crossing the right edge: the view goes on one width to the right.
+    expect(wrapShift({ x: 0, y: 0 }, { n: "1:0", alive: true, at: at(99, 0) }, { n: "1:0", alive: true, at: at(-99, 0) }, b, false)).toEqual({ x: 200, y: 0 });
+    // A new ship beaming in 180 m above where the last was lost, deep in a cave: no shift at all.
+    expect(wrapShift({ x: 0, y: 0 }, { n: "1:0", alive: false, at: at(20, -130) }, { n: "2:0", alive: true, at: at(-70, 50) }, b, false)).toEqual({ x: 0, y: 0 });
+    // A shift built up on the last ship is dropped for the next.
+    expect(wrapShift({ x: 200, y: 0 }, { n: "1:0", alive: false, at: at(20, -130) }, { n: "2:0", alive: true, at: at(-70, 50) }, b, false)).toEqual({ x: 0, y: 0 });
+    // A ground level doesn't follow up and down; an asteroid's square does.
+    expect(wrapShift({ x: 0, y: 0 }, { n: "1:0", alive: true, at: at(0, -169) }, { n: "1:0", alive: true, at: at(0, 169) }, b, false)).toEqual({ x: 0, y: 0 });
+    expect(wrapShift({ x: 0, y: 0 }, { n: "1:0", alive: true, at: at(0, -169) }, { n: "1:0", alive: true, at: at(0, 169) }, b, true)).toEqual({ x: 0, y: -340 });
+  });
+
   it("MTH-086 the HUD's coolant gauge reads the share of the reactor's coolant left, on a level with a plant only", () => {
     expect(coolantStatus(world(1))).toBeNull();
     const w = world(3);
