@@ -116,15 +116,19 @@ other sources in §12):
   left, one hanging from the right wall, one from the chamber's roof, and one on the chamber's
   floor. The pod stands at the chamber's left end with two fuel tanks beside it; one more fuel
   tank is on the surface. Play can start here: `thrust.html?level=4`.
-- **Level 5: the asteroid** (13 November 2026, a first design to try before Chloe draws one; level 4 until 14 November). A
-  round asteroid 180 m across floating in open space 340 m across, its gravity pulling toward its
-  centre as a uniform ball's: 4 m/s² at the surface, falling as 1/r² further out and in a straight
-  line to nothing at its centre (its caves aren't counted). A tunnel winds down from a mouth on
-  its upper left into a chamber above the centre, where the pod and a fuel tank stand (gravity
-  there about 0.5 m/s²); another tank stands on the top, under the start. Eight electric turrets
-  round the tunnel and chamber (no plant: unlimited power), five fuel turrets round the surface.
-  The level is left by getting 130 m from the centre with the pod; without it, the ship is beamed
-  back, as at a level's top.
+- **Level 5: the asteroid** (Chloe's drawing, 14 November 2026, traced at 0.13 m a pixel; it
+  replaces the first design of 13 November). An asteroid about 200 m across, curled round on
+  itself, with one way in on its left into a ring of caves. The power plant stands on the floor of
+  the lower cave. Its lines run through the rock to the turrets of the lower and right parts, and
+  reach the upper part across the open by either of two transmitters: it keeps its power while
+  either stands (MTH-095). Thirteen electric turrets, inside and out. The pod stands on a ledge in
+  the right-hand cave, its stand level to the pull (on the ledge's slope it rolled out of its cup);
+  four fuel tanks stand round the rock, each upright to it. Gravity pulls toward the asteroid's
+  middle as a uniform ball's: 4 m/s² at 84 m (the asteroid's area as a disc), falling as 1/r²
+  further out and in a straight line to nothing at the middle (its caves aren't counted). The level
+  is left by getting 150 m from the middle with the pod, about 25 m past its furthest rock; without
+  the pod, the ship is beamed back, as at a level's top. Its square of open space is 380 m across.
+  The way in is about 19 m wide.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
   through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
@@ -459,9 +463,12 @@ Priority: **M** must, **S** should.
   off (up to 3), and knocks the plant offline.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more
   often the less coolant is left.
-- **MTH-091** `[M]` Level 5 is an asteroid: rock as an island in open space, gravity toward its
-  centre as a uniform ball's (inverse square outside, linear inside), left by getting 130 m from
-  its centre (40 m over its surface; 150 m until 14 November 2026).
+- **MTH-091** `[M]` Level 5 is Chloe's asteroid (§3): rock as an island in open space, gravity
+  toward its middle as a uniform ball's (inverse square outside, linear inside), left by getting
+  150 m from its middle, about 25 m past its furthest rock. Thirteen electric turrets, four fuel
+  tanks, the plant in its lower cave; nothing on it moves as it starts.
+- **MTH-095** `[M]` A turret or power line may take power through any one of several transmitters
+  (`"tx1|tx2"`): it keeps power while one of them stands.
 - **MTH-093** `[M]` Every level wraps round at its sides, with no walls: the ground's two ends meet
   at one height, a ship (and the pod on its tether) flown off one side comes in at the other, and
   the view goes on across the edge without a jump. The asteroid's square wraps on all four sides.

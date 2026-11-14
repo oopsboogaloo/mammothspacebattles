@@ -1114,20 +1114,23 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(quarter).toBeGreaterThan(0);
     expect(little).toBeGreaterThan(quarter);
   }, 120_000);
-  it("MTH-091 FLT-015 TER-007 level 5 is an asteroid: rock as an island in open space, pulling toward its centre as a uniform ball, left by getting 130 m from its centre", () => {
+  it("MTH-091 FLT-015 TER-007 level 5 is Chloe's asteroid: rock as an island in open space, pulling toward its middle as a uniform ball, left by getting 150 m from it", () => {
     const s = raw(5);
     expect(s.world.gravity).toEqual({ x: 0, y: 0 });
     expect(s.world.terrain.islands).toHaveLength(1);
+    expect(s.world.thrust.turrets).toHaveLength(13);
+    expect(s.world.thrust.tanks).toEqual(["fuel-1", "fuel-2", "fuel-3", "fuel-4"]);
     const { w, step } = game(5);
-    expect(w.thrust!.spec.escape).toEqual({ centre: { x: 0, y: 0 }, radius: 130 });
-    // Rock all round the asteroid's surface, none in the open beside it.
+    expect(w.thrust!.spec.escape).toEqual({ centre: { x: 0, y: 0 }, radius: 150 });
+    // Rock all round the asteroid's surface, none out in the open; no walls: the square of open
+    // space wraps round on every side (MTH-093).
     const rock = w.bodies.filter((b) => b.id.startsWith("rock-s"));
     expect(rock.length).toBeGreaterThan(30);
-    // No walls: the square of open space wraps round on every side (MTH-093).
-    expect(rock.every((b) => Math.hypot(b.position.x, b.position.y) < 90 + 5)).toBe(true);
-    expect(w.bounds).toMatchObject({ min: { x: -170, y: -170 }, max: { x: 170, y: 170 }, wrap: true });
-    // The pull on a 1 kg ball held still at 135 m, 90 m (the surface, over the sea of rock: a probe in
-    // the open beside it) and 45 m from the centre, in the tunnel's direction where needed.
+    expect(rock.every((b) => Math.hypot(b.position.x, b.position.y) < 125 + 5)).toBe(true);
+    expect(w.bounds).toMatchObject({ min: { x: -190, y: -190 }, max: { x: 190, y: 190 }, wrap: true });
+    // The pull on a 1 kg ball held still 140 m out, and in the open middle of its caves, 23 m from
+    // its source: 4 m/s² at 84 m, falling as 1/r² outside and in a straight line to nothing inside.
+    const core = body(w, "rock-core")!.position;
     const pullAt = (x: number, y: number) => {
       const g = game(5, (sc) => {
         sc.world.thrust.turrets = [];
@@ -1135,27 +1138,51 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
       });
       g.step(1 / 240);
       const v = body(g.w, "probe")!.velocity;
-      return { a: Math.hypot(v.x, v.y) * 240, inward: -(v.x * x + v.y * y) / Math.hypot(x, y) > 0 };
+      const r = Math.hypot(x - core.x, y - core.y);
+      return { r, a: Math.hypot(v.x, v.y) * 240, inward: -(v.x * (x - core.x) + v.y * (y - core.y)) / r > 0 };
     };
-    const far = pullAt(0, 135);
-    expect(far.a).toBeCloseTo((4 * 90 * 90) / (135 * 135), 2);
+    const far = pullAt(core.x, core.y + 140);
+    expect(far.a).toBeCloseTo((4 * 84 * 84) / (140 * 140), 2);
     expect(far.inward).toBe(true);
-    expect(pullAt(-90.5, 0).a).toBeCloseTo(4 * (90 / 90.5) ** 2, 2);
-    // Inside, in the chamber 30 m from the centre: a straight line to nothing, 4 × 30/90.
-    const inside = pullAt(0, 30);
-    expect(inside.a).toBeCloseTo((4 * 30) / 90, 2);
+    const inside = pullAt(-20, -5);
+    expect(inside.a).toBeCloseTo((4 * inside.r) / 84, 2);
     expect(inside.inward).toBe(true);
+    // The plant powers every turret; the upper part's four through either transmitter.
+    const powered = () => w.bodies.filter((b) => b.turret).map((b) => b.turret!.powered);
+    step(0.1);
+    expect(powered().every(Boolean)).toBe(true);
+    const upper = s.world.thrust.plant.turrets.filter((t: { needs?: string[] }) => t.needs).map((t: { id: string }) => t.id);
+    expect(upper).toEqual(["t1-breech", "t2-breech", "t5-breech", "t7-breech"]);
     // Settled, nothing on the rock moves (turrets off), and the ledger is clean.
     for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
     const at = new Map(w.bodies.map((b) => [b.id, { ...b.position }]));
     step(3);
-    // (A barrel held across the pull sags a little on its joint: 13 cm on the tunnel's outer wall.)
-    for (const b of w.bodies.filter((x) => x.id.startsWith("t") || x.id.startsWith("fuel") || x.id === "pod"))
+    for (const b of w.bodies.filter((x) => /^(t\d|fuel|pod|plant|aerial)/.test(x.id)))
       expect(Math.hypot(b.position.x - at.get(b.id)!.x, b.position.y - at.get(b.id)!.y), b.id).toBeLessThan(/barrel|breech/.test(b.id) ? 0.2 : 0.1);
     expect(w.ledger.violations).toBe(0);
   }, 120_000);
 
-  it("MTH-091 on the asteroid, a ship with the pod 150 m from the centre wins, and one without it is sent back", () => {
+  it("MTH-095 a turret fed by either of two transmitters has power while one is up", () => {
+    const { w, step } = game(5, (s) => (s.world.thrust.turrets = []));
+    step(0.1);
+    const t1 = body(w, "t1-breech")!;
+    expect(t1.turret!.powered).toBe(true);
+    // One transmitter's antenna gone: still powered; both: not.
+    w.bodies = w.bodies.filter((b) => !b.id.startsWith("aerial-1-"));
+    settle(w);
+    step(0.1);
+    expect(st(w).plant!.up).toMatchObject({ tx1: false, tx2: true });
+    expect(t1.turret!.powered).toBe(true);
+    w.bodies = w.bodies.filter((b) => !b.id.startsWith("aerial-3-"));
+    settle(w);
+    step(0.1);
+    expect(st(w).plant!.up).toMatchObject({ tx1: false, tx2: false });
+    expect(t1.turret!.powered).toBe(false);
+    // The lower and right parts' turrets don't need them.
+    expect(body(w, "t13-breech")!.turret!.powered).toBe(true);
+  });
+
+  it("MTH-091 on the asteroid, a ship with the pod 150 m from the middle wins, and one without it is sent back", () => {
     const g = withPod(5, (s) => {
       s.world.thrust.turrets = [];
     });
