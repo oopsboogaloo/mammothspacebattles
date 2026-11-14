@@ -95,10 +95,14 @@ other sources in §12):
   with more turrets and fuel; doors from the fourth mission. Ours follow that progression.
 - **Our own layouts.** We take the scale and the order of difficulty, not the shapes: no level is
   traced or copied from the original's.
-- **Level 1 (MVP): the surface.** No cave. Lunar mountains across about 300 m, with a hollow
-  between them. The pod stands in the hollow, in plain sight. The factory and two buildings on a
-  flat to one side, one fuel tank, one turret. It teaches flying, the beam, the tether and the
-  climb out.
+- **Level 1: the surface** (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel; MTH-096).
+  No cave. Spires and mesas across about 200 m with a valley in the middle, where the pod stands.
+  One electric turret on the valley's left shoulder, on its own power (§ Powered turrets): a round
+  fuel tank on the mesa feeds a generator below it through a pipe down the mesa's side; the
+  generator charges a capacitor in a notch further down; the capacitor powers the turret. A second
+  fuel tank stands on the plateau to the right. It teaches flying, the beam, the tether and the
+  climb out, and taking a turret's power away. (The first level 1, with a turret of the first
+  kind, is kept as `scenarios/thrust-test.json` for the tests; it isn't played.)
 - **Level 2 (MVP): one chamber.** The factory, a building and a turret on the surface. One shaft,
   about 30 m wide and 80 m deep, opens into a single chamber about 120 m across. Two turrets on
   the chamber's walls, the pod and a fuel tank on its floor. It teaches flying the pod up a shaft.
@@ -302,11 +306,31 @@ plan below (a cheat that turned shells and gas back and let rock through).
 - While it is up the five engines and the gun don't work. The tractor still does.
 - The field weighs 2 kg while up (0.5 kg lost its bounce in the weld).
 
+### Powered turrets
+
+Chloe's design, 14 November 2026 (WPN-013): electric turrets that make their own power, replacing
+the first fuel turrets level by level (level 1 now; level 2 when Chloe redraws it). Each part stands
+on its own pad on the rock and can be shot on its own:
+
+- **Fuel tank** (a round FUEL tank): feeds the generator through a **pipe**. One slug breaks a
+  piece of pipe, and the fuel stops there. The ship's beam can drain the tank as any fuel tank.
+- **Generator**: no fuel of its own. While fed it charges the capacitor, 1 shot a second, burning
+  0.02 kg/s (idle once the capacitor is full). Its light is green while it is whole and fed, red
+  once it is destroyed, its pipe is broken or its tank is dry.
+- **Capacitor**: holds 5 shots; its bar shows how full it is, and turns red when it is empty.
+  Destroyed, the turret is out of action (and scores).
+- **Electric turret**: fires from the capacitor, a shot each. Its nodes are red while it is offline,
+  as when its capacitor is empty.
+- The **cables** (generator to capacitor, capacitor to turret) can't be cut. They are drawn white
+  while what they leave from is on, dark while it isn't.
+
 ### Fuel
 
 - The ship carries half Asteroids' load (Chloe, 14 November 2026, MTH-094: with a full load you
   never needed to refuel): 8.1 kg, about a minute of full thrust, as much as one fuel tank holds.
   Out of fuel, the ship falls. Lighter, it turns faster (about 9 rad/s² against 7).
+- A fuel tank is a round tank with FUEL on it, on two legs on a pad (Chloe's drawing, 14 November
+  2026), the whole stand anchored to the rock.
 - A fuel tank stands on a pad on the ground. While the beam is held with one in its wedge, fuel
   moves to the ship until the tank is empty or the ship is full, and the game says REFUELLING.
   First values: a tank holds 8.1 kg, half a ship's load, and gives 2 kg a game second, so a full

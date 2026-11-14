@@ -1,13 +1,13 @@
 // Mammoth Thrust's levels (docs/games/mammoth-thrust.md §3, -design.md §4): the ground from an
 // outline of its open space, the ship (Mammoth Asteroids' ship with a tractor unit and a tether
 // unit), and the pod on its stand. The game itself is in the world (src/core/thrust.ts).
-//   node scripts/thrust.ts            writes scenarios/thrust-1.json … thrust-5.json
+//   node scripts/thrust.ts            writes scenarios/thrust-1.json … thrust-5.json, and thrust-test.json
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
 import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
 import { narrowest, type Vec } from "./terrain.ts";
-import { electricTurret, turret, type ElectricTuning, type TurretTuning } from "./turretParts.ts";
+import { capacitor, electricTurret, generator, pipe, turret, type ElectricTuning, type TurretTuning } from "./turretParts.ts";
 import { antenna, powerPlant, type PlantTuning } from "./plantParts.ts";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -153,15 +153,24 @@ const TANK_FUEL = 8.1;
  * explodes when destroyed (MTH-043).
  */
 function fuelTank(name: string, at: Vec, angle = 0) {
+  // Round, on two stands (Chloe's drawing, 14 November 2026: a circle with FUEL on it): a 2 m disc
+  // welded to two legs on a pad, the three fixed and anchored to the rock as one (TER-006).
   const store = (resource: string, mass: number) => ({ resource, mass: Math.round(mass * 1e6) / 1e6, capacity: Math.round(mass * 1e6) / 1e6 });
-  const off = (y: number): Vec => ({ x: r6(at.x - y * Math.sin(angle)), y: r6(at.y + y * Math.cos(angle)) });
+  const off = (x: number, y: number): Vec => ({ x: r6(at.x + x * Math.cos(angle) - y * Math.sin(angle)), y: r6(at.y + x * Math.sin(angle) + y * Math.cos(angle)) });
+  const R = 1;
+  const legX = 0.75;
+  const legTop = r6(R + 0.6 - Math.sqrt(R * R - legX * legX)); // where the disc meets the legs
+  const legH = r6(legTop - 0.3);
+  const stand = (id: string, shape: Json, x: number, y: number, mass: number): Json => ({ ...fixed(id, shape, off(x, y)), angle: r6(angle), anchored: { mass, group: name } });
   const bodies: Json[] = [
-    { ...fixed(`${name}-pad`, { kind: "box", width: 2, height: 0.3 }, off(0.15)), angle: r6(angle), anchored: { mass: 30 } },
+    stand(`${name}-pad`, { kind: "box", width: 2.4, height: 0.3 }, 0, 0.15, 20),
+    stand(`${name}-leg-l`, { kind: "box", width: 0.25, height: legH }, -legX, 0.3 + legH / 2, 5),
+    stand(`${name}-leg-r`, { kind: "box", width: 0.25, height: legH }, legX, 0.3 + legH / 2, 5),
     {
       id: name,
-      shape: { kind: "box", width: 1.4, height: 1.6 },
+      shape: { kind: "disc", radius: R },
       mass: 2,
-      position: off(1.1),
+      position: off(0, R + 0.6),
       velocity: { x: 0, y: 0 },
       angle: r6(angle),
       angularVelocity: 0,
@@ -174,12 +183,17 @@ function fuelTank(name: string, at: Vec, angle = 0) {
     },
   ];
   const limits = { tension: 22950, compression: 45900, shear: 16050, torque: 5520 };
-  const joints: Json[] = [-0.5, 0.5].map((x, k) => ({ id: `${name}-w-${k}`, a: `${name}-pad`, b: name, anchorA: { x, y: 0.15 }, anchorB: { x, y: -0.8 }, limits }));
+  const joints: Json[] = (["l", "r"] as const).map((side, k) => {
+    const x = side === "l" ? -legX : legX;
+    return { id: `${name}-w-${k}`, a: `${name}-leg-${side}`, b: name, anchorA: { x: 0, y: r6(legH / 2) }, anchorB: { x, y: r6(legTop - (R + 0.6)) }, limits };
+  });
   return { bodies, joints, tank: name };
 }
 
 interface Level {
   n: number;
+  /** The scenario's file name, if not `thrust-{n}` (a test level). */
+  file?: string;
   title: string;
   description: string;
   colour: string;
@@ -213,6 +227,13 @@ interface Level {
    * level is left by getting `escape` m from the centre. `ground` and `top` aren't used.
    */
   asteroid?: { island: Vec[]; radius: number; gravity: number; box: number; escape: number; core?: Vec };
+  /**
+   * Electric turrets with their own power (WPN-013; Chloe's drawing, 14 November 2026): turret
+   * number `turret` (from 1) is powered by a capacitor, charged by a generator, fed by fuel tank
+   * number `tank` (from 1) through a pipe along `pipe` (tank to generator). The cables, generator
+   * to capacitor and capacitor to turret, are drawn along `cables`.
+   */
+  powered?: { turret: number; generator: { at: Vec; angle?: number }; capacitor: { at: Vec; angle?: number }; tank: number; pipe: Vec[]; cables: [Vec[], Vec[]] }[];
   /** Seeds the turrets' generators: the level's number × 100 if not given (a renumbered level keeps its own). */
   seed?: number;
   plant?: {
@@ -258,8 +279,32 @@ function write(l0: Level) {
   }
   // The sky, for the stars: the open space above the ground, closed across each cave's mouth.
   const inCave = (p: Vec) => l.caves.some((c) => c.slice(1, -1).some((q) => q.x === p.x && q.y === p.y));
-  const sky = ast ? air : [{ x: left, y: SKY }, { x: right, y: SKY }, ...l.ground.filter((p) => !inCave(p))];
-  const turrets = l.turrets.map((t, k) => (t.electric ? electricTurret : turret)(`t${k + 1}`, t.at, t.angle, (t.electric ? ELECTRIC_TURRET : TURRET) as never, (l.seed ?? 100 * l.n) + k + 1));
+  // It reaches 1 m past each side, so that where the level's copies meet (MTH-093) their skies
+  // overlap: two skies only touching left a faint line of rock between them.
+  const O = 1;
+  const g0 = l.ground[0];
+  const g1 = l.ground[l.ground.length - 1];
+  const sky = ast
+    ? [P(-ast.box - O, ast.box + O), P(ast.box + O, ast.box + O), P(ast.box + O, -ast.box - O), P(-ast.box - O, -ast.box - O)]
+    : [{ x: left - O, y: SKY }, { x: right + O, y: SKY }, { x: right + O, y: g0.y }, ...l.ground.filter((p) => !inCave(p)), { x: left - O, y: g1.y }];
+  const supply = new Map((l.powered ?? []).map((p) => [p.turret, p]));
+  const turrets = l.turrets.map((t, k) =>
+    t.electric
+      ? electricTurret(`t${k + 1}`, t.at, t.angle, ELECTRIC_TURRET, (l.seed ?? 100 * l.n) + k + 1, supply.has(k + 1) ? `t${k + 1}-cap` : undefined)
+      : turret(`t${k + 1}`, t.at, t.angle, TURRET, (l.seed ?? 100 * l.n) + k + 1),
+  );
+  // Each powered turret's capacitor, generator and pipe (WPN-013), and the cables drawn between them.
+  const machines = (l.powered ?? []).flatMap((p) => {
+    const name = `t${p.turret}`;
+    const gen = generator(`${name}-gen`, p.generator.at, p.generator.angle ?? 0, `${name}-cap`, { burn: TURRET.burn, charge: TURRET.charge });
+    const cap = capacitor(`${name}-cap`, p.capacitor.at, p.capacitor.angle ?? 0, TURRET.shots);
+    const fuel = pipe(`${name}-pipe`, p.pipe, `fuel-${p.tank}`, `${name}-gen`);
+    return [{ bodies: [...gen.bodies, ...cap.bodies, ...fuel.bodies], joints: [...gen.joints, ...cap.joints], links: fuel.links }];
+  });
+  const cables = (l.powered ?? []).flatMap((p) => [
+    { points: p.cables[0], from: `t${p.turret}-gen` },
+    { points: p.cables[1], from: `t${p.turret}-cap` },
+  ]);
   const tanks = l.tanks.map((t, k) => ("at" in t ? fuelTank(`fuel-${k + 1}`, t.at, t.angle) : fuelTank(`fuel-${k + 1}`, t)));
   const plant = l.plant ? powerPlant(l.plant.at, PLANT, l.plant.angle ?? 0) : undefined;
   const txs = l.plant ? (l.plant.transmitters ?? [{ id: "tx", antennae: l.plant.antennae! }]) : [];
@@ -270,7 +315,7 @@ function write(l0: Level) {
     if (Array.isArray(b)) return b.includes(k) ? ["tx"] : undefined;
     return b[k];
   };
-  const name = `thrust-${l.n}`;
+  const name = l.file ?? `thrust-${l.n}`;
   const scenario = {
     schema: 1,
     name,
@@ -288,9 +333,9 @@ function write(l0: Level) {
       bodies: [
         // An asteroid's gravity: a source at its centre that pulls as a uniform ball (FLT-015), hidden in the rock.
         ...(ast ? [{ ...fixed("rock-core", { kind: "disc", radius: 0.5 }, ast.core ?? P(0, 0)), gravity: { mu: ast.gravity * ast.radius * ast.radius, core: 1, radius: ast.radius } }] : []),
-        ...pod(l.pod, l.podAngle ?? 0), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies)],
-      joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints), ...(plant?.joints ?? []), ...aerials.flatMap((a) => a.joints)],
-      links: turrets.flatMap((t) => t.links),
+        ...pod(l.pod, l.podAngle ?? 0), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies), ...machines.flatMap((m) => m.bodies)],
+      joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints), ...(plant?.joints ?? []), ...aerials.flatMap((a) => a.joints), ...machines.flatMap((m) => m.joints)],
+      links: [...turrets.flatMap((t) => t.links), ...machines.flatMap((m) => m.links)],
       thrust: {
         ship: ship(),
         mix: SHIP_MIX,
@@ -325,7 +370,7 @@ function write(l0: Level) {
         respawn: 1.25,
         grace: 1,
         level: l.n,
-        view: { colour: l.colour, pitch: 1, sky, caves: l.caves, ...(ast ? { islands: [ast.island] } : {}) },
+        view: { colour: l.colour, pitch: 1, sky, caves: l.caves, ...(ast ? { islands: [ast.island] } : {}), ...(cables.length ? { cables } : {}) },
       },
     },
     timeline: [],
@@ -341,15 +386,67 @@ function write(l0: Level) {
 
 const P = (x: number, y: number): Vec => ({ x, y });
 
-// Level 1, the surface (MTH-011): no cave. Mountains across 300 m with a hollow between them; the
-// pod stands in the hollow, in plain sight. The ship comes in over the flat to the left.
+// Level 1, the surface (Chloe's drawing, 14 November 2026, traced at 0.1 m a pixel as level 3 was;
+// MTH-011): no cave. Spires and mesas across 200 m with a valley in the middle, where the pod
+// stands. One electric turret on the valley's left shoulder, powered its own way (WPN-013): a round
+// fuel tank on the mesa feeds a generator below it through a pipe down the mesa's side; the
+// generator charges a capacitor in a notch further down, and the capacitor powers the turret. A
+// second fuel tank stands on the plateau to the right.
 write({
   n: 1,
   title: "The surface",
-  description: "Fly down to the pod in the hollow, take it on the tether with the tractor beam, and carry it up past the top.",
+  description: "Fly down to the pod in the valley, take it on the tether with the tractor beam, and carry it up past the top. The turret on the shoulder runs on its own capacitor, generator and fuel.",
+  colour: "#7a7a28",
+  top: 90,
+  // Right to left: the open space is above.
+  ground: [
+    P(102.2, 36.7), P(98.6, 36.6), P(92.0, 39.3), P(85.78, 38.4), P(82.98, 38.4), P(80.0, 38.3), P(78.4, 37.5), P(77.5, 31.3),
+    P(75.7, 29.9), P(73.7, 29.8), P(72.4, 30.9), P(73.0, 36.1), P(72.6, 37.1), P(67.5, 28.2), P(60.7, 27.5), P(52.5, 32.2),
+    P(51.5, 33.4), P(49.5, 38.0), P(48.6, 46.4), P(47.1, 48.0), P(45.7, 46.1), P(45.5, 41.1), P(44.1, 33.7), P(37.5, 27.4),
+    P(36.5, 27.2), P(35.7, 27.7), P(33.4, 32.3), P(31.8, 40.5), P(30.8, 41.8), P(29.5, 39.8), P(26.9, 28.8), P(25.9, 27.4),
+    P(23.3, 25.1), P(22.3, 25.0), P(21.0, 26.4), P(20.1, 30.0), P(18.9, 30.7), P(10.9, 22.0), P(11.4, 18.6), P(15.2, 14.4),
+    P(15.5, 7.2), P(12.5, 1.8), P(10.3, 0.6), P(7.7, 0.9), P(6.6, 3.3), P(6.5, 6.7), P(5.7, 7.3), P(5.0, 3.5),
+    P(3.8, 0.9), P(0.96, -0.1), P(-2.24, -0.1), P(-3.6, -0.4), P(-6.6, 0.3), P(-6.9, 1.9), P(-7.7, 2.6), P(-9.2, 1.1),
+    P(-11.0, 2.0), P(-11.6, 3.2), P(-11.7, 6.9), P(-12.7, 6.7), P(-13.0, 4.7), P(-14.0, 4.6), P(-15.1, 7.2), P(-16.2, 8.1),
+    P(-16.3, 10.3), P(-17.9, 11.3), P(-18.5, 14.3), P(-27.3, 14.3), P(-29.4, 27.3), P(-30.3, 28.4), P(-31.5, 27.7), P(-32.6, 19.7),
+    P(-34.84, 18.6), P(-37.04, 18.6), P(-40.8, 18.4), P(-42.0, 20.7), P(-41.7, 21.5), P(-40.1, 22.3), P(-39.7, 24.9), P(-42.6, 45.1),
+    P(-43.7, 45.3), P(-44.8, 37.5), P(-46.0, 36.6), P(-46.5, 34.2), P(-47.3, 33.3), P(-49.5, 32.4), P(-50.7, 32.6), P(-53.5, 38.1),
+    P(-55.63, 38.1), P(-58.43, 38.1), P(-59.9, 37.8), P(-60.7, 34.2), P(-62.1, 33.6), P(-64.1, 31.0), P(-66.5, 31.0), P(-69.5, 34.6),
+    P(-70.8, 35.2), P(-71.0, 42.0), P(-71.7, 45.0), P(-72.7, 44.4), P(-73.7, 38.8), P(-74.8, 37.0), P(-75.7, 33.2), P(-78.3, 33.8),
+    P(-80.8, 39.6), P(-89.2, 38.6), P(-90.9, 36.5), P(-94.0, 27.9), P(-96.6, 27.7), P(-99.5, 42.4), P(-101.3, 32.3), P(-102.3, 31.2),
+  ],
+  caves: [],
+  start: P(-85, 62),
+  pod: P(-0.64, -0.1),
+  turrets: [{ at: P(-22.9, 14.3), angle: 0, electric: true }],
+  // The turret's own tank on the mesa, and one on the plateau to the right.
+  tanks: [P(-57.03, 38.1), P(84.38, 38.4)],
+  powered: [
+    {
+      turret: 1,
+      tank: 1,
+      generator: { at: P(-65.3, 31.0) },
+      capacitor: { at: P(-35.94, 18.6) },
+      // Down the mesa's side, from the tank's stand to the generator's side.
+      pipe: [P(-58.35, 38.3), P(-59.47, 36.29), P(-60.21, 33.96), P(-61.27, 32.9), P(-64.45, 31.55)],
+      cables: [
+        [P(-65.3, 31.0), P(-64.24, 19.65), P(-57.03, 15.09), P(-36.68, 16.15), P(-35.94, 18.6)],
+        [P(-35.94, 18.6), P(-34.03, 10.96), P(-23.11, 11.91), P(-22.9, 14.3)],
+      ],
+    },
+  ],
+});
+
+// A test level, not played: the first level 1 (12 November 2026), with the first turret, the one
+// that carries its own tank, generator and battery. The core tests of the ship, the tether and
+// that turret fly here (tests/core/thrust.test.ts), as they did before Chloe drew level 1.
+write({
+  n: 1,
+  file: "thrust-test",
+  title: "Test: the first surface",
+  description: "The first level 1, kept for the tests: mountains with a hollow, one turret of the first kind.",
   colour: "#c8502e",
   top: 120,
-  // Right to left: the open space is above.
   ground: [
     P(150, 62), P(138, 40), P(124, 36), P(112, 16), P(96, 16), P(84, 18), P(70, 30), P(56, 24), P(44, 6), P(42, 5), P(34, 5), P(30, 2),
     P(20, -8), P(4, -8), P(-4, -6), P(-12, 8), P(-24, 26), P(-36, 22), P(-48, 10), P(-78, 10), P(-92, 12), P(-104, 30),
@@ -358,9 +455,7 @@ write({
   caves: [],
   start: P(-63, 75),
   pod: P(12, -8),
-  // One turret, on a ledge at the hollow's rim, overlooking the pod.
   turrets: [{ at: P(38, 5), angle: 0 }],
-  // One fuel tank, on the flat to the right.
   tanks: [P(104, 16)],
 });
 

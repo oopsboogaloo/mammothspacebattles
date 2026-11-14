@@ -1,15 +1,16 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, turretOnline, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, generatorOnline, turretOnline, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 
-const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
+/** A level's scenario; "test" is the first level 1, kept for the tests of the ship, the tether and the first turret. */
+const raw = (n: number | "test") => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
 const sandbox = getProfile("sandbox");
 const set = (channel: string, value: number): Command => ({ type: "control.set", channel, value });
 
 /** A game on level `n`, with `edit` over the scenario. `step(s)` runs s game seconds, the commands on its first step. */
-function game(n = 1, edit?: (scn: ReturnType<typeof raw>) => void): { w: World; step: (seconds: number, commands?: Command[]) => void } {
+function game(n: number | "test" = "test", edit?: (scn: ReturnType<typeof raw>) => void): { w: World; step: (seconds: number, commands?: Command[]) => void } {
   const scn = raw(n);
   edit?.(scn);
   const w = initialWorld(parseScenario(scn));
@@ -41,7 +42,7 @@ function moveShip(w: World, to: { x: number; y: number }): void {
   settle(w);
 }
 /** The ship 9 m over the pod with the pod on its tether, the tractor's button let go. */
-function withPod(n = 1, edit?: (scn: ReturnType<typeof raw>) => void) {
+function withPod(n: number | "test" = "test", edit?: (scn: ReturnType<typeof raw>) => void) {
   const g = game(n, edit);
   moveShip(g.w, { x: pod(g.w).position.x, y: pod(g.w).position.y + 9 });
   g.step(0.1, [set("tractor", 1)]);
@@ -73,8 +74,9 @@ describe("Mammoth Thrust", () => {
       expect(pod(w).mass).toBe(34);
       expect(w.thrust!.spec.level).toBe(n);
     }
-    // Level 1 has one turret, level 2 three: each a base, a mount, a carriage with its gun, a battery, a generator, a pipe and a fuel tank (MTH-031).
-    for (const [n, count] of [[1, 1], [2, 3]] as const) {
+    // The test level (the first level 1) has one turret of the first kind, level 2 three: each a
+    // base, a mount, a carriage with its gun, a battery, a generator, a pipe and a fuel tank (MTH-031).
+    for (const [n, count] of [["test", 1], [2, 3]] as const) {
       const { w } = game(n);
       expect(w.thrust!.spec.turrets).toHaveLength(count);
       for (let k = 1; k <= count; k++) {
@@ -88,6 +90,78 @@ describe("Mammoth Thrust", () => {
     expect(raw(1).world.thrust.view.caves).toHaveLength(0);
     expect(raw(2).world.thrust.view.caves).toHaveLength(1);
     expect(pod(game(2).w).position.y).toBeLessThan(-100);
+  });
+
+  it("MTH-096 WPN-013 level 1 is Chloe's surface: an electric turret on its own power, a fuel tank feeding a generator through a pipe, the generator charging a capacitor, the capacitor powering the turret; nothing moves as it starts", () => {
+    const s = raw(1);
+    expect(s.world.thrust.turrets).toEqual(["t1-breech"]);
+    expect(s.world.thrust.tanks).toEqual(["fuel-1", "fuel-2"]);
+    expect(s.world.thrust.view.cables).toHaveLength(2);
+    const { w, step } = game(1);
+    const breech = body(w, "t1-breech")!;
+    expect(breech.turret).toMatchObject({ battery: "t1-cap", cabled: true });
+    expect(body(w, "t1-cap")!.charge).toEqual({ shots: 5, capacity: 5 });
+    expect(body(w, "t1-gen")!.generator).toMatchObject({ battery: "t1-cap" });
+    expect(w.bodies.filter((b) => b.id.startsWith("t1-pipe-")).length).toBeGreaterThan(1);
+    // The new fuel tanks: round, on two legs.
+    expect(body(w, "fuel-1")!.shape).toEqual({ kind: "disc", radius: 1 });
+    expect(body(w, "fuel-1-leg-l")).toBeDefined();
+    expect(generatorOnline(w, body(w, "t1-gen")!)).toBe(true);
+    expect(turretOnline(w, breech)).toBe(true);
+    breech.turret!.enabled = false;
+    const at = new Map(w.bodies.map((b) => [b.id, { ...b.position }]));
+    step(3);
+    for (const b of w.bodies.filter((x) => /^(t1|fuel|pod|stand)/.test(x.id))) expect(Math.hypot(b.position.x - at.get(b.id)!.x, b.position.y - at.get(b.id)!.y), b.id).toBeLessThan(0.05);
+    expect(w.ledger.violations).toBe(0);
+  });
+
+  it("WPN-013 the capacitor empties as the turret fires and the generator fills it again, burning the tank's fuel; red when it can't", () => {
+    // The ship held over the valley, in the turret's sight.
+    const { w, step } = game(1, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    const cap = body(w, "t1-cap")!;
+    const gen = body(w, "t1-gen")!;
+    const breech = body(w, "t1-breech")!;
+    const fuel = () => (body(w, "fuel-1")?.contents ?? []).reduce((m, c) => m + c.mass, 0);
+    const full = fuel();
+    moveShip(w, { x: -10, y: 40 });
+    let least = 5;
+    for (let k = 0; k < 40; k++) {
+      step(0.25);
+      least = Math.min(least, cap.charge!.shots);
+    }
+    expect(w.events.filter((e) => e.type === "turret.fire" && e.data.id === "t1-breech").length).toBeGreaterThan(3);
+    expect(least).toBeLessThan(5);
+    expect(fuel()).toBeLessThan(full); // the generator burned some to fill it again
+    // The pipe broken: the generator is offline at once, and the capacitor runs down and is red.
+    const piece = w.bodies.find((b) => b.id === "t1-pipe-2")!;
+    piece.integrity = 0;
+    step(0.05);
+    expect(generatorOnline(w, gen)).toBe(false);
+    cap.charge!.shots = 0.5;
+    expect(turretOnline(w, breech)).toBe(false);
+    const shots = cap.charge!.shots;
+    step(2);
+    expect(cap.charge!.shots).toBeCloseTo(shots, 6); // nothing fills it
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("WPN-013 a generator goes red once its tank is dry (the beam can drain it); a destroyed capacitor puts the turret out of action, a destroyed generator doesn't at once", () => {
+    const dry = game(1);
+    expect(generatorOnline(dry.w, body(dry.w, "t1-gen")!)).toBe(true);
+    for (const c of body(dry.w, "fuel-1")!.contents!) c.mass = 0;
+    settle(dry.w);
+    dry.step(0.1);
+    expect(generatorOnline(dry.w, body(dry.w, "t1-gen")!)).toBe(false);
+    expect(body(dry.w, "fuel-1")!.siphon).toBe(true);
+    const gone = game(1);
+    body(gone.w, "t1-cap")!.integrity = 0;
+    gone.step(0.1);
+    expect(st(gone.w).turretsOut).toEqual(["t1-breech"]);
+    const noGen = game(1);
+    body(noGen.w, "t1-gen")!.integrity = 0;
+    noGen.step(0.1);
+    expect(st(noGen.w).turretsOut).toEqual([]);
+    expect(turretOnline(noGen.w, body(noGen.w, "t1-breech")!)).toBe(true); // on its capacitor's 5 shots
   });
 
   it("MTH-012 the narrowest passage of a cave is measured, and rock is a crust on the rock side of the outline", () => {
@@ -108,7 +182,7 @@ describe("Mammoth Thrust", () => {
   });
 
   it("MTH-093 flown off one side the ship comes back in at the other, the pod on its tether with it", () => {
-    const g = withPod(1, (sc) => (sc.world.gravity = { x: 0, y: 0 }));
+    const g = withPod("test", (sc) => (sc.world.gravity = { x: 0, y: 0 }));
     const { w } = g;
     // The ship and pod high over the right side (the ground there is 61 m up), moving right at 15 m/s.
     const shift = (ids: World["bodies"], dx: number, dy: number) => {
@@ -134,7 +208,7 @@ describe("Mammoth Thrust", () => {
   });
 
   it("MTH-020 the ship is Mammoth Asteroids' with a tractor unit and a tether unit, turns at about 7 rad/s², and fires slugs with no charge", () => {
-    const { w, step } = game(1, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    const { w, step } = game("test", (s) => (s.world.gravity = { x: 0, y: 0 }));
     // The cockpit works the beam and holds the tether, through the two units.
     expect(hull(w).tractor).toMatchObject({ channel: "tractor", beamFrom: "p1-tractor", tetherFrom: "p1-tether", only: ["pod"], mode: "off" });
     expect(body(w, "p1-tractor")).toBeDefined();
@@ -168,7 +242,7 @@ describe("Mammoth Thrust", () => {
   });
 
   it("MTH-021 the tether takes the pod from up to 22 m off and reels it in to 12 m, gently; hard thrust and a turn don't make it let go", () => {
-    const { w } = game(1, (s) => Object.assign(s.world.thrust, { top: 100000, turrets: [] }));
+    const { w } = game("test", (s) => Object.assign(s.world.thrust, { top: 100000, turrets: [] }));
     moveShip(w, { x: pod(w).position.x + 3, y: pod(w).position.y + 20 });
     const far = game();
     moveShip(far.w, { x: pod(far.w).position.x, y: pod(far.w).position.y + 24 });
@@ -210,7 +284,7 @@ describe("Mammoth Thrust", () => {
   });
 
   it("MTH-027 the beam pulls anything free in its wedge (wreckage too), but the tether takes the pod alone", () => {
-    const { w, step } = game(1, (s) => {
+    const { w, step } = game("test", (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];
       // A loose piece of an earlier ship, 6 m under where the ship will be.
@@ -302,7 +376,7 @@ describe("Mammoth Thrust", () => {
 
   it("MTH-024 MTH-051 the level is complete when the ship is above the top with the pod on its tether: 2,000 for the pod and 100 for each kg of fuel left", () => {
     // A low top, so the climb is short: 30 m, with the start under it.
-    const { w, step } = withPod(1, (s) => Object.assign(s.world.thrust, { top: 30, start: { x: -63, y: 25 } }));
+    const { w, step } = withPod("test", (s) => Object.assign(s.world.thrust, { top: 30, start: { x: -63, y: 25 } }));
     step(0.02, [set("left", 1), set("right", 1)]);
     for (let t = 0; t < 8 && st(w).phase === "flying"; t += 0.25) step(0.25);
     expect(st(w).phase).toBe("won");
@@ -357,7 +431,7 @@ describe("Mammoth Thrust", () => {
     expect(pod(crash.w).integrity).toBe(1);
 
     // A slug from the ship's own gun, in empty space: the pod 10 m ahead of the muzzle.
-    const shot = game(1, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    const shot = game("test", (s) => (s.world.gravity = { x: 0, y: 0 }));
     pod(shot.w).position = { x: hull(shot.w).position.x, y: hull(shot.w).position.y + 12 };
     settle(shot.w);
     shot.step(0.4, [set("fire", 1)]);
@@ -416,7 +490,7 @@ it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its 
   });
 
   it("MTH-035 MTH-038 MTH-031 a slug on a turret's fuel tank sets the tank off, and the explosion alone puts the turret out of action: 750, once", () => {
-    const { w, step } = game(1, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    const { w, step } = game("test", (s) => (s.world.gravity = { x: 0, y: 0 }));
     // The ship upside down 14 m over the tank, its gun pointing down at it.
     const h = hull(w);
     const to = { x: 38 - 2.4, y: 5 + 14 };
@@ -457,7 +531,7 @@ it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its 
   });
 
   it("MTH-032 a bolt that bursts 2 m from the ship pushes it measurably and destroys no part of it; the ledger records the gas it makes", () => {
-    const { w, step } = game(1, (s) => {
+    const { w, step } = game("test", (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];
       s.world.thrust.tanks = [];
@@ -465,7 +539,7 @@ it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its 
       s.world.joints = [];
       s.world.links = [];
     });
-    const bolt = raw(1).world.bodies.find((b: { id: string }) => b.id === "t1-carriage").magazine.shell;
+    const bolt = raw("test").world.bodies.find((b: { id: string }) => b.id === "t1-carriage").magazine.shell;
     expect(bolt.explosive).toMatchObject({ charge: 0.05, gas: 6, radius: 0.6 });
     const h = hull(w).position;
     const welds = w.joints.length;
@@ -488,7 +562,7 @@ it("MTH-030 MTH-036 a turret wakes when it sees the ship, waits, then turns its 
   });
 
 it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on the ground leaves craters; a slug leaves none, and is spent in the rock", () => {
-    const { w, step } = game(1, (s) => {
+    const { w, step } = game("test", (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];
     });
@@ -563,7 +637,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
   });
 
   it("MTH-062 an engine knocked off the ship no longer answers the controls: it burns out what it holds and is dead, and its tank leaks; a gun knocked off doesn't fire", () => {
-    const { w, step } = game(1, (s) => {
+    const { w, step } = game("test", (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];
     });
@@ -636,7 +710,7 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(() => parseScenario(none)).toThrow(ScenarioError);
   });
   /** The ship at rest `up` m over a body, with no gravity, its tanks holding `share` of a full load. */
-  function over(id: string, share: number, up = 12, n = 1) {
+  function over(id: string, share: number, up = 12, n: number | "test" = "test") {
     const g = game(n, (s) => {
       s.world.gravity = { x: 0, y: 0 };
       s.world.thrust.turrets = [];

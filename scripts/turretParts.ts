@@ -184,7 +184,7 @@ export const ELECTRIC = {
  *      /|          |\   nodes at the arc's feet
  *    ====================  base
  */
-export function electricTurret(name: string, at: Vec, angle: number, t: ElectricTuning, seed: number) {
+export function electricTurret(name: string, at: Vec, angle: number, t: ElectricTuning, seed: number, battery?: string) {
   const bodies: Json[] = [];
   const joints: Json[] = [];
   const links: Json[] = [];
@@ -259,7 +259,7 @@ export function electricTurret(name: string, at: Vec, angle: number, t: Electric
     polygon(part, [{ x: w / 2, y: pivot.y + from }, { x: w / 2, y: pivot.y + to }, { x: -w / 2, y: pivot.y + to }, { x: -w / 2, y: pivot.y + from }].reverse(), mass, { material: BARREL, ...extra });
   const breech = (r0 + r1) / 2;
   box("breech", E.breech.width, r0, r1, 1, {
-    turret: { joint: id("w-pivot"), gun: id("breech"), barrel: id("barrel"), nodes: [id("node-l"), id("node-r")], range: t.range, wait: t.wait, hold: t.hold, aim: t.aim, seed },
+    turret: { joint: id("w-pivot"), gun: id("breech"), barrel: id("barrel"), nodes: [id("node-l"), id("node-r")], ...(battery ? { battery, cabled: true } : {}), range: t.range, wait: t.wait, hold: t.hold, aim: t.aim, seed },
     magazine: { count: t.bolts, reload: t.reload, at: { x: 0, y: round(r2 + 0.15 - breech) }, angle: 0, shell: t.bolt, railgun: { channel: `${name}.fire`, speed: t.speed } },
   });
   box("barrel", E.outer.width, r1, r2, 0.5, { recoil: { gun: id("breech"), travel: E.recoil } });
@@ -268,4 +268,90 @@ export function electricTurret(name: string, at: Vec, angle: number, t: Electric
 
   links.push({ id: id("ctl-fire"), kind: "control", channel: `${name}.fire`, to: id("breech") });
   return { bodies, joints, links, carriage: id("breech"), tank: undefined as string | undefined };
+}
+
+// ---- An electric turret's own power (Chloe's drawing, 14 November 2026; WPN-013) ----
+//
+//    (FUEL)==pipe==[gen]~~cable~~[cap]~~cable~~(turret)
+//
+// A fuel tank feeds a generator through a pipe; the generator charges a capacitor; the capacitor
+// powers the turret. Each stands on its own pad on the rock. The cables can't be cut (they are
+// drawn, not bodies); the pipe can.
+
+/** One slug breaks a piece of pipe. */
+const PIPE = { name: "pipe", threshold: 30, toughness: 150 };
+/** What the pipe and the generator hold of fuel in passing, kg: next to nothing (WPN-013: it has no fuel of its own). */
+const IN_PASSING = 0.0001;
+
+/** A machine on a pad: a fixed plate anchored to the rock, and one body welded on it. Its frame: x along the rock, y up. */
+function onPad(name: string, at: Vec, angle: number, pad: { width: number; mass: number }, part: { width: number; height: number; mass: number; extra: Json }) {
+  const place = (p: Vec): Vec => {
+    const r = rot(p, angle);
+    return { x: round(at.x + r.x), y: round(at.y + r.y) };
+  };
+  const bodies: Json[] = [
+    { id: `${name}-pad`, fixed: true, shape: { kind: "box", width: pad.width, height: 0.3 }, mass: 1, position: place({ x: 0, y: 0.15 }), velocity: { x: 0, y: 0 }, angle: round(angle), angularVelocity: 0, friction: 0.9, anchored: { mass: pad.mass } },
+    { id: name, shape: { kind: "box", width: part.width, height: part.height }, mass: part.mass, position: place({ x: 0, y: 0.3 + part.height / 2 }), velocity: { x: 0, y: 0 }, angle: round(angle), angularVelocity: 0, restitution: 0, friction: 0.4, material: HULL, ...part.extra },
+  ];
+  const joints: Json[] = [-1, 1].map((k, n) => ({ id: `${name}-w-${n}`, a: `${name}-pad`, b: name, anchorA: { x: round((k * part.width) / 3), y: 0.15 }, anchorB: { x: round((k * part.width) / 3), y: round(-part.height / 2) }, limits: WELD }));
+  return { bodies, joints };
+}
+
+/**
+ * A generator at `at` (WPN-013): 1.4 m wide, 2.2 m tall, charging `battery` at `rate` shots a second
+ * and burning `burn` kg/s while it does. Its light (drawn) is green while it is online: whole and fed.
+ */
+export function generator(name: string, at: Vec, angle: number, battery: string, t: { burn: number; charge: number }) {
+  const stores = [
+    { resource: "h2", mass: 0, capacity: round(IN_PASSING / 9) },
+    { resource: "o2", mass: 0, capacity: round((8 * IN_PASSING) / 9) },
+  ];
+  return onPad(name, at, angle, { width: 2, mass: 20 }, { width: 1.4, height: 2.2, mass: 2, extra: { contents: stores, generator: { battery, burn: t.burn, rate: t.charge } } });
+}
+
+/**
+ * A capacitor at `at` (WPN-013): 1.2 m wide, 1.8 m tall, holding `shots`. Its bar (drawn) shows how
+ * full it is, red once empty. Destroyed, it fails with a small explosion, as the old battery did.
+ */
+export function capacitor(name: string, at: Vec, angle: number, shots: number) {
+  return onPad(name, at, angle, { width: 1.8, mass: 20 }, { width: 1.2, height: 1.8, mass: 2, extra: { charge: { shots, capacity: shots }, explosive: { charge: 0.05, arm: 1e6, fragments: 4, radius: 1, whenDestroyed: true } } });
+}
+
+/**
+ * A fuel pipe from `from` (a tank) to `to` (a generator) along `points`: a piece of pipe for each
+ * stretch, fixed where it lies on the rock and anchored to it, each passing the fuel to the next by
+ * feed links. One slug breaks a piece, and the fuel stops there.
+ */
+export function pipe(name: string, points: Vec[], from: string, to: string) {
+  const bodies: Json[] = [];
+  const links: Json[] = [];
+  const ids: string[] = [];
+  for (let k = 0; k + 1 < points.length; k++) {
+    const a = points[k];
+    const b = points[k + 1];
+    const L = Math.hypot(b.x - a.x, b.y - a.y);
+    const id = `${name}-${k + 1}`;
+    ids.push(id);
+    bodies.push({
+      id,
+      fixed: true,
+      shape: { kind: "box", width: round(L), height: 0.3 },
+      mass: 1,
+      position: { x: round((a.x + b.x) / 2), y: round((a.y + b.y) / 2) },
+      velocity: { x: 0, y: 0 },
+      angle: round(Math.atan2(b.y - a.y, b.x - a.x)),
+      angularVelocity: 0,
+      friction: 0.6,
+      material: PIPE,
+      anchored: { mass: round(0.5 * L) },
+      contents: [
+        { resource: "h2", mass: 0, capacity: round(IN_PASSING / 9) },
+        { resource: "o2", mass: 0, capacity: round((8 * IN_PASSING) / 9) },
+      ],
+    });
+  }
+  const chain = [from, ...ids, to];
+  for (let k = 0; k + 1 < chain.length; k++)
+    for (const res of ["h2", "o2"]) links.push({ id: `${name}-feed-${res}-${k + 1}`, kind: "feed", from: chain[k], to: chain[k + 1], resource: res, rate: 0.5 });
+  return { bodies, links, pieces: ids };
 }

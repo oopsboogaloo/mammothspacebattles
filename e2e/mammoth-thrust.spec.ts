@@ -233,14 +233,14 @@ test("MTH-052 the view doesn't jump when the tether takes the pod: it eases towa
 test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires bolts; they show in flight", async ({ page }) => {
   test.setTimeout(90_000);
   await start(page);
-  const turret = () => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "t1-carriage")?.turret);
+  const turret = () => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "t1-breech")?.turret);
   expect((await turret())?.shots).toBe(0);
-  // Over the hollow, in plain sight of the turret on its ledge, held there against gravity by the test.
+  // Over the valley, in plain sight of the turret on its shoulder, held there against gravity by the test.
   const hold = () =>
     hook(page, (m) => {
       const w = m.sandbox().world;
       const hull = w.bodies.find((b) => b.id === "p1-hull")!;
-      const d = { x: 20 - hull.position.x, y: 30 - hull.position.y };
+      const d = { x: -10 - hull.position.x, y: 40 - hull.position.y };
       return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-") && !b.id.includes("-shell-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
     });
   await expect
@@ -253,7 +253,7 @@ test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires
     )
     .toBeGreaterThan(0);
   expect((await turret())?.target).toBe("p1-hull");
-  expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id.startsWith("t1-carriage-shell-")))).toBe(true);
+  expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id.startsWith("t1-breech-shell-")))).toBe(true);
 });
 
 test("MTH-060 a ship destroyed on the ground leaves a crater there, and the view stays on it", async ({ page }) => {

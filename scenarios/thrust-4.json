@@ -2695,24 +2695,74 @@
         "angularVelocity": 0,
         "shape": {
           "kind": "box",
-          "width": 2,
+          "width": 2.4,
           "height": 0.3
         },
         "anchored": {
-          "mass": 30
+          "mass": 20,
+          "group": "fuel-1"
+        }
+      },
+      {
+        "id": "fuel-1-leg-l",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 4.05,
+          "y": -132.580719
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 0.25,
+          "height": 0.638562
+        },
+        "anchored": {
+          "mass": 5,
+          "group": "fuel-1"
+        }
+      },
+      {
+        "id": "fuel-1-leg-r",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": 5.55,
+          "y": -132.580719
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 0.25,
+          "height": 0.638562
+        },
+        "anchored": {
+          "mass": 5,
+          "group": "fuel-1"
         }
       },
       {
         "id": "fuel-1",
         "shape": {
-          "kind": "box",
-          "width": 1.4,
-          "height": 1.6
+          "kind": "disc",
+          "radius": 1
         },
         "mass": 2,
         "position": {
           "x": 4.8,
-          "y": -132.1
+          "y": -131.6
         },
         "velocity": {
           "x": 0,
@@ -2765,24 +2815,74 @@
         "angularVelocity": 0,
         "shape": {
           "kind": "box",
-          "width": 2,
+          "width": 2.4,
           "height": 0.3
         },
         "anchored": {
-          "mass": 30
+          "mass": 20,
+          "group": "fuel-2"
+        }
+      },
+      {
+        "id": "fuel-2-leg-l",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": -2.75,
+          "y": -132.580719
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 0.25,
+          "height": 0.638562
+        },
+        "anchored": {
+          "mass": 5,
+          "group": "fuel-2"
+        }
+      },
+      {
+        "id": "fuel-2-leg-r",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": -1.25,
+          "y": -132.580719
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 0.25,
+          "height": 0.638562
+        },
+        "anchored": {
+          "mass": 5,
+          "group": "fuel-2"
         }
       },
       {
         "id": "fuel-2",
         "shape": {
-          "kind": "box",
-          "width": 1.4,
-          "height": 1.6
+          "kind": "disc",
+          "radius": 1
         },
         "mass": 2,
         "position": {
           "x": -2,
-          "y": -132.1
+          "y": -131.6
         },
         "velocity": {
           "x": 0,
@@ -2835,24 +2935,74 @@
         "angularVelocity": 0,
         "shape": {
           "kind": "box",
-          "width": 2,
+          "width": 2.4,
           "height": 0.3
         },
         "anchored": {
-          "mass": 30
+          "mass": 20,
+          "group": "fuel-3"
+        }
+      },
+      {
+        "id": "fuel-3-leg-l",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": -34.35,
+          "y": 12.619281
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 0.25,
+          "height": 0.638562
+        },
+        "anchored": {
+          "mass": 5,
+          "group": "fuel-3"
+        }
+      },
+      {
+        "id": "fuel-3-leg-r",
+        "fixed": true,
+        "mass": 1,
+        "friction": 0.9,
+        "position": {
+          "x": -32.85,
+          "y": 12.619281
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "shape": {
+          "kind": "box",
+          "width": 0.25,
+          "height": 0.638562
+        },
+        "anchored": {
+          "mass": 5,
+          "group": "fuel-3"
         }
       },
       {
         "id": "fuel-3",
         "shape": {
-          "kind": "box",
-          "width": 1.4,
-          "height": 1.6
+          "kind": "disc",
+          "radius": 1
         },
         "mass": 2,
         "position": {
           "x": -33.6,
-          "y": 13.1
+          "y": 13.6
         },
         "velocity": {
           "x": 0,
@@ -4288,15 +4438,15 @@
       },
       {
         "id": "fuel-1-w-0",
-        "a": "fuel-1-pad",
+        "a": "fuel-1-leg-l",
         "b": "fuel-1",
         "anchorA": {
-          "x": -0.5,
-          "y": 0.15
+          "x": 0,
+          "y": 0.319281
         },
         "anchorB": {
-          "x": -0.5,
-          "y": -0.8
+          "x": -0.75,
+          "y": -0.661438
         },
         "limits": {
           "tension": 22950,
@@ -4307,15 +4457,15 @@
       },
       {
         "id": "fuel-1-w-1",
-        "a": "fuel-1-pad",
+        "a": "fuel-1-leg-r",
         "b": "fuel-1",
         "anchorA": {
-          "x": 0.5,
-          "y": 0.15
+          "x": 0,
+          "y": 0.319281
         },
         "anchorB": {
-          "x": 0.5,
-          "y": -0.8
+          "x": 0.75,
+          "y": -0.661438
         },
         "limits": {
           "tension": 22950,
@@ -4326,15 +4476,15 @@
       },
       {
         "id": "fuel-2-w-0",
-        "a": "fuel-2-pad",
+        "a": "fuel-2-leg-l",
         "b": "fuel-2",
         "anchorA": {
-          "x": -0.5,
-          "y": 0.15
+          "x": 0,
+          "y": 0.319281
         },
         "anchorB": {
-          "x": -0.5,
-          "y": -0.8
+          "x": -0.75,
+          "y": -0.661438
         },
         "limits": {
           "tension": 22950,
@@ -4345,15 +4495,15 @@
       },
       {
         "id": "fuel-2-w-1",
-        "a": "fuel-2-pad",
+        "a": "fuel-2-leg-r",
         "b": "fuel-2",
         "anchorA": {
-          "x": 0.5,
-          "y": 0.15
+          "x": 0,
+          "y": 0.319281
         },
         "anchorB": {
-          "x": 0.5,
-          "y": -0.8
+          "x": 0.75,
+          "y": -0.661438
         },
         "limits": {
           "tension": 22950,
@@ -4364,15 +4514,15 @@
       },
       {
         "id": "fuel-3-w-0",
-        "a": "fuel-3-pad",
+        "a": "fuel-3-leg-l",
         "b": "fuel-3",
         "anchorA": {
-          "x": -0.5,
-          "y": 0.15
+          "x": 0,
+          "y": 0.319281
         },
         "anchorB": {
-          "x": -0.5,
-          "y": -0.8
+          "x": -0.75,
+          "y": -0.661438
         },
         "limits": {
           "tension": 22950,
@@ -4383,15 +4533,15 @@
       },
       {
         "id": "fuel-3-w-1",
-        "a": "fuel-3-pad",
+        "a": "fuel-3-leg-r",
         "b": "fuel-3",
         "anchorA": {
-          "x": 0.5,
-          "y": 0.15
+          "x": 0,
+          "y": 0.319281
         },
         "anchorB": {
-          "x": 0.5,
-          "y": -0.8
+          "x": 0.75,
+          "y": -0.661438
         },
         "limits": {
           "tension": 22950,
@@ -7157,12 +7307,16 @@
         "pitch": 1,
         "sky": [
           {
-            "x": -102.4,
+            "x": -103.4,
             "y": 3000
           },
           {
-            "x": 102.4,
+            "x": 103.4,
             "y": 3000
+          },
+          {
+            "x": 103.4,
+            "y": 4.8
           },
           {
             "x": 102.4,
@@ -7302,6 +7456,10 @@
           },
           {
             "x": -102.4,
+            "y": 4.8
+          },
+          {
+            "x": -103.4,
             "y": 4.8
           }
         ],
