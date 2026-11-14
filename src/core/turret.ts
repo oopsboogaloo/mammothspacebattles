@@ -7,6 +7,7 @@
 // generator that is whole and has fuel refills it.
 
 import { assemblyRoots } from "./joints.ts";
+import { bodiesById } from "./bodies.ts";
 import { cross, dot, length, rotate, sinCos, sub, type Vec2 } from "./math.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
 import { railgunReady } from "./railgun.ts";
@@ -111,11 +112,12 @@ const STUCK = 0.3;
  * solver then holds the bodies at the new angle, as it holds any weld.
  */
 export function turnJoints(world: World, dt: number): void {
+  const byId = bodiesById(world);
   for (const j of world.joints) {
     const t = j.turn;
     if (!t) continue;
-    const a = world.bodies.find((b) => b.id === j.a);
-    const b = world.bodies.find((x) => x.id === j.b);
+    const a = byId.get(j.a);
+    const b = byId.get(j.b);
     const health = Math.min(j.integrity, a?.integrity ?? 0, b?.integrity ?? 0);
     if (health < STUCK) continue;
     const to = Math.min(t.max, Math.max(t.min, t.target));
@@ -154,14 +156,28 @@ function clearLine(world: World, a: Vec2, b: Vec2): boolean {
  * its mount fit to turn, and its battery if it has one.
  */
 /**
+ * The world's lookups for one pass over its turrets: bodies by id, joints by id and the assemblies.
+ * Built once and handed to each turret, not looked up again for every one (each lookup checks the
+ * whole world is unchanged before it trusts its cache: hundreds of bodies on a big level).
+ */
+export interface TurretLookup {
+  byId: ReadonlyMap<string, Body>;
+  joints: ReadonlyMap<string, Joint>;
+  roots: ReadonlyMap<string, string>;
+}
+export function turretLookup(world: World): TurretLookup {
+  return { byId: bodiesById(world), joints: new Map(world.joints.map((j) => [j.id, j])), roots: assemblyRoots(world) };
+}
+
+/**
  * Whether a turret is online (WPN-012): switched on, powered, and able to work (turretWorks): its
  * aim can turn, it has its gun, barrel, nodes and battery. What an electric turret's nodes show.
  */
-export function turretOnline(world: World, carriage: Body): boolean {
+export function turretOnline(world: World, carriage: Body, lk: TurretLookup = turretLookup(world)): boolean {
   const t = carriage.turret;
-  if (!t || !t.enabled || t.powered === false || !turretWorks(world, carriage)) return false;
+  if (!t || !t.enabled || t.powered === false || !turretWorks(world, carriage, lk)) return false;
   // A turret with a battery is offline while it holds no shot (WPN-013).
-  if (t.battery !== undefined) return (world.bodies.find((b) => b.id === t.battery)?.charge?.shots ?? 0) >= 1;
+  if (t.battery !== undefined) return (lk.byId.get(t.battery)?.charge?.shots ?? 0) >= 1;
   return true;
 }
 
@@ -173,14 +189,14 @@ const FED = 0.001;
  * that between them hold fuel (a pipe from a tank). It keeps no fuel of its own worth counting, so
  * cut off or run dry, it is offline at once. What a generator's light shows.
  */
-export function generatorOnline(world: World, gen: Body): boolean {
+export function generatorOnline(world: World, gen: Body, byId: ReadonlyMap<string, Body> = bodiesById(world)): boolean {
   if (!gen.generator || gen.integrity <= 0) return false;
   const seen = new Set<string>([gen.id]);
   let fuel = 0;
   const walk = (id: string): void => {
     for (const l of world.links) {
       if (l.kind !== "feed" || l.to !== id || l.integrity <= 0 || seen.has(l.from)) continue;
-      const from = world.bodies.find((x) => x.id === l.from);
+      const from = byId.get(l.from);
       if (!from || from.integrity <= 0) continue;
       seen.add(from.id);
       fuel += (from.contents ?? []).reduce((m, s) => m + s.mass, 0);
@@ -191,27 +207,27 @@ export function generatorOnline(world: World, gen: Body): boolean {
   return fuel >= FED;
 }
 
-export function turretWorks(world: World, carriage: Body): boolean {
+export function turretWorks(world: World, carriage: Body, lk: TurretLookup = turretLookup(world)): boolean {
   const t = carriage.turret;
   if (!t || carriage.integrity <= 0) return false;
-  const joint = world.joints.find((j) => j.id === t.joint);
-  const gun = world.bodies.find((b) => b.id === t.gun);
+  const { byId, roots } = lk;
+  const joint = lk.joints.get(t.joint);
+  const gun = byId.get(t.gun);
   if (!joint || joint.b !== carriage.id || !gun || gun.integrity <= 0 || !gun.magazine?.railgun) return false;
-  const mount = world.bodies.find((b) => b.id === joint.a);
+  const mount = byId.get(joint.a);
   if (!joint.turn || Math.min(joint.integrity, mount?.integrity ?? 0, carriage.integrity) < STUCK) return false;
-  const roots = assemblyRoots(world);
   const root = roots.get(joint.a);
   if (roots.get(gun.id) !== root) return false;
   if (t.barrel !== undefined) {
-    const barrel = world.bodies.find((b) => b.id === t.barrel);
+    const barrel = byId.get(t.barrel);
     if (!barrel || barrel.integrity <= 0 || roots.get(barrel.id) !== root) return false;
   }
   for (const n of t.nodes ?? []) {
-    const node = world.bodies.find((b) => b.id === n);
+    const node = byId.get(n);
     if (!node || node.integrity <= 0 || roots.get(node.id) !== root) return false;
   }
   if (t.battery !== undefined) {
-    const battery = world.bodies.find((b) => b.id === t.battery);
+    const battery = byId.get(t.battery);
     if (!battery || battery.integrity <= 0 || !battery.charge || (!t.cabled && roots.get(battery.id) !== root)) return false;
   }
   return true;
@@ -231,13 +247,16 @@ function setChannel(world: World, channel: string, value: number): void {
 export function runTurrets(world: World, dt: number): number {
   let burned = 0;
   const now = world.time;
+  // Nothing below adds, removes or joins bodies: one set of lookups serves the whole pass.
+  const lk = turretLookup(world);
+  const byId = lk.byId;
   // Generators: fuel in, shots out.
   for (const g of world.bodies) {
     const gen = g.generator;
     if (!gen || g.integrity <= 0) continue;
     // A generator fed by a pipe runs only while it is fed (WPN-013): cut off, what is in passing in it doesn't count.
-    if (world.links.some((l) => l.kind === "feed" && l.to === g.id) && !generatorOnline(world, g)) continue;
-    const battery = world.bodies.find((b) => b.id === gen.battery);
+    if (world.links.some((l) => l.kind === "feed" && l.to === g.id) && !generatorOnline(world, g, byId)) continue;
+    const battery = byId.get(gen.battery);
     if (!battery?.charge || battery.integrity <= 0 || battery.charge.shots >= battery.charge.capacity) continue;
     const stores = g.contents ?? [];
     const have = stores.reduce((m, s) => m + s.mass, 0);
@@ -251,18 +270,18 @@ export function runTurrets(world: World, dt: number): number {
   for (const c of world.bodies) {
     const t = c.turret;
     if (!t) continue;
-    const gun = world.bodies.find((b) => b.id === t.gun);
+    const gun = byId.get(t.gun);
     const channel = gun?.magazine?.railgun?.channel;
     // Last step's shot is over: the channel is held on for one step.
     if (t.firing && channel) setChannel(world, channel, 0);
     t.firing = false;
-    const joint: Joint | undefined = world.joints.find((j) => j.id === t.joint);
-    if (!gun || !channel || !joint?.turn || !t.enabled || t.powered === false || !turretWorks(world, c)) {
+    const joint: Joint | undefined = lk.joints.get(t.joint);
+    if (!gun || !channel || !joint?.turn || !t.enabled || t.powered === false || !turretWorks(world, c, lk)) {
       t.sees = false;
       if (t.phase !== "idle" && t.phase !== "waiting") t.phase = "turning"; // it starts again from a fresh bearing
       continue;
     }
-    const target = t.target !== undefined ? world.bodies.find((b) => b.id === t.target) : undefined;
+    const target = t.target !== undefined ? byId.get(t.target) : undefined;
     const to = target ? sub(target.position, gun.position) : { x: 0, y: 0 };
     const dist = length(to);
     t.sees = !!target && dist <= t.range && dist > 1e-6 && clearLine(world, gun.position, target.position);
@@ -303,7 +322,7 @@ export function runTurrets(world: World, dt: number): number {
     } else {
       onTarget = Math.abs(Math.min(joint.turn.max, Math.max(joint.turn.min, joint.turn.target)) - joint.referenceAngle) < 1e-9;
     }
-    const a = world.bodies.find((b) => b.id === joint.a);
+    const a = byId.get(joint.a);
     const settled = !!a && Math.abs(c.angle - a.angle - joint.referenceAngle) < SETTLED;
     if (!onTarget || !settled || !railgunReady(gun)) continue;
     // Never on a bearing it avoids (WPN-014): it picks another.
@@ -311,7 +330,7 @@ export function runTurrets(world: World, dt: number): number {
       if (t.aim === "random") pick();
       continue;
     }
-    const battery = t.battery !== undefined ? world.bodies.find((b) => b.id === t.battery)?.charge : undefined;
+    const battery = t.battery !== undefined ? byId.get(t.battery)?.charge : undefined;
     if (t.battery !== undefined && (!battery || battery.shots < 1)) continue; // waiting on power
     if (battery) battery.shots -= 1;
     setChannel(world, channel, 1);

@@ -2,7 +2,8 @@
 // smooth while the physics runs. It keeps its own copy of the world between runs; the page sends a new
 // one only when its own has changed (an edit, undo, scrub). Same code as the page, so same results.
 /// <reference lib="webworker" />
-import { applyCommands, getProfile, type Command, type World } from "../core/index.ts";
+import { applyCommands, getProfile, type Body, type Command, type World } from "../core/index.ts";
+import { RockStubs, runChangesBodies } from "./rockStubs.ts";
 import { runSteps, type Edit, type Series, type StepRun } from "./controller.ts";
 import { eventDelta, type EventDelta } from "./eventDelta.ts";
 
@@ -35,6 +36,8 @@ export interface RunResult {
 let world: World | null = null;
 let version = -1;
 
+const rock = new RockStubs();
+
 /** The GPU gas spike page (gpu-spike.html) runs its WebGPU passes here, in the simulation worker. */
 export interface GpuSpikeRequest {
   type: "gpuSpike";
@@ -51,7 +54,10 @@ async function gpuSpike(req: GpuSpikeRequest) {
 self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
   if (e.data.type === "gpuSpike") return gpuSpike(e.data);
   const req = e.data;
-  if (req.world) world = req.world;
+  if (req.world) {
+    world = req.world;
+    rock.forget();
+  }
   else if (version !== (req.inputs ? req.version - 1 : req.version) || !world) return; // a stale request: the page will resend
   if (req.inputs && !req.world) applyCommands(world, req.inputs, getProfile(req.profile));
   const before = world.events.slice();
@@ -60,9 +66,11 @@ self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
     deadline: () => performance.now() - start > req.budgetMs,
     stopOnVerdict: req.stopOnVerdict,
   });
+  // A command that can change a body in place applied in this run: every body goes whole this time.
+  if (runChangesBodies(req, run.from, run.steps)) rock.forget();
   // The page takes the result as its next version; this copy carries on from it.
   version = req.version + 1;
   const events = eventDelta(before, world.events);
-  const sent: StepRun = { ...run, world: { ...world, events: [] } };
+  const sent: StepRun = { ...run, world: { ...world, events: [], bodies: rock.pack(world) as Body[] } };
   (self as unknown as Worker).postMessage({ type: "done", version: req.version, run: sent, events } satisfies RunResult);
 };

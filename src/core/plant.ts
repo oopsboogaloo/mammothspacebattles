@@ -7,6 +7,7 @@
 // for a moment.
 
 import { assemblyRoots } from "./joints.ts";
+import { bodiesById } from "./bodies.ts";
 import { fieldId } from "./shield.ts";
 import { add, invRotate, length, rotate, sinCos, sub, type Vec2 } from "./math.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
@@ -380,8 +381,9 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
   }
 
   // The turrets have power while the plant is on and their transmitters are up.
+  const byId = bodiesById(world);
   for (const t of spec.turrets) {
-    const c = world.bodies.find((b) => b.id === t.id);
+    const c = byId.get(t.id);
     if (c?.turret) c.turret.powered = powered(s, now, t.needs);
   }
 

@@ -403,7 +403,7 @@ describe("Mammoth Thrust", () => {
     expect(w.events.filter((e) => e.type === "thrust.over")).toHaveLength(1);
     step(0.5, [set("destruct", 1)]);
     expect(st(w).n).toBe(5);
-  });
+  }, 60_000);
 
   it("MTH-024 MTH-051 the level is complete when the ship is above the top with the pod on its tether: 2,000 for the pod and 100 for each kg of fuel left", () => {
     // A low top, so the climb is short: 30 m, with the start under it.

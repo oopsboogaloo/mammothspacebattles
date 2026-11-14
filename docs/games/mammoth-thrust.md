@@ -547,6 +547,10 @@ Priority: **M** must, **S** should.
 - **MTH-094** `[M]` The ship carries half Mammoth Asteroids' fuel: 8.1 kg.
 - **MTH-090** `[S]` For testing (Chloe, 13 November 2026), the page shows the simulation's step
   time (mean and slowest) against its budget, with the gas parcels and bodies. To go before release.
+- **MTH-104** `[S]` On a slow device (Chloe, 14 November 2026) the page draws every other frame
+  (30 fps) once frames have run slower than 40 fps for a second, and lighter: gas as dots, the
+  shock as one line. The simulation is untouched and the skipped frame's time goes into the next,
+  so nothing moves slower. Back to every frame once 30 fps has held with room to spare for 3 s.
 - **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to
   start at any level. Not meant for players: to go before release.
 - **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the

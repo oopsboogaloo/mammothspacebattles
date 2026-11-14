@@ -28,6 +28,7 @@ import { SimClient } from "./simClient.ts";
 import { fmt } from "./format.ts";
 import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
 import { ENGINE, engineFor, HULL, TANK, withFreshChannels } from "./parts.ts";
+import { FramePacer } from "./framePacer.ts";
 import { COLORS, FLAME, GLOW_FROM, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, temperatureFraction, type PortMarker, type Preview, type RulerView } from "./render.ts";
 import { extrapolate, nextShownTime, shown, sourceOf } from "./smooth.ts";
 import { diag } from "./diag.ts";
@@ -188,6 +189,7 @@ export function View() {
   // Render loop and fixed-step clock (ARC-006, SBX-002, SBX-005).
   useEffect(() => {
     const stepper = createStepper();
+    const pacer = new FramePacer();
     let last = performance.now();
     let lastBump = 0;
     // When the run last fell behind; the "slow" mark stays on a second after, so it doesn't flicker.
@@ -218,6 +220,11 @@ export function View() {
       const sb = sandbox.value;
       const ctx = canvas.current?.getContext("2d");
       if (!sb || !ctx) return;
+      // Mammoth Thrust on a slow device (framePacer.ts): every other frame while frames run long, the
+      // skipped one's time carried into the next, so nothing moves slower; and lighter drawing.
+      const pace = sb.world.thrust && playing.value ? pacer.frame(now) : null;
+      if (pace?.skip) return;
+      const workFrom = performance.now();
       const realDt = Math.min(0.25, (now - last) / 1000);
       last = now;
       if (playing.value) {
@@ -320,7 +327,9 @@ export function View() {
         thrust: sb.world.thrust?.spec.view && { ...sb.world.thrust.spec.view, craters: sb.world.terrain?.holes },
         // In a challenge the parts' ids are clutter: the pad is marked instead.
         labels: !sb.world.challenge && sb.scenario.ui?.labels !== false,
+        lite: !!pace?.lite,
       });
+      if (pace) pacer.done(performance.now() - workFrom);
       // Rotate handle for a single selected body with the Move tool.
       const handle = rotateHandle();
       if (handle) {
