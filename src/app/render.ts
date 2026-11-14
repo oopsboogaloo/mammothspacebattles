@@ -405,6 +405,11 @@ export interface RenderOptions {
   gasColour?: "temperature" | "composition";
   /** Draw gas as a glowing plume (default) or as dots. The plume needs a real canvas; recorders get dots. */
   gasStyle?: GasStyle;
+  /**
+   * Draw lighter (framePacer.ts: Mammoth Thrust on a slow device, at half rate): gas as dots, not the
+   * glowing plume, and the transmitters' shock as one line, not three.
+   */
+  lite?: boolean;
   /** A landing pad to mark (FLT-009). */
   pad?: string;
   /** Draw fixed bodies as plain ground with a single surface line (Mammoth Lander). */
@@ -874,7 +879,7 @@ const jitter = (a: number, b: number): number => {
 };
 
 /** The power crossing between a transmitter's antennae: a jagged arc that moves every step, only while it carries power. */
-function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport, lite = false): void {
   const spec = world.thrust?.spec.plant;
   const s = world.thrust?.state.plant;
   if (!spec || !s) return;
@@ -888,7 +893,9 @@ function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
     if (L < 1e-6) continue;
     const n = { x: -d.y / L, y: d.x / L };
     const k = Math.max(6, Math.round(L / 2));
-    for (const [width, colour, amp, salt] of [[Math.max(4, 0.5 * c.zoom), "rgba(140, 200, 255, 0.35)", 0.7, 0], [Math.max(1.5, 0.12 * c.zoom), "#eaf6ff", 0.7, 0], [Math.max(1, 0.08 * c.zoom), "#b9dcff", 0.45, 7]] as const) {
+    const layers = [[Math.max(4, 0.5 * c.zoom), "rgba(140, 200, 255, 0.35)", 0.7, 0], [Math.max(1.5, 0.12 * c.zoom), "#eaf6ff", 0.7, 0], [Math.max(1, 0.08 * c.zoom), "#b9dcff", 0.45, 7]] as const;
+    // Lite (a slow device): the bright core only.
+    for (const [width, colour, amp, salt] of lite ? [layers[1]] : layers) {
       ctx.strokeStyle = colour;
       ctx.lineWidth = width;
       ctx.beginPath();
@@ -1367,6 +1374,29 @@ function maskOutside(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   if (b.y < vp.height - 0.5) ctx.fillRect(0, b.y, vp.width, vp.height - b.y);
 }
 
+/**
+ * Which power nodes are lit (WPN-012). In the game, worked out about ten times a game second, not every
+ * frame (it looks up the whole world for each turret); again at once on a new level or a restart (the
+ * tick goes back).
+ */
+let nodeCache: { tick: number; level: number | undefined; nodes: Map<string, boolean> } | null = null;
+const NODE_EVERY = 24;
+function nodeColours(world: World): Map<string, boolean> {
+  // Only in the game: the sandbox can be edited while paused, at the same tick.
+  const level = world.thrust?.spec.level;
+  const c = nodeCache;
+  if (world.thrust && c && c.level === level && world.tick >= c.tick && world.tick - c.tick < NODE_EVERY) return c.nodes;
+  const nodes = new Map<string, boolean>();
+  const lk = world.bodies.some((c) => c.turret?.nodes) ? turretLookup(world) : null;
+  for (const c of world.bodies) {
+    if (!c.turret?.nodes) continue;
+    const on = turretOnline(world, c, lk!);
+    for (const n of c.turret.nodes) nodes.set(n, on);
+  }
+  nodeCache = { tick: world.tick, level, nodes };
+  return nodes;
+}
+
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   // The games' look: Mammoth Asteroids' and Mammoth Thrust's.
   const game = !!opts.arcade || !!opts.thrust;
@@ -1386,7 +1416,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   if (world.bounds.wrap) {
     for (const [ox, oy] of wrapImages(world, c, vp)) {
       const ci = { ...c, x: c.x - ox, y: c.y - oy };
-      drawGas(ctx, world, ci, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
+      drawGas(ctx, world, ci, vp, opts.gasColour ?? "temperature", opts.lite ? "dots" : (opts.gasStyle ?? "plume"));
       // The game's copies look like the world itself: ground as ground, and its pads.
       if (opts.groundLine) {
         drawGroundLine(ctx, world, ci, vp);
@@ -1409,7 +1439,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     if (!opts.groundLine && !opts.arcade && !opts.thrust) drawSeam(ctx, world, c, vp);
   }
   // Gas under bodies, so walls stay crisp.
-  drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature", opts.gasStyle ?? "plume");
+  drawGas(ctx, world, c, vp, opts.gasColour ?? "temperature", opts.lite ? "dots" : (opts.gasStyle ?? "plume"));
   drawDust(ctx, world, c, vp);
 
   // Hidden seams of larger asteroid fragments (AST-007): where each weld sits on its bodies.
@@ -1429,13 +1459,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   // Shield fields (SHD-002) are drawn as fields, after the bodies, not as bodies.
   const fields = new Set(world.bodies.filter((b) => b.shield).map((b) => fieldId(b.id)));
   // An electric turret's power nodes show whether it is online: green, or red (WPN-012).
-  const nodes = new Map<string, boolean>();
-  const lk = world.bodies.some((c) => c.turret?.nodes) ? turretLookup(world) : null;
-  for (const c of world.bodies) {
-    if (!c.turret?.nodes) continue;
-    const on = turretOnline(world, c, lk!);
-    for (const n of c.turret.nodes) nodes.set(n, on);
-  }
+  const nodes = nodeColours(world);
   const drawBodies = (cam: Camera): void => {
     for (const b of world.bodies) {
       if (opts.groundLine && isGround(b)) continue;
@@ -1520,7 +1544,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       drawDust(ctx, world, ci, vp);
       drawBodies(ci);
       drawBeams(ctx, world, ci, vp);
-      drawShocks(ctx, world, ci, vp);
+      drawShocks(ctx, world, ci, vp, opts.lite);
       drawTractors(ctx, world, ci, vp);
       drawFields(ctx, world, ci, vp, fields);
     }
@@ -1538,7 +1562,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   }
   if (opts.thrust) {
     drawBeams(ctx, world, c, vp);
-    drawShocks(ctx, world, c, vp);
+    drawShocks(ctx, world, c, vp, opts.lite);
   }
   drawTractors(ctx, world, c, vp);
   drawFields(ctx, world, c, vp, fields);
@@ -1769,6 +1793,9 @@ function drawDamage(ctx: Ctx, world: World, c: Camera, vp: Viewport, bars: boole
   const taken: { x: number; y: number }[] = []; // bar + label boxes drawn so far, 76 × 12 px
   for (const b of world.bodies) {
     if (b.compound) continue; // a larger fragment's pieces stay hidden until its seams show (AST-007)
+    // Only what is destroyed is marked here, or everything with the damage overlay: the rest is skipped
+    // before its size is worked out (every body, every frame).
+    if (b.integrity > 0 && !bars) continue;
     const s = toScreen(c, vp, b.position);
     const r = Math.max(6, (b.shape.kind === "disc" ? b.shape.radius : massProps(b.shape, b.mass).boundingRadius) * c.zoom * 0.5);
     if (b.integrity <= 0) {
