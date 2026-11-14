@@ -33,7 +33,22 @@ export interface WorldPoly {
   normals: Vec2[];
 }
 
+/**
+ * The last outline worked out for each shape, and where: a body that hasn't moved (the rock, and
+ * whatever rests on it) gets the same outline back instead of working it out again every step. The
+ * same numbers either way; callers only read it.
+ */
+const outlines = new WeakMap<Shape, { x: number; y: number; c: number; s: number; poly: WorldPoly }>();
+
 export function worldPolygon(p: Placed): WorldPoly {
+  const kept = outlines.get(p.shape);
+  if (kept && kept.x === p.position.x && kept.y === p.position.y && kept.c === p.rot.c && kept.s === p.rot.s) return kept.poly;
+  const poly = outlineOf(p);
+  outlines.set(p.shape, { x: p.position.x, y: p.position.y, c: p.rot.c, s: p.rot.s, poly });
+  return poly;
+}
+
+function outlineOf(p: Placed): WorldPoly {
   const local = localVertices(p.shape);
   const vertices = local.map((v) => add(p.position, rotate(p.rot, v)));
   const normals = vertices.map((v, i) => {
