@@ -141,9 +141,8 @@ other sources in §12):
 - **Level 6: the warren** (Chloe's sketch, 14 November 2026, "a much rougher sketch": traced at
   0.15 m a pixel and approximated). Layers of rock with caves between them, full of stalactites: a
   roof over the top, a middle shelf, a lower shelf and the floor, where the pod stands at the right.
-  The power plant stands on the lower shelf's right end; its lines (tidied from the sketch's white
-  lines into straight runs along each shelf and down its walls, with a straight branch to each
-  turret and antenna; Chloe, 14 November 2026: "much more straight") feed the right-hand rock and the lower shelf directly, the middle shelf (and the floor past
+  The power plant stands on the lower shelf's right end; its lines (traced from the sketch's white
+  lines) feed the right-hand rock and the lower shelf directly, the middle shelf (and the floor past
   its left end) through any of three transmitters, and the roof through any of three more. Eighteen
   electric turrets, six fuel tanks. Its passages aren't held to a least width: some gaps between
   stalactites are tight, as sketched. A step takes about 4.7 ms (557 bodies; level 5: 2.8 ms).
