@@ -942,6 +942,81 @@ function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport, lite = fals
 }
 
 function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport, copies: [number, number][] = [[0, 0]], bounds?: World["bounds"]): void {
+  rockLayer(ctx, view, c, vp, copies, false);
+  // A point of the view, as the copy of the world it falls in.
+  const W = bounds ? bounds.max.x - bounds.min.x : 0;
+  const H = bounds ? bounds.max.y - bounds.min.y : 0;
+  const home = (p: Vec2): Vec2 => {
+    const k = copies.find(([ox, oy]) => ox !== 0 || oy !== 0 ? p.x - ox >= bounds!.min.x && p.x - ox < bounds!.max.x && (oy === 0 || (p.y - oy >= bounds!.min.y && p.y - oy < bounds!.max.y)) : false);
+    return k && W && H ? { x: p.x - k[0], y: p.y - k[1] } : p;
+  };
+  drawStars(ctx, c, vp, (x, y) => {
+    const p = home(toWorld(c, vp, { x, y }));
+    return insideOutline(view.sky, p) && !(view.islands ?? []).some((o) => insideOutline(o, p)) && !view.caves.some((o) => insideOutline(o, p));
+  });
+}
+
+/**
+ * Mammoth Thrust's rock, drawn once into a picture a little bigger than the view and laid over the
+ * stars each frame, not drawn again every frame (the sky's and caves' outlines are thousands of
+ * points, and every star was tested against them). The picture is the rock opaque (its lines, the
+ * caves and craters black) and the sky cut out of it, so the stars, drawn first and drifting as
+ * before, show only through the sky. Drawn again when the view leaves it, zooms, resizes or a
+ * crater is cut. Only on a real canvas: anything else draws the ground directly.
+ */
+interface GroundPicture {
+  canvas: HTMLCanvasElement;
+  sky: Vec2[];
+  craters: number;
+  zoom: number;
+  dpr: number;
+  /** Its size, CSS px, and the world point at its centre. */
+  w: number;
+  h: number;
+  x: number;
+  y: number;
+}
+let groundPicture: GroundPicture | null = null;
+/** How far past the view the picture reaches on each side, as a share of the view. */
+const GROUND_MARGIN = 0.25;
+/** Its largest side, device px. */
+const GROUND_MAX = 4096;
+
+function drawGroundCached(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport, world: World, vertical: boolean): boolean {
+  if (!canPlume(ctx) || typeof ctx.getTransform !== "function") return false;
+  const dpr = ctx.getTransform().a || 1;
+  const w = Math.min(Math.ceil(vp.width * (1 + 2 * GROUND_MARGIN)), Math.floor(GROUND_MAX / dpr));
+  const h = Math.min(Math.ceil(vp.height * (1 + 2 * GROUND_MARGIN)), Math.floor(GROUND_MAX / dpr));
+  if (w < vp.width || h < vp.height) return false; // a screen too big for the picture: draw directly
+  const craters = view.craters?.length ?? 0;
+  let g = groundPicture;
+  const inside = (p: GroundPicture) => Math.abs(c.x - p.x) * c.zoom <= (p.w - vp.width) / 2 && Math.abs(c.y - p.y) * c.zoom <= (p.h - vp.height) / 2;
+  if (!g || g.sky !== view.sky || g.craters !== craters || g.zoom !== c.zoom || g.dpr !== dpr || g.w !== w || g.h !== h || !inside(g)) {
+    const canvas = g?.canvas ?? document.createElement("canvas");
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    const pc = canvas.getContext("2d");
+    if (!pc) return false;
+    pc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const at: Camera = { ...c };
+    const pv: Viewport = { width: w, height: h };
+    const copies: [number, number][] = [[0, 0], ...(world.bounds.wrap ? levelCopies(world, at, pv, vertical) : [])];
+    // Rock: black under its lines; then the sky cut out, and the caves and craters black (rockLayer).
+    pc.fillStyle = "#000";
+    pc.fillRect(0, 0, w, h);
+    rockLayer(pc, view, at, pv, copies);
+    g = groundPicture = { canvas, sky: view.sky, craters, zoom: c.zoom, dpr, w, h, x: c.x, y: c.y };
+  }
+  drawStars(ctx, c, vp);
+  // Its top left on screen, on a whole device pixel so the lines stay sharp.
+  const left = Math.round(((g.x - c.x) * c.zoom + (vp.width - g.w) / 2) * dpr) / dpr;
+  const top = Math.round(((c.y - g.y) * c.zoom + (vp.height - g.h) / 2) * dpr) / dpr;
+  ctx.drawImage(g.canvas, left, top, g.w, g.h);
+  return true;
+}
+
+/** The rock's lines over the view, the sky cut out (on a picture) or filled black (drawn directly), and the caves and craters black. */
+function rockLayer(ctx: Ctx & Partial<Pick<CanvasRenderingContext2D, "globalCompositeOperation">>, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport, copies: [number, number][], cut = true): void {
   const h = stripeHeight(view.pitch, c.zoom);
   ctx.fillStyle = view.colour;
   if (view.pitch * c.zoom < 3) {
@@ -969,36 +1044,28 @@ function drawStripedGround(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>,
       ctx.closePath();
     };
     // The sky, with any island of rock in it (an asteroid, TER-007) left as rock: filled even-odd.
+    // On a picture it is cut out, for the stars behind to show through.
+    if (cut) ctx.globalCompositeOperation = "destination-out";
     ctx.beginPath();
     trace(view.sky);
     for (const island of view.islands ?? []) trace(island);
     ctx.fill("evenodd");
+    if (cut) ctx.globalCompositeOperation = "source-over";
     for (const outline of view.caves) {
       ctx.beginPath();
       trace(outline);
       ctx.fill();
     }
     // Craters (TER-004): open space cut into the rock, plain black like the caves.
-    for (const h of view.craters ?? []) {
-      const q = at(h);
-      const r = h.r * c.zoom;
+    for (const hole of view.craters ?? []) {
+      const q = at(hole);
+      const r = hole.r * c.zoom;
       if (q.x + r < 0 || q.x - r > vp.width || q.y + r < 0 || q.y - r > vp.height) continue;
       ctx.beginPath();
       ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
       ctx.fill();
     }
   }
-  // A point of the view, as the copy of the world it falls in.
-  const W = bounds ? bounds.max.x - bounds.min.x : 0;
-  const H = bounds ? bounds.max.y - bounds.min.y : 0;
-  const home = (p: Vec2): Vec2 => {
-    const k = copies.find(([ox, oy]) => ox !== 0 || oy !== 0 ? p.x - ox >= bounds!.min.x && p.x - ox < bounds!.max.x && (oy === 0 || (p.y - oy >= bounds!.min.y && p.y - oy < bounds!.max.y)) : false);
-    return k && W && H ? { x: p.x - k[0], y: p.y - k[1] } : p;
-  };
-  drawStars(ctx, c, vp, (x, y) => {
-    const p = home(toWorld(c, vp, { x, y }));
-    return insideOutline(view.sky, p) && !(view.islands ?? []).some((o) => insideOutline(o, p)) && !view.caves.some((o) => insideOutline(o, p));
-  });
 }
 
 /** Ground in the game: fixed terrain, and the pieces of an asteroid (they carry its gravity field, LND-011). */
@@ -1407,7 +1474,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   // reaches. A level of ground doesn't wrap up and down in play (rock closes over it), so only its sides.
   const copies: [number, number][] = [[0, 0], ...(opts.thrust && world.bounds.wrap ? levelCopies(world, c, vp, !!opts.thrust.islands?.length) : [])];
   if (opts.thrust) {
-    drawStripedGround(ctx, opts.thrust, c, vp, copies, world.bounds);
+    if (!drawGroundCached(ctx, opts.thrust, c, vp, world, !!opts.thrust.islands?.length)) drawStripedGround(ctx, opts.thrust, c, vp, copies, world.bounds);
     for (const [ox, oy] of copies) drawPowerLines(ctx, world, { ...c, x: c.x - ox, y: c.y - oy }, vp);
   }
   else if (opts.stars) drawStars(ctx, opts.stars === "still" ? { x: 0, y: 0 } : c, vp);

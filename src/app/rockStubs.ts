@@ -9,6 +9,9 @@ export interface KeptBody {
   kept: true;
 }
 
+/** What a part the page already holds is sent as. */
+export const KEPT = { kept: true } as const;
+
 const isRock = (w: World, b: Body): boolean => !!w.terrain && b.fixed === true && !b.material && b.id.startsWith(w.terrain.prefix);
 
 /**
@@ -19,9 +22,21 @@ const isRock = (w: World, b: Body): boolean => !!w.terrain && b.fixed === true &
  */
 export class RockStubs {
   private sent = new WeakMap<Body, { shape: Body["shape"]; x: number; y: number; angle: number }>();
+  /** The Mammoth Thrust level's spec already sent (39 KB on level 6): nothing changes it during a game. */
+  private spec: object | null = null;
 
   forget(): void {
     this.sent = new WeakMap();
+    this.spec = null;
+  }
+
+  /** The world's game state to send: a level spec already sent goes as `{ kept: true }`. */
+  packThrust(w: World): World["thrust"] {
+    const t = w.thrust;
+    if (!t) return t;
+    if (this.spec === t.spec) return { ...t, spec: KEPT as never };
+    this.spec = t.spec;
+    return t;
   }
 
   /** The world's bodies to send: rock already sent as it is, as stubs. */

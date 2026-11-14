@@ -71,6 +71,6 @@ self.onmessage = async (e: MessageEvent<RunRequest | GpuSpikeRequest>) => {
   // The page takes the result as its next version; this copy carries on from it.
   version = req.version + 1;
   const events = eventDelta(before, world.events);
-  const sent: StepRun = { ...run, world: { ...world, events: [], bodies: rock.pack(world) as Body[] } };
+  const sent: StepRun = { ...run, world: { ...world, events: [], bodies: rock.pack(world) as Body[], thrust: rock.packThrust(world) } };
   (self as unknown as Worker).postMessage({ type: "done", version: req.version, run: sent, events } satisfies RunResult);
 };

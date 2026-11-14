@@ -4,7 +4,7 @@
 import type { Sandbox } from "./controller.ts";
 import type { RunRequest, RunResult } from "./simWorker.ts";
 import type { KeptBody } from "./rockStubs.ts";
-import type { Body, Command } from "../core/index.ts";
+import type { Body, Command, World } from "../core/index.ts";
 import { diag } from "./diag.ts";
 import { applyEventDelta } from "./eventDelta.ts";
 
@@ -119,7 +119,7 @@ export class SimClient {
     // The run began from the page's world at this version, so its log is the one the change is to.
     res.run.world.events = applyEventDelta(f.sb.world.events, res.events);
     // Rock the worker had already sent comes back as stubs: the page's own copies go in their place.
-    if (!f.cancelled && !unpackBodies(res.run.world, f.sb.world.bodies)) {
+    if (!f.cancelled && (!unpackBodies(res.run.world, f.sb.world.bodies) || !unpackThrust(res.run.world, f.sb.world))) {
       this.holds = null; // missing one: drop this run, and send the world whole next time
       return;
     }
@@ -146,5 +146,14 @@ export function unpackBodies(world: { bodies: (Body | KeptBody)[] }, mine: reado
     if (!have) return false;
     world.bodies[i] = have;
   }
+  return true;
+}
+
+/** Puts the page's own level spec in place of the worker's stub (rockStubs.ts packThrust). False if the page has none. */
+export function unpackThrust(world: Pick<World, "thrust">, mine: Pick<World, "thrust">): boolean {
+  const t = world.thrust;
+  if (!t || !("kept" in (t.spec as object))) return true;
+  if (!mine.thrust) return false;
+  world.thrust = { ...t, spec: mine.thrust.spec };
   return true;
 }
