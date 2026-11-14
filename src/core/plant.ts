@@ -324,11 +324,17 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
     for (const l of world.links) if (l.off === "shock") delete l.off;
   }
   if (ship && s.shockUntil === undefined) {
+    // Only what is still the ship: its parts still joined to its hull, and the field of a shield
+    // generator among them. Pieces it has lost (a leg knocked off, a tank's fragments) keep its
+    // prefix but are debris: one lying in a beam doesn't shock the ship wherever it is.
+    const root = roots.get(`${ship}hull`);
+    const own = new Set(world.bodies.filter((b) => root !== undefined && roots.get(b.id) === root).map((b) => b.id));
+    const onShip = (b: Body) => own.has(b.id) || (b.id.endsWith("-field") && own.has(b.id.slice(0, -"-field".length)) && !!world.bodies.find((g) => g.id === b.id.slice(0, -"-field".length))?.shield);
     for (const t of spec.transmitters) {
       if (!powered(s, now, [t.id])) continue;
       const tips = transmitterTips(world, t);
       if (!tips) continue;
-      const struck = world.bodies.some((b) => b.id.startsWith(ship) && !b.id.includes("-shell-") && toSegment(b.position, tips[0], tips[1]) < reach(b) + t.width / 2);
+      const struck = world.bodies.some((b) => onShip(b) && toSegment(b.position, tips[0], tips[1]) < reach(b) + t.width / 2);
       if (!struck) continue;
       s.shockUntil = now + t.shock;
       for (const l of world.links) if (l.kind === "control" && l.to.startsWith(ship)) l.off = "shock";

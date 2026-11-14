@@ -512,7 +512,9 @@ Priority: **M** must, **S** should.
 - **MTH-083** `[M]` Two antennae carry power across the open. Either destroyed, the turrets beyond
   them have no power, and the others still do.
 - **MTH-084** `[M]` A ship touching the shock between live antennae has no control for 1 s, and
-  electricity fizzes over it for as long (Chloe, 14 November 2026).
+  electricity fizzes over it for as long (Chloe, 14 November 2026). Only the ship counts (its
+  parts still joined to its hull, and its shield's field): a piece it has lost, lying in a beam,
+  doesn't shock it elsewhere.
 - **MTH-088** `[M]` An explosion that reaches a dome punches leaks in it, more the nearer it went
   off (up to 3), and knocks the plant offline.
 - **MTH-089** `[M]` Below half its coolant the plant's power fails for 2 to 3 s at a time, more

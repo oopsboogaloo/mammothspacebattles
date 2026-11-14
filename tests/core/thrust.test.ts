@@ -1166,6 +1166,23 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(free.w.events.some((e) => e.type === "plant.shock")).toBe(false);
     expect(free.links().every((k) => k === 1)).toBe(true);
   }, 60_000);
+  it("MTH-084 a piece the ship has lost, lying in the shock, doesn't shock the ship elsewhere", () => {
+    const { w, step } = game(4, (s) => (s.world.gravity = { x: 0, y: 0 }));
+    step(0.1);
+    const [a, b] = transmitterTips(w, w.thrust!.spec.plant!.transmitters[0])!;
+    // The left tank's front thruster, broken off and put in the beam; the ship well clear of it.
+    const lost = body(w, "p1-front-l")!;
+    w.joints = w.joints.filter((j) => j.a !== lost.id && j.b !== lost.id);
+    moveShip(w, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + 10 });
+    lost.position = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    lost.velocity = { x: 0, y: 0 };
+    step(0.3);
+    expect(w.events.some((e) => e.type === "plant.shock")).toBe(false);
+    // The ship itself in the beam still is.
+    moveShip(w, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    step(0.05);
+    expect(w.events.filter((e) => e.type === "plant.shock")).toHaveLength(1);
+  }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
       const { w, step } = game(4);
