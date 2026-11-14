@@ -316,7 +316,8 @@ plan below (a cheat that turned shells and gas back and let rock through).
 
 - A small, light generator on the ship: a 0.3 kg collar round the gun's foot, on the centre line.
 - Held (X or ., the left bumper, or SHIELD on screen): a disc grows from nothing round the ship's
-  centre of mass to just past its farthest corner (3.35 m) in a quarter of a game second.
+  centre of mass to just past its farthest corner at 28 m/s, about a sixth of a game second
+  (twice the first 14 m/s: Chloe, 14 November 2026).
 - It doesn't touch its own ship; everything else meets it as a surface. Rocks, wreckage, slugs and
   bolts bounce off; gas is turned back and pushed out as it grows; the pod too, when not on the
   tether. The field is welded rigidly to the cockpit, so the ship is pushed by what hits it and

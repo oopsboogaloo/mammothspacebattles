@@ -3128,7 +3128,7 @@
             "shield": {
               "radius": 4.452363,
               "channel": "shield",
-              "grow": 14,
+              "grow": 28,
               "burn": 0.4,
               "hitBurn": 0.00125,
               "minHit": 0.025,
