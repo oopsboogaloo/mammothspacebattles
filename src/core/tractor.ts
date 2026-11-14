@@ -339,19 +339,24 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
   const shipV = t.maxSpeed !== undefined ? groupVelocity(shipGroup) : null;
   for (const [root, pieces] of inBeam) {
     const m = pieces.reduce((s, r) => s + r.mass, 0);
-    // How fast this assembly is closing on the beam's origin, and so how much of the pull it gets (TRC-014).
-    let k = 1;
+    // How fast this assembly is closing on the beam's origin, and so how much of the pull it gets
+    // (TRC-014): it fades to nothing at the top speed, and is never more than would take the closing
+    // speed to it in this step (a light piece would otherwise pass it in one step), the ship
+    // recoiling as it pulls.
+    let pull = share * dt;
     if (shipV && t.maxSpeed !== undefined) {
       const g = groupOf(rbs, roots, root);
       const toward = sub(origin, nearCopy(world, origin, g.com));
       const L = length(toward);
       const closing = L > 1e-9 ? dot(sub(groupVelocity(g), shipV), toward) / L : 0;
-      k = t.maxSpeed > 0 ? Math.max(0, Math.min(1, 1 - closing / t.maxSpeed)) : 0;
+      const k = t.maxSpeed > 0 ? Math.max(0, Math.min(1, 1 - closing / t.maxSpeed)) : 0;
+      const room = Math.max(0, t.maxSpeed - closing) * ((g.mass * shipGroup.mass) / (g.mass + shipGroup.mass));
+      pull = Math.min(k * pull, room);
     }
-    if (k <= 0) continue;
+    if (pull <= 0) continue;
     for (const r of pieces) {
       const d = sub(origin, nearCopy(world, origin, r.body.position));
-      const J = scale(d, (k * share * (r.mass / m) * dt) / length(d));
+      const J = scale(d, (pull * (r.mass / m)) / length(d));
       push(r, J, r.body.position);
       push(ship, scale(J, -1), origin);
       t.targets.push(r.body.id);

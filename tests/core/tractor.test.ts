@@ -297,6 +297,16 @@ describe("tractor beam", () => {
     expect(limited.w.ledger.violations).toBe(0);
     // Without one it comes in much faster.
     expect(pull().fastest).toBeGreaterThan(10);
+    // A light piece (a slug, 0.17 kg) doesn't pass the top speed in its first step either.
+    const w = world([ball("slug", 0.1, 0.166667, 0, -20)], { range: 50, maxSpeed: 3, tether: { length: 1, reach: 1 } });
+    let fastest = 0;
+    for (let i = 0; i < 240 * 2; i++) {
+      stepInPlace(w, i === 0 ? set(1) : [], sandbox);
+      fastest = Math.max(fastest, at(w, "slug").velocity.y - at(w, "ship").velocity.y);
+    }
+    expect(fastest).toBeGreaterThan(2.9);
+    expect(fastest).toBeLessThan(3.05);
+    expect(w.ledger.violations).toBe(0);
     expect(() => parseScenario({ ...(readJson(join(ROOT, "scenarios", "tractor.json")) as object), world: { bodies: [ship({ maxSpeed: -1 })] } })).toThrow(ScenarioError);
   });
 
