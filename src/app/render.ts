@@ -1308,6 +1308,41 @@ function drawBeams(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   const beams = world.arcade?.state.beams ?? world.thrust?.state.beams;
   if (!beams?.length) return;
   const dt = world.tick > 0 ? world.time / world.tick : 1 / 240;
+  // Mammoth Thrust: a four-pointed hyperspace star (Chloe, 14 November 2026). Out, it grows from the
+  // ship and fades; in, the same backwards: it shrinks onto the ship as the ship appears.
+  if (world.thrust) {
+    for (const b of beams as readonly { at: number; x: number; y: number; r: number; out?: boolean }[]) {
+      const age = Math.min(1, Math.max(0, ((world.tick - b.at) * dt) / BEAM_LIFE));
+      const t = b.out ? age : 1 - age;
+      // Its size rises fast and its light falls as it goes (out), or the reverse (in).
+      const size = b.r * 2.5 * Math.sin((Math.PI / 2) * Math.min(1, t * 1.6)) * c.zoom;
+      const light = b.out ? 1 - age : age < 0.85 ? 1 : (1 - age) / 0.15;
+      if (size < 1 || light <= 0) continue;
+      const s = toScreen(c, vp, { x: b.x, y: b.y });
+      const star = (L: number, w: number) => {
+        ctx.beginPath();
+        for (let k = 0; k < 8; k++) {
+          const a = (k * Math.PI) / 4;
+          const r = k % 2 === 0 ? L : w;
+          const x = s.x + r * Math.cos(a);
+          const y = s.y - r * Math.sin(a);
+          if (k === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+      };
+      ctx.globalAlpha = 0.35 * light;
+      ctx.fillStyle = "#9fd8ff";
+      star(size * 1.25, size * 0.22);
+      ctx.fill();
+      ctx.globalAlpha = light;
+      ctx.fillStyle = "#fff";
+      star(size, size * 0.1);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
   for (const b of beams) {
     const age = Math.min(1, Math.max(0, ((world.tick - b.at) * dt) / BEAM_LIFE));
     const s = toScreen(c, vp, { x: b.x, y: b.y });

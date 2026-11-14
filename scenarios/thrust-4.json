@@ -7105,7 +7105,7 @@
           "first": 2.5,
           "more": 1
         },
-        "countdown": 5,
+        "countdown": 15,
         "perLeak": 3,
         "leakSpeed": 20,
         "blastLeaks": 3,

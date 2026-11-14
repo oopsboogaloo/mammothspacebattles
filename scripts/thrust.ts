@@ -102,7 +102,8 @@ const PLANT_LEAK = { perLeak: 3, leakSpeed: 20, blastLeaks: 3, outages: { below:
 const PLANT_OFFLINE = { first: 2.5, more: 1 };
 /** Turrets don't fire within this of a clear shot at the plant, rad (WPN-014): 10°. */
 const REACTOR_MARGIN = (10 * Math.PI) / 180;
-const PLANT_COUNTDOWN = 5;
+/** From critical to the blast, game seconds: 30 s on screen (Chloe, 14 November 2026: 10 was really tough). */
+const PLANT_COUNTDOWN = 15;
 const SHOCK = 0.5;
 const TURRET: TurretTuning = { range: 80, wait: 1.5, hold: 0.25, aim: "random", arc: Math.PI / 3, rate: 2.1, bolt: BOLT, speed: 40, reload: 1, bolts: 40, shots: 5, charge: 1, burn: 0.02, fuel: 8.1 };
 
@@ -708,8 +709,9 @@ write({
 // reach the upper part across the open by either of two transmitters. Thirteen electric turrets,
 // inside and out; the pod stands on a ledge in the right-hand cave, its stand level to the pull
 // (on the ledge's slope it rolled out of its cup). Gravity is a uniform ball's (FLT-015), 4 m/s² at
-// 84 m (the asteroid's area as a disc), from its middle; the level is left 150 m from there, about
-// 25 m beyond its furthest point, in a square 380 m across that wraps round.
+// 84 m (the asteroid's area as a disc), from its middle; the level is left 300 m from there, about
+// 175 m beyond its furthest point (150 until Chloe asked for twice the room to fly about, 14
+// November 2026), in a square 680 m across that wraps round.
 {
   // The asteroid's rock, counter-clockwise (rock on the left), its caves included.
   const island = [
@@ -751,7 +753,7 @@ write({
     n: 5,
     seed: 500,
     title: "The asteroid",
-    description: "An asteroid curled round on itself, with one way into its caves. Its gravity pulls toward its middle. Fly in, take the pod on the tether, and carry it 150 m out from the middle.",
+    description: "An asteroid curled round on itself, with one way into its caves. Its gravity pulls toward its middle. Fly in, take the pod on the tether, and carry it 300 m out from the middle.",
     colour: "#8a3cff",
     top: 150,
     ground: [],
@@ -780,7 +782,7 @@ write({
       { at: P(-11.51, -71.98), angle: 0.132 },
       { at: P(-41.57, -93.41), angle: 2.403 },
     ],
-    asteroid: { island, radius: 84, gravity: 4, box: 190, escape: 150, core: P(2.47, -1.17) },
+    asteroid: { island, radius: 84, gravity: 4, box: 340, escape: 300, core: P(2.47, -1.17) },
     plant: {
       at: P(-25.37, -70.32),
       angle: -0.205,

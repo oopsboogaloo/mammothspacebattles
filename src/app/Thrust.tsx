@@ -171,6 +171,9 @@ function hold(channel: string, by: number): void {
   else if (was > 0 && held[channel] === 0) sendControl(channel, 0, `Key ${channel}`, group);
 }
 
+/** How long the hyperspace star plays as a ship beams out of a won level, ms on screen, before the result. */
+const BEAM_OUT_MS = 1000;
+
 const ended = (): boolean => {
   const phase = sandbox.value?.world.thrust?.state.phase;
   return phase === "won" || phase === "over";
@@ -349,18 +352,31 @@ function Play() {
       releaseKeys();
     };
   }, []);
-  // The level is over, either way: the world rests, and the keys are let go.
+  // The level is over, either way: the world rests, and the keys are let go. Won, the ship's
+  // hyperspace star (beaming out) plays first, the world running on for it.
+  const [shownWon, setShownWon] = useState(false);
   useEffect(() => {
-    if (phase !== "won" && phase !== "over") return;
+    if (phase !== "won" && phase !== "over") {
+      setShownWon(false);
+      return;
+    }
     releaseKeys();
-    playing.value = false;
+    if (phase === "over") {
+      playing.value = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      playing.value = false;
+      setShownWon(true);
+    }, BEAM_OUT_MS);
+    return () => clearTimeout(t);
   }, [phase]);
 
   if (!game) return null;
   const s = game.state;
   const level = game.spec.level ?? 1;
   const over = s.phase === "over";
-  const won = s.phase === "won";
+  const won = s.phase === "won" && shownWon;
   const ship = shipStatus(sb.world);
   const coolant = coolantStatus(sb.world);
   const back = s.backAt !== undefined && sb.world.time - s.backAt < BACK_NOTE;
@@ -407,12 +423,6 @@ function Play() {
           </span>
         )}
       </div>
-      {s.phase === "between" && sb.world.time >= (s.noteAt ?? 0) && (
-        <div class="mth-note" data-testid="mth-lost">
-          SHIP LOST
-          <small>{s.lives > 0 ? "The next one is beaming in. Nothing else has changed." : ""}</small>
-        </div>
-      )}
       {s.phase === "flying" && !back && sb.world.bodies.some((b) => b.id === game.spec.tractor.replaceAll("{n}", String(s.n)) && b.tractor?.siphoning) && (
         <div class="mth-note" data-testid="mth-refuel">
           REFUELLING

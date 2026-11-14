@@ -303,10 +303,9 @@ test("MTH-050 self-destruct costs a ship, and three ships lost is game over, wit
     await page.getByTestId("mth-destruct").click();
     await expect(page.getByTestId("mth-destruct")).toHaveText("Confirm self-destruct");
     await page.getByTestId("mth-destruct").click();
-    // The ship goes up at once; the page leaves 3 s to watch it before it says so.
+    // The ship goes up at once, and the next simply beams in: no message (Chloe, 14 November 2026).
     await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("between");
-    if (k === 3) await expect(page.getByTestId("mth-lost")).toBeHidden();
-    if (k > 1) await expect(page.getByTestId("mth-lost")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("mth-lost")).toHaveCount(0);
   }
   await expect(page.getByTestId("mth-over")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("mth-over")).toContainText("No ships left");
