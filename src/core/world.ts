@@ -370,6 +370,12 @@ export interface World {
   drags: Drag[];
   contacts: Contact[];
   ledger: Ledger;
+  /**
+   * The ledger's bookkeeping skipped (Chloe, 14 November 2026: in a game nothing reads it). The
+   * physics is the same either way: the ledger only records. Set by Mammoth Thrust's page in play;
+   * the sandbox and the tests keep the full ledger. `?ledger=1` on the page keeps it in the game.
+   */
+  ledgerOff?: boolean;
   events: WorldEvent[];
   /** Changes made by commands since the last step, attributed to the user at the next step. */
   pendingUser: Delta;
@@ -1361,6 +1367,9 @@ export interface StepTimings {
 /** Advances the world one fixed step in place, mutating it. Commands apply at the start of the step. */
 export function stepInPlace(world: World, commands: readonly Command[], profile: Profile, timings?: StepTimings): void {
   const dt = profile.timestep;
+  // With the ledger off, its totals (a walk over every body and gas parcel, several times a step)
+  // are skipped: they only feed the ledger's record.
+  const totals = world.ledgerOff ? noTotals : computeTotals;
   let t0 = timings?.clock() ?? 0;
   const mark = (name: string) => {
     if (!timings) return;
@@ -1400,14 +1409,14 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // `before` holds the totals of the world as it is now, all the way to the field's kick: each
   // block below that changes the world ends by setting it, so none needs to work them out again
   // before it starts (the totals walk every body and parcel, and nothing changes in between).
-  let before = computeTotals(world);
+  let before = totals(world);
   // Turrets (WPN-009, WPN-010) and the joints that aim them (ASM-008). What a generator burns leaves
   // the world; the joint's turning is work the weld solver does, booked with the joints'.
   if (world.bodies.some((b) => b.turret || b.generator) || world.joints.some((j) => j.turn)) {
     const burned = runTurrets(world, dt);
     turnJoints(world, dt);
     if (burned > 0) {
-      const after = computeTotals(world);
+      const after = totals(world);
       addDelta(sources.boundary, diff(before, after));
       before = after;
     }
@@ -1415,14 +1424,14 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Shields (SHD-001…SHD-005): a field coming or going, growing, and the fuel it burns leave or enter the world.
   if (world.bodies.some((b) => b.shield)) {
     if (runShields(world, dt, { addBody, addJoint })) {
-      const after = computeTotals(world);
+      const after = totals(world);
       addDelta(sources.boundary, diff(before, after));
       before = after;
     }
   }
   if (world.links.length) {
     const { touchedFixed, spinShift } = runFeeds(world, dt);
-    const after = computeTotals(world);
+    const after = totals(world);
     // Mass moving to or from a fixed body leaves or enters the dynamic totals: attribute all of it then.
     sources.transfer = touchedFixed
       ? diff(before, after)
@@ -1433,7 +1442,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     const t0 = before;
     retractStops(world);
     runMagazines(world, dt);
-    const t1 = computeTotals(world);
+    const t1 = totals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
     sources.transfer.energy += t1.energy.total - t0.energy.total;
     before = t1;
@@ -1442,7 +1451,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   if (world.bodies.some((b) => b.magazine?.railgun)) {
     const t0 = before;
     fireRailguns(world, dt, addBody as never, normalizeBody as never);
-    const t1 = computeTotals(world);
+    const t1 = totals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
     sources.power.energy += t1.energy.total - t0.energy.total;
     before = t1;
@@ -1456,7 +1465,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     runInjectors(world, dt, profile);
     runLeaks(world, dt, profile);
     igniteAndBurn(world.gas);
-    const t1 = computeTotals(world);
+    const t1 = totals(world);
     sources.transfer.angularMomentum += t1.angularMomentum - t0.angularMomentum;
     sources.transfer.energy += t1.energy.potential - t0.energy.potential;
     // An injector with an economy makes the rest of each parcel from nothing (FLT-010): record it all.
@@ -1484,7 +1493,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     }
   }
   applyAttractors(world, rbs, dt, field);
-  let after = computeTotals(world);
+  let after = totals(world);
   sources.field.momentumX = field.impulse.x;
   sources.field.momentumY = field.impulse.y;
   sources.field.angularMomentum = field.angular;
@@ -1494,7 +1503,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   before = after;
   if (world.drags.length) {
     applyDrags(world, rbs, dt);
-    after = computeTotals(world);
+    after = totals(world);
   }
   // With no drags nothing changed: the same totals, so the same (zero) difference.
   addDelta(sources.user, diff(before, after));
@@ -1505,7 +1514,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     before = after;
     applyTractors(world, rbs, dt);
     const ext = applyCollectors(world, rbs, dt);
-    after = computeTotals(world);
+    after = totals(world);
     sources.tractor = { mass: 0, momentumX: ext.impulse.x, momentumY: ext.impulse.y, angularMomentum: ext.angular, energy: after.energy.total - before.energy.total };
   }
   mark("forces");
@@ -1526,9 +1535,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   // Integrate positions. Only gravitational potential can change here: free assemblies move
   // rigidly, which conserves momentum, angular momentum and kinetic energy exactly.
-  before = computeTotals(world);
+  before = totals(world);
   const rigidImpulse = integratePositions(rbs, dt, world);
-  after = computeTotals(world);
+  after = totals(world);
   sources.field.energy += after.energy.potential - before.energy.potential;
   // Joints past a limit break (ASM-004). The solver already held them to their limits, so
   // breaking changes no velocity and the ledger has nothing more to record.
@@ -1541,14 +1550,14 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Disc pairs that met mid-step move onto their true paths; this is part of the contact.
   before = after;
   applyImpactFix(solved);
-  after = computeTotals(world);
+  after = totals(world);
   sources.contact.angularMomentum += after.angularMomentum - before.angularMomentum;
   sources.contact.energy += after.energy.total - before.energy.total;
 
   // Position correction moves bodies, not velocities; record what that did.
   before = after;
   correctPositions(world, solved, profile);
-  after = computeTotals(world);
+  after = totals(world);
   sources.correction.angularMomentum = after.angularMomentum - before.angularMomentum;
   sources.correction.energy = after.energy.total - before.energy.total;
 
@@ -1559,7 +1568,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     before = after;
     const released = releaseBlasts(world, dt);
     if (detonate(world, world.joints.length ? assemblyRoots(world) : null, dt).length + released) {
-      after = computeTotals(world);
+      after = totals(world);
       sources.transfer.angularMomentum += after.angularMomentum - before.angularMomentum;
       sources.transfer.energy += after.energy.potential - before.energy.potential;
       // A charge that makes more gas than its shell weighs (`gas`): what it made from nothing, recorded.
@@ -1572,9 +1581,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // What has been destroyed leaves the world in a puff of dust (DMG-007).
   stepDust(world, dt);
   if (world.bodies.some((b) => b.integrity <= 0 && !b.fixed)) {
-    before = computeTotals(world);
+    before = totals(world);
     removeDestroyed(world);
-    after = computeTotals(world);
+    after = totals(world);
     addDelta(sources.boundary, diff(before, after));
   }
   mark("integrate");
@@ -1656,7 +1665,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
       const e = gasJointImpulse.get(h.b.id) ?? { x: 0, y: 0, angular: 0 };
       gasJointImpulse.set(h.b.id, { x: e.x + J.x, y: e.y + J.y, angular: e.angular + J.angular + cross(rel, J) });
     }
-    after = computeTotals(world);
+    after = totals(world);
     sources.contact.momentumX += gas.externalImpulse.x;
     sources.contact.momentumY += gas.externalImpulse.y;
     sources.contact.angularMomentum += gas.angular;
@@ -1676,7 +1685,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   if (world.wisps?.length) {
     before = after;
     stepWisps(world, dt);
-    after = computeTotals(world);
+    after = totals(world);
     addDelta(sources.boundary, diff(before, after));
   }
   if (leftGas.length) {
@@ -1700,18 +1709,18 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
 
   // Cargo a collector reeled all the way in leaves the world, delivered (BAS-004).
   if (world.bodies.some((b) => b.collector?.captured)) {
-    const t0 = computeTotals(world);
+    const t0 = totals(world);
     collectCaptured(world);
-    after = computeTotals(world);
+    after = totals(world);
     addDelta(sources.boundary, diff(t0, after));
   }
 
   // A duel (DUEL-001, DUEL-004): kills, and knocked-out ships coming back, which takes their
   // remains out and brings a fresh copy in through the boundary.
   if (world.duel) {
-    const t0 = computeTotals(world);
+    const t0 = totals(world);
     if (runDuel(world, world.duel, dt)) {
-      after = computeTotals(world);
+      after = totals(world);
       addDelta(sources.boundary, diff(t0, after));
     }
   }
@@ -1719,9 +1728,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Mammoth Asteroids (MAS-070): gold collected and spent slugs leave, and new ships and levels
   // come in, through the boundary.
   if (world.arcade) {
-    const t0 = computeTotals(world);
+    const t0 = totals(world);
     if (runArcade(world, dt, ARCADE_OPS)) {
-      after = computeTotals(world);
+      after = totals(world);
       addDelta(sources.boundary, diff(t0, after));
     }
   }
@@ -1730,8 +1739,8 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // the rock leaves through the boundary.
   if (world.terrain?.craters) {
     let t0: ReturnType<typeof computeTotals> | undefined;
-    if (runTerrain(world, TERRAIN_OPS, () => (t0 = computeTotals(world))) && t0) {
-      after = computeTotals(world);
+    if (runTerrain(world, TERRAIN_OPS, () => (t0 = totals(world))) && t0) {
+      after = totals(world);
       addDelta(sources.boundary, diff(t0, after));
     }
   }
@@ -1739,25 +1748,25 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Mammoth Thrust (MTH-023, MTH-026): each new ship comes in, and a ship beamed back from the
   // level's top is moved, through the boundary.
   if (world.thrust) {
-    const t0 = computeTotals(world);
+    const t0 = totals(world);
     if (runThrust(world, dt, ARCADE_OPS)) {
-      after = computeTotals(world);
+      after = totals(world);
       addDelta(sources.boundary, diff(t0, after));
     }
   }
 
   // A wrapped world (FLT-012): what crosses an edge comes back in at the other one.
   if (world.bounds.wrap) {
-    const t0 = computeTotals(world);
+    const t0 = totals(world);
     if (wrapAround(world)) {
-      after = computeTotals(world);
+      after = totals(world);
       addDelta(sources.boundary, diff(t0, after));
     }
   }
 
   world.tick += 1;
   world.time = world.tick * dt;
-  finishLedger(world, start, after, sources, profile, [...account.involved], contactHeat);
+  if (!world.ledgerOff) finishLedger(world, start, after, sources, profile, [...account.involved], contactHeat);
   world.pendingUser = zeroDelta();
   world.pendingDebug = [];
   mark("ledger");
@@ -1770,6 +1779,10 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     if (world.lander) updateLander(world);
   }
 }
+
+/** What the ledger's totals read while it is off: nothing, so nothing is recorded. */
+const NO_TOTALS: Totals = { mass: 0, momentum: { x: 0, y: 0 }, angularMomentum: 0, energy: { kinetic: 0, potential: 0, thermal: 0, chemical: 0, total: 0 } };
+const noTotals = (): Totals => NO_TOTALS;
 
 function finishLedger(
   world: World,

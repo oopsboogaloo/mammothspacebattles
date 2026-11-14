@@ -1245,6 +1245,23 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(smashed.leaks).toBe(1);
     expect(smashed.w.ledger.violations).toBe(0);
   }, 60_000);
+  it("MTH-105 with the ledger off (the game's page) the physics is the same to the bit, and nothing is recorded", () => {
+    const fly = (off: boolean) => {
+      const { w, step } = game(4);
+      w.ledgerOff = off;
+      step(1, [set("main", 1), set("fire", 1)]);
+      step(0.5, [set("main", 0), set("fire", 0), set("destruct", 1)]);
+      step(1, [set("destruct", 0)]);
+      return w;
+    };
+    const on = fly(false);
+    const off = fly(true);
+    const state = (w: World) => hashValue([w.bodies.map((b) => [b.id, b.position, b.velocity, b.angle, b.angularVelocity, b.integrity, b.contents ?? null]), w.gas.count, Array.from(w.gas.x.slice(0, w.gas.count)), w.thrust!.state]);
+    expect(state(off)).toBe(state(on));
+    expect(on.ledger.last).not.toBeNull();
+    expect(off.ledger.last).toBeNull();
+    expect(on.ledger.violations).toBe(0);
+  }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
       const { w, step } = game(4);
