@@ -445,8 +445,9 @@ write({
       tank: 1,
       generator: { at: P(-65.3, 31.0) },
       capacitor: { at: P(-35.94, 18.6) },
-      // Down the mesa's side, from the tank's stand to the generator's side.
-      pipe: [P(-58.35, 38.3), P(-59.47, 36.29), P(-60.21, 33.96), P(-61.27, 32.9), P(-64.45, 31.55)],
+      // Down the mesa's side, from the tank's stand to the generator's side, 0.4 m out from the rock
+      // all the way, so a slug can reach every piece of it (it ran inside the rock at first).
+      pipe: [P(-58.35, 38.4), P(-60.18, 38.09), P(-61.01, 34.46), P(-62.35, 33.92), P(-64.28, 31.36), P(-64.45, 31.6)],
       cables: [
         { points: [P(-65.3, 31.0), P(-64.24, 19.65), P(-57.03, 15.09), P(-36.68, 16.15), P(-35.94, 18.6)], from: "generator" },
         { points: [P(-35.94, 18.6), P(-34.03, 10.96), P(-23.11, 11.91), P(-22.9, 14.3)], from: "capacitor" },

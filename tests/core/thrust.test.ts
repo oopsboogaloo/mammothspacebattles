@@ -103,7 +103,20 @@ describe("Mammoth Thrust", () => {
     expect(breech.turret).toMatchObject({ battery: "t1-cap", cabled: true });
     expect(body(w, "t1-cap")!.charge).toEqual({ shots: 5, capacity: 5 });
     expect(body(w, "t1-gen")!.generator).toMatchObject({ battery: "t1-cap" });
-    expect(w.bodies.filter((b) => b.id.startsWith("t1-pipe-")).length).toBeGreaterThan(1);
+    const pipes = w.bodies.filter((b) => b.id.startsWith("t1-pipe-"));
+    expect(pipes.length).toBeGreaterThan(1);
+    // Every piece of pipe lies in the open, where a slug can reach it, not inside the rock.
+    const outline: { x: number; y: number }[] = s.world.terrain.outline;
+    const open = (p: { x: number; y: number }) => {
+      let c = false;
+      for (let i = 0, j = outline.length - 1; i < outline.length; j = i++) {
+        const a = outline[i];
+        const b = outline[j];
+        if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) c = !c;
+      }
+      return c;
+    };
+    for (const b of pipes) expect(open(b.position), b.id).toBe(true);
     // The new fuel tanks: round, on two legs.
     expect(body(w, "fuel-1")!.shape).toEqual({ kind: "disc", radius: 1 });
     expect(body(w, "fuel-1-leg-l")).toBeDefined();

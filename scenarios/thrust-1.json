@@ -1314,19 +1314,19 @@
         "fixed": true,
         "shape": {
           "kind": "box",
-          "width": 2.300978,
+          "width": 1.856071,
           "height": 0.3
         },
         "mass": 1,
         "position": {
-          "x": -58.91,
-          "y": 37.295
+          "x": -59.265,
+          "y": 38.245
         },
         "velocity": {
           "x": 0,
           "y": 0
         },
-        "angle": -2.079161,
+        "angle": -2.973787,
         "angularVelocity": 0,
         "friction": 0.6,
         "material": {
@@ -1335,7 +1335,7 @@
           "toughness": 150
         },
         "anchored": {
-          "mass": 1.150489
+          "mass": 0.928036
         },
         "contents": [
           {
@@ -1355,19 +1355,19 @@
         "fixed": true,
         "shape": {
           "kind": "box",
-          "width": 2.444688,
+          "width": 3.723681,
           "height": 0.3
         },
         "mass": 1,
         "position": {
-          "x": -59.84,
-          "y": 35.125
+          "x": -60.595,
+          "y": 36.275
         },
         "velocity": {
           "x": 0,
           "y": 0
         },
-        "angle": -1.878318,
+        "angle": -1.795582,
         "angularVelocity": 0,
         "friction": 0.6,
         "material": {
@@ -1376,7 +1376,7 @@
           "toughness": 150
         },
         "anchored": {
-          "mass": 1.222344
+          "mass": 1.86184
         },
         "contents": [
           {
@@ -1396,19 +1396,19 @@
         "fixed": true,
         "shape": {
           "kind": "box",
-          "width": 1.499066,
+          "width": 1.444715,
           "height": 0.3
         },
         "mass": 1,
         "position": {
-          "x": -60.74,
-          "y": 33.43
+          "x": -61.68,
+          "y": 34.19
         },
         "velocity": {
           "x": 0,
           "y": 0
         },
-        "angle": -2.356194,
+        "angle": -2.758516,
         "angularVelocity": 0,
         "friction": 0.6,
         "material": {
@@ -1417,7 +1417,7 @@
           "toughness": 150
         },
         "anchored": {
-          "mass": 0.749533
+          "mass": 0.722357
         },
         "contents": [
           {
@@ -1437,19 +1437,19 @@
         "fixed": true,
         "shape": {
           "kind": "box",
-          "width": 3.454692,
+          "width": 3.20601,
           "height": 0.3
         },
         "mass": 1,
         "position": {
-          "x": -62.86,
-          "y": 32.225
+          "x": -63.315,
+          "y": 32.64
         },
         "velocity": {
           "x": 0,
           "y": 0
         },
-        "angle": -2.740122,
+        "angle": -2.216793,
         "angularVelocity": 0,
         "friction": 0.6,
         "material": {
@@ -1458,7 +1458,48 @@
           "toughness": 150
         },
         "anchored": {
-          "mass": 1.727346
+          "mass": 1.603005
+        },
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0,
+            "capacity": 0.000011
+          },
+          {
+            "resource": "o2",
+            "mass": 0,
+            "capacity": 0.000089
+          }
+        ]
+      },
+      {
+        "id": "t1-pipe-5",
+        "fixed": true,
+        "shape": {
+          "kind": "box",
+          "width": 0.294109,
+          "height": 0.3
+        },
+        "mass": 1,
+        "position": {
+          "x": -64.365,
+          "y": 31.48
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 2.187093,
+        "angularVelocity": 0,
+        "friction": 0.6,
+        "material": {
+          "name": "pipe",
+          "threshold": 30,
+          "toughness": 150
+        },
+        "anchored": {
+          "mass": 0.147054
         },
         "contents": [
           {
@@ -1823,7 +1864,7 @@
         "id": "t1-pipe-feed-h2-5",
         "kind": "feed",
         "from": "t1-pipe-4",
-        "to": "t1-gen",
+        "to": "t1-pipe-5",
         "resource": "h2",
         "rate": 0.5
       },
@@ -1831,6 +1872,22 @@
         "id": "t1-pipe-feed-o2-5",
         "kind": "feed",
         "from": "t1-pipe-4",
+        "to": "t1-pipe-5",
+        "resource": "o2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-pipe-feed-h2-6",
+        "kind": "feed",
+        "from": "t1-pipe-5",
+        "to": "t1-gen",
+        "resource": "h2",
+        "rate": 0.5
+      },
+      {
+        "id": "t1-pipe-feed-o2-6",
+        "kind": "feed",
+        "from": "t1-pipe-5",
         "to": "t1-gen",
         "resource": "o2",
         "rate": 0.5
