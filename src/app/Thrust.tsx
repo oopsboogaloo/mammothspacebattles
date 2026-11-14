@@ -127,7 +127,7 @@ function SelfDestruct() {
 
 /**
  * The keys: each holds its channels on while it is down. ↑ is left and right together: forward.
- * The tractor is beside either Shift: Z on the left, / on the right. (X and . are kept for the shield.)
+ * The tractor is beside either Shift: Z on the left, / on the right; the shield beside that: X or . (SHD-001).
  */
 const KEYS: Record<string, string[]> = {
   KeyQ: ["left"],
@@ -145,6 +145,8 @@ const KEYS: Record<string, string[]> = {
   KeyW: ["fire"],
   KeyZ: ["tractor"],
   Slash: ["tractor"],
+  KeyX: ["shield"],
+  Period: ["shield"],
 };
 /** The keys held, each with the channels it went to: they are let go on the same ones. */
 const down = new Map<string, string[]>();
@@ -208,12 +210,14 @@ export function thrustKeyUp(e: KeyboardEvent): void {
  * A game controller (gamepad.ts). The ship's movement takes values between 0 and 1: the stick turns
  * as far as it is pushed, and forward is the stick pushed up, the right trigger as far as it is
  * pulled, or A or D-pad up at full; reverse the stick pulled down, the left trigger, or B or D-pad
- * down. The rest by the keys it stands for: X or the right bumper fires, Y or the left bumper is the tractor.
+ * down. The rest by the keys it stands for: X or the right bumper fires, Y is the tractor, the left
+ * bumper the shield.
  */
 function padControls(p: PadState): string[] {
   const out: string[] = [];
   if (p.x || p.rb) out.push("Space");
-  if (p.y || p.lb) out.push("KeyZ");
+  if (p.y) out.push("KeyZ");
+  if (p.lb) out.push("KeyX");
   return out;
 }
 function padMovement(p: PadState, a: PadAnalog): Record<string, number> {
@@ -436,6 +440,7 @@ function Play() {
           <Thrust channel={asteroidsSide("left")} label="L" side="left" className="mas-thrust" />
           <Thrust channel="reverse" label="REV" side="reverse" className="mas-thrust" />
           <Thrust channel="tractor" label="BEAM" side="tractor" className="mas-thrust" />
+          <Thrust channel="shield" label="SHIELD" side="shield" className="mas-thrust" />
           <Thrust channel="fire" label="FIRE" side="fire" className="mas-thrust" />
           <Thrust channel={asteroidsSide("right")} label="R" side="right" className="mas-thrust" />
         </>

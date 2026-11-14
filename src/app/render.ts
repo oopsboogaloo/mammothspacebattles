@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, fieldId, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
@@ -944,6 +944,30 @@ function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   ctx.stroke();
 }
 
+/**
+ * Shield fields (SHD-002): a pale blue disc with a brighter rim, shimmering a little, that flares
+ * for a moment where something hits it.
+ */
+function drawFields(ctx: Ctx, world: World, c: Camera, vp: Viewport, fields: ReadonlySet<string>): void {
+  if (!fields.size) return;
+  for (const b of world.bodies) {
+    if (!fields.has(b.id) || b.shape.kind !== "disc") continue;
+    const o = toScreen(c, vp, b.position);
+    const r = b.shape.radius * c.zoom;
+    const gen = b.id.slice(0, -"-field".length);
+    // A hit in the last 36 steps (0.15 game s) brightens it.
+    const hit = world.events.some((e) => e.type === "shield.hit" && e.data.id === gen && world.tick - e.tick < 36);
+    const shimmer = 0.04 * Math.sin(world.time * 40);
+    ctx.beginPath();
+    ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(120, 200, 255, ${(hit ? 0.26 : 0.12) + shimmer / 2})`;
+    ctx.fill();
+    ctx.lineWidth = hit ? 3 : 2;
+    ctx.strokeStyle = `rgba(160, 225, 255, ${(hit ? 0.95 : 0.6) + shimmer})`;
+    ctx.stroke();
+  }
+}
+
 /** Tractor beams as a faint wedge, and tethers as a line that warms from teal to red as it nears breaking (TRC). */
 function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   // A base's collector: a thin dashed line from its cup to what it is reeling in (BAS).
@@ -1204,9 +1228,12 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
   const playing = world.arcade?.state ?? world.thrust?.state;
   const grace = playing?.graceUntil !== undefined && Math.floor(world.time * 10) % 2 === 0;
   const flashing = grace ? `p${playing!.n}-` : null;
+  // Shield fields (SHD-002) are drawn as fields, after the bodies, not as bodies.
+  const fields = new Set(world.bodies.filter((b) => b.shield).map((b) => fieldId(b.id)));
   const drawBodies = (cam: Camera): void => {
     for (const b of world.bodies) {
       if (opts.groundLine && isGround(b)) continue;
+      if (fields.has(b.id)) continue;
       if (opts.thrust && b.fixed && b.id.startsWith("rock-")) continue; // the rock is the lines behind
       const selected = opts.selection.has(b.id);
       const hover = opts.hover === b.id;
@@ -1296,6 +1323,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
     drawShocks(ctx, world, c, vp);
   }
   drawTractors(ctx, world, c, vp);
+  drawFields(ctx, world, c, vp, fields);
   // Several pads, each with its multiplier (Mammoth Lander, LND-010); or the one pad.
   const goal = world.challenge?.goal;
   if (goal?.pads) for (const p of goal.pads) drawPad(ctx, world, c, vp, p.id, `×${p.multiplier}`, goal.used?.includes(p.id));

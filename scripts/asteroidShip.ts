@@ -35,6 +35,13 @@ export interface ShipTuning {
    * tractor as scenarios write it, less its origin, direction and tether generator, which are set here.
    */
   tractor?: Json;
+  /**
+   * Mammoth Thrust's shield generator (SHD-001; Chloe, 14 November 2026): a small, light collar on
+   * the cockpit's nose. This is the shield as scenarios write it, less its tanks, the controls it
+   * blocks, the part its field is welded to and the field's centre, which are set here; and with no
+   * radius, the field just clears the ship.
+   */
+  shield?: Json;
 }
 
 const rot = (v: Vec, a: number): Vec => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
@@ -221,9 +228,40 @@ export function asteroidShip(t: ShipTuning) {
     }
     links.push({ id: id("ctl-tractor"), kind: "control", channel: String(t.tractor.channel), to: id("hull") });
   }
+  if (t.shield) {
+    // A thin collar round the gun's foot, on the cockpit's nose: 0.3 kg, on the centre line, so the
+    // ship flies as it did. Its field is welded to the cockpit, centred on the ship's centre of mass,
+    // and blocks the five engines and the gun while it is up.
+    box("shield", -0.45, 0.45, 1.2, 1.32, 0.3);
+    weld("shield-a", "hull", "shield", { x: -0.25, y: 1.2 });
+    weld("shield-b", "hull", "shield", { x: 0.25, y: 1.2 });
+    links.push({ id: id("ctl-shield"), kind: "control", channel: "shield", to: id("shield") });
+  }
   // The game places a ship by its hull: the parts are laid out round the cockpit's centre.
   const o = at.get("hull")!.position;
   for (const b of bodies) b.position = rv(sub(b.position as Vec, o));
+  if (t.shield) {
+    // The ship's centre of mass, from the cockpit's centre; and how far its farthest corner is from it.
+    const mass = bodies.reduce((m, b) => m + (b.mass as number), 0);
+    const com: Vec = bodies.reduce<Vec>((c, b) => add(c, { x: ((b.position as Vec).x * (b.mass as number)) / mass, y: ((b.position as Vec).y * (b.mass as number)) / mass }), { x: 0, y: 0 });
+    let reach = 0;
+    for (const b of bodies) {
+      const p = b.position as Vec;
+      const sh = b.shape as { kind: string; width?: number; height?: number; radius?: number; vertices?: Vec[] };
+      const corners =
+        sh.kind === "box" ? [-1, 1].flatMap((i) => [-1, 1].map((j) => ({ x: (i * sh.width!) / 2, y: (j * sh.height!) / 2 }))) : sh.kind === "polygon" ? sh.vertices! : [{ x: sh.radius!, y: 0 }];
+      for (const c of corners) reach = Math.max(reach, Math.hypot(p.x + rot(c, (b.angle as number) ?? 0).x - com.x, p.y + rot(c, (b.angle as number) ?? 0).y - com.y));
+    }
+    const gen = bodies.find((b) => b.id === id("shield"))!;
+    gen.shield = {
+      radius: round(reach + 0.4),
+      ...t.shield,
+      from: [id("tank-l"), id("tank-r")],
+      blocks: ["main", "bl", "br", "fl", "fr", "fire"],
+      to: id("hull"),
+      at: rv(com),
+    };
+  }
   return { bodies, joints, links };
 }
 

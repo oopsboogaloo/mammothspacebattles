@@ -8,8 +8,8 @@ levels, look and sound are our own; only the idea and the rules of play follow t
 
 Status: agreed 12 November 2026, from Chloe's brief and several rounds of questions (§10). **The
 MVP is built** (milestones 1 and the playable part of 4, §9): two levels, the ship, the pod, lives,
-the level's top and the page. **Turrets are built too** (the MVP1 turret, firing at random bearings). The factory, fuel and the
-shield are not built yet, so the rules for them below are still plans. What the build measured and changed is in
+the level's top and the page. **Turrets are built too** (the MVP1 turret, firing at random bearings). Fuel and the
+shield are built (the shield to Chloe's design of 14 November 2026: see Shield, which supersedes the older rules for it below); the factory is not yet. What the build measured and changed is in
 `mammoth-thrust-design.md` §8 and §9. The requirement IDs (MTH-…) are this game's own. The
 engine changes the game needs (§8) become requirements in `docs/spec.md` once agreed. Design and plan:
 `mammoth-thrust-design.md`.
@@ -268,13 +268,20 @@ From before Chloe's power design; level 3's plant does this. Levels 1 and 2 have
 
 ### Shield
 
-- Held: a field of fixed radius round the ship's centre of mass. Shells and bolts that reach it
-  bounce off it without bursting; gas parcels are turned back at it. The push goes into the field
-  and not the ship (a cheat with momentum, recorded by the ledger).
-- It burns fuel at a fixed rate (first value: as much as the main engine at half thrust).
-- While it is up the engines and the gun don't work, and the tractor beam lets go of nothing but
-  takes nothing new.
-- It never covers the pod, however close, and it does nothing against rock or buildings.
+Chloe's design, 14 November 2026 (built; docs/spec.md §9.12, SHD-001…005). It replaces the first
+plan below (a cheat that turned shells and gas back and let rock through).
+
+- A small, light generator on the ship: a 0.3 kg collar round the gun's foot, on the centre line.
+- Held (X or ., the left bumper, or SHIELD on screen): a disc grows from nothing round the ship's
+  centre of mass to just past its farthest corner (3.35 m) in a quarter of a game second.
+- It doesn't touch its own ship; everything else meets it as a surface. Rocks, wreckage, slugs and
+  bolts bounce off; gas is turned back and pushed out as it grows; the pod too, when not on the
+  tether. The field is welded rigidly to the cockpit, so the ship is pushed by what hits it and
+  comes down on it against rock. A blast outside it doesn't damage what is inside.
+- It burns fuel fast: 0.8 kg a game second (full tanks in 40 s on screen), and each hit more:
+  0.005 kg for each N·s, at least 0.1 kg.
+- While it is up the five engines and the gun don't work. The tractor still does.
+- The field weighs 2 kg while up (0.5 kg lost its bounce in the weld).
 
 ### Fuel
 

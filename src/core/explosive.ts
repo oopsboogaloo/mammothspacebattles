@@ -23,6 +23,7 @@ import { collide } from "./collide.ts";
 import { addParcel, storeChemical, storeThermal, type Parcel } from "./gas.ts";
 import { add, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { localVertices, massProps, polygonArea } from "./shapes.ts";
+import { fieldId } from "./shield.ts";
 import { compareIds, nearestOffset, type Body, type World } from "./world.ts";
 
 export interface Explosive {
@@ -288,8 +289,16 @@ function burst(world: World, s: Body, dt: number): void {
   world.events.push({ tick: world.tick, type: "detonation", data: { id: s.id, energy: E, fragments: made.length, gas: gasMass, x: s.position.x, y: s.position.y, radius: e.radius ?? 2 } });
   // Blast damage: a share of E to each damageable body near enough.
   const R = e.radius ?? 2;
+  // A shield's field (SHD-004) stands between a blast outside it and what it covers.
+  const fields = world.bodies.filter((g) => g.shield).flatMap((g) => world.bodies.filter((f) => f.id === fieldId(g.id) && f.shape.kind === "disc"));
+  const covered = (b: Body) =>
+    fields.some((f) => {
+      const r = (f.shape as { radius: number }).radius;
+      return length(nearestOffset(world, f.position, b.position)) < r && length(nearestOffset(world, f.position, s.position)) > r;
+    });
   for (const b of world.bodies) {
     if (!b.material || made.includes(b)) continue;
+    if (fields.length && covered(b)) continue;
     const r = massProps(b.shape, 1).boundingRadius;
     // From the body to the blast: to its nearest copy, in a wrapped world (FLT-016).
     const toBlast = nearestOffset(world, b.position, s.position);

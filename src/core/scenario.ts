@@ -235,6 +235,7 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
   if (b.explosive !== undefined) validateExplosive(v, b.explosive, b.mass, `${path}.explosive`);
   if (b.tractor !== undefined) validateTractor(v, b.tractor, `${path}.tractor`);
   if (b.turret !== undefined) validateTurret(v, b.turret, `${path}.turret`);
+  if (b.shield !== undefined) validateShield(v, b.shield, `${path}.shield`);
   if (b.siphon !== undefined && typeof b.siphon !== "boolean") err(v, `${path}.siphon`, "must be true or false");
   if (b.vents !== undefined) {
     if (!isObj(b.vents) || !Array.isArray(b.vents.holes)) err(v, `${path}.vents`, "must be {from?, rate, holes}");
@@ -382,6 +383,19 @@ function validateRoute(v: V, r: Record<string, unknown>, path: string): void {
   if (!Array.isArray(r.waypoints) || !r.waypoints.length) return err(v, `${path}.waypoints`, "must be a list of points");
   r.waypoints.forEach((w, i) => vec(v, w, `${path}.waypoints[${i}]`));
   if (r.speed !== undefined) num(v, r.speed, `${path}.speed`, { positive: true });
+}
+
+/** A shield generator (SHD-001…SHD-005, shield.ts). */
+function validateShield(v: V, s: unknown, path: string): void {
+  if (!isObj(s)) return err(v, path, "must be {channel, radius, grow, burn, from, hitBurn, minHit, blocks, mass, to, at}");
+  str(v, s.channel, `${path}.channel`);
+  str(v, s.to, `${path}.to`);
+  vec(v, s.at, `${path}.at`);
+  num(v, s.radius, `${path}.radius`, { positive: true });
+  num(v, s.grow, `${path}.grow`, { positive: true });
+  num(v, s.mass, `${path}.mass`, { positive: true });
+  for (const k of ["burn", "hitBurn", "minHit"] as const) num(v, s[k], `${path}.${k}`, { min: 0 });
+  for (const k of ["from", "blocks"] as const) if (!Array.isArray(s[k]) || !(s[k] as unknown[]).every((x) => typeof x === "string")) err(v, `${path}.${k}`, "must be a list of names");
 }
 
 function validateTractor(v: V, t: unknown, path: string): void {

@@ -11,7 +11,7 @@ interface Body {
   turret?: { shots: number; sees: boolean; target?: string };
 }
 interface Hook {
-  sandbox: () => { world: { time: number; controls: Record<string, number>; bodies: Body[]; terrain: { holes: { x: number; y: number; r: number }[] }; thrust: { spec: { start: { x: number; y: number }; top: number } } } };
+  sandbox: () => { world: { time: number; controls: Record<string, number>; bodies: Body[]; links: { id: string; off?: string }[]; terrain: { holes: { x: number; y: number; r: number }[] }; thrust: { spec: { start: { x: number; y: number }; top: number } } } };
   thrust: () => { phase: string; lives: number; n: number; score: number; pod: string; stats: { back: number } } | null;
   level: () => number | null;
   camera: () => { x: number; y: number; zoom: number };
@@ -64,7 +64,7 @@ test("MTH-001 MTH-002 Mammoth Thrust on its own page: the title over a still map
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON ITS STAND");
   await expect(page.getByTestId("mth-slugs")).toHaveText("SHELLS 120");
   await expect(page.getByTestId("mth-damage")).toHaveText("DAMAGE 0%");
-  for (const b of ["thrust-left", "thrust-right", "thrust-reverse", "thrust-fire", "thrust-tractor", "mth-pause"]) await expect(page.getByTestId(b)).toBeVisible();
+  for (const b of ["thrust-left", "thrust-right", "thrust-reverse", "thrust-fire", "thrust-tractor", "thrust-shield", "mth-pause"]) await expect(page.getByTestId(b)).toBeVisible();
   await expect(page.getByTestId("sandbox")).toHaveCount(0);
   // The game is running, and the ship is falling under gravity.
   await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-hull")!.velocity.y), { timeout: 15_000 }).toBeLessThan(-1);
@@ -104,6 +104,24 @@ test("MTH-021 the keys: ↑ is forward, Space fires slugs, and Z or / works the 
     await page.keyboard.up(key);
     await expect.poll(() => hook(page, (m) => m.sandbox().world.bodies.find((b) => b.id === "p1-hull")?.tractor?.mode)).toBe("off");
   }
+});
+
+test("SHD-001 SHD-005 the keys: X or . holds the shield up, and the engines don't work while it is", async ({ page }) => {
+  await start(page);
+  const field = () => hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id === "p1-shield-field"));
+  for (const key of ["x", "."]) {
+    await page.keyboard.down(key);
+    await expect.poll(field).toBe(true);
+    await page.keyboard.up(key);
+    await expect.poll(field).toBe(false);
+  }
+  await page.keyboard.down("x");
+  await expect.poll(field).toBe(true);
+  await page.keyboard.down("ArrowUp");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.links.filter((l) => l.off === "shield").length)).toBe(6);
+  await page.keyboard.up("ArrowUp");
+  await page.keyboard.up("x");
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.links.filter((l) => l.off).length)).toBe(0);
 });
 
 test("MTH-021 touch: the beam button works the tractor while held, with a thrust button held at the same time", async ({ page }) => {

@@ -318,7 +318,7 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
   // The shock: a ship part near a live transmitter's line loses the ship its control for a moment.
   if (s.shockUntil !== undefined && now >= s.shockUntil - 1e-9) {
     s.shockUntil = undefined;
-    for (const l of world.links) if (l.off) delete l.off;
+    for (const l of world.links) if (l.off === "shock") delete l.off;
   }
   if (ship && s.shockUntil === undefined) {
     for (const t of spec.transmitters) {
@@ -328,7 +328,7 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       const struck = world.bodies.some((b) => b.id.startsWith(ship) && !b.id.includes("-shell-") && toSegment(b.position, tips[0], tips[1]) < reach(b) + t.width / 2);
       if (!struck) continue;
       s.shockUntil = now + t.shock;
-      for (const l of world.links) if (l.kind === "control" && l.to.startsWith(ship)) l.off = true;
+      for (const l of world.links) if (l.kind === "control" && l.to.startsWith(ship)) l.off = "shock";
       world.events.push({ tick: world.tick, type: "plant.shock", data: { id: t.id } });
       break;
     }

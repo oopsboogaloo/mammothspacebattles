@@ -48,7 +48,15 @@ function ship() {
   // Held on a fuel tank in its wedge, the beam draws the tank's fuel into the ship's two tanks
   // (TRC-008), 2 kg a game second: a full 8.1 kg tank in 8 s on screen. The tank isn't pulled.
   const tractor = { channel: "tractor", range: 40, arc: Math.PI / 6, force: 1200, maxSpeed: 3, capture: 1.2, only: ["pod"], pullAny: true, siphon: { rate: 2 }, tether: { length: 12, reach: 22, stiffness: 2000, damping: 1.5, maxTension: 100000, payOut: 6 } };
-  return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor });
+  // The shield (SHD-001…SHD-005; Chloe, 14 November 2026): held on, a field grows round the ship
+  // in a quarter of a game second and stays up while there is fuel, burning it fast: 0.8 kg a game
+  // second, full tanks (16.2 kg) in 40 s on screen. Each hit costs more: 0.005 kg for each N·s of
+  // its impulse, and at least 0.1 kg (a slug or a 1 kg rock: 0.1 kg; the ship falling onto rock at
+  // 20 m/s: about 3.5 kg). The engines and the gun don't work while it is up. First values, for
+  // Chloe to tune. The field weighs 2 kg while it is up: lighter, and the weld that holds it to the
+  // ship soaks up its bounce (a 1 kg rock at 10 m/s came back at 0 m/s off a 0.5 kg field, 4 m/s off 2 kg).
+  const shield = { channel: "shield", grow: 14, burn: 0.8, hitBurn: 0.005, minHit: 0.1, mass: 2 };
+  return asteroidShip({ small: SMALL, main: MAIN, economy: ECONOMY, magazine, tractor, shield });
 }
 
 /**

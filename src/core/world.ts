@@ -21,6 +21,7 @@ import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
 import { runTerrain, startTerrain, type Terrain, type TerrainOps, type TerrainSpec } from "./terrain.ts";
+import { runShields, type Shield } from "./shield.ts";
 import { normalizeTurret, runTurrets, turnJoints, type Charge, type Generator, type JointTurn, type Turret, type TurretInput } from "./turret.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
@@ -91,6 +92,8 @@ export interface Body {
   explosive?: Explosive;
   /** A tractor beam and tether (TRC): see tractor.ts. */
   tractor?: Tractor;
+  /** A shield generator (SHD-001): see shield.ts. */
+  shield?: Shield;
   /** A gun turret's fire control, on the gun's carriage (WPN-009): see turret.ts. */
   turret?: Turret;
   /** A battery's shots, and a generator that refills one (WPN-010): see turret.ts. */
@@ -299,8 +302,11 @@ export type Link = (
 ) & {
   /** 1 whole, 0 broken (DMG-001). It falls with damage to either end. Absent in a scenario: 1. */
   integrity: number;
-  /** A control link switched off for now carries nothing, though whole (Mammoth Thrust's shock, plant.ts). */
-  off?: boolean;
+  /**
+   * A control link switched off for now carries nothing, though whole, and why: "shock" (Mammoth
+   * Thrust's power plant, plant.ts) or "shield" (a ship's own shield, shield.ts). Each clears only its own.
+   */
+  off?: "shock" | "shield";
 };
 
 /** A link as written in scenarios: integrity defaults to 1. */
@@ -1400,6 +1406,14 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     const burned = runTurrets(world, dt);
     turnJoints(world, dt);
     if (burned > 0) {
+      const after = computeTotals(world);
+      addDelta(sources.boundary, diff(before, after));
+      before = after;
+    }
+  }
+  // Shields (SHD-001…SHD-005): a field coming or going, growing, and the fuel it burns leave or enter the world.
+  if (world.bodies.some((b) => b.shield)) {
+    if (runShields(world, dt, { addBody, addJoint })) {
       const after = computeTotals(world);
       addDelta(sources.boundary, diff(before, after));
       before = after;
