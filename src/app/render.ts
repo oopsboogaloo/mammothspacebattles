@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, fieldId, nearestOffset, turretOnline, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, assemblyRoots, fieldId, generatorOnline, nearestOffset, turretOnline, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
@@ -422,7 +422,7 @@ export interface RenderOptions {
    * caves) as horizontal lines of one colour, fixed to the world, with no outline; stars in the sky
    * only; the caves plain black. The ship, the pod and everything else as Mammoth Asteroids draws them.
    */
-  thrust?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][]; islands?: Vec2[][]; craters?: readonly { x: number; y: number; r: number }[] };
+  thrust?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][]; islands?: Vec2[][]; craters?: readonly { x: number; y: number; r: number }[]; cables?: readonly { points: Vec2[]; from: string }[] };
 }
 
 /** The subset of CanvasRenderingContext2D used, so tests can pass a recorder. */
@@ -756,11 +756,31 @@ export const LAMP_OFF = "#ff4040";
 export const NODE_ON = "#3f8f2a";
 export const NODE_OFF = "#8f2a24";
 
+/** Whether a generator or capacitor is on (WPN-013): a generator online, a capacitor holding a shot. */
+function machineOn(world: World, id: string): boolean {
+  const b = world.bodies.find((x) => x.id === id);
+  if (!b) return false;
+  if (b.generator) return generatorOnline(world, b);
+  return b.integrity > 0 && (b.charge?.shots ?? 0) >= 1;
+}
+
 function drawPowerLines(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  ctx.lineWidth = Math.max(2, 0.45 * c.zoom);
+  // A powered turret's cables (WPN-013): lit while what they leave from is on.
+  for (const l of world.thrust?.spec.view?.cables ?? []) {
+    if (l.points.length < 2) continue;
+    ctx.strokeStyle = machineOn(world, l.from) ? LINE_ON : LINE_OFF;
+    ctx.beginPath();
+    l.points.forEach((p, k) => {
+      const q = toScreen(c, vp, p);
+      if (k === 0) ctx.moveTo(q.x, q.y);
+      else ctx.lineTo(q.x, q.y);
+    });
+    ctx.stroke();
+  }
   const spec = world.thrust?.spec.plant;
   const s = world.thrust?.state.plant;
   if (!spec || !s) return;
-  ctx.lineWidth = Math.max(2, 0.45 * c.zoom);
   for (const l of spec.lines) {
     if (l.points.length < 2) continue;
     ctx.strokeStyle = powered(s, world.time, l.needs) ? LINE_ON : LINE_OFF;
@@ -771,6 +791,73 @@ function drawPowerLines(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
       else ctx.lineTo(q.x, q.y);
     });
     ctx.stroke();
+  }
+}
+
+/**
+ * What a machine shows on it (WPN-013): a generator's light on top, green while it is online and
+ * red while it isn't, and its fins; a capacitor's (or battery's) bar of charge, red once empty; a
+ * round fuel tank's word FUEL.
+ */
+function drawMachineMarks(ctx: Ctx, world: World, c: Camera, vp: Viewport, b: Body): void {
+  const q = sinCos(b.angle);
+  const at = (x: number, y: number) => toScreen(c, vp, add(b.position, rotate(q, { x, y })));
+  const box = b.shape.kind === "box" ? b.shape : null;
+  if (b.generator && box) {
+    const top = at(0, box.height / 2 + 0.25);
+    ctx.fillStyle = generatorOnline(world, b) ? NODE_ON : NODE_OFF;
+    ctx.beginPath();
+    ctx.arc(top.x, top.y, Math.max(2, 0.28 * c.zoom), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = COLORS.bodyStroke;
+    ctx.lineWidth = 1.25;
+    ctx.stroke();
+    // Fins down each side.
+    ctx.beginPath();
+    for (const side of [-1, 1])
+      for (let k = 0; k < 4; k++) {
+        const y = -box.height / 2 + (box.height * (k + 0.75)) / 4.5;
+        const p0 = at((side * box.width) / 2, y);
+        const p1 = at(side * (box.width / 2 + 0.3), y);
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+      }
+    ctx.stroke();
+  }
+  if (b.charge && box) {
+    const share = Math.max(0, Math.min(1, b.charge.shots / b.charge.capacity));
+    const w = 0.3;
+    const h = box.height - 0.5;
+    const corners = (y0: number, y1: number) => [at(-w / 2, y0), at(w / 2, y0), at(w / 2, y1), at(-w / 2, y1)];
+    const path = (pts: { x: number; y: number }[]) => {
+      ctx.beginPath();
+      pts.forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.closePath();
+    };
+    const empty = b.charge.shots < 1;
+    path(corners(-h / 2, h / 2));
+    ctx.strokeStyle = empty ? NODE_OFF : COLORS.bodyStroke;
+    ctx.lineWidth = 1.25;
+    ctx.stroke();
+    if (empty) {
+      ctx.fillStyle = NODE_OFF;
+      ctx.fill();
+    } else {
+      path(corners(-h / 2, -h / 2 + h * share));
+      ctx.fillStyle = NODE_ON;
+      ctx.fill();
+    }
+  }
+  if (b.siphon && b.shape.kind === "disc") {
+    const p = at(0, 0);
+    const size = 0.6 * b.shape.radius * c.zoom;
+    if (size < 4) return;
+    // (Upright on the screen, however the tank stands.)
+    ctx.fillStyle = COLORS.bodyStroke;
+    ctx.font = `${Math.round(size)}px 'IBM Plex Mono', monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("FUEL", p.x, p.y);
   }
 }
 
@@ -1327,6 +1414,7 @@ export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opt
       if (hidden && b.shape.kind !== "disc" && !selected) strokeOutline(ctx, cam, vp, b, hidden, fill);
       else ctx.stroke();
       ctx.setLineDash([]);
+      if (opts.thrust && b.integrity > 0) drawMachineMarks(ctx, world, cam, vp, b);
       if (dim) ctx.globalAlpha = 1;
       if (game || (b.compound && !selected)) continue; // no orientation mark or label to give its pieces away (none at all in the game)
       // Orientation mark: centre to the body's local +x edge, so rotation is visible.

@@ -60,7 +60,8 @@ export interface ThrustSpec {
    * the open sky (a closed outline: stars show inside it) and the open space underground (closed
    * outlines, plain black). Everything else is rock.
    */
-  view?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][]; islands?: Vec2[][] };
+  /** How the page draws the level; `cables` are a powered turret's (WPN-013), each lit while what it leaves from is on. */
+  view?: { colour: string; pitch: number; sky: Vec2[]; caves: Vec2[][]; islands?: Vec2[][]; cables?: { points: Vec2[]; from: string }[] };
 }
 
 export type ThrustPhase = "flying" | "between" | "won" | "over";

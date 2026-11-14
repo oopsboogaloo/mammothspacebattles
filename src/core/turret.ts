@@ -33,6 +33,11 @@ export interface Turret {
   barrel?: string;
   /** The body that holds its shots (`charge`). Without one, it needs no power. */
   battery?: string;
+  /**
+   * Its battery stands apart, joined to it by a cable (WPN-013: Mammoth Thrust's capacitor): it
+   * need not be on the turret's assembly, only whole. The cable itself can't be cut.
+   */
+  cabled?: boolean;
   /** Parts its power comes in through (an electric turret's power nodes, WPN-012): any one destroyed or knocked off, it can't fire. */
   nodes?: string[];
   /** How far it sees, m. */
@@ -149,7 +154,36 @@ function clearLine(world: World, a: Vec2, b: Vec2): boolean {
  */
 export function turretOnline(world: World, carriage: Body): boolean {
   const t = carriage.turret;
-  return !!t && t.enabled && t.powered !== false && turretWorks(world, carriage);
+  if (!t || !t.enabled || t.powered === false || !turretWorks(world, carriage)) return false;
+  // A turret with a battery is offline while it holds no shot (WPN-013).
+  if (t.battery !== undefined) return (world.bodies.find((b) => b.id === t.battery)?.charge?.shots ?? 0) >= 1;
+  return true;
+}
+
+/** Fuel a generator's supply must still hold for it to count as fed, kg: more than the pipe's few grams in transit. */
+const FED = 0.001;
+
+/**
+ * Whether a generator is online (WPN-013): whole, and fed: whole feed links reach it from stores
+ * that between them hold fuel (a pipe from a tank). It keeps no fuel of its own worth counting, so
+ * cut off or run dry, it is offline at once. What a generator's light shows.
+ */
+export function generatorOnline(world: World, gen: Body): boolean {
+  if (!gen.generator || gen.integrity <= 0) return false;
+  const seen = new Set<string>([gen.id]);
+  let fuel = 0;
+  const walk = (id: string): void => {
+    for (const l of world.links) {
+      if (l.kind !== "feed" || l.to !== id || l.integrity <= 0 || seen.has(l.from)) continue;
+      const from = world.bodies.find((x) => x.id === l.from);
+      if (!from || from.integrity <= 0) continue;
+      seen.add(from.id);
+      fuel += (from.contents ?? []).reduce((m, s) => m + s.mass, 0);
+      walk(from.id);
+    }
+  };
+  walk(gen.id);
+  return fuel >= FED;
 }
 
 export function turretWorks(world: World, carriage: Body): boolean {
@@ -173,7 +207,7 @@ export function turretWorks(world: World, carriage: Body): boolean {
   }
   if (t.battery !== undefined) {
     const battery = world.bodies.find((b) => b.id === t.battery);
-    if (!battery || battery.integrity <= 0 || !battery.charge || roots.get(battery.id) !== root) return false;
+    if (!battery || battery.integrity <= 0 || !battery.charge || (!t.cabled && roots.get(battery.id) !== root)) return false;
   }
   return true;
 }
@@ -193,6 +227,8 @@ export function runTurrets(world: World, dt: number): number {
   for (const g of world.bodies) {
     const gen = g.generator;
     if (!gen || g.integrity <= 0) continue;
+    // A generator fed by a pipe runs only while it is fed (WPN-013): cut off, what is in passing in it doesn't count.
+    if (world.links.some((l) => l.kind === "feed" && l.to === g.id) && !generatorOnline(world, g)) continue;
     const battery = world.bodies.find((b) => b.id === gen.battery);
     if (!battery?.charge || battery.integrity <= 0 || battery.charge.shots >= battery.charge.capacity) continue;
     const stores = g.contents ?? [];
