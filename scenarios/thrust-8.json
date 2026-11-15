@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "thrust-8",
   "title": "Mammoth Thrust: The airbase",
-  "description": "An airbase over a cavern, five gunships parked by the shaft: the first lifts off when you come near, another every 15 seconds. Fly down the shaft, take the pod on the tether, and carry it up past the top.",
+  "description": "An airbase over a cavern, three gunships parked by the shaft: the first lifts off when you come near, the next once it is down. Fly down the shaft, take the pod on the tether, and carry it up past the top.",
   "profile": "sandbox",
   "seed": 1,
   "world": {
@@ -13641,13 +13641,6 @@
           },
           {
             "at": {
-              "x": 38.1,
-              "y": 0.98
-            },
-            "angle": 0
-          },
-          {
-            "at": {
               "x": -0.45,
               "y": -0.68
             },
@@ -13657,13 +13650,6 @@
             "at": {
               "x": -29.1,
               "y": -1.27
-            },
-            "angle": 0
-          },
-          {
-            "at": {
-              "x": -15,
-              "y": -0.98
             },
             "angle": 0
           }
