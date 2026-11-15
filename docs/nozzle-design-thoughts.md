@@ -179,6 +179,69 @@ All of this can be worked out while designing, before flying:
 A designer readout could show thrust, exhaust speed (Isp), exit Mach number, chamber pressure and
 wall loads.
 
+### The designer's inputs, and what follows from them
+
+Agreed 15 November 2026: the engine isn't simulated as gas in the game (the chamber model stays,
+for speed); the designer sets:
+
+- **burn rate:** the injector's flow, capped by its feed (PRP-002);
+- **throat width;**
+- **wall angle and wall length:** with the throat, they give the exit width,
+  exit = throat + 2 × length × tan(angle), so any two of angle, length and exit width fix the third;
+- **chamber wall thickness:** the welds' limits follow from it (below).
+
+What follows, in order of cause:
+
+1. **The feed sets the burn rate.** The engine doesn't choose it.
+2. **The throat turns the burn rate into chamber pressure.** The throat chokes, so the pressure
+   rises until exactly that flow leaves through it: p_c = ṁ · c\* ÷ A_t, where the characteristic
+   velocity c\* depends only on the propellant's chemistry, not on the nozzle
+   ([Characteristic velocity](https://en.wikipedia.org/wiki/Characteristic_velocity), after Sutton
+   & Biblarz). Half the throat at the same flow is twice the pressure. The chamber model already
+   settles there.
+3. **The chamber's walls and welds must hold that pressure.** This is where a burn rate is
+   supported or not: too much pressure for the welds and the engine bursts. The game already pushes
+   the chamber's pressure onto its walls and so into their welds (`wallLoads`, `vessel.ts`;
+   ASM-004).
+4. **The nozzle sets how much thrust that buys, and nothing else.** Past the throat the flow is
+   supersonic, so nothing downstream reaches the throat or the chamber: a nozzle can't fail to
+   support a burn rate, only waste it. F = ṁ · c\* · C_F, with the thrust coefficient C_F from the
+   area ratio and the divergence (§2). If the walls are narrowest somewhere other than the intended
+   throat, that place is the throat; the chamber scan already finds it.
+
+**A consequence worth designing round:** in vacuum, at a given burn rate and area ratio, thrust
+doesn't depend on the throat's size. The throat trades structure against size:
+
+- a small throat: high pressure, so thick, heavy chamber walls; but compact, as the exit for a
+  given area ratio is narrow;
+- a big throat: low pressure and light walls, but a wide nozzle for the same efficiency.
+
+### Wall thickness sets the weld limits
+
+Agreed 15 November 2026: weld limits follow from the parts' thickness, so the designer sets
+thickness and not limits. A first proposal, to calibrate:
+
+- **Per metre of depth, for the thinner part at the joint, thickness t, of a material of strength
+  σ:**
+  - tension and compression ≈ σ · t;
+  - shear ≈ τ · t, with τ about 0.6 σ;
+  - torque (bending) ≈ σ · t² ÷ 6: the elastic section modulus of a strip t thick (÷ 4 if it may
+    yield fully).
+- **Mass follows thickness too:** a wall's mass is its density × t × its length. Strength and mass
+  then rise together: high pressure means thick, heavy walls.
+- **A sizing rule falls out.** A chamber wall spanning L between its welds, under p_c, carries
+  p_c · L in all: p_c · L ÷ 2 at each end, and an end moment of about p_c · L² ÷ 12 (a beam held at
+  both ends). It holds while
+  - t ≥ p_c · L ÷ (2σ) (tension at the ends), and
+  - t ≥ L · √(p_c ÷ (2σ)) (bending at the ends), which usually decides it for thin walls.
+
+  This is the game's form of the pressure vessel's t = p · r ÷ σ. The designer readout can show the
+  margin for each wall.
+- **Today's welds don't follow this.** Thrust's ship has tension 22,950 N and torque 5,520 N·m on
+  0.1 m walls (`scripts/asteroidShip.ts`): torque ÷ tension = 0.24 m, against t ÷ 6 ≈ 0.017 m for a
+  strip 0.1 m thick. Its welds are about 14 times stiffer in bending than the rule gives, so
+  adopting it means choosing σ per material and retuning existing ships (with step 3 of §7).
+
 ## 6. Where measurement comes in
 
 1. **Validation:** whether the gas follows the theory's trend across sizes and shapes (the sweep).
@@ -196,7 +259,9 @@ wall loads.
 3. Rebalance: every engine with a flared nozzle gets stronger (about +20% for RS-08-like
    nozzles). Lander, the gunships and Thrust's ship would need retuning, or their nozzles
    reshaping.
-4. Later: the designer readout.
+4. Weld limits from the parts' thickness and material (§5), with the existing ships' welds mapped
+   onto it in the same rebalance.
+5. Later: the designer readout: thrust, Isp, chamber pressure, and each wall's margin.
 
 ## 8. Open questions
 
@@ -207,3 +272,5 @@ wall loads.
 - Should the game ever have ambient air (planets with atmospheres)? Then sea-level against vacuum
   nozzles becomes a real design choice, and over-expansion and separation need modelling.
 - Is sin α ÷ α right for planar nozzles? To check against a textbook.
+- Weld limits from thickness: which materials and strengths; elastic (t² ÷ 6) or fully yielding
+  (t² ÷ 4) bending; and whether nozzle walls, which carry much less pressure, follow the same rule.
