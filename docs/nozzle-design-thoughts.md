@@ -244,6 +244,43 @@ thickness and not limits. A first proposal, to calibrate:
   strip 0.1 m thick. Its welds are about 14 times stiffer in bending than the rule gives, so
   adopting it means choosing σ per material and retuning existing ships (with step 3 of §7).
 
+### Chamber length and width
+
+Mostly not the pressure: in steady state p_c = ṁ · c\* ÷ W_t, in theory and in the game's model
+alike, and the chamber's size isn't in it. What its size does change:
+
+1. **Structural load (the main effect in the game).** At a given pressure, a bigger chamber has more
+   wall under it: a wall's load is about p_c × its length, so a longer chamber loads its side walls
+   and their welds more, and a wider one the head and the throat pieces. With the thickness rule
+   the wall needed grows with its span (t ≥ L · √(p_c ÷ 2σ)), so a big chamber needs thick, heavy
+   walls.
+2. **Throttle response.** The chamber holds gas, so its pressure (and the thrust) takes time to
+   build and to fall. The time constant is about the chamber's area ÷ (the throat's width × the
+   throat's gas speed). From the model's outflow (`runVessel`, `vessel.ts`), roughly: RS-08's
+   engine about 0.02 s; Thrust's main engine, whose chamber is a thin slab, about 0.002 s. A big
+   chamber with a small throat would feel laggy: a real effect, and could be a design trait.
+3. **Burning completely (real engines; not in the game).** Propellant needs time in the chamber to
+   mix and burn. The measure is the characteristic length L\* = chamber volume ÷ throat area (in 2D,
+   the chamber's area ÷ the throat's width), typically about 0.8–3 m for liquid engines, 2–40 ms in
+   the chamber ([design guide, ch. IV-4.3](https://kaldoc.pages.dev/Rocket%20Engine%20Design/Part%20IV/chapter_iv_43_thrust_chamber_configuration_layout)).
+   Too short, and it burns incompletely, so c\* falls: measured c\* efficiencies are about
+   0.85–1.03 ([Characteristic velocity](https://en.wikipedia.org/wiki/Characteristic_velocity)).
+   The game burns everything at once, so has no such penalty.
+4. **Contraction ratio, chamber width ÷ throat width (real engines; small).** A chamber not much
+   wider than its throat has its gas already moving, and loses a little pressure. Real engines use
+   about 1.3–2.5 (large, high-pressure) to 2–5 (small, pressure-fed)
+   ([design guide](https://kaldoc.pages.dev/Rocket%20Engine%20Design/Part%20IV/chapter_iv_43_thrust_chamber_configuration_layout);
+   [MIT project wiki](https://wikis.mit.edu/confluence/x/VQBNEQ)). The game's model takes the gas
+   as at rest, so ignores it.
+
+These ranges are from secondary sources citing Sutton & Biblarz, not the book itself.
+
+**For the designer: as the game stands, a smaller chamber is always better** (less wall, less mass,
+faster response), so designers would shrink chambers to nothing. **Proposed:** borrow point 3, a c\*
+efficiency that falls when L\* is too short: for example full above about 1 m, falling steeply
+below. Then a chamber must be big enough to burn its propellant but no bigger than its walls can
+hold, the balance real designers strike. Chamber length and width join the designer's inputs.
+
 ### A worked example: Mammoth Thrust's engines against the simplified engine
 
 Thrust's engines (`engine()` in `scripts/asteroidShip.ts`) are a head with two flared walls and
@@ -306,5 +343,7 @@ we can.
 - Should the game ever have ambient air (planets with atmospheres)? Then sea-level against vacuum
   nozzles becomes a real design choice, and over-expansion and separation need modelling.
 - Is sin α ÷ α right for planar nozzles? To check against a textbook.
+- The L\* penalty: what curve (where c\* efficiency starts to fall, how steeply), and whether it
+  depends on the propellant. Should a small contraction ratio cost a little too (§5)?
 - Weld limits from thickness: which materials and strengths; elastic (t² ÷ 6) or fully yielding
   (t² ÷ 4) bending; and whether nozzle walls, which carry much less pressure, follow the same rule.
