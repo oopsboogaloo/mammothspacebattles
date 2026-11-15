@@ -170,7 +170,7 @@ other sources in §12):
   kept, and one flying at a time, for Android). One out of the fight, in the air or on the ground, scores 1,000. The
   power plant stands on the cavern's floor at the right; its lines feed the right-hand rock and the
   cavern's pillar directly, and the left-hand rock across the shaft by either of two transmitters.
-  Fourteen electric turrets, five fuel tanks; the pod stands on the cavern's floor at the left.
+  Ten electric turrets, four fuel tanks; the pod stands on the cavern's floor at the left.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
   through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
