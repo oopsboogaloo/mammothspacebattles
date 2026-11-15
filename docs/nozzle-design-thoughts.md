@@ -349,6 +349,51 @@ way round.
 whatever its size (`gasParcelRate`, `src/core/profile.ts`), so many small thrusters cost more gas
 simulation than one big engine. Pulsed thrusters are fine; ships with dozens of them need watching.
 
+### Propellant and tanks: liquid hydrogen and oxygen
+
+The propellant is liquid hydrogen and liquid oxygen, 1:8 by mass (the game's mixture).
+
+| | Density | Boils at |
+|---|---|---|
+| Liquid hydrogen | 70.8 kg/m³ | 20.3 K |
+| Liquid oxygen | 1,141 kg/m³ | 90.2 K |
+
+([National MagLab](https://nationalmaglab.org/research/research-groups/cryogenics/educational-resources/),
+[Liquid hydrogen](https://en.wikipedia.org/wiki/Liquid_hydrogen).)
+
+- **The 1:8 load averages about 426 kg/m³, 2.35 litres a kg.** Hydrogen is 11% of the mass but about
+  two thirds of the volume: the hydrogen tank is the big one, as on real hydrogen–oxygen stages.
+  Thrust's 8.1 kg fills about 19 litres; in the game's 2D terms (per metre of depth) 0.019 m², far
+  less than its two 1.5 × 1.0 m tanks, which are mostly structure and space today.
+- **Fuel mass hardly depends on chamber pressure.** Thrust per kg/s (Isp) depends on the propellant
+  (c\*) and the area ratio, not on the pressure (F = ṁ · c\* · C_F), so the propellant a manoeuvre
+  needs is the same at any pressure. Real engines gain a little at higher pressure; the game doesn't
+  model that.
+- **Tank mass rises in proportion to the pressure (pressure-fed).** A thin-walled vessel's mass is
+  about C · p · V · ρ_wall ÷ σ, with C = 3/2 for a sphere and 2 for a long cylinder, whatever its
+  size ([pressure vessel](https://www.doc.surf/wiki/pressure-vessel);
+  [Nanomedicine §10.3.1](https://www.nanomedicine.com/NMI/10.3.1.htm)). A liquid takes the same
+  volume at any pressure, so the tanks' mass for each kg of propellant is ∝ p: double the chamber
+  pressure and the tanks roughly double. (For stored gas it is different: higher pressure packs
+  more gas into the same tank.) In the game, by the thickness rule, a tank's walls follow
+  t ≥ p · L ÷ (2 k_T).
+- **The hydrogen tank dominates the tank mass:** two thirds of the volume, at the same pressure.
+
+**What the game doesn't do yet:**
+
+- **Propellant has mass but no volume.** Tanks are boxes of fixed mass (Thrust's: 2 kg holding
+  4.05 kg), so the size and mass of a tank don't follow from what it holds. It needs the densities
+  above.
+- **Each tank holds hydrogen and oxygen together.** Real rockets keep them apart; mixed, they are a
+  bomb (the game already uses that: a destroyed tank explodes, a leaking one vents a burnable mix).
+  **Proposed:** separate tanks for each propellant, a design choice in itself: a big, light
+  hydrogen tank and a small, dense oxygen tank.
+- **Stores are held at 300 K** (`STORE_TEMPERATURE`, `src/core/gas.ts`), so the propellant is warm
+  in energy terms; really hydrogen is at 20 K and oxygen at 90 K. It matters only if we want
+  boil-off, insulation, or the burn's colder start; the reaction's declared energy can absorb the
+  difference.
+- **`economy`** (Thrust's 66) makes most of the propellant from nothing, which hides its mass.
+
 ### A worked example: Mammoth Thrust's engines against the simplified engine
 
 Thrust's engines (`engine()` in `scripts/asteroidShip.ts`) are a head with two flared walls and
@@ -414,6 +459,8 @@ we can.
 - Should the game ever have ambient air (planets with atmospheres)? Then sea-level against vacuum
   nozzles becomes a real design choice, and over-expansion and separation need modelling.
 - Is sin α ÷ α right for planar nozzles? To check against a textbook.
+- Propellant: give stores a volume (the densities in §5), separate hydrogen and oxygen tanks, and
+  whether to keep 300 K or go cryogenic (boil-off, insulation). How these sit with `economy`.
 - Pressure-fed tanks: how much above the chamber's pressure they are held, and so how their mass
   grows with it. For pumped engines later: what propellant density for P = ṁ · p_c ÷ ρ.
 - The L\* penalty: what curve (where c\* efficiency starts to fall, how steeply), and whether it
