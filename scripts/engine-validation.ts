@@ -14,6 +14,9 @@
 //   node scripts/engine-validation.ts --sweep         runs the sweep; prints the tables, writes docs/perf/engine-validation.json
 //   node scripts/engine-validation.ts --sweep --quick fewer engines and parcel rates
 //   node scripts/engine-validation.ts --report        the tables again, from docs/perf/engine-validation.json
+//   node scripts/engine-validation.ts --engine K      engine K alone (0–9), its row as JSON on stdout; in parallel:
+//     seq 0 9 | xargs -P 4 -I{} sh -c 'node scripts/engine-validation.ts --engine {} > /tmp/eng-{}.json'
+//   node scripts/engine-validation.ts --merge FILES   those rows, in order, into docs/perf/engine-validation.json, and the tables
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { assemblyTotals, getProfile, initialWorld, parseScenario, stepInPlace, vesselPressure, vesselShape, type World } from "../src/core/index.ts";
@@ -287,8 +290,10 @@ const SIZES: Engine[] = [0.5, 2, 4].map((s) => engineOf(`Ratio 2.8, 0.6 m (RS-08
 /** Parcel rates for the gas runs, a second (the sandbox lets a chamber engine release 1,000). */
 const RATES = [500, 1000, 2000, 4000, 8000];
 
-function sweep(quick: boolean) {
-  const engines = quick ? [SHAPES[0], SHAPES[3], SHAPES[6]] : [...SHAPES, ...SIZES];
+const ALL = [...SHAPES, ...SIZES];
+
+function sweep(quick: boolean, only?: number) {
+  const engines = only !== undefined ? [ALL[only]] : quick ? [SHAPES[0], SHAPES[3], SHAPES[6]] : ALL;
   const rates = quick ? [500, 1000] : RATES;
   const out = [];
   for (const e of engines) {
@@ -411,6 +416,13 @@ function scenario(): Json {
 const args = process.argv.slice(2);
 const results = join(root, "docs", "perf", "engine-validation.json");
 if (args.includes("--report")) report(JSON.parse(readFileSync(results, "utf8")) as Row[]);
+else if (args.includes("--engine")) console.log(JSON.stringify(sweep(false, Number(args[args.indexOf("--engine") + 1]))[0]));
+else if (args.includes("--merge")) {
+  const rows = args.slice(args.indexOf("--merge") + 1).map((f) => JSON.parse(readFileSync(f, "utf8")) as Row);
+  rows.sort((a, b) => ALL.findIndex((e) => e.name === a.engine.name) - ALL.findIndex((e) => e.name === b.engine.name));
+  writeFileSync(results, JSON.stringify(rows, null, 1) + "\n");
+  report(rows);
+}
 else if (args.includes("--sweep")) {
   const rows = sweep(args.includes("--quick"));
   report(rows);
