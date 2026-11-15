@@ -155,10 +155,14 @@ test("MMN-052 MMN-051 on the spikes the mammoth is back at the last flag, with a
   // On along the ground into the crater's spikes (78 to 82 m).
   await expect.poll(() => hook(page, (m) => m.moon()!.tries)).toBe(1);
   await page.keyboard.up("ArrowRight");
+  // Back at the flag at 60 m: on the near side of the crater (its rim is at 73 m), however far it
+  // had run on from the flag before the key came up.
+  const at = await along(page);
+  expect(at).toBeGreaterThan(59);
+  expect(at).toBeLessThan(73);
   await expect(page.getByTestId("mmn-back")).toContainText("OUCH");
   await shot(page, info, "mmn-back");
   expect(await hook(page, (m) => m.moon()!.back!.why)).toBe("spikes");
-  expect(Math.abs((await along(page)) - 60)).toBeLessThan(6);
   await expect(page.getByTestId("mmn-tries")).toHaveText("TRIES 1");
   // Standing still, the leg's 16 s (as the player sees them) run out.
   await expect.poll(() => hook(page, (m) => m.moon()!.tries), { timeout: 30_000 }).toBe(2);
