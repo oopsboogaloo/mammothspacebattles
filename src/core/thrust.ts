@@ -349,8 +349,10 @@ function runGunships(world: World, game: ThrustGame, hullId: string, ops: Thrust
   if (s.gunships!.some((x) => x.launched && !x.out)) return false;
   nearest.launched = true;
   s.nextGunship = now + g.every;
-  // Its engines linked to their controls, and its pilot awake: it learns its ship afresh, now with engines.
-  for (const l of withN(g.template, nearest.n).links ?? []) if (l.kind === "control") ops.addLink(world, l);
+  // Its engines linked to their controls (those it still has: a part shot off while it was parked
+  // stays gone), and its pilot awake: it learns its ship afresh, now with engines.
+  const have = new Set(world.bodies.map((b) => b.id));
+  for (const l of withN(g.template, nearest.n).links ?? []) if (l.kind === "control" && have.has(l.to)) ops.addLink(world, l);
   for (const b of world.bodies)
     if (b.id.startsWith(`g${nearest.n}-`) && b.pilot) {
       b.pilot.mode = "hunting";

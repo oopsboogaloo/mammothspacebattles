@@ -1338,6 +1338,21 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(launches()).not.toContain(first);
   }, 60_000);
 
+  it("MTH-107 a parked gunship that lost a part (its breech) but can still fly lifts off without its controls to that part", () => {
+    const { w, step } = game(8);
+    for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    body(w, "g1-breech")!.integrity = 0;
+    step(0.1);
+    expect(body(w, "g1-breech")).toBeUndefined();
+    expect(st(w).gunships!.find((g) => g.n === 1)!.out).toBe(false);
+    const g1 = body(w, "g1-hull")!.position;
+    moveShip(w, { x: g1.x - 20, y: g1.y + 25 });
+    expect(() => step(0.2)).not.toThrow();
+    expect(w.events.filter((e) => e.type === "thrust.gunship").map((e) => e.data.n)).toEqual([1]);
+    expect(w.links.some((l) => l.kind === "control" && l.to === "g1-breech")).toBe(false);
+    expect(w.links.some((l) => l.kind === "control" && l.to.startsWith("g1-"))).toBe(true);
+  }, 60_000);
+
   it("MTH-108 level 8's buildings stand on their own, and a slug breaks a piece of one", () => {
     const { w, step } = game(8);
     for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
