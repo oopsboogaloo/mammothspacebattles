@@ -590,8 +590,10 @@ Priority: **M** must, **S** should.
   conservation ledger's bookkeeping is skipped: the physics is the same to the bit, and a step is
   about 15% quicker. The sandbox and the tests keep the full ledger; `?ledger=1` keeps it in the
   game, to look into a bug.
-- **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to
-  start at any level. Not meant for players: to go before release.
+- **MTH-087** `[S]` The title has a small row of buttons to start at any level (Chloe, 15 November
+  2026: kept for players, who needn't get through every level to try the later ones).
+- **MTH-109** `[S]` Once a level is won, the pause menu and the Pause button are not shown: the
+  beam-out plays, then the result, with no Paused box flashing up between them.
 - **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the
   reactor's coolant left, red under a quarter.
 - **MTH-085** `[M]` Power lines are drawn white while they carry power and dark while they don't;

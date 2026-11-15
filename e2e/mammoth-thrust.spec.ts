@@ -136,7 +136,7 @@ test("MTH-021 touch: the beam button works the tractor while held, with a thrust
   await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.tractor ?? 0, m.sandbox().world.controls.left ?? 0].join())).toBe("0,0");
 });
 
-test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the top, the level is complete, and level 2 opens with the score and ships carried over", async ({ page }) => {
+test("MTH-021 MTH-024 MTH-109 the tractor takes the pod on the tether; carried past the top, the level is complete with no Paused box flashing up first, and level 2 opens with the score and ships carried over", async ({ page }) => {
   test.setTimeout(300_000);
   await start(page);
   expect(await quiet(page)).toBe(true);
@@ -145,6 +145,14 @@ test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the 
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON THE TETHER", { timeout: 15_000 });
   await page.keyboard.up("z");
   await page.keyboard.down("ArrowUp");
+  // Note it if the Paused box ever shows between here and the result (MTH-109).
+  await page.evaluate(() => {
+    const w = window as unknown as { pausedSeen?: boolean };
+    w.pausedSeen = false;
+    new MutationObserver(() => {
+      if (document.querySelector('[data-testid="mth-paused"]')) w.pausedSeen = true;
+    }).observe(document.body, { childList: true, subtree: true });
+  });
   // The climb is about 5 game seconds: 10 s on screen, and several times that on a slow machine. If
   // it never ends, say where the ship and the pod had got to.
   const where = () =>
@@ -160,6 +168,7 @@ test("MTH-021 MTH-024 the tractor takes the pod on the tether; carried past the 
     throw new Error(`The level was not won in 200 s: ${await where()}`);
   }
   await page.keyboard.up("ArrowUp");
+  expect(await page.evaluate(() => (window as unknown as { pausedSeen?: boolean }).pausedSeen)).toBe(false);
   await expect(page.getByTestId("mth-won")).toContainText("Level 1 complete");
   await expect(page.getByTestId("mth-won")).toContainText("+2000");
   const score = await hook(page, (m) => m.thrust()!.score);
@@ -440,7 +449,7 @@ test("MTH-082 level 4's power plant: with its coolant gone it goes critical, the
   await expect(page.getByTestId("mth-again")).toBeVisible();
 });
 
-test("MTH-087 for testing, the title has a button for each level that starts the game there", async ({ page }) => {
+test("MTH-087 the title has a button for each level that starts the game there", async ({ page }) => {
   await page.goto("./thrust.html");
   for (const n of [5, 3, 1]) {
     await page.getByTestId(`mth-level-${n}`).click();
