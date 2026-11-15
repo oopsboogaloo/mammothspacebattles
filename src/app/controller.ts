@@ -136,6 +136,8 @@ function undecided(world: World): boolean {
   if (world.arcade) return world.arcade.state.phase !== "over";
   // Mammoth Thrust plays on through a won level's beam-out (the page stops it once the stars have played).
   if (world.thrust) return world.thrust.state.phase !== "over";
+  // Moon Mammoth plays on through every send-back: only the finish stops it.
+  if (world.moon) return world.moon.state.phase !== "won";
   return world.challenge?.status.phase === "flying" || world.duel?.status.phase === "fighting";
 }
 
@@ -151,7 +153,7 @@ function afterStep(run: StepRun, plan: StepPlan, flying: boolean, opts: { deadli
   run.steps++;
   const t = world.tick;
   // Snapshots are for scrubbing back through a run; the game has no scrubbing (each one is a whole world).
-  if (t % SNAPSHOT_EVERY === 0 && !world.lander && !world.arcade && !world.thrust) run.snapshots.push([t, structuredClone(world)]);
+  if (t % SNAPSHOT_EVERY === 0 && !world.lander && !world.arcade && !world.thrust && !world.moon) run.snapshots.push([t, structuredClone(world)]);
   const pending = plan.edits.filter((e) => e.tick === t).flatMap((e) => e.commands);
   if (pending.length) applyCommands(world, pending, plan.profile);
   for (const s of plan.series) {

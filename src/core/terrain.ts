@@ -41,6 +41,11 @@ export interface TerrainSpec {
    * time). Absent: the ground can't be cratered.
    */
   craters?: { blast?: number; bullet?: number; least?: number; most?: number; limit?: number; small?: number };
+  /**
+   * How bouncy the rock is, 0 to 1 (TER-009). A contact takes the bouncier of its two bodies, so
+   * rock at the default (0.5) bounces whatever lands on it; Moon Mammoth's is 0. Absent: the default.
+   */
+  restitution?: number;
 }
 
 /** A crater: a disc of open space, cut as a polygon of `n` sides turned by `turn`. */
@@ -58,6 +63,7 @@ export interface Terrain {
   islands?: Vec2[][];
   prefix: string;
   craters?: Required<NonNullable<TerrainSpec["craters"]>>;
+  restitution?: number;
   /** The craters so far, in the order they were made. */
   holes: Crater[];
   /**
@@ -201,7 +207,9 @@ function near(t: Terrain, at: Vec2, within: number): Near {
  * side, as deep as the crust goes, or less where the rock is thinner, so no crust reaches through
  * into open space.
  */
-function crust(id: string, a: Vec2, b: Vec2, walls: Seg[], deepest: number, from?: Vec2): BodyInput | null {
+const bouncy = (b: BodyInput, restitution?: number): BodyInput => (restitution === undefined ? b : ({ ...b, restitution } as BodyInput));
+
+function crust(id: string, a: Vec2, b: Vec2, walls: Seg[], deepest: number, from?: Vec2, restitution?: number): BodyInput | null {
   const L = length(sub(b, a));
   if (L < SHORTEST) return null;
   const u = { x: -(b.y - a.y) / L, y: (b.x - a.x) / L };
@@ -239,7 +247,7 @@ function crust(id: string, a: Vec2, b: Vec2, walls: Seg[], deepest: number, from
     return { x: p.x + (d.x / n) * depth, y: p.y + (d.y / n) * depth };
   };
   const vertices = [a, b, out(b), out(a)].map((v) => ({ x: round(v.x), y: round(v.y) }));
-  return { id, fixed: true, mass: 1, friction: 0.9, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape: { kind: "polygon", vertices } } as BodyInput;
+  return bouncy({ id, fixed: true, mass: 1, friction: 0.9, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape: { kind: "polygon", vertices } } as BodyInput, restitution);
 }
 
 /**
@@ -277,7 +285,7 @@ function outlineCrust(t: Terrain, i: number): BodyInput[] {
   const rims = n.holes.flatMap(({ vs }) => vs.map((v, e): Seg => [v, vs[(e + 1) % vs.length]]));
   const kept = pieces(a, b, rims, (p) => !n.holes.some(({ vs }) => insideRim(vs, p)));
   const walls = n.walls.filter((s) => !own(s));
-  return kept.map(([p, q], k) => crust(`${t.prefix}s${i}-${k}`, p, q, walls, CRUST)).filter((x): x is BodyInput => !!x);
+  return kept.map(([p, q], k) => crust(`${t.prefix}s${i}-${k}`, p, q, walls, CRUST, undefined, t.restitution)).filter((x): x is BodyInput => !!x);
 }
 
 /** The crust round crater c: the parts of its rim that lie in rock, outside the open space and every other crater. */
@@ -295,7 +303,7 @@ function craterCrust(t: Terrain, c: number): BodyInput[] {
     const kept = pieces(a, b, cutters, (p) => !insideOpen(t, p) && !others.some(({ vs: o }) => insideRim(o, p)));
     const walls = n.walls.filter((s) => !(s[0] === a && s[1] === b) && !vs.includes(s[0]));
     kept.forEach(([p, q], k) => {
-      const body = crust(`${t.prefix}c${c}-${e}-${k}`, p, q, walls, RIM_CRUST, h);
+      const body = crust(`${t.prefix}c${c}-${e}-${k}`, p, q, walls, RIM_CRUST, h, t.restitution);
       if (body) out.push(body);
     });
   }
@@ -318,6 +326,7 @@ export function startTerrain(world: World, spec: TerrainSpec, ops: TerrainOps): 
     prefix: spec.prefix ?? "rock-",
     ...(spec.craters ? { craters: { ...TERRAIN_DEFAULTS, ...spec.craters } } : {}),
     holes: [],
+    ...(spec.restitution !== undefined ? { restitution: spec.restitution } : {}),
     ...(world.bounds.wrap ? { edges: { min: { ...world.bounds.min }, max: { ...world.bounds.max } } } : {}),
   };
   const n = segments(t).length;
