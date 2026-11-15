@@ -281,6 +281,64 @@ efficiency that falls when L\* is too short: for example full above about 1 m, f
 below. Then a chamber must be big enough to burn its propellant but no bigger than its walls can
 hold, the balance real designers strike. Chamber length and width join the designer's inputs.
 
+### Engines of different sizes: small rotational thrusters, big main engines
+
+Wanted (15 November 2026): engines of very different power, from small rotational thrusters to big
+main engines.
+
+**How an engine scales with its burn rate ṁ** (thrust ∝ ṁ), at a given chamber pressure and shape:
+
+| Quantity | Scales as | Why |
+|---|---|---|
+| Throat width | ∝ ṁ | W_t = ṁ · c\* ÷ p_c; in 2D the flow passes a width, not an area |
+| Every length (chamber, nozzle, exit) | ∝ ṁ | the same shape, larger |
+| Wall thickness | ∝ ṁ | t ≥ L · √(p_c ÷ 2σ) |
+| Engine mass | ∝ ṁ² | thickness × length |
+| Thrust ÷ engine mass | ∝ 1 ÷ ṁ | big engines are heavier for their thrust |
+| Throttle response time | ∝ ṁ | a big chamber takes longer to fill and empty |
+
+**The 2D twist.** In 3D, ten times the flow needs a throat only about √10 ≈ 3.2 times wider (its
+area grows with the diameter squared); in 2D, ten times wider. A main engine 100 times a rotational
+thruster would be 100 times as wide at the same pressure, too wide for a ship. So big engines must
+run at higher pressure:
+
+- raising the pressure shrinks every dimension ∝ 1 ÷ p_c;
+- the walls must thicken ∝ √p_c;
+- so engine mass ∝ ṁ² ÷ p_c^1.5: at higher pressure the same thrust comes from a lighter engine.
+
+That is so in real rocketry too: high-pressure engines are compact and light.
+
+**The missing counterweight: the cost of feeding against the pressure.** Nothing in the game yet
+makes high pressure cost anything, so designers would run every engine at the limit of its welds.
+In reality the propellant has to be pushed into the chamber against its pressure. **Proposed**, one
+of:
+
+- **pump power** P = ṁ · p_c ÷ ρ (flow × pressure ÷ the propellant's density), drawn from the
+  ship's battery and generators. Thrust's ship already carries both, with "energy use to come"
+  (`scripts/asteroidShip.ts`): a natural link to power systems;
+- or, for **pressure-fed** engines, **heavier tanks**: they must be held above the chamber's
+  pressure, so their walls thicken with p_c.
+
+Either way high pressure buys a small, light engine at the price of a heavy pump or tanks.
+
+**Two families fall out:**
+
+| | Rotational thrusters | Main engines |
+|---|---|---|
+| Burn rate | small | large |
+| What matters | quick response, small size | efficiency (Isp), thrust per kg |
+| Chamber | short, for quick pulses, accepting some L\* penalty | long enough to burn completely |
+| Nozzle | short and wide: little room, and Isp matters less | a large area ratio |
+| Pressure | moderate: they are small anyway | high, to keep the width manageable in 2D |
+| Placement | far from the centre of mass (torque = F × arm) | behind the centre of mass |
+
+As in real rocketry, rotational thrusters trade efficiency for response and main engines the other
+way round.
+
+**A performance note.** In the sandbox each chamber engine releases at most 1,000 parcels a second
+whatever its size (`gasParcelRate`, `src/core/profile.ts`), so many small thrusters cost more gas
+simulation than one big engine. Pulsed thrusters are fine; ships with dozens of them need watching.
+
 ### A worked example: Mammoth Thrust's engines against the simplified engine
 
 Thrust's engines (`engine()` in `scripts/asteroidShip.ts`) are a head with two flared walls and
@@ -332,7 +390,10 @@ we can.
    here, keeping its handling and its damage model as they are (§5, the worked example).
 4. Weld limits from the parts' thickness and material (§5), with the existing ships' welds mapped
    onto it in the same rebalance.
-5. Later: the designer readout: thrust, Isp, chamber pressure, and each wall's margin.
+5. The feed's cost (§5): pump power from the battery and generators, or pressure-fed tanks, so
+   chamber pressure has a price.
+6. Later: the designer readout: thrust, Isp, chamber pressure, each wall's margin, and the feed's
+   power or tank mass.
 
 ## 8. Open questions
 
@@ -343,6 +404,8 @@ we can.
 - Should the game ever have ambient air (planets with atmospheres)? Then sea-level against vacuum
   nozzles becomes a real design choice, and over-expansion and separation need modelling.
 - Is sin α ÷ α right for planar nozzles? To check against a textbook.
+- The feed's cost: pump power from the battery and generators, heavier tanks, or both (pumped and
+  pressure-fed engines as a design choice)? What propellant density for P = ṁ · p_c ÷ ρ?
 - The L\* penalty: what curve (where c\* efficiency starts to fall, how steeply), and whether it
   depends on the propellant. Should a small contraction ratio cost a little too (§5)?
 - Weld limits from thickness: which materials and strengths; elastic (t² ÷ 6) or fully yielding
