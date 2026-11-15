@@ -59,6 +59,41 @@ about 6.7 times at the base.
   acceleration, turns about half as fast unless its engines move further out. Start turns early.
   It flies on with one engine out, or one each side, at half thrust.
 
+## Nozzle walls (Mammoth Thrust's ship)
+
+What the nozzle walls are worth, measured 15 November 2026 on Mammoth Thrust's ship (the ship in
+`scenarios/thrust-test.json`, drawn in `docs/games/mammoth-thrust-ship.svg`). How it was measured:
+
+- The ship alone in empty space, no gravity, sandbox profile, each engine group at full throttle
+  from rest.
+- Thrust = the ship's mean mass × its acceleration between 0.5 s and 1.5 s, as above.
+- "No walls": the ten nozzle-wall bodies (3.9 kg) and their welds removed; everything else as is.
+- Rerun with `node scripts/nozzle-walls.ts`.
+
+| Engines | Flow | Thrust, walls | Thrust, no walls | Ratio | Exhaust speed, walls / none | Acceleration, walls / none |
+|---|---|---|---|---|---|---|
+| Main thruster | 7.78 kg/s | 1,603 N | 592 N | 2.71× | 206 / 76 m/s | 26.2 / 10.4 m/s² |
+| Back pair | 2.90 kg/s | 600 N | 220 N | 2.73× | 207 / 76 m/s | 9.8 / 3.8 m/s² |
+| Main + back pair (forward) | 10.68 kg/s | 2,204 N | 810 N | 2.72× | 206 / 76 m/s | 36.1 / 14.2 m/s² |
+| Front pair (braking) | 2.90 kg/s | −600 N | −220 N | 2.73× | 207 / 76 m/s | −9.8 / −3.8 m/s² |
+
+Ship mass: 61.2 kg with walls, 57.3 kg without. Exhaust speed here is thrust ÷ flow.
+
+- **Without walls an engine gives about 37% of its thrust:** the walls make about 63% of it.
+- **The checks held:**
+  - Thrust is steady to 0.5% over 0.25–2.5 s.
+  - Main + back pair is the sum of the two measured apart.
+  - No weld broke and the ledger recorded no violations.
+  - 2,204 N on the 69 kg ship of the design doc gives 31.9 m/s², against the 31.5 measured there.
+- **Why:** an engine's chamber is a pressure vessel only while its own walls enclose it
+  (`src/core/vessel.ts`).
+  - With walls, the gas leaves through the throat as a choked jet and pushes on the walls.
+  - Without them, it stays as loose parcels, leaving the head at the injector's own speed, and
+    only the head is pushed.
+- **In play, against the ship's 245 N weight in Thrust's 4 m/s² gravity:**
+  - The main thruster without walls still lifts it, at 2.4 times its weight (6.5 with walls).
+  - The back pair without walls (220 N) can't hold it up.
+
 ## Ideas kept for later
 
 - **A gunship with the lander's handling:** keep Gunship 3's gun, tractor and armour, but
