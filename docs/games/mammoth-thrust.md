@@ -551,6 +551,10 @@ Priority: **M** must, **S** should.
   (30 fps) once frames have run slower than 40 fps for a second, and lighter: gas as dots, the
   shock as one line. The simulation is untouched and the skipped frame's time goes into the next,
   so nothing moves slower. Back to every frame once 30 fps has held with room to spare for 3 s.
+- **MTH-105** `[S]` In the game (Chloe, 14 November 2026: nothing in play reads it) the
+  conservation ledger's bookkeeping is skipped: the physics is the same to the bit, and a step is
+  about 15% quicker. The sandbox and the tests keep the full ledger; `?ledger=1` keeps it in the
+  game, to look into a bug.
 - **MTH-087** `[S]` For testing (Chloe, 13 November 2026), the title has a small row of buttons to
   start at any level. Not meant for players: to go before release.
 - **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the

@@ -25,6 +25,10 @@ function openLevel(n: number, run: boolean, carry?: { score: number; lives: numb
   const raw = structuredClone(file) as { world: { thrust: { carry?: { score: number; lives: number } } } };
   if (carry) raw.world.thrust.carry = carry;
   if (!openScenario(raw, `thrust-${n}`)) return false;
+  // In the game nothing reads the conservation ledger: its bookkeeping is skipped (the physics is the
+  // same), unless the address asks for it (`?ledger=1`) to look into a bug. The sandbox keeps it.
+  const sb = sandbox.value;
+  if (sb && new URLSearchParams(window.location.search).get("ledger") !== "1") sb.world.ledgerOff = true;
   screen.value = "lander"; // openScenario switches to the sandbox: this is a game
   timeScale.value = 1;
   overlays.value = new Set();
