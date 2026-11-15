@@ -2,14 +2,14 @@
 // outline of its open space, the ship (Mammoth Asteroids' ship with a tractor unit and a tether
 // unit), and the pod on its stand. The game itself is in the world (src/core/thrust.ts).
 //   node scripts/thrust.ts            writes scenarios/thrust-1.json … thrust-6.json, and thrust-test.json
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { initialWorld, parseScenario } from "../src/core/index.ts";
 import { bearingsOnto } from "./aim.ts";
 import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
 import { narrowest, type Vec } from "./terrain.ts";
 import { capacitor, electricTurret, generator, pipe, turret, type ElectricTuning, type TurretTuning } from "./turretParts.ts";
-import { antenna, powerPlant, type PlantTuning } from "./plantParts.ts";
+import { antenna, building, powerPlant, type PlantTuning } from "./plantParts.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;
@@ -270,6 +270,24 @@ interface Level {
     /** The turrets (by number) fed through the transmitter; or what each of those needs, by number. */
     beyond: number[] | Record<number, string[]>;
   };
+  /**
+   * Parked gunships (Chloe, 14 November 2026: level 8): where each stands (the middle of its foot,
+   * on flat rock) and which way is up; the first lifts off when the ship comes within `wake` m of
+   * one, another every `every` game seconds.
+   */
+  gunships?: { parked: { at: Vec; angle: number }[]; wake: number; every: number };
+  /** Buildings: destructible scenery on the rock (plantParts.ts building). */
+  buildings?: { kind: "dish" | "tower" | "block"; at: Vec; angle: number }[];
+}
+
+/**
+ * The gunship Mammoth Asteroids' gunships are (its scenario, scripts/asteroids.ts): Gunship 3 with a
+ * Hunting pilot on side "enemy", ids and channels `g{n}`, and its small charged shell. It stands
+ * 1.43 m above its foot (its legs).
+ */
+function gunshipTemplate() {
+  const a = JSON.parse(readFileSync(join(root, "scenarios", "asteroids.json"), "utf8")) as { world: { arcade: { gunship: { template: Record<string, unknown>; hull: string } } } };
+  return { template: a.world.arcade.gunship.template, hull: a.world.arcade.gunship.hull, foot: 1.43 };
 }
 
 /**
@@ -331,6 +349,7 @@ function write(l0: Level) {
   const plant = l.plant ? powerPlant(l.plant.at, PLANT, l.plant.angle ?? 0) : undefined;
   const txs = l.plant ? (l.plant.transmitters ?? [{ id: "tx", antennae: l.plant.antennae! }]) : [];
   const aerials = txs.flatMap((t) => t.antennae).map((a, k) => antenna(`aerial-${k + 1}`, a.at, a.angle));
+  const buildings = (l.buildings ?? []).map((b, k) => building(`bldg-${k + 1}`, b.kind, b.at, b.angle));
   const needsOf = (k: number): string[] | undefined => {
     const b = l.plant?.beyond;
     if (!b) return undefined;
@@ -356,8 +375,8 @@ function write(l0: Level) {
       bodies: [
         // An asteroid's gravity: a source at its centre that pulls as a uniform ball (FLT-015), hidden in the rock.
         ...(ast && ast.gravity > 0 ? [{ ...fixed("rock-core", { kind: "disc", radius: 0.5 }, ast.core ?? P(0, 0)), gravity: { mu: ast.gravity * ast.radius * ast.radius, core: 1, radius: ast.radius } }] : []),
-        ...pod(l.pod, l.podAngle ?? 0), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies), ...machines.flatMap((m) => m.bodies)],
-      joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints), ...(plant?.joints ?? []), ...aerials.flatMap((a) => a.joints), ...machines.flatMap((m) => m.joints)],
+        ...pod(l.pod, l.podAngle ?? 0), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies), ...machines.flatMap((m) => m.bodies), ...buildings.flatMap((b) => b.bodies)],
+      joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints), ...(plant?.joints ?? []), ...aerials.flatMap((a) => a.joints), ...machines.flatMap((m) => m.joints), ...buildings.flatMap((b) => b.joints)],
       links: [...turrets.flatMap((t) => t.links), ...machines.flatMap((m) => m.links)],
       thrust: {
         ship: ship(),
@@ -370,6 +389,7 @@ function write(l0: Level) {
         ...(ast ? { escape: { centre: P(0, 0), radius: ast.escape } } : {}),
         pod: "pod",
         turrets: turrets.map((t) => t.carriage),
+        ...(l.gunships ? { gunships: { ...gunshipTemplate(), parked: l.gunships.parked, wake: l.gunships.wake, every: l.gunships.every } } : {}),
         // Every tank the ship can draw from: the fuel tanks, and each turret's own.
         tanks: [...tanks.map((t) => t.tank), ...turrets.flatMap((t) => (t.tank ? [t.tank] : []))],
         ...(plant && l.plant
@@ -1134,6 +1154,138 @@ write({
         { points: [P(74.8, 29.96), P(95.5, 0.71)], needs: ["tx2|tx4"] },
       ],
       beyond: { 2: ["tx1|tx3"], 5: ["tx1|tx3"], 6: ["tx2|tx4"], 7: ["tx2|tx4"], 8: ["tx2|tx4"], 9: ["tx1|tx3"], 10: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"], 11: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"], 12: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+    },
+  });
+}
+
+// Level 8, the airbase (Chloe's drawing, 14 November 2026, traced at 0.15 m a pixel): ground with a
+// radar dish, a control tower and a block (destructible scenery), five gunships parked on either
+// side of a shaft down into a cavern, and a power plant on the cavern's floor at the right. The
+// first gunship lifts off when the ship comes within 80 m of one, and another every 15 s on screen
+// while any can still fly. The plant's lines feed the right-hand rock and the cavern's pillar; the
+// left-hand rock across the shaft by either of two transmitters. Fourteen electric turrets, five
+// fuel tanks; the pod stands on the cavern's floor at the left.
+{
+  // Right to left: the open space is above (the cavern is reached down the shaft).
+  const ground = [
+    P(153.3, 2.7), P(138.3, 2.7), P(133.8, 3.75), P(132.16, 5.19), P(124.34, 9.21), P(122.25, 9.15), P(121.05, 11.1), P(118.2, 12.9),
+    P(115.65, 27.3), P(104.55, 32.55), P(102.3, 36.75), P(97.5, 37.65), P(95.1, 41.55), P(86.4, 42.0), P(84.9, 41.1), P(82.62, 36.16),
+    P(77.58, 28.94), P(77.85, 28.05), P(75.0, 23.55), P(72.15, 11.85), P(64.95, 3.3), P(57.68, 2.17), P(51.68, 2.17), P(44.25, 1.95),
+    P(41.1, 0.98), P(35.1, 0.98), P(30.0, 0.0), P(31.35, -8.25), P(30.9, -20.1), P(32.25, -21.3), P(30.9, -22.8), P(31.05, -32.7),
+    P(33.17, -33.45), P(41.83, -34.95), P(48.92, -36.41), P(57.58, -37.99), P(58.95, -38.4), P(59.4, -39.6), P(63.15, -55.2), P(66.75, -58.35),
+    P(68.85, -58.65), P(69.51, -60.46), P(75.69, -66.74), P(78.6, -68.1), P(79.5, -69.9), P(86.55, -75.15), P(113.25, -72.9), P(117.15, -75.3),
+    P(125.1, -94.2), P(126.3, -102.9), P(126.15, -112.2), P(123.9, -115.8), P(119.7, -119.25), P(109.8, -120.3), P(109.47, -121.72), P(86.88, -121.72),
+    P(74.7, -122.1), P(69.75, -105.6), P(65.85, -102.6), P(51.75, -101.85), P(47.43, -90.34), P(46.77, -81.56), P(44.4, -73.35), P(42.0, -72.9),
+    P(41.7, -71.7), P(40.92, -72.96), P(32.28, -71.34), P(30.75, -72.75), P(29.6, -72.38), P(20.8, -72.52), P(12.74, -72.25), P(4.06, -70.85),
+    P(1.65, -73.05), P(0.12, -84.67), P(-1.92, -93.23), P(-6.3, -109.8), P(-13.8, -111.15), P(-26.4, -111.6), P(-33.6, -114.6), P(-34.5, -119.4),
+    P(-44.4, -120.15), P(-44.97, -121.53), P(-48.57, -121.53), P(-48.9, -120.6), P(-63.16, -121.02), P(-65.96, -121.02), P(-70.81, -120.91), P(-73.61, -120.91),
+    P(-76.0, -120.87), P(-78.8, -120.87), P(-81.34, -121.23), P(-84.14, -121.23), P(-86.99, -120.87), P(-89.79, -120.87), P(-102.0, -120.6), P(-106.5, -114.15),
+    P(-107.4, -109.95), P(-106.8, -80.85), P(-98.1, -72.45), P(-78.8, -70.66), P(-70.0, -70.34), P(-54.0, -70.05), P(-44.1, -68.7), P(-42.6, -68.25),
+    P(-41.55, -65.55), P(-38.25, -62.7), P(-22.05, -59.7), P(-18.6, -57.15), P(-15.45, -43.95), P(-13.48, -41.82), P(-5.72, -37.68), P(1.52, -35.38),
+    P(9.58, -31.82), P(10.65, -31.2), P(10.8, -29.7), P(9.75, -23.1), P(10.5, -21.0), P(9.0, -0.6), P(6.0, 0.0), P(2.55, -0.68),
+    P(-3.45, -0.68), P(-12.0, -0.98), P(-18.0, -0.98), P(-26.1, -1.27), P(-32.1, -1.27), P(-40.2, -1.35), P(-41.5, -2.92), P(-50.3, -2.92),
+    P(-50.85, -1.8), P(-53.3, -2.02), P(-58.3, -2.02), P(-70.8, 9.75), P(-76.2, 10.95), P(-84.3, 16.5), P(-91.2, 15.9), P(-92.4, 15.08),
+    P(-98.4, 15.08), P(-120.6, 2.85), P(-124.79, 2.39), P(-133.51, 3.61), P(-153.45, 0.0),
+  ];
+  write({
+    n: 8,
+    title: "The airbase",
+    description: "An airbase over a cavern, five gunships parked by the shaft: the first lifts off when you come near, another every 15 seconds. Fly down the shaft, take the pod on the tether, and carry it up past the top.",
+    colour: "#1fd81f",
+    top: 82,
+    ground,
+    caves: [ground.slice(25, 119)],
+    start: P(-112, 57),
+    pod: P(-46.77, -121.53),
+    turrets: [
+      { at: P(80.1, 32.55), angle: 0.961, electric: true },
+      { at: P(128.25, 7.2), angle: -0.474, electric: true },
+      { at: P(-129.15, 3.0), angle: -0.138, electric: true }, // across the shaft
+      { at: P(5.55, -33.6), angle: -2.726, electric: true }, // across the shaft
+      { at: P(37.5, -34.2), angle: 2.969, electric: true },
+      { at: P(53.25, -37.2), angle: 2.96, electric: true },
+      { at: P(-9.6, -39.75), angle: -2.652, electric: true }, // across the shaft
+      { at: P(72.6, -63.6), angle: 2.348, electric: true },
+      { at: P(8.4, -71.55), angle: -0.16, electric: true },
+      { at: P(25.2, -72.45), angle: 0.016, electric: true },
+      { at: P(36.6, -72.15), angle: -0.186, electric: true },
+      { at: P(-74.4, -70.5), angle: -3.106, electric: true }, // across the shaft
+      { at: P(47.1, -85.95), angle: -1.496, electric: true },
+      { at: P(-0.9, -88.95), angle: 1.337, electric: true },
+    ],
+    tanks: [
+      { at: P(-72.21, -120.91), angle: -0.0 },
+      { at: P(-82.74, -121.23), angle: -0.0 },
+      { at: P(-64.56, -121.02), angle: -0.0 },
+      { at: P(-88.39, -120.87), angle: -0.0 },
+      { at: P(-77.4, -120.87), angle: -0.0 },
+    ],
+    // The gunships, parked; the first lifts off within 80 m, another every 7.5 game s (15 s on screen).
+    gunships: {
+      parked: [
+        { at: P(54.68, 2.17), angle: -0.0 },
+        { at: P(38.1, 0.98), angle: -0.0 },
+        { at: P(-0.45, -0.68), angle: -0.0 },
+        { at: P(-29.1, -1.27), angle: -0.0 },
+        { at: P(-15.0, -0.98), angle: -0.0 },
+      ],
+      wake: 80,
+      every: 7.5,
+    },
+    buildings: [
+      { kind: "dish", at: P(-95.4, 15.08), angle: -0.0 },
+      { kind: "tower", at: P(-55.8, -2.02), angle: -0.0 },
+      { kind: "block", at: P(-45.9, -2.92), angle: -0.0 },
+    ],
+    plant: {
+      at: P(98.18, -121.72),
+      transmitters: [
+        { id: "tx1", antennae: [{ at: P(31.31, -7.69), angle: 1.627 }, { at: P(9.29, -8.94), angle: -1.514 }] },
+        { id: "tx2", antennae: [{ at: P(31.76, -21.95), angle: 1.6 }, { at: P(9.92, -22.58), angle: -1.542 }] },
+      ],
+      // The power lines (Chloe's), each lit by what feeds its side: the right-hand rock and the pillar
+      // straight from the plant, the left-hand rock across the shaft.
+      lines: [
+        { points: [P(-128.4, 1.05), P(-128.55, -4.95), P(-127.8, -6.3), P(-126.3, -7.05), P(-117.6, -14.55), P(-113.55, -17.25), P(-107.55, -22.5), P(-105.3, -23.85), P(-99.0, -29.25), P(-91.35, -34.95), P(-90.45, -36.15), P(-88.05, -37.65), P(-76.95, -46.8), P(-75.45, -47.55), P(-73.8, -49.35), P(-65.85, -55.35), P(-65.25, -56.55)], needs: ["tx1|tx2"] },
+        { points: [P(-75.45, -69.15), P(-75.3, -61.5), P(-65.7, -57.3), P(-65.25, -56.55)], needs: ["tx1|tx2"] },
+        { points: [P(-65.25, -56.55), P(-62.1, -55.8), P(-12.6, -33.6), P(-10.8, -33.45)], needs: ["tx1|tx2"] },
+        { points: [P(-10.8, -33.45), P(-6.15, -30.75), P(-1.2, -28.65), P(1.05, -28.2)], needs: ["tx1|tx2"] },
+        { points: [P(-10.8, -33.45), P(-9.15, -37.5)], needs: ["tx1|tx2"] },
+        { points: [P(0.0, -89.7), P(7.05, -92.1), P(14.4, -93.75), P(19.05, -95.55), P(24.75, -96.75)] },
+        { points: [P(1.05, -28.2), P(3.15, -27.0), P(3.45, -22.95)], needs: ["tx1|tx2"] },
+        { points: [P(1.05, -28.2), P(1.5, -30.0), P(3.45, -32.7)], needs: ["tx1|tx2"] },
+        { points: [P(3.45, -22.95), P(3.0, -16.65), P(3.15, -9.45), P(8.25, -8.7)], needs: ["tx1|tx2"] },
+        { points: [P(3.45, -22.95), P(4.95, -22.8), P(5.55, -23.4)], needs: ["tx1|tx2"] },
+        { points: [P(7.95, -22.5), P(8.25, -22.95), P(9.0, -22.8)], needs: ["tx1|tx2"] },
+        { points: [P(9.75, -133.05), P(26.1, -132.15)] },
+        { points: [P(10.05, -73.2), P(10.5, -77.7), P(22.5, -83.7), P(24.45, -84.0)] },
+        { points: [P(24.15, -74.1), P(24.45, -84.0)] },
+        { points: [P(24.75, -84.15), P(27.0, -83.55), P(37.2, -77.7), P(37.5, -75.75)] },
+        { points: [P(24.75, -84.15), P(24.45, -86.7), P(25.05, -92.1)] },
+        { points: [P(24.75, -96.75), P(25.05, -92.1)] },
+        { points: [P(24.75, -96.75), P(26.1, -132.15)] },
+        { points: [P(25.05, -92.1), P(29.4, -91.5), P(32.4, -90.45), P(34.8, -90.3), P(44.25, -88.05), P(45.15, -88.5)] },
+        { points: [P(26.1, -132.15), P(97.8, -129.9)] },
+        { points: [P(31.95, -7.8), P(35.85, -7.35), P(36.45, -7.95), P(36.75, -21.45)] },
+        { points: [P(32.7, -21.3), P(36.75, -21.45)] },
+        { points: [P(36.75, -21.45), P(37.05, -27.15), P(40.05, -28.2)] },
+        { points: [P(39.9, -29.55), P(40.05, -28.2)] },
+        { points: [P(40.05, -28.2), P(49.05, -29.55), P(54.3, -31.05)] },
+        { points: [P(53.4, -35.85), P(54.3, -31.05)] },
+        { points: [P(54.3, -31.05), P(55.65, -30.9), P(73.8, -34.65), P(84.75, -36.3), P(89.85, -37.65), P(95.4, -38.4), P(97.65, -39.3)] },
+        { points: [P(74.55, -63.0), P(82.8, -55.35), P(87.0, -50.55), P(97.35, -40.65), P(97.65, -39.3)] },
+        { points: [P(82.65, 33.3), P(106.5, 18.3), P(106.8, 9.9), P(114.15, 5.4), P(122.25, -0.45), P(123.9, -0.9)] },
+        { points: [P(97.65, -39.3), P(102.6, -39.6), P(104.55, -40.35), P(108.15, -40.65), P(118.05, -42.9), P(132.6, -45.3)] },
+        { points: [P(97.8, -122.85), P(97.8, -129.9)] },
+        { points: [P(97.8, -129.9), P(121.5, -129.15), P(132.75, -117.9), P(133.5, -116.7), P(133.2, -86.55)] },
+        { points: [P(123.9, -0.9), P(126.6, 6.3)] },
+        { points: [P(123.9, -0.9), P(124.65, -2.25), P(130.95, -6.45), P(132.15, -6.75), P(132.75, -8.1), P(133.05, -43.95), P(132.6, -45.3)] },
+        { points: [P(132.6, -45.3), P(133.2, -48.3), P(133.05, -75.75), P(133.65, -76.35)] },
+        { points: [P(133.35, -78.75), P(133.35, -82.95)] },
+        { points: [P(5.55, -23.4), P(7.95, -22.5)], needs: ["tx1|tx2"] },
+        { points: [P(133.2, -86.55), P(133.35, -82.95)] },
+      ],
+      beyond: { 3: ["tx1|tx2"], 4: ["tx1|tx2"], 7: ["tx1|tx2"], 12: ["tx1|tx2"] },
     },
   });
 }

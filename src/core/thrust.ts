@@ -51,8 +51,27 @@ export interface ThrustSpec {
   turrets?: string[];
   /** The level's fuel tanks (MTH-042): bodies the ship's beam can draw fuel from. */
   tanks?: string[];
+  /**
+   * Parked gunships (Chloe, 14 November 2026: level 8). Each stands on the ground at `parked[i]`
+   * (the middle of its foot, its up turned by `angle`), its pilot asleep. When the ship flying first
+   * comes within `wake` m of one still able to fly, the nearest lifts off and hunts it (a Hunting
+   * pilot, AIP-015), and another every `every` game seconds while any parked one can still fly.
+   * One out of the fight, in the air or on the ground, scores once.
+   */
+  gunships?: {
+    /** The gunship, laid out round its hull, pointing up, with `{n}` in its ids and channels; a pilot on one of its bodies. */
+    template: { bodies: BodyInput[]; joints?: JointInput[]; links?: LinkInput[] };
+    /** Its hull, with `{n}`. */
+    hull: string;
+    /** Below its hull to its lowest point, m: it stands that high on its foot. */
+    foot: number;
+    parked: { at: Vec2; angle: number }[];
+    wake: number;
+    every: number;
+    skill?: { flight: number; combat: number };
+  };
   /** Points: for the pod carried out, for each kg of fuel left then, for a turret put out of action, and for a fuel tank the ship has emptied. */
-  scores?: { pod?: number; fuel?: number; turret?: number; tank?: number };
+  scores?: { pod?: number; fuel?: number; turret?: number; tank?: number; gunship?: number };
   /** The score and ships brought from the level before. */
   carry?: { score: number; lives: number };
   /** The power plant and what it powers (plant.ts), if the level has one. */
@@ -106,6 +125,9 @@ export interface ThrustState {
   tankCharge: Record<string, number>;
   /** The turrets that can no longer fire: each scored once. */
   turretsOut: string[];
+  /** The level's gunships (`g{n}-…`): lifted off yet, and out of the fight; and when the next lifts off, s (once they are awake). */
+  gunships?: { n: number; hull: string; launched: boolean; out: boolean }[];
+  nextGunship?: number;
   /** For the end screens. */
   stats: { ships: number; back: number };
   /** When a ship was last beamed back from the top, s. */
@@ -127,7 +149,7 @@ export interface ThrustOps {
 }
 
 export const THRUST_DEFAULTS = { lives: 3, respawn: 1.25, grace: 1, watch: 1.5 };
-export const THRUST_SCORES = { pod: 2000, fuel: 100, turret: 750, tank: 300 };
+export const THRUST_SCORES = { pod: 2000, fuel: 100, turret: 750, tank: 300, gunship: 1000 };
 /** The control that destroys the player's own ship, as Mammoth Asteroids' (MAS-039). */
 export const THRUST_DESTRUCT = "destruct";
 /** How long a beam ring shows, game s. */
@@ -259,7 +281,70 @@ export function startThrust(world: World, spec: ThrustSpec, ops: ThrustOps): Thr
     },
   };
   addShip(world, game, ops, 0);
+  if (spec.gunships) parkGunships(world, game, ops);
   return game;
+}
+
+/** The level's gunships, parked on the ground with their pilots asleep (an idle goal: engines off). */
+function parkGunships(world: World, game: ThrustGame, ops: ThrustOps): void {
+  const g = game.spec.gunships!;
+  game.state.gunships = [];
+  g.parked.forEach((p, i) => {
+    const n = i + 1;
+    const t = withN(g.template, n);
+    const q = sinCos(p.angle);
+    for (const b of t.bodies) {
+      const off = rotate(q, { x: b.position.x, y: b.position.y + g.foot });
+      const body: BodyInput = { ...b, position: { x: p.at.x + off.x, y: p.at.y + off.y }, angle: (b.angle ?? 0) + p.angle, velocity: { x: 0, y: 0 }, angularVelocity: 0 };
+      if (body.pilot) body.pilot = { ...body.pilot, mode: "manual", goal: { kind: "idle" }, side: "enemy", ...(g.skill ? { skill: { ...g.skill } } : {}) };
+      ops.addBody(world, body);
+    }
+    for (const j of t.joints ?? []) ops.addJoint(world, j);
+    for (const l of t.links ?? []) ops.addLink(world, l);
+    game.state.gunships!.push({ n, hull: idOf(g.hull, n), launched: false, out: false });
+  });
+}
+
+/**
+ * The gunships, each step: one out of the fight scores once and its pilot lets go; the first lifts
+ * off when the ship flying comes within `wake` m of one parked, and the next every `every` s after.
+ * The one to go is the parked one nearest the ship (or the start, between ships).
+ */
+function runGunships(world: World, game: ThrustGame, hullId: string): void {
+  const { spec, state: s } = game;
+  const g = spec.gunships!;
+  const now = world.time;
+  for (const x of s.gunships!) {
+    if (x.out || shipState(world, x.hull).flies) continue;
+    x.out = true;
+    s.score += spec.scores?.gunship ?? THRUST_SCORES.gunship;
+    const prefix = `g${x.n}-`;
+    for (const b of world.bodies) {
+      if (!b.id.startsWith(prefix) || !b.pilot) continue;
+      for (const ch of Object.keys(b.pilot.command)) world.controls[ch] = 0;
+      delete b.pilot;
+    }
+    world.events.push({ tick: world.tick, type: "thrust.gunshipOut", data: { n: x.n } });
+  }
+  const hull = s.phase === "flying" ? world.bodies.find((b) => b.id === hullId) : undefined;
+  const parked = s.gunships!.filter((x) => !x.launched && !x.out);
+  if (!parked.length) return;
+  const at = (x: { hull: string }) => world.bodies.find((b) => b.id === x.hull)?.position;
+  const from = hull?.position ?? spec.start;
+  const dist = (x: { hull: string }) => {
+    const p = at(x);
+    return p ? length(sub(p, from)) : Infinity;
+  };
+  const nearest = parked.reduce((m, x) => (dist(x) < dist(m) ? x : m));
+  if (s.nextGunship === undefined) {
+    if (!hull || dist(nearest) > g.wake) return;
+    s.nextGunship = now;
+  }
+  if (now < s.nextGunship - 1e-9) return;
+  nearest.launched = true;
+  s.nextGunship = now + g.every;
+  for (const b of world.bodies) if (b.id.startsWith(`g${nearest.n}-`) && b.pilot) b.pilot.mode = "hunting";
+  world.events.push({ tick: world.tick, type: "thrust.gunship", data: { n: nearest.n } });
 }
 
 /**
@@ -303,6 +388,9 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       return true;
     }
   }
+
+  // 0a. The gunships (level 8): out of the fight, and lifting off.
+  if (spec.gunships && s.gunships) runGunships(world, game, hullId);
 
   // 0. The turrets watch for the ship flying, and for nothing between ships. One that can no longer
   // fire (its gun, carriage or battery gone) is out of action for the level, and scores once (MTH-031).
