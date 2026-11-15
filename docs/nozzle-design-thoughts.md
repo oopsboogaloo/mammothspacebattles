@@ -181,6 +181,8 @@ wall loads.
 
 ### The designer's inputs, and what follows from them
 
+![A simplified engine: what the designer sets, and what follows](simplified-engine.svg)
+
 Agreed 15 November 2026: the engine isn't simulated as gas in the game (the chamber model stays,
 for speed); the designer sets:
 

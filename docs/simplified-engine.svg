@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The simplified engine a ship designer sets up (docs/nozzle-design-thoughts.md §5): a section
+     through a 2D engine firing down, to scale with RS-08's (chamber 0.8 × 0.6 m, throat 0.3 m, nozzle
+     0.6 m long opening to 0.84 m, walls 0.1 m thick) at 375 px a metre. Drawn by hand. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1580" height="960" viewBox="0 0 1580 960" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="nozzleGas" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ef7a4d"/>
+      <stop offset="0.35" stop-color="#f6b183"/>
+      <stop offset="1" stop-color="#fdeee1"/>
+    </linearGradient>
+    <linearGradient id="pressureKey" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fdeee1"/>
+      <stop offset="0.5" stop-color="#f6b183"/>
+      <stop offset="1" stop-color="#e4573f"/>
+    </linearGradient>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker>
+    <marker id="big" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+    <style>
+      .title { font-size: 26px; font-weight: 700; fill: #111; }
+      .sub { font-size: 14px; fill: #555; }
+      .metal { fill: #cfd6de; stroke: #4a5563; stroke-width: 1.5; }
+      .head { fill: #b9c2ff; stroke: #3b46a8; stroke-width: 1.5; }
+      .dim { stroke: #333; stroke-width: 1.2; fill: none; }
+      .ext { stroke: #888; stroke-width: 1; stroke-dasharray: 4 3; fill: none; }
+      .lbl { font-size: 15px; fill: #111; }
+      .lblb { font-size: 15px; font-weight: 700; fill: #111; }
+      .small { font-size: 13px; fill: #444; }
+      .badge { fill: #1d4ed8; }
+      .badgeText { font-size: 13px; font-weight: 700; fill: #fff; text-anchor: middle; }
+      .weld { fill: #111; stroke: #fff; stroke-width: 1.2; }
+      .h2 { font-size: 18px; font-weight: 700; fill: #111; }
+      .input { font-size: 15px; fill: #111; }
+      .follow { font-size: 15px; fill: #333; }
+      .mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: 14px; fill: #111; }
+    </style>
+  </defs>
+  <rect width="1580" height="960" fill="#fff"/>
+
+  <text class="title" x="40" y="44">A simplified engine: what the designer sets, and what follows</text>
+  <text class="sub" x="40" y="68">A section through a 2D engine firing down. To scale with RS-08's engine (chamber 0.8 × 0.6 m, throat 0.3 m, nozzle 0.6 m to a 0.84 m exit, walls 0.1 m).</text>
+
+  <g transform="translate(60,0)">
+  <!-- Feed: tanks to the injector -->
+  <rect x="120" y="106" width="150" height="36" rx="8" fill="#ffd27a" stroke="#a6741a" stroke-width="1.5"/>
+  <text class="small" x="195" y="129" text-anchor="middle">Tanks (H₂ + O₂)</text>
+  <path d="M270,124 H330 V150" fill="none" stroke="#a6741a" stroke-width="5"/>
+  <circle class="badge" cx="-28" cy="91" r="12"/><text class="badgeText" x="-28" y="96">1</text>
+  <text class="input" x="-8" y="96"><tspan font-weight="700">Feed / injector flow:</tspan> sets the burn rate ṁ</text>
+
+  <!-- Injector head -->
+  <rect class="head" x="262" y="150" width="376" height="70"/>
+  <text class="lbl" x="450" y="191" text-anchor="middle">Injector head</text>
+  <g fill="#3b46a8">
+    <rect x="345" y="214" width="8" height="6"/><rect x="380" y="214" width="8" height="6"/><rect x="415" y="214" width="8" height="6"/>
+    <rect x="477" y="214" width="8" height="6"/><rect x="512" y="214" width="8" height="6"/><rect x="547" y="214" width="8" height="6"/>
+  </g>
+
+  <!-- Chamber gas (high pressure) -->
+  <rect x="300" y="220" width="300" height="225" fill="#e4573f" opacity="0.9"/>
+  <rect x="394" y="445" width="112" height="38" fill="#e4573f" opacity="0.9"/>
+  <text x="450" y="322" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">Chamber</text>
+  <text x="450" y="344" text-anchor="middle" font-size="14" fill="#fff">burning gas at pressure p_c</text>
+  <text x="450" y="364" text-anchor="middle" font-size="14" fill="#fff">p_c = ṁ · c* ÷ W_t</text>
+  <!-- Pressure pushes on the walls -->
+  <g stroke="#fff" stroke-width="2" fill="none" opacity="0.9">
+    <path d="M330,400 H305" marker-end="url(#arr)"/><path d="M570,400 H595" marker-end="url(#arr)"/>
+    <path d="M330,275 H305" marker-end="url(#arr)"/><path d="M570,275 H595" marker-end="url(#arr)"/>
+    <path d="M360,240 V225" marker-end="url(#arr)"/><path d="M540,240 V225" marker-end="url(#arr)"/>
+  </g>
+
+  <!-- Nozzle gas (pressure falls) -->
+  <polygon points="394,483 506,483 607.5,708 292.5,708" fill="url(#nozzleGas)"/>
+
+  <!-- Chamber walls -->
+  <rect class="metal" x="262" y="220" width="38" height="225"/>
+  <rect class="metal" x="600" y="220" width="38" height="225"/>
+  <!-- Throat pieces -->
+  <rect class="metal" x="262" y="445" width="132" height="38"/>
+  <rect class="metal" x="506" y="445" width="132" height="38"/>
+  <!-- Nozzle walls -->
+  <polygon class="metal" points="394,483 356,483 254.5,708 292.5,708"/>
+  <polygon class="metal" points="506,483 544,483 645.5,708 607.5,708"/>
+
+  <!-- Welds -->
+  <circle class="weld" cx="281" cy="220" r="5"/><circle class="weld" cx="619" cy="220" r="5"/>
+  <circle class="weld" cx="281" cy="445" r="5"/><circle class="weld" cx="619" cy="445" r="5"/>
+  <circle class="weld" cx="375" cy="483" r="5"/><circle class="weld" cx="525" cy="483" r="5"/>
+
+  <!-- Exhaust -->
+  <g stroke="#c2410c" stroke-width="2.2" fill="none">
+    <path d="M450,500 V560" marker-end="url(#flow)"/>
+    <path d="M420,600 L395,690" marker-end="url(#flow)"/>
+    <path d="M480,600 L505,690" marker-end="url(#flow)"/>
+    <path d="M450,620 V700" marker-end="url(#flow)"/>
+    <path d="M380,782 L350,846" marker-end="url(#flow)"/>
+    <path d="M450,782 V856" marker-end="url(#flow)"/>
+    <path d="M520,782 L550,846" marker-end="url(#flow)"/>
+  </g>
+  <text class="small" x="450" y="884" text-anchor="middle">Exhaust: faster and cooler the wider the nozzle opens</text>
+
+  <!-- Thrust -->
+  <path d="M450,146 V92" stroke="#1d4ed8" stroke-width="9" fill="none" marker-end="url(#big)"/>
+  <text class="lblb" x="486" y="110" fill="#1d4ed8">Thrust F</text>
+  <text class="small" x="486" y="128">F = ṁ · c* · C_F(ε, α)</text>
+
+  <!-- 2: throat width -->
+  <path class="dim" d="M398,464 H502" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <path class="ext" d="M506,464 H690"/>
+  <circle class="badge" cx="705" cy="464" r="12"/><text class="badgeText" x="705" y="469">2</text>
+  <text class="lblb" x="725" y="460">Throat width W_t</text>
+  <text class="small" x="725" y="478">the narrowest gap; it sets p_c</text>
+
+  <!-- 3: chamber wall thickness -->
+  <path class="dim" d="M222,240 H262" marker-end="url(#arr)"/>
+  <path class="dim" d="M336,240 H300" marker-end="url(#arr)"/>
+  <circle class="badge" cx="-28" cy="240" r="12"/><text class="badgeText" x="-28" y="245">3</text>
+  <text class="lblb" x="-8" y="237">Chamber wall thickness t</text>
+  <text class="small" x="-8" y="255">weld limits follow from it</text>
+
+  <!-- Chamber wall label -->
+  <path class="ext" d="M262,380 H200"/>
+  <text class="lbl" x="190" y="377" text-anchor="end">Chamber wall</text>
+  <text class="small" x="190" y="395" text-anchor="end">holds p_c, or bursts</text>
+
+  <!-- Throat piece label -->
+  <path class="ext" d="M262,464 H200"/>
+  <text class="lbl" x="190" y="461" text-anchor="end">Throat piece</text>
+  <text class="small" x="190" y="479" text-anchor="end">also holds p_c</text>
+
+  <!-- 4: wall angle -->
+  <path class="ext" d="M506,483 V600"/>
+  <path class="dim" d="M506,563 A80,80 0 0 0 538.5,555.2"/>
+  <text class="lblb" x="528" y="590" font-size="17">α</text>
+  <path class="ext" d="M560,575 H690"/>
+  <circle class="badge" cx="705" cy="575" r="12"/><text class="badgeText" x="705" y="580">4</text>
+  <text class="lblb" x="725" y="571">Nozzle wall angle α</text>
+  <text class="small" x="725" y="589">the spread costs thrust: sin α ÷ α</text>
+
+  <!-- 5: wall length -->
+  <path class="ext" d="M254.5,483 H200 M254.5,708 H200"/>
+  <path class="dim" d="M210,487 V704" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <path class="ext" d="M150,595 H206"/>
+  <circle class="badge" cx="-28" cy="595" r="12"/><text class="badgeText" x="-28" y="600">5</text>
+  <text class="lblb" x="-8" y="591">Nozzle wall length L</text>
+  <text class="small" x="-8" y="609">sets, with α, the exit</text>
+
+  <!-- Nozzle wall label -->
+  <path class="ext" d="M626,650 H690"/>
+  <text class="lbl" x="700" y="647">Nozzle wall</text>
+  <text class="small" x="700" y="665">carries little: the pressure falls to</text>
+  <text class="small" x="700" y="681">about 6% of p_c at the exit (ratio 2.8)</text>
+
+  <!-- Exit width (follows) -->
+  <path class="ext" d="M292.5,708 V745 M607.5,708 V745"/>
+  <path class="dim" d="M296.5,738 H603.5" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <text class="lbl" x="450" y="764" text-anchor="middle">Exit width W_e = W_t + 2 · L · tan α  (follows)</text>
+
+  <!-- Welds key -->
+  <circle class="weld" cx="-28" cy="700" r="5"/>
+  <text class="small" x="-16" y="705">weld</text>
+
+  </g>
+
+  <!-- Right-hand panel -->
+  <rect x="1050" y="96" width="510" height="820" rx="12" fill="#f6f8fa" stroke="#dde2e8"/>
+  <text class="h2" x="1074" y="130">The designer sets</text>
+  <g>
+    <circle class="badge" cx="1086" cy="160" r="12"/><text class="badgeText" x="1086" y="165">1</text>
+    <text class="input" x="1108" y="165"><tspan font-weight="700">Burn rate ṁ</tspan>: the injector's flow, capped by the feed</text>
+    <circle class="badge" cx="1086" cy="192" r="12"/><text class="badgeText" x="1086" y="197">2</text>
+    <text class="input" x="1108" y="197"><tspan font-weight="700">Throat width W_t</tspan></text>
+    <circle class="badge" cx="1086" cy="224" r="12"/><text class="badgeText" x="1086" y="229">3</text>
+    <text class="input" x="1108" y="229"><tspan font-weight="700">Chamber wall thickness t</tspan>: weld limits follow</text>
+    <circle class="badge" cx="1086" cy="256" r="12"/><text class="badgeText" x="1086" y="261">4</text>
+    <text class="input" x="1108" y="261"><tspan font-weight="700">Nozzle wall angle α</tspan></text>
+    <circle class="badge" cx="1086" cy="288" r="12"/><text class="badgeText" x="1086" y="293">5</text>
+    <text class="input" x="1108" y="293"><tspan font-weight="700">Nozzle wall length L</tspan></text>
+  </g>
+
+  <text class="h2" x="1074" y="346">What follows, in order of cause</text>
+  <g>
+    <text class="follow" x="1074" y="378"><tspan font-weight="700">The feed sets the burn rate.</tspan> The engine</text>
+    <text class="follow" x="1074" y="398">doesn't choose it.</text>
+
+    <text class="follow" x="1074" y="432"><tspan font-weight="700">The throat turns it into chamber pressure.</tspan></text>
+    <text class="mono" x="1094" y="456">p_c = ṁ · c* ÷ W_t</text>
+    <text class="follow" x="1074" y="480">c* depends only on the propellant. Half the</text>
+    <text class="follow" x="1074" y="500">throat at the same flow: twice the pressure.</text>
+
+    <text class="follow" x="1074" y="534"><tspan font-weight="700">The chamber must hold that pressure.</tspan> Its</text>
+    <text class="follow" x="1074" y="554">walls, throat pieces and their welds carry p_c;</text>
+    <text class="follow" x="1074" y="574">too thin, and the engine bursts. A wall spanning</text>
+    <text class="follow" x="1074" y="594">L_c holds while roughly</text>
+    <text class="mono" x="1094" y="618">t ≥ L_c · √(p_c ÷ 2σ)</text>
+    <text class="follow" x="1074" y="642">(σ: the material's strength).</text>
+
+    <text class="follow" x="1074" y="676"><tspan font-weight="700">The nozzle only sets how much thrust it buys.</tspan></text>
+    <text class="mono" x="1094" y="700">ε = W_e ÷ W_t,  F = ṁ · c* · C_F(ε, α)</text>
+    <text class="follow" x="1074" y="724">Past the throat the flow is supersonic, so the</text>
+    <text class="follow" x="1074" y="744">nozzle can't change the burn rate or p_c, only</text>
+    <text class="follow" x="1074" y="764">waste less of it: +21% at ε 2.8, +33% at ε 10.</text>
+  </g>
+
+  <text class="h2" x="1074" y="808">Pressure</text>
+  <rect x="1074" y="822" width="300" height="18" fill="url(#pressureKey)" stroke="#bbb"/>
+  <text class="small" x="1074" y="860">low (nozzle exit)</text>
+  <text class="small" x="1374" y="860" text-anchor="end">p_c (chamber)</text>
+  <text class="small" x="1074" y="892">Thrust in vacuum, at a given ṁ and ε, doesn't depend on the</text>
+  <text class="small" x="1074" y="910">throat's size: a small throat is compact but needs thick walls.</text>
+</svg>
