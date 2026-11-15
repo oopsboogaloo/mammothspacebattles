@@ -20,6 +20,7 @@ import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
+import { driveMoon, runMoon, startMoon, type MoonGame, type MoonSpec } from "./moon.ts";
 import { takeStrikes } from "./plant.ts";
 import { runTerrain, startTerrain, type Terrain, type TerrainOps, type TerrainSpec } from "./terrain.ts";
 import { runShields, type Shield } from "./shield.ts";
@@ -406,6 +407,8 @@ export interface World {
   terrain?: Terrain;
   /** Mammoth Thrust's game: ships, the pod and the level's top (docs/games/mammoth-thrust.md). */
   thrust?: ThrustGame;
+  /** Moon Mammoth's game: the mammoth's moves, the flags and the clocks (docs/games/moon-mammoth.md). */
+  moon?: MoonGame;
   /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
   blasts?: Blast[];
   /** The plume's tail: gas gone from the gas model, fading out (GAS-011): see wisps.ts. */
@@ -468,7 +471,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; terrain?: TerrainSpec; frame?: Frame } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -503,6 +506,7 @@ export function createWorld(
   if (extra.arcade) world.arcade = startArcade(world, extra.arcade, ARCADE_OPS);
   // Mammoth Thrust starts with its first ship in the world.
   if (extra.thrust) world.thrust = startThrust(world, extra.thrust, ARCADE_OPS);
+  if (extra.moon) world.moon = startMoon(world, extra.moon);
   world.ledger.totals = computeTotals(world);
   if (extra.challenge) world.challenge = startLanding(world, structuredClone(extra.challenge));
   if (extra.lander) world.lander = startLander(extra.lander);
@@ -1457,6 +1461,14 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // block below that changes the world ends by setting it, so none needs to work them out again
   // before it starts (the totals walk every body and parcel, and nothing changes in between).
   let before = totals(world);
+  // Moon Mammoth's moves (MMN-010…MMN-043): what the mammoth's legs do to it this step is its own
+  // power. It pushes on fixed rock, so the momentum comes from outside the free bodies.
+  if (world.moon) {
+    driveMoon(world, dt);
+    const after = totals(world);
+    addDelta(sources.power, diff(before, after));
+    before = after;
+  }
   // Turrets (WPN-009, WPN-010) and the joints that aim them (ASM-008). What a generator burns leaves
   // the world; the joint's turning is work the weld solver does, booked with the joints'.
   if (world.bodies.some((b) => b.turret || b.generator) || world.joints.some((j) => j.turn)) {
@@ -1798,6 +1810,16 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   if (world.thrust) {
     const t0 = totals(world);
     if (runThrust(world, dt, ARCADE_OPS)) {
+      after = totals(world);
+      addDelta(sources.boundary, diff(t0, after));
+    }
+  }
+
+  // Moon Mammoth (MMN-051, MMN-053): the mammoth put back at a flag, and a rock let go or put back,
+  // through the boundary.
+  if (world.moon) {
+    const t0 = totals(world);
+    if (runMoon(world, dt, { addBody })) {
       after = totals(world);
       addDelta(sources.boundary, diff(t0, after));
     }

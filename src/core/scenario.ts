@@ -13,6 +13,7 @@ import type { DuelGoal } from "./duel.ts";
 import type { ArcadeSpec } from "./arcade.ts";
 import type { TerrainSpec } from "./terrain.ts";
 import type { ThrustSpec } from "./thrust.ts";
+import type { MoonSpec } from "./moon.ts";
 import { PROFILES, getProfile, type Profile } from "./profile.ts";
 import type { ShipTemplate } from "./spawn.ts";
 import { polygonProblem } from "./shapes.ts";
@@ -70,7 +71,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -621,6 +622,51 @@ function validateTerrain(v: V, t: unknown, path: string): void {
     if (t.craters.bullet !== undefined) num(v, t.craters.bullet, `${path}.craters.bullet`, { min: 0 });
     for (const k of ["limit", "small"]) if (t.craters[k] !== undefined) num(v, t.craters[k], `${path}.craters.${k}`, { int: true, min: 0, max: 5000 });
   }
+  if (t.restitution !== undefined) num(v, t.restitution, `${path}.restitution`, { min: 0, max: 1 });
+}
+
+function validateMoon(v: V, g: unknown, bodies: unknown, path: string): void {
+  if (!isObj(g)) return err(v, path, "must be an object {mammoth, centre, size, run, jump, roll, slide, slope, flags, reach, spikes}");
+  const list = Array.isArray(bodies) ? bodies.filter(isObj) : [];
+  const m = list.find((b) => b.id === g.mammoth);
+  if (typeof g.mammoth !== "string" || !m) err(v, `${path}.mammoth`, "must be the id of one of the world's bodies");
+  else if (!isObj(m.shape) || m.shape.kind !== "disc" || m.fixed === true) err(v, `${path}.mammoth`, "must be a free disc");
+  vec(v, g.centre, `${path}.centre`);
+  const group = (name: string, keys: string[], opts: Record<string, { min?: number; max?: number; positive?: boolean }> = {}) => {
+    const o = g[name];
+    if (!isObj(o)) return err(v, `${path}.${name}`, `must be an object {${keys.join(", ")}}`);
+    for (const k of keys) num(v, o[k], `${path}.${name}.${k}`, opts[k] ?? { positive: true });
+  };
+  group("size", ["stand", "duck"]);
+  if (isObj(g.size) && typeof g.size.stand === "number" && typeof g.size.duck === "number" && g.size.duck > g.size.stand) err(v, `${path}.size.duck`, "must be no bigger than standing");
+  group("run", ["speed", "accel", "brake", "air"]);
+  group("jump", ["speed", "cut", "early", "late"], { cut: { min: 0, max: 1 }, early: { min: 0 }, late: { min: 0 } });
+  group("roll", ["speed", "time", "wait"], { wait: { min: 0 } });
+  group("slide", ["brake", "least", "crawl"], { least: { min: 0 }, crawl: { min: 0 } });
+  num(v, g.slope, `${path}.slope`, { min: 0, max: 1 });
+  num(v, g.reach, `${path}.reach`, { positive: true });
+  str(v, g.spikes, `${path}.spikes`);
+  if (!Array.isArray(g.flags) || g.flags.length < 2) err(v, `${path}.flags`, "must be a list of at least 2 flags {at, time}");
+  else
+    g.flags.forEach((f: unknown, i: number) => {
+      if (!isObj(f)) return err(v, `${path}.flags[${i}]`, "must be {at, time}");
+      vec(v, f.at, `${path}.flags[${i}].at`);
+      num(v, f.time, `${path}.flags[${i}].time`, i === 0 ? { min: 0 } : { positive: true });
+    });
+  if (g.rocks !== undefined) {
+    if (!Array.isArray(g.rocks)) err(v, `${path}.rocks`, "must be a list of {id, within, mass}");
+    else
+      g.rocks.forEach((r: unknown, i: number) => {
+        if (!isObj(r)) return err(v, `${path}.rocks[${i}]`, "must be {id, within, mass}");
+        if (typeof r.id !== "string" || !list.some((b) => b.id === r.id && b.fixed === true)) err(v, `${path}.rocks[${i}].id`, "must be the id of one of the world's fixed bodies");
+        num(v, r.within, `${path}.rocks[${i}].within`, { positive: true });
+        num(v, r.mass, `${path}.rocks[${i}].mass`, { positive: true });
+      });
+  }
+  if (g.view !== undefined) {
+    if (!isObj(g.view) || !Array.isArray(g.view.outline) || g.view.outline.length < 3) err(v, `${path}.view`, "must be {outline} with at least 3 points");
+    else g.view.outline.forEach((p: unknown, i: number) => vec(v, p, `${path}.view.outline[${i}]`));
+  }
 }
 
 function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
@@ -1066,6 +1112,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
       }
     }
     if (data.world.thrust !== undefined) validateThrust(v, data.world.thrust, data.world.bodies, "$.world.thrust");
+    if (data.world.moon !== undefined) validateMoon(v, data.world.moon, data.world.bodies, "$.world.moon");
   }
 
   let endSteps = Infinity;
@@ -1189,7 +1236,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, terrain: scn.world.terrain, frame: scn.world.frame },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, moon: scn.world.moon, terrain: scn.world.terrain, frame: scn.world.frame },
     getProfile(scn.profile),
   );
 }

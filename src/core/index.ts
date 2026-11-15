@@ -32,6 +32,7 @@ export * from "./lander.ts";
 export * from "./arcade.ts";
 export * from "./terrain.ts";
 export * from "./thrust.ts";
+export * from "./moon.ts";
 export * from "./plant.ts";
 export { fieldId, runShields, type Shield } from "./shield.ts";
 export * from "./turret.ts";

@@ -24,10 +24,12 @@ export class RockStubs {
   private sent = new WeakMap<Body, { shape: Body["shape"]; x: number; y: number; angle: number }>();
   /** The Mammoth Thrust level's spec already sent (39 KB on level 6): nothing changes it during a game. */
   private spec: object | null = null;
+  private moonSpec: object | null = null;
 
   forget(): void {
     this.sent = new WeakMap();
     this.spec = null;
+    this.moonSpec = null;
   }
 
   /** The world's game state to send: a level spec already sent goes as `{ kept: true }`. */
@@ -37,6 +39,15 @@ export class RockStubs {
     if (this.spec === t.spec) return { ...t, spec: KEPT as never };
     this.spec = t.spec;
     return t;
+  }
+
+  /** Moon Mammoth's game state to send: its spec (the moon's outline), already sent, goes as `{ kept: true }`. */
+  packMoon(w: World): World["moon"] {
+    const g = w.moon;
+    if (!g) return g;
+    if (this.moonSpec === g.spec) return { ...g, spec: KEPT as never };
+    this.moonSpec = g.spec;
+    return g;
   }
 
   /** The world's bodies to send: rock already sent as it is, as stubs. */

@@ -4,6 +4,7 @@ import { add, sub, assemblyRoots, fieldId, generatorOnline, nearestOffset, turre
 import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
+import { drawMoon } from "./moonRender.ts";
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "pilots" | "grid";
 
 export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: string }[] = [
@@ -412,6 +413,8 @@ export interface RenderOptions {
   lite?: boolean;
   /** Drawn inside a turning level's turn (renderFrame): no background, and no stars of its own. */
   turning?: boolean;
+  /** Moon Mammoth's view (MMN-060): the frame turned so the mammoth is upright, drawn by moonRender.ts. */
+  moon?: boolean;
   /** A landing pad to mark (FLT-009). */
   pad?: string;
   /** Draw fixed bodies as plain ground with a single surface line (Mammoth Lander). */
@@ -1507,6 +1510,8 @@ function shapeRadius(shape: Body["shape"]): number {
 }
 
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
+  // Moon Mammoth has its own drawing, turned with the mammoth (moonRender.ts).
+  if (opts.moon && world.moon && canPlume(ctx)) return drawMoon(ctx, world, c, vp);
   const f = world.frame;
   if (!f || !f.omega || !opts.thrust || !canPlume(ctx)) return drawFrame(ctx, world, c, vp, opts);
   const turn = f.omega * world.time; // the frame's turn, counter-clockwise, rad
