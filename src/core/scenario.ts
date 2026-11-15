@@ -642,6 +642,23 @@ function validateThrust(v: V, g: unknown, bodies: unknown, path: string): void {
   if (isObj(g.start) && typeof g.start.y === "number" && typeof g.top === "number" && g.start.y >= g.top) err(v, `${path}.start`, "must be below the level's top");
   if (typeof g.pod !== "string" || !Array.isArray(bodies) || !bodies.some((b) => isObj(b) && b.id === g.pod)) err(v, `${path}.pod`, "must be the id of one of the world's bodies");
   if (g.lives !== undefined) num(v, g.lives, `${path}.lives`, { int: true, min: 1, max: 99 });
+  if (g.gunships !== undefined) {
+    const gs = g.gunships;
+    if (!isObj(gs) || !isObj(gs.template) || !Array.isArray(gs.template.bodies)) err(v, `${path}.gunships`, "must be {template, hull, foot, parked, wake, every}");
+    else {
+      if (typeof gs.hull !== "string" || !gs.hull.includes("{n}") || !gs.template.bodies.some((b) => isObj(b) && b.id === gs.hull)) err(v, `${path}.gunships.hull`, 'must be the id, with "{n}", of one of its bodies');
+      if (!gs.template.bodies.some((b) => isObj(b) && isObj(b.pilot))) err(v, `${path}.gunships.template`, "needs a pilot on one of its bodies");
+      num(v, gs.foot, `${path}.gunships.foot`, { min: 0 });
+      num(v, gs.wake, `${path}.gunships.wake`, { positive: true });
+      num(v, gs.every, `${path}.gunships.every`, { positive: true });
+      if (!Array.isArray(gs.parked)) err(v, `${path}.gunships.parked`, "must be a list of {at, angle}");
+      else gs.parked.forEach((q, i) => {
+        if (!isObj(q)) return err(v, `${path}.gunships.parked[${i}]`, "must be {at, angle}");
+        point(q.at, `${path}.gunships.parked[${i}].at`);
+        num(v, q.angle, `${path}.gunships.parked[${i}].angle`, {});
+      });
+    }
+  }
   if (g.extraLife !== undefined) num(v, g.extraLife, `${path}.extraLife`, { positive: true });
   if (g.level !== undefined) num(v, g.level, `${path}.level`, { int: true, min: 1 });
   for (const k of ["respawn", "grace", "watch"]) if (g[k] !== undefined) num(v, g[k], `${path}.${k}`, { min: 0 });

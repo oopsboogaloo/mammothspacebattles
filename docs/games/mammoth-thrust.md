@@ -160,6 +160,16 @@ other sources in §12):
   200 m from the hub's middle. Objects are seated clear of the rock: one sat 15 cm into it at a
   corner, and the frame's push made its weld fight the contact until it broke. A step takes about
   2.9 ms (347 bodies). The rim moves at about 11 m/s and the pod at about 9 m/s.
+- **Level 8: the airbase** (Chloe's drawing, 14 November 2026, traced at 0.15 m a pixel). Ground
+  with a radar dish, a control tower and a low block (destructible scenery: thin skin welded to a
+  base anchored to the rock; a slug or two breaks a piece), and five gunships parked either side of
+  a shaft down into a cavern. The gunships are Mammoth Asteroids' (Gunship 3, its Hunting pilot and
+  small charged shell), parked with their pilots asleep. When the ship first comes within 80 m of
+  one that can still fly, the nearest lifts off and hunts it; another every 15 s on screen while any
+  parked one can still fly. One out of the fight, in the air or on the ground, scores 1,000. The
+  power plant stands on the cavern's floor at the right; its lines feed the right-hand rock and the
+  cavern's pillar directly, and the left-hand rock across the shaft by either of two transmitters.
+  Fourteen electric turrets, five fuel tanks; the pod stands on the cavern's floor at the left.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
   through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
@@ -552,6 +562,12 @@ Priority: **M** must, **S** should.
 - **MTH-095** `[M]` A turret or power line may take power through any one of several transmitters
   (`"tx1|tx2"`): it keeps power while one of them stands. A route across two gaps joins its
   transmitters with `+` (`"tx5+tx1|tx6+tx2"`): it keeps power while every one of some route stands.
+- **MTH-107** `[M]` Level 8's gunships stay parked, their pilots asleep, until the ship first comes
+  within 80 m of one; the nearest that can still fly then lifts off and hunts it, and another every
+  7.5 game seconds (15 s on screen). One put out of the fight, in the air or on the ground, scores
+  1,000 and never lifts off.
+- **MTH-108** `[S]` Level 8's buildings stand on their own and are destructible scenery: a slug
+  damages a piece.
 - **MTH-106** `[M]` Level 7 turns clockwise, a turn every 60 game seconds (FLT-017). A ship beams in
   upright and at rest on screen, at the same place whatever the turn; left alone, nothing on the
   station breaks and the pod stays on its stand.

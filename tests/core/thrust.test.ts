@@ -1297,6 +1297,59 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(st(w).pod).toBe("stand");
     expect(w.ledger.violations).toBe(0);
   }, 60_000);
+  it("MTH-107 level 8's gunships stay parked, pilots asleep, until the ship comes within 80 m; then the nearest lifts off and hunts, and another every 7.5 game s; one put out on the ground scores 1,000 and never lifts off", () => {
+    const { w, step } = game(8);
+    for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    const launches = () => w.events.filter((e) => e.type === "thrust.gunship").map((e) => e.data.n);
+    const hullOf = (n: number) => body(w, `g${n}-hull`)!;
+    const parked0 = [1, 2, 3, 4, 5].map((n) => ({ ...hullOf(n).position }));
+    // Held off: the ship kept 150 m from the nearest gunship, at rest.
+    moveShip(w, { x: -110, y: 60 });
+    w.gravity = { x: 0, y: 0 };
+    step(4);
+    expect(launches()).toEqual([]);
+    [1, 2, 3, 4, 5].forEach((n, k) => expect(Math.hypot(hullOf(n).position.x - parked0[k].x, hullOf(n).position.y - parked0[k].y)).toBeLessThan(0.1));
+    expect([1, 2, 3, 4, 5].every((n) => hullOf(n).pilot?.mode === "manual")).toBe(true);
+    // One put out on the ground (its hull destroyed): it scores, and never lifts off.
+    const score = st(w).score;
+    const nearestTo = (p: { x: number; y: number }) => [1, 2, 3, 4, 5].filter((n) => body(w, `g${n}-hull`)).sort((a, b) => Math.hypot(hullOf(a).position.x - p.x, hullOf(a).position.y - p.y) - Math.hypot(hullOf(b).position.x - p.x, hullOf(b).position.y - p.y))[0];
+    const near = { x: -60, y: 30 };
+    const first = nearestTo(near);
+    hullOf(first).integrity = 0;
+    step(0.2);
+    expect(st(w).score).toBe(score + 1000);
+    expect(st(w).gunships!.find((g) => g.n === first)!.out).toBe(true);
+    // The ship comes within 80 m: the nearest still able lifts off, hunting.
+    moveShip(w, near);
+    step(0.1);
+    const second = nearestTo(near);
+    expect(launches()).toEqual([second]);
+    expect(hullOf(second).pilot?.mode).toBe("hunting");
+    step(7.3);
+    expect(launches()).toHaveLength(1);
+    step(0.2);
+    expect(launches()).toHaveLength(2);
+    expect(launches()).not.toContain(first);
+  }, 60_000);
+
+  it("MTH-108 level 8's buildings stand on their own, and a slug breaks a piece of one", () => {
+    const { w, step } = game(8);
+    for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    moveShip(w, { x: -112, y: 70 });
+    w.gravity = { x: 0, y: -4 };
+    const parts = w.bodies.filter((b) => b.id.startsWith("bldg-") && !b.fixed);
+    const at0 = new Map(parts.map((b) => [b.id, { ...b.position }]));
+    expect(parts.length).toBeGreaterThan(8);
+    step(4);
+    for (const b of parts) expect(Math.hypot(b.position.x - at0.get(b.id)!.x, b.position.y - at0.get(b.id)!.y), b.id).toBeLessThan(0.5);
+    expect(w.events.filter((e) => e.type === "joint.break" && String(e.data.id).startsWith("bldg-"))).toHaveLength(0);
+    // A slug into the tower's cabin.
+    const cabin = body(w, "bldg-2-cabin")!;
+    slugAtPoint(w, { x: cabin.position.x, y: cabin.position.y }, 1, { x: -8, y: 0 });
+    step(0.3);
+    expect(w.events.some((e) => e.type === "damage" && String(e.data.id).startsWith("bldg-2-"))).toBe(true);
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {
       const { w, step } = game(4);
