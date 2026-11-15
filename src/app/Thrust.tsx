@@ -306,9 +306,8 @@ function Title() {
             Play
           </button>
         </div>
-        {/* For testing (Chloe, 13 November 2026): start at any level. Not for players; to go before release. */}
+        {/* Start at any level (Chloe, 15 November 2026: kept for players; MTH-087). */}
         <div class="mas-row mth-levels" data-testid="mth-levels">
-          <span>Test: start at</span>
           {Array.from({ length: LEVELS }, (_, k) => (
             <button key={k} class="mas-btn small" onClick={() => startThrust(k + 1)} data-testid={`mth-level-${k + 1}`}>
               Level {k + 1}
@@ -418,7 +417,7 @@ function Play() {
         <span class={ship.damage > 0.005 ? "bad" : ""} data-testid="mth-damage">
           DAMAGE <b>{(100 * ship.damage).toFixed(0)}</b>%
         </span>
-        {!over && !won && (
+        {!over && s.phase !== "won" && (
           <span class="mas-hud-buttons">
             {playing.value && s.phase === "flying" && <SelfDestruct />}
             <button class="mas-btn small" onClick={() => (playing.value = !playing.value)} data-testid="mth-pause">
@@ -445,7 +444,7 @@ function Play() {
           <small>You left without the pod. Finish the mission.</small>
         </div>
       )}
-      {!playing.value && !over && !won && (
+      {!playing.value && !over && s.phase !== "won" && (
         <div class="mas-modal" data-testid="mth-paused">
           <h2>Paused</h2>
           {zoomed.value && <p>The page is zoomed in. Pinch outwards to zoom back out, then resume.</p>}
