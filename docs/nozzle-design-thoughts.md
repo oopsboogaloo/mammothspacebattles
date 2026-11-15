@@ -244,6 +244,37 @@ thickness and not limits. A first proposal, to calibrate:
   strip 0.1 m thick. Its welds are about 14 times stiffer in bending than the rule gives, so
   adopting it means choosing σ per material and retuning existing ships (with step 3 of §7).
 
+### A worked example: Mammoth Thrust's engines against the simplified engine
+
+Thrust's engines (`engine()` in `scripts/asteroidShip.ts`) are a head with two flared walls and
+nothing else:
+
+| Simplified engine | Thrust's main engine | What's missing |
+|---|---|---|
+| ① Feed sets the burn rate | The injector's `rate`, 7.78 kg/s (the small ones 1.45), fed from the wing tanks | Nothing in the structure, but `economy: 66` makes 65/66 of the propellant from nothing, so the feed hardly limits anything |
+| A chamber with its own walls | None: the chamber scan finds a slab only 0.09 m deep between the head and the walls' tops | Chamber walls |
+| ② A throat narrower than the chamber | No throat pieces: the narrowest gap is the walls' tops, 1.0–1.05 m, nearly the whole 1.2 m head | A constriction, so the chamber pressure is low (about 206 N/m in the model) |
+| ③ Wall thickness sets the weld limits | Walls 0.1 m; welds "Lander's × 3", one a wall, unrelated to thickness | The thickness rule |
+| ④⑤ Nozzle angle and length set the exit | 12.8° a side, 1.1 m long: exit 1.5 m, area ratio about 1.45 | It is a nozzle, but a mild one |
+
+The four small thrusters are the same pattern: a 0.6 m throat, a 0.84 m exit, area ratio about 1.4.
+
+- **It is in effect a throat-only engine with a slightly flared exhaust.** It loses nothing today,
+  because the jet formula gives it all its thrust and the game ignores the nozzle: that is why its
+  walls' shape made no difference (`docs/ship-designs.md`, "Nozzle shape").
+- **Under the proposed nozzle model it would gain only about 10%** (area ratio about 1.45; RS-08's
+  2.8 gains 21%). More needs a narrower throat or a wider exit.
+- **The pressure loads land on the head and the tops of the nozzle walls**, there being no chamber
+  walls: a small, low-pressure slab, which is why its walls carry little today.
+- **To match the simplified engine** it would need chamber walls, throat pieces narrowing to a chosen
+  width (raising the chamber pressure, so its welds would start to matter), nozzle walls below the
+  throat, and weld limits from thickness.
+
+**Decided 15 November 2026: Thrust's ship stays as it is for now.** It flies well and its damage
+model is just right, so it is not to be touched until the redesign and rebalance (§7, steps 3 and
+4) come round. Then it is redesigned to the simplified engine with its handling kept as close as
+we can.
+
 ## 6. Where measurement comes in
 
 1. **Validation:** whether the gas follows the theory's trend across sizes and shapes (the sweep).
@@ -260,7 +291,8 @@ thickness and not limits. A first proposal, to calibrate:
    with ENG-V and the sweep.
 3. Rebalance: every engine with a flared nozzle gets stronger (about +20% for RS-08-like
    nozzles). Lander, the gunships and Thrust's ship would need retuning, or their nozzles
-   reshaping.
+   reshaping. Thrust's ship is left alone until then, and redesigned to the simplified engine
+   here, keeping its handling and its damage model as they are (§5, the worked example).
 4. Weld limits from the parts' thickness and material (§5), with the existing ships' welds mapped
    onto it in the same rebalance.
 5. Later: the designer readout: thrust, Isp, chamber pressure, and each wall's margin.
