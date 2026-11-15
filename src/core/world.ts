@@ -21,6 +21,7 @@ import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
 import { driveMoon, runMoon, startMoon, type MoonGame, type MoonSpec } from "./moon.ts";
+import { stepRopes, type Rope } from "./rope.ts";
 import { takeStrikes } from "./plant.ts";
 import { runTerrain, startTerrain, type Terrain, type TerrainOps, type TerrainSpec } from "./terrain.ts";
 import { runShields, type Shield } from "./shield.ts";
@@ -409,6 +410,8 @@ export interface World {
   thrust?: ThrustGame;
   /** Moon Mammoth's game: the mammoth's moves, the flags and the clocks (docs/games/moon-mammoth.md). */
   moon?: MoonGame;
+  /** Ropes: each from a body that holds it to what it has caught (ROP): see rope.ts. */
+  ropes?: Rope[];
   /** Blast gas held for a step after its shell burst (WPN): see explosive.ts. */
   blasts?: Blast[];
   /** The plume's tail: gas gone from the gas model, fading out (GAS-011): see wisps.ts. */
@@ -1576,6 +1579,14 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     const ext = applyCollectors(world, rbs, dt);
     after = totals(world);
     sources.tractor = { mass: 0, momentumX: ext.impulse.x, momentumY: ext.impulse.y, angularMomentum: ext.angular, energy: after.energy.total - before.energy.total };
+  }
+  // Ropes (ROP-001…ROP-006): a rope keeps its holder within its length of what it has caught. What
+  // it has caught is fixed, or isn't pulled back, so what the holder loses or gains is from outside.
+  if (world.ropes?.length) {
+    stepRopes(world, dt);
+    const roped = totals(world);
+    addDelta(sources.tractor, diff(after, roped));
+    after = roped;
   }
   mark("forces");
 

@@ -642,6 +642,7 @@ function validateMoon(v: V, g: unknown, bodies: unknown, path: string): void {
   group("run", ["speed", "accel", "brake", "air"]);
   group("jump", ["speed", "cut", "early", "late"], { cut: { min: 0, max: 1 }, early: { min: 0 }, late: { min: 0 } });
   group("roll", ["speed", "time", "wait"], { wait: { min: 0 } });
+  if (isObj(g.roll) && g.roll.accel !== undefined) num(v, g.roll.accel, `${path}.roll.accel`, { positive: true });
   group("slide", ["brake", "least", "crawl"], { least: { min: 0 }, crawl: { min: 0 } });
   num(v, g.slope, `${path}.slope`, { min: 0, max: 1 });
   num(v, g.reach, `${path}.reach`, { positive: true });
@@ -662,6 +663,17 @@ function validateMoon(v: V, g: unknown, bodies: unknown, path: string): void {
         num(v, r.within, `${path}.rocks[${i}].within`, { positive: true });
         num(v, r.mass, `${path}.rocks[${i}].mass`, { positive: true });
       });
+  }
+  if (g.tools !== undefined) {
+    const t = g.tools;
+    if (!isObj(t) || !isObj(t.rifle) || !isObj(t.hook)) err(v, `${path}.tools`, "must be an object {aim, rifle, hook, breakable?}");
+    else {
+      num(v, t.aim, `${path}.tools.aim`);
+      for (const k of ["speed", "mass", "radius", "every", "life"]) num(v, t.rifle[k], `${path}.tools.rifle.${k}`, { positive: true });
+      for (const k of ["speed", "range", "reel"]) num(v, t.hook[k], `${path}.tools.hook.${k}`, { positive: true });
+      for (const k of ["stretch", "radius", "least", "retract"]) if (t.hook[k] !== undefined) num(v, t.hook[k], `${path}.tools.hook.${k}`, { positive: true });
+      if (t.breakable !== undefined) str(v, t.breakable, `${path}.tools.breakable`);
+    }
   }
   if (g.view !== undefined) {
     if (!isObj(g.view) || !Array.isArray(g.view.outline) || g.view.outline.length < 3) err(v, `${path}.view`, "must be {outline} with at least 3 points");
