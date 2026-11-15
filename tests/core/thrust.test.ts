@@ -405,7 +405,7 @@ describe("Mammoth Thrust", () => {
     expect(st(w).n).toBe(5);
   }, 60_000);
 
-  it("MTH-024 MTH-051 the level is complete when the ship is above the top with the pod on its tether: 2,000 for the pod and 100 for each kg of fuel left", () => {
+  it("MTH-024 MTH-051 MTH-110 the level is complete when the ship is above the top with the pod on its tether: 2,000 for the pod and 100 for each kg of fuel left; the ship and the pod each beam out under a star", () => {
     // A low top, so the climb is short: 30 m, with the start under it.
     const { w, step } = withPod("test", (s) => Object.assign(s.world.thrust, { top: 30, start: { x: -63, y: 25 } }));
     step(0.02, [set("left", 1), set("right", 1)]);
@@ -421,6 +421,9 @@ describe("Mammoth Thrust", () => {
     expect(fuel).toBeGreaterThan(500);
     expect(st(w).score).toBe(2000 + fuel);
     expect(w.events.filter((e) => e.type === "thrust.won")).toHaveLength(1);
+    const stars = st(w).beams.filter((b) => b.out);
+    expect(stars).toHaveLength(2);
+    expect(stars.filter((b) => b.pod)).toHaveLength(1);
     const score = st(w).score;
     step(0.2);
     expect(st(w).score).toBe(score); // won once

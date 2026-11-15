@@ -134,7 +134,8 @@ function undecided(world: World): boolean {
   // Mammoth Lander plays on through each ship's verdict: the game itself decides when it's over.
   if (world.lander) return world.lander.state.phase !== "over";
   if (world.arcade) return world.arcade.state.phase !== "over";
-  if (world.thrust) return world.thrust.state.phase === "flying" || world.thrust.state.phase === "between";
+  // Mammoth Thrust plays on through a won level's beam-out (the page stops it once the stars have played).
+  if (world.thrust) return world.thrust.state.phase !== "over";
   return world.challenge?.status.phase === "flying" || world.duel?.status.phase === "fighting";
 }
 
