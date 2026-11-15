@@ -136,7 +136,7 @@ test("MTH-021 touch: the beam button works the tractor while held, with a thrust
   await expect.poll(() => hook(page, (m) => [m.sandbox().world.controls.tractor ?? 0, m.sandbox().world.controls.left ?? 0].join())).toBe("0,0");
 });
 
-test("MTH-021 MTH-024 MTH-109 the tractor takes the pod on the tether; carried past the top, the level is complete with no Paused box flashing up first, and level 2 opens with the score and ships carried over", async ({ page }) => {
+test("MTH-021 MTH-024 MTH-109 MTH-110 the tractor takes the pod on the tether; carried past the top, the level is complete with no Paused box flashing up first, and level 2 opens with the score and ships carried over", async ({ page }) => {
   test.setTimeout(300_000);
   await start(page);
   expect(await quiet(page)).toBe(true);
@@ -169,6 +169,9 @@ test("MTH-021 MTH-024 MTH-109 the tractor takes the pod on the tether; carried p
   }
   await page.keyboard.up("ArrowUp");
   expect(await page.evaluate(() => (window as unknown as { pausedSeen?: boolean }).pausedSeen)).toBe(false);
+  // The world played on through the beam-out (half a game second) before the result (MTH-110).
+  const after = await hook(page, (m) => { const w = m.sandbox() as unknown as { world: { tick: number; events: { tick: number; type: string }[] } }; return w.world.tick - w.world.events.find((e) => e.type === "thrust.won")!.tick; });
+  expect(after).toBeGreaterThanOrEqual(100);
   await expect(page.getByTestId("mth-won")).toContainText("Level 1 complete");
   await expect(page.getByTestId("mth-won")).toContainText("+2000");
   const score = await hook(page, (m) => m.thrust()!.score);

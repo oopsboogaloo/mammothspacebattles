@@ -1,7 +1,7 @@
 // Mammoth Thrust's page: the HUD's readings, where the view looks, and how the level is drawn.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { insideOutline, LAMP_OFF, LAMP_ON, LINE_OFF, LINE_ON, RECOIL_TIME, recoilOf, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
+import { beamedOut, insideOutline, LAMP_OFF, LAMP_ON, LINE_OFF, LINE_ON, RECOIL_TIME, recoilOf, renderFrame, stripeHeight, type Ctx } from "../../src/app/render.ts";
 import { coolantStatus, wrapShift, easeLean, LEAN_TIME, LEVELS, lookAt, lookParts, POD_LABEL, shipStatus, VIEW_HEIGHT, zoomFor } from "../../src/app/thrustHud.ts";
 import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
 
@@ -203,5 +203,23 @@ describe("Mammoth Thrust's page", () => {
     const c = coolantStatus(w)!;
     expect(c.share).toBeCloseTo(0.25, 9);
     expect(c.holes).toBe(4);
+  });
+});
+
+describe("MTH-110 beaming out of a won level", () => {
+  it("the ship (not its shells) and the pod stop being drawn once their stars have grown over them, and not before", () => {
+    const w = world(1);
+    const g = w.thrust!;
+    expect(beamedOut(w)).toBeNull();
+    g.state.phase = "won";
+    g.state.beams = [{ at: w.tick, x: 0, y: 0, r: 4, out: true }];
+    expect(beamedOut(w)).toBeNull(); // the star has only just started
+    w.tick += 60;
+    w.time += 60 / 240;
+    const gone = beamedOut(w)!;
+    expect(gone(`p${g.state.n}-hull`)).toBe(true);
+    expect(gone(g.spec.pod)).toBe(true);
+    expect(gone(`p${g.state.n}-shell-3`)).toBe(false);
+    expect(gone("rock-1")).toBe(false);
   });
 });

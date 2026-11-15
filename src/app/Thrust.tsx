@@ -75,7 +75,8 @@ function useFollowCamera(): void {
       const look = lookParts(w, shown.time - w.time);
       if (look) lean = easeLean(lean, look.lean, dt);
       else lean = { x: 0, y: 0 };
-      const ship = look && { x: look.ship.x + lean.x, y: look.ship.y + lean.y };
+      // Won, the view holds where it was, on the stars, while the ship and pod beam out (MTH-110).
+      const ship = look && !(last && w.thrust.state.phase === "won") ? { x: look.ship.x + lean.x, y: look.ship.y + lean.y } : null;
       if (ship) last = ship;
       else if (w.time < 0.05) last = null; // a new level
       const raw = ship ?? last ?? w.thrust.spec.start;
@@ -175,8 +176,8 @@ function hold(channel: string, by: number): void {
   else if (was > 0 && held[channel] === 0) sendControl(channel, 0, `Key ${channel}`, group);
 }
 
-/** How long the hyperspace star plays as a ship beams out of a won level, ms on screen, before the result. */
-const BEAM_OUT_MS = 1000;
+/** The longest the result waits for the ship's and pod's stars to play out (1 s on screen at full speed), ms. */
+const BEAM_OUT_MS = 4000;
 
 const ended = (): boolean => {
   const phase = sandbox.value?.world.thrust?.state.phase;
@@ -368,11 +369,17 @@ function Play() {
       playing.value = false;
       return;
     }
-    const t = setTimeout(() => {
+    // The result once the stars have played out in game time (the game prunes them then), so a
+    // slow device, running in slow motion, sees them whole too; at most BEAM_OUT_MS whatever happens.
+    const from = performance.now();
+    const t = setInterval(() => {
+      const beams = sandbox.value?.world.thrust?.state.beams ?? [];
+      if (beams.some((b) => b.out) && performance.now() - from < BEAM_OUT_MS) return;
+      clearInterval(t);
       playing.value = false;
       setShownWon(true);
-    }, BEAM_OUT_MS);
-    return () => clearTimeout(t);
+    }, 50);
+    return () => clearInterval(t);
   }, [phase]);
 
   if (!game) return null;

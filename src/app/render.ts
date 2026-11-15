@@ -1206,6 +1206,7 @@ function drawFields(ctx: Ctx, world: World, c: Camera, vp: Viewport, fields: Rea
 
 /** Tractor beams as a faint wedge, and tethers as a line that warms from teal to red as it nears breaking (TRC). */
 function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
+  const gone = beamedOut(world);
   // A base's collector: a thin dashed line from its cup to what it is reeling in (BAS).
   for (const b of world.bodies) {
     const col = b.collector;
@@ -1225,7 +1226,7 @@ function drawTractors(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
   }
   for (const b of world.bodies) {
     const t = b.tractor;
-    if (!t || t.mode === "off") continue;
+    if (!t || t.mode === "off" || gone?.(b.id)) continue;
     const { origin, axis } = tractorFrame(b);
     const o = toScreen(c, vp, origin);
     if (t.mode === "beam") {
@@ -1380,6 +1381,23 @@ const POD_STROKE = "#7fe9ff";
 
 /** How long a beam ring shows, s of game time (as the game keeps them). */
 const BEAM_LIFE = 0.5;
+
+/** How far through its star a ship or pod beaming out of a won level stops being drawn: the star has grown over it by then. */
+const BEAM_HIDE = 0.2;
+
+/**
+ * Mammoth Thrust: what has beamed out of a won level and is no longer drawn: the ship (its shells
+ * excepted) and the pod, once their stars have grown over them (MTH-110).
+ */
+export function beamedOut(world: World): ((id: string) => boolean) | null {
+  const g = world.thrust;
+  if (!g || g.state.phase !== "won") return null;
+  const star = g.state.beams.find((b) => b.out);
+  const dt = world.tick > 0 ? world.time / world.tick : 1 / 240;
+  if (star && ((world.tick - star.at) * dt) / BEAM_LIFE < BEAM_HIDE) return null;
+  const ship = `p${g.state.n}-`;
+  return (id) => id === g.spec.pod || (id.startsWith(ship) && !id.includes("-shell-"));
+}
 
 /** Mammoth Asteroids' beam rings: a white ring growing from where something beamed in, fading as it goes. */
 function drawBeams(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
@@ -1573,6 +1591,7 @@ function drawFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: Render
   const fields = new Set(world.bodies.filter((b) => b.shield).map((b) => fieldId(b.id)));
   // An electric turret's power nodes show whether it is online: green, or red (WPN-012).
   const nodes = nodeColours(world);
+  const gone = opts.thrust ? beamedOut(world) : null;
   const drawBodies = (cam: Camera): void => {
     for (const b of world.bodies) {
       // Off the screen (its bounding circle, and a margin for what is drawn round it): not drawn.
@@ -1582,6 +1601,7 @@ function drawFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: Render
       if (opts.groundLine && isGround(b)) continue;
       if (fields.has(b.id)) continue;
       if (opts.thrust && b.fixed && b.id.startsWith("rock-")) continue; // the rock is the lines behind
+      if (gone?.(b.id)) continue;
       const selected = opts.selection.has(b.id);
       const hover = opts.hover === b.id;
       // Gold shows once it can be seen: not while hidden inside a larger fragment (AST-006).

@@ -592,6 +592,10 @@ Priority: **M** must, **S** should.
   game, to look into a bug.
 - **MTH-087** `[S]` The title has a small row of buttons to start at any level (Chloe, 15 November
   2026: kept for players, who needn't get through every level to try the later ones).
+- **MTH-110** `[S]` Won, the ship and the pod beam out together (Chloe, 15 November 2026): a
+  hyperspace star grows on each, the ship and the pod are gone under them, and the view holds still
+  on the stars. The world plays on through them (it isn't stopped the moment the level is won), and
+  the result shows once they have played out in game time, so a slow device sees them whole too.
 - **MTH-109** `[S]` Once a level is won, the pause menu and the Pause button are not shown: the
   beam-out plays, then the result, with no Paused box flashing up between them.
 - **MTH-086** `[M]` On a level with a power plant, the HUD has a coolant gauge: the share of the
