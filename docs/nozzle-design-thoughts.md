@@ -438,6 +438,59 @@ model is just right, so it is not to be touched until the redesign and rebalance
 4) come round. Then it is redesigned to the simplified engine with its handling kept as close as
 we can.
 
+### A future engine type: solid motors
+
+Recorded 15 November 2026, for later. From general knowledge, at the level that matters for the
+game; not yet checked against sources.
+
+**What it is.** Fuel and oxidiser premixed and cast as one solid block, the grain, inside the motor's
+casing. No tanks, pumps, valves or injector: the casing is the combustion chamber, with a nozzle on
+the end.
+
+**How it burns.**
+
+- Only the exposed surface burns, receding into the grain.
+- The burning rate rises with the chamber pressure, so the motor finds a balance: more burning
+  surface, more gas, higher pressure, faster burning; and the throat lets more gas out the higher
+  the pressure. It is stable while the burning rate rises less than in proportion to the pressure,
+  as motors are made to.
+- So the chamber pressure follows from the burning area ÷ the throat's area: the same idea as
+  p_c = ṁ · c\* ÷ W_t, except that ṁ isn't set by a feed but by how much surface is burning.
+
+**The grain's shape is the thrust curve.** The channel moulded down its middle sets how the burning
+area changes as it burns: a plain round bore grows, so thrust rises; a star-shaped bore can hold it
+roughly level; other shapes make it fall. Real designers use this, for example to ease off during
+the heaviest aerodynamic load.
+
+**Against liquid hydrogen and oxygen:**
+
+| Strengths | Weaknesses |
+|---|---|
+| Simple, few moving parts | Once lit it burns to the end: no throttle, no restart |
+| Storable for years, ready at once | Less efficient: roughly half the specific impulse of hydrogen–oxygen |
+| Dense, so very high thrust from a compact motor | The whole casing is at chamber pressure all the burn, so it is heavy |
+
+**How they fail.**
+
+- A crack in the grain, or the grain parting from the casing, bares more burning surface; the
+  pressure climbs past what the casing holds, and it bursts.
+- A joint or seal fails and hot gas cuts sideways into whatever is beside it (Challenger's booster
+  is the well-known case).
+- Combustion instability: acoustic coupling in the chamber, as with liquids; grains rich in
+  oxidiser are more prone to it.
+
+**In the game.**
+
+- **Most of the model carries over:** the throat sets the pressure, the casing holds it (the
+  thickness rule; the whole casing, for the whole burn), and the nozzle sets the efficiency (the same
+  1D theory).
+- **The new design input is the grain's shape:** a thrust curve the designer draws, in place of a
+  throttle. Good for boosters, missiles and one-shot manoeuvres.
+- **A natural trade-off:** solids for great, simple, unstoppable thrust; liquids for control and
+  efficiency. Real launchers pair them the same way.
+- **Damage fits the physics:** a hit that cracks the grain or the casing raises the pressure and can
+  burst the motor. Dramatic, and true to the rest of the damage model.
+
 ## 6. Where measurement comes in
 
 1. **Validation:** whether the gas follows the theory's trend across sizes and shapes (the sweep).
@@ -473,6 +526,8 @@ we can.
   nozzles becomes a real design choice, and over-expansion and separation need modelling.
 - Is sin α ÷ α right for planar nozzles? The sweep supports it (the 61° nozzle within 4%); still to
   check against a textbook.
+- Solid motors (§5): when, and how the grain's burning would be modelled (its shape as a thrust
+  curve; the burning rate's dependence on pressure); check the section against sources first.
 - Propellant: give stores a volume (the densities in §5), separate hydrogen and oxygen tanks, and
   whether to keep 300 K or go cryogenic (boil-off, insulation). How these sit with `economy`.
 - Pressure-fed tanks: how much above the chamber's pressure they are held, and so how their mass
