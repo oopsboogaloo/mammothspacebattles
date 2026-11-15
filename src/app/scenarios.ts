@@ -43,6 +43,7 @@ const ORDER: [string, string][] = [
   ["rs10-weak-engine-mount", "RS-10"],
   ["rs11-armour-ram", "RS-11"],
   ["rs16-twin-engine", "RS-16"],
+  ["eng-validation", "ENG-V"],
   ["rs00-workload", "RS-00"],
   ["reference-battle", "REF"],
   ["stress-test", "STRESS"],
