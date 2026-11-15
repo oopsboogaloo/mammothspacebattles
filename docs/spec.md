@@ -830,6 +830,21 @@ Ground made from an outline, which explosions and shells cut into, for Mammoth T
 - *Mammoth Thrust keeps craters for explosions* (Chloe, 12 November 2026): `bullet` 0 and `least` 1 m there, so slugs and the turrets' bolts leave none. With a crater for each, three turrets firing every 2 s would have used the 150 small craters allowed in a few minutes, and 351 craters put a step over budget (6.4 ms thrusting).
 - *Not done:* impacts of anything but shells (a ship or the pod crashing) leave no crater; Chloe may want that later.
 
+### 9.14 Ropes (M10)
+
+A segmented rope, for Moon Mammoth's grappling hook (`docs/games/moon-mammoth-design.md` §9). Asked for by Chloe, 15 November 2026: "a proper segmented rope… I think a segmented rope's what I want from the engine." Optional: a world has ropes only when something casts one (`world.ropes`, `src/core/rope.ts`).
+
+- **ROP-001** `[M · M10 · U]` A held rope shall keep the body holding it within the rope's length of what it has caught, measured along the rope as it lies, by taking away whatever of the holder's motion would stretch it. It shall only pull: slack, it does nothing to its holder. What it does to its holder is recorded in the ledger under `tractor`.
+- **ROP-002** `[M · M10 · U]` A rope is cast from a body along a direction at a speed, on top of the body's own velocity. Its far end flies under gravity (FLT-011, FLT-015) and catches the first body it hits, other than its holder and those it is told to pass through. The rope then lies straight from there to its holder, as long as that distance.
+- **ROP-003** `[M · M10 · U]` A rope cast further than its range without hitting anything shall come back to its holder and leave the world.
+- **ROP-004** `[M · M10 · U]` A rope is a chain of points a stretch apart. The points fall under gravity and are pushed out of the bodies they are in, so a rope hangs, drapes over things and bends round corners; bent round something, it holds its holder by its length along the bend. Pulled tight, it is straight but where something is in its way.
+- **ROP-005** `[M · M10 · U]` A held rope may be reeled in or paid out at a rate, between its least length and its range. Reeled in while tight, it draws its holder toward what it has caught. It is not reeled in further while its holder is caught on something.
+- **ROP-006** `[M · M10 · U]` A rope let go shall come back to its holder, reeled in fast from its holder's end, and leave the world when all of it is in. Its holder is free from the moment it is let go.
+- **ROP-007** `[M · M10 · U]` A rope whose holder, or what it has caught, leaves the world shall let go or leave with it.
+- **ROP-008** `[M · M10 · U]` A rope's state is part of the world: a run with a rope and its replay agree exactly (DET-001). It uses only the pinned maths (DET-003).
+
+Limits, as built: what a rope has caught is not pulled by it (it is fixed, or is treated as if it were); the rope has no mass of its own in the ledger; its points are 0.5 m apart, so it cuts a corner by up to that.
+
 ### 9.12 Shield (M10)
 
 A field round a ship that is a real surface, for Mammoth Thrust (`src/core/shield.ts`). Chloe's design, 14 November 2026, in place of the first plan (a declared cheat that reflected shells and gas and let rock through): a small, light generator on the ship; held on, a disc grows from nothing round the ship; it doesn't touch its own ship but everything else meets it, so it turns back objects, debris and gas, and the ship, rigidly joined to it, comes down on it against rock. The engines and gun don't work while it is up. It burns fuel fast, and more for every hit.

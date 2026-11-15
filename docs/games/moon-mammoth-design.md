@@ -327,3 +327,107 @@ shows.
 - Real art: replace `src/app/moon/mammoth.svg`, keeping the layout in `sheet.ts` or changing the
   table.
 - The open questions in the spec's §10.
+
+## 9. The rifle and the grappling hook (15 November 2026)
+
+Built to the spec's §11. Files: `src/core/rope.ts` (new), `src/core/moon.ts`, `scripts/moon.ts`,
+`scenarios/moon-2.json` and `moon-test-2.json`, `src/app/Moon.tsx`, `moonRender.ts`, `moonHud.ts`.
+Tests: `tests/core/rope.test.ts` (9), `tests/core/moonTools.test.ts` (22), 4 more in
+`tests/app/moon.test.ts`, 5 more in `e2e/moon-mammoth.spec.ts`. `moon.html?level=2` starts on
+level 2; `?level=test2` plays the small test moon with one gate, one pit and one cliff.
+
+### 9.1 The rope, `src/core/rope.ts` (ROP-001…ROP-008)
+
+The engine's joints are welds, solved in the WebAssembly solver; the nearest thing to a rope was
+Thrust's tether, a spring between two centres. The rope is a part of its own, stepped inside the
+world step after gravity and the tractors and before the contacts, so the contact solve sees what
+the rope did.
+
+- **State.** `world.ropes`: for each, its holder, its mode (cast, held, back), what it has caught
+  and where on it, its points and their velocities from the far end toward the holder, the length
+  of a stretch (0.5 m) and of the last one (between the last point and the holder), and its reel
+  rate. All plain data, so it hashes and replays with the world.
+- **Cast.** One point, flying under `gravityAt`, moved in sub-steps of 0.2 m and tested against the
+  bodies near it with `collideDisc`. On a hit the rope is laid straight from there to the holder.
+- **Held, each step.** The points fall. Then twelve passes: out from the far end, each point to
+  within a stretch of the one before; back from the holder, each to within a stretch of the one
+  after (the holder is heavy and the rope light, so points come to the holder); and each pushed out
+  of what it is in. Then the holder: if the line from the far end through every point to where the
+  holder would be this step is longer than the rope, the holder's velocity is cut back along the
+  rope's last stretch by the excess, and the points are set out again along that line.
+- **Reeling** changes the last stretch's length, adding or taking a point as it passes a stretch.
+- **Let go**, the far end is freed and the rope is reeled in at 120 m/s until none is left.
+
+Three things found while building it:
+
+- **A rope that held its holder by its points' own positions drained the swing.** The points have
+  weight, so a rope under load bowed, and then held its holder along the bowed last stretch, not
+  along the line to what it had caught: a pendulum lost a third of its height each swing. Now a
+  rope that is holding its holder is pulled straight in each pass (each point halfway to the middle
+  of its neighbours, then pushed back out of anything it is in), which is what tension does. A
+  pendulum now keeps its length to a millimetre and loses about 5% of its height a swing.
+- **Measuring the rope by clamping each point to a stretch from the one before** undercounted its
+  reach whenever points had bunched up, and yanked the holder. The length is now the length of the
+  line through the points, whatever their spacing.
+- **A rope a whole number of stretches long has a last stretch of no length**, and so no direction
+  to hold its holder along: the mammoth ran off the top of a cliff with 1.5 m of rope still on the
+  girder. The hold is now along the line from the last point that isn't on top of the holder.
+
+Limits: what the rope has caught is not pulled (level 2's rock and girders are fixed; a block is
+2 to 4 t); the points are 0.5 m apart, so the rope cuts a corner by up to that; a rope's own weight
+is outside the ledger, like dust's.
+
+### 9.2 The rifle
+
+- A shot is a body added by the game after the step, with the mammoth's recoil, both booked under
+  `boundary`. `passes: [mammoth]` keeps it off the mammoth. The game takes a shot out when one of
+  its contacts has carried an impulse, or after its time. What it did to what it hit was the
+  engine's `applyDamage`, earlier in the same step.
+- **The numbers come from the damage rule.** A contact's lost energy is split between its two
+  bodies (DMG-002). The mammoth is 100 kg and rolls at 32 m/s: 51 kJ, so 26 kJ to whatever it
+  rolls into. For a shot to break what the mammoth can't, it has to deliver more than that: 1 kg at
+  400 m/s is 80 kJ, 40 kJ to the block (about 37 kJ measured, as it strikes a little aslant). The
+  block's threshold is 30 kJ and its toughness 20 kJ, so each shot takes about a third. The recoil
+  that goes with that shot is 4 m/s (2 as seen). A lighter or slower shot would need a material
+  that the mammoth's own body also breaks.
+- **The roll had to lose its endless force.** It set the mammoth's speed outright each step, so a
+  roll into a 2 t block shoved it along and broke it. It now comes up to speed at 600 m/s²
+  (`roll.accel`): against a block that is 60 kN, a third of what the block's weight holds by
+  friction.
+- **One slab, not a stack.** A shot at 400 m/s moves 1.7 m a step, and the solver's speculative
+  contacts reach that far: arriving near the join between two stacked blocks its blow was shared
+  between them, and neither share passed the threshold. Each gate is one slab. This will matter
+  again when shots meet things made of several parts (enemies).
+- **Level ground under a gate.** A block on a slope crept down it at up to 0.1 m/s. The level
+  script flattens the ground for 4 m either side of a gate.
+
+### 9.3 The page
+
+- **The aim is one channel**, `aim`, an angle. The page sends it only when it has changed by a
+  hundredth of a radian. Each frame, in order: a controller's right stick if pushed; else Q or E
+  swinging; else the mouse, from where the mammoth is drawn (the view says how far under its middle
+  that is) to the pointer. The view is upright, so the screen's right and up are the mammoth's.
+- **The aim's line** (`aimPath` in `moonRender.ts`) steps a point from the mammoth under
+  `gravityAt` at the rifle's speed, and again at the hook's for the reach ring.
+- **Up is its own channel** now (↑, W, stick up): the game treats it as a jump unless the mammoth
+  is on the rope, where it reels in.
+
+### 9.4 A lap of level 2
+
+A scripted player (stop before each gate and fire until it is gone; hook each pit's girder from the
+edge, run off reeling in, let go on the way up past the middle; hook each cliff's girder from its
+foot, reel all the way up, lean over and let go) runs level 2 in 59 s as the player sees it, with
+no tries. Its legs took 7.0, 6.3, 9.1, 7.8, 6.7, 12.5 and 9.7 s against 20, 18, 26, 22, 20, 34 and
+28 s allowed. It is a test. It found one fault in the level: a girder set back over a cliff's top
+can't be hooked from the foot (the hook strikes the cliff's face first), so those girders now reach
+out past the edge.
+
+Step time with the tools in play: 0.3 to 0.4 ms on level 2 (292 bodies), against a budget of 8.3 ms.
+
+### 9.5 Still to do
+
+- Tuning after Chloe plays: `TOOLS` and `BLOCK` at the top of `scripts/moon.ts`.
+- Reeling in while swinging adds a lot of speed (it is how the scripted player crosses the pits).
+  If that feels too strong, slow the reel.
+- The mammoth has no frames for aiming, firing or hanging.
+- A phone's screen is crowded with eleven touch controls: to try on a real one.

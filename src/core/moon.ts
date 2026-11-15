@@ -12,6 +12,8 @@
 
 import { collideDisc } from "./collide.ts";
 import { add, dot, length, scale, sinCos, sub, type Vec2 } from "./math.ts";
+import { burst } from "./dust.ts";
+import { castRope, releaseRope, type Rope, type RopeSpec } from "./rope.ts";
 import { boundingRadiusOf } from "./shapes.ts";
 import type { Body, BodyInput, World } from "./world.ts";
 
@@ -29,8 +31,12 @@ export interface MoonSpec {
    * go; how long before landing a press still counts, and how long after leaving an edge, s.
    */
   jump: { speed: number; cut: number; early: number; late: number };
-  /** Rolling: a burst at `speed` for `time`, and the wait after it before the next, s. */
-  roll: { speed: number; time: number; wait: number };
+  /**
+   * Rolling: a burst at `speed` for `time`, and the wait after it before the next, s. It comes up
+   * to that speed at `accel` m/s² (default 600): hard, but not with endless force, so a roll into
+   * something heavy stops against it and doesn't shove it along.
+   */
+  roll: { speed: number; time: number; wait: number; accel?: number };
   /** Ducked: a slide slows at `brake`; under `least` m/s it is a sit; with a direction held it creeps at `crawl`. */
   slide: { brake: number; least: number; crawl: number };
   /** The steepest ground it stands on: the cosine of its angle from level (0.5 is 60°). */
@@ -45,7 +51,26 @@ export interface MoonSpec {
   rocks?: { id: string; within: number; mass: number }[];
   /** How the page draws the moon: its outline. */
   view?: { outline: Vec2[] };
+  /**
+   * The mammoth's rifle and grappling hook (MMN-100…MMN-125), both aimed the same way. Absent: it has neither.
+   * `aim`: where it points before the player has aimed, rad above the way the mammoth faces.
+   * `rifle`: each shot is a disc of `mass` kg and `radius` m leaving at `speed` m/s, one every
+   * `every` s while fire is held, gone after `life` s or when it hits something. The mammoth
+   * recoils with the shot's momentum.
+   * `hook`: the rope it casts (rope.ts), and how fast it is reeled in and paid out, m/s.
+   * `breakable`: what the rifle is for, by id prefix (for the page's drawing: the engine's damage decides what breaks).
+   */
+  tools?: {
+    aim: number;
+    rifle: { speed: number; mass: number; radius: number; every: number; life: number };
+    hook: RopeSpec & { reel: number };
+    breakable?: string;
+  };
 }
+
+/** The mammoth's rope's id, and what its shots' ids start with. */
+export const MOON_ROPE = "hook";
+export const MOON_SHOT = "shot-";
 
 export type MoonAction = "idle" | "walk" | "turn" | "jump" | "fall" | "roll" | "sit" | "slide";
 
@@ -85,6 +110,13 @@ export interface MoonState {
   /** The rocks let go since the last flag or send-back, and where each rock began. */
   loose: string[];
   rocks: Record<string, { position: Vec2; angle: number; mass: number }>;
+  /** Where its tools point, rad from its right toward its up, once the player has aimed (MMN-100). */
+  aim?: number;
+  /** The hook button as it was last step; shots fired so far (names the next); when the last was; and the shots in flight, with when each left. */
+  hookHeld?: boolean;
+  shots?: number;
+  shotAt?: number;
+  flying?: { id: string; at: number }[];
 }
 
 export interface MoonGame {
@@ -97,7 +129,33 @@ export interface MoonOps {
 }
 
 /** The channels the player's controls set. */
-export const MOON_CHANNELS = ["left", "right", "jump", "duck", "roll"] as const;
+export const MOON_CHANNELS = ["left", "right", "jump", "duck", "roll", "up", "fire", "hook"] as const;
+
+/** The mammoth's up at a point, and its right: the frame its aim is in. */
+function frameAt(spec: MoonSpec, p: Vec2): { up: Vec2; right: Vec2 } {
+  const up = upAt(spec, p);
+  return { up, right: { x: up.y, y: -up.x } };
+}
+
+/**
+ * Where the mammoth's tools point (MMN-100): the angle the player last set (the `aim` channel, rad
+ * from the mammoth's right toward its up), or before any, a little above the way it faces. As a
+ * unit vector in the world, with the angle.
+ */
+export function moonAim(world: World): { angle: number; dir: Vec2; from: Vec2 } | null {
+  const game = world.moon;
+  const tools = game?.spec.tools;
+  const m = game && mammothOf(world, game.spec);
+  if (!game || !tools || !m) return null;
+  const s = game.state;
+  const angle = s.aim ?? (s.facing > 0 ? tools.aim : Math.PI - tools.aim);
+  const q = sinCos(angle);
+  const f = frameAt(game.spec, m.position);
+  return { angle, dir: { x: f.right.x * q.c + f.up.x * q.s, y: f.right.y * q.c + f.up.y * q.s }, from: m.position };
+}
+
+/** The mammoth's rope, if it has one out. */
+export const moonRope = (world: World): Rope | undefined => (world.moon?.spec.tools ? world.ropes?.find((r) => r.id === MOON_ROPE && r.holder === world.moon!.spec.mammoth) : undefined);
 
 /** Long ago: before any time in a game (a plain number, so the state stays plain data). */
 const NEVER = -1e9;
@@ -111,6 +169,8 @@ const TOUCH = 0.03;
 const NEAR = 0.25;
 /** A knock from a join in the rock: at least this much up, m/s, and no more than this share of its speed back (and 1 m/s at least). */
 const KNOCK = { up: 0.3, back: 0.07 };
+/** How hard a roll comes up to its speed, m/s², where the level doesn't say. */
+const ROLL_ACCEL = 600;
 /** How long a turn is shown, s. */
 const TURN = 0.1;
 /** Off the ground for less than this is still shown as on it (a bump at a run), s. */
@@ -247,7 +307,17 @@ export function driveMoon(world: World, dt: number): void {
 
   // Duck (MMN-040, MMN-043): down at once, keeping its foot where it was; up only where there is room.
   const drop = spec.size.stand - spec.size.duck;
-  const wantDuck = on("duck") && !rolling;
+  // The rope (MMN-120…MMN-125): held, up reels it in and down pays it out; hanging from it, down
+  // is not a duck.
+  const tools = spec.tools;
+  const rope = moonRope(world);
+  const roped = rope?.mode === "held";
+  if (rope && roped) rope.reel = ((on("duck") ? 1 : 0) - (on("up") ? 1 : 0)) * tools!.hook.reel;
+  if (tools && s.phase !== "won") {
+    const a = world.controls.aim;
+    if (typeof a === "number" && Number.isFinite(a)) s.aim = a;
+  }
+  const wantDuck = on("duck") && !rolling && !(roped && !onGround);
   if (wantDuck && !s.ducked) {
     s.ducked = true;
     m.shape = { kind: "disc", radius: spec.size.duck };
@@ -271,7 +341,7 @@ export function driveMoon(world: World, dt: number): void {
   const vt = dot(m.velocity, t);
   let to = vt;
   if (rolling) {
-    if (onGround) to = spec.roll.speed * s.facing;
+    if (onGround) to = approach(vt, spec.roll.speed * s.facing, (spec.roll.accel ?? ROLL_ACCEL) * dt);
   } else if (onGround) {
     if (s.ducked) to = Math.abs(vt) <= spec.slide.crawl || input === 0 ? approach(vt, spec.slide.crawl * input, spec.slide.brake * dt) : approach(vt, 0, spec.slide.brake * dt);
     else to = approach(vt, spec.run.speed * input, (input !== 0 && input * vt >= 0 ? spec.run.accel : spec.run.brake) * dt);
@@ -282,8 +352,22 @@ export function driveMoon(world: World, dt: number): void {
   if (to !== vt) m.velocity = add(m.velocity, scale(t, to - vt));
 
   // Jump (MMN-020…MMN-022, MMN-032).
-  const jumpNow = on("jump");
-  if (jumpNow && !s.jumpHeld) s.jumpAsked = now;
+  // Up is a jump too, but on the rope, where it reels in.
+  const jumpNow = on("jump") || (!roped && on("up"));
+  if (jumpNow && !s.jumpHeld) {
+    s.jumpAsked = now;
+    // A jump lets go of the rope (MMN-124).
+    if (rope && roped) releaseRope(rope);
+  }
+  // The hook's button (MMN-120, MMN-124): casts the rope, or lets go of the one out.
+  if (tools) {
+    const hookNow = on("hook");
+    if (hookNow && !s.hookHeld) {
+      if (rope) releaseRope(rope);
+      else castRope(world, MOON_ROPE, m, moonAim(world)!.dir, tools.hook, [MOON_SHOT]);
+    }
+    s.hookHeld = hookNow;
+  }
   const rise = dot(m.velocity, up);
   if (s.jumping && n && rise <= 1) s.jumping = false;
   let leapt = false;
@@ -362,6 +446,14 @@ function sendBack(world: World, game: MoonGame, m: Body, why: NonNullable<MoonSt
   s.rollUntil = NEVER;
   s.rollReady = NEVER;
   s.drove = undefined;
+  // Its rope and its shots in flight go with it.
+  if (world.ropes) world.ropes = world.ropes.filter((r) => r.holder !== m.id);
+  const shots = new Set((s.flying ?? []).map((f) => f.id));
+  if (shots.size) {
+    world.bodies = world.bodies.filter((b) => !shots.has(b.id));
+    world.contacts = world.contacts.filter((c) => !shots.has(c.a) && !shots.has(c.b));
+    s.flying = [];
+  }
   resetRocks(world, s, ops);
   world.events.push({ tick: world.tick, type: "moon.back", data: { why, flag: s.flag } });
 }
@@ -377,6 +469,58 @@ function resetRocks(world: World, s: MoonState, ops: MoonOps): void {
     ops.addBody(world, { ...b, fixed: true, mass: was.mass, position: { ...was.position }, angle: was.angle, velocity: { x: 0, y: 0 }, angularVelocity: 0 } as BodyInput);
   }
   s.loose = [];
+}
+
+/**
+ * The rifle (MMN-110…MMN-114): while fire is held, a shot every so often, a real body that leaves
+ * along the aim at the rifle's speed on top of the mammoth's own, and the mammoth takes the shot's
+ * momentum the other way. What a shot does to what it hits is the engine's damage (DMG-002): the
+ * game only takes a shot out once it has hit something, or after its time. Returns whether a body
+ * came or went.
+ */
+function runRifle(world: World, game: MoonGame, m: Body, ops: MoonOps): boolean {
+  const { spec, state: s } = game;
+  const rifle = spec.tools!.rifle;
+  let changed = false;
+  // Spent: it has struck something, or flown its time.
+  const flying = s.flying ?? [];
+  const spent = new Set<string>();
+  for (const f of flying) {
+    const hit = world.contacts.some((c) => (c.a === f.id || c.b === f.id) && c.normalImpulse > 0);
+    if (hit || world.time - f.at >= rifle.life || !world.bodies.some((b) => b.id === f.id)) spent.add(f.id);
+  }
+  if (spent.size) {
+    // A puff where one struck (one that only flew its time goes without).
+    for (const b of world.bodies) if (spent.has(b.id) && world.contacts.some((c) => (c.a === b.id || c.b === b.id) && c.normalImpulse > 0)) burst(world, b);
+    world.bodies = world.bodies.filter((b) => !spent.has(b.id));
+    world.contacts = world.contacts.filter((c) => !spent.has(c.a) && !spent.has(c.b));
+    s.flying = flying.filter((f) => !spent.has(f.id));
+    changed = true;
+  }
+  if ((world.controls.fire ?? 0) > 0 && world.time - (s.shotAt ?? NEVER) >= rifle.every) {
+    const aim = moonAim(world)!;
+    const radius = m.shape.kind === "disc" ? m.shape.radius : spec.size.stand;
+    const id = `${MOON_SHOT}${(s.shots = (s.shots ?? 0) + 1)}`;
+    ops.addBody(world, {
+      id,
+      shape: { kind: "disc", radius: rifle.radius },
+      mass: rifle.mass,
+      restitution: 0,
+      friction: 0.2,
+      position: add(m.position, scale(aim.dir, radius + rifle.radius + 0.05)),
+      velocity: add(m.velocity, scale(aim.dir, rifle.speed)),
+      angle: 0,
+      angularVelocity: 0,
+      // It never strikes the mammoth that fired it.
+      passes: [m.id],
+    });
+    // Recoil: the shot's momentum, the other way.
+    m.velocity = sub(m.velocity, scale(aim.dir, (rifle.mass * rifle.speed) / m.mass));
+    s.shotAt = world.time;
+    s.flying = [...(s.flying ?? []), { id, at: world.time }];
+    changed = true;
+  }
+  return changed;
 }
 
 /**
@@ -412,6 +556,9 @@ export function runMoon(world: World, dt: number, ops: MoonOps): boolean {
     }
     s.left = spec.flags[s.flag + 1].time;
   }
+
+  // The rifle (MMN-110…MMN-114).
+  if (spec.tools && runRifle(world, game, m, ops)) changed = true;
 
   // Rocks: let go when the mammoth comes near (MMN-053).
   for (const r of spec.rocks ?? []) {

@@ -25,7 +25,7 @@ export const zoomFor = (vp: Viewport): number => Math.min(vp.height / VIEW_HEIGH
  * drawn `ahead` game seconds on, so the drawing's turn puts the mammoth straight below the screen's
  * middle; at a height that eases after the mammoth's.
  */
-export function cameraFor(world: World, ahead: number, vp: Viewport, was: MoonCam | null, dt: number): { x: number; y: number; zoom: number; cam: MoonCam } | null {
+export function cameraFor(world: World, ahead: number, vp: Viewport, was: MoonCam | null, dt: number): { x: number; y: number; zoom: number; cam: MoonCam; below: number } | null {
   const game = world.moon;
   const m = game && world.bodies.find((b) => b.id === game.spec.mammoth);
   if (!game || !m) return null;
@@ -36,7 +36,30 @@ export function cameraFor(world: World, ahead: number, vp: Viewport, was: MoonCa
   const radius = !was || Math.abs(r - was.radius) > SNAP ? r : was.radius + (r - was.radius) * (1 - Math.exp(-dt / EASE));
   const zoom = zoomFor(vp);
   const look = radius + (LOWER * vp.height) / zoom;
-  return { x: c.x + (dx / r) * look, y: c.y + (dy / r) * look, zoom, cam: { radius } };
+  // The mammoth is drawn straight under the view's middle, by how much nearer the moon's centre it is.
+  return { x: c.x + (dx / r) * look, y: c.y + (dy / r) * look, zoom, cam: { radius }, below: (look - r) * zoom };
+}
+
+/** The levels the title offers, in order. */
+export const LEVELS: readonly { n: number; name: string }[] = [
+  { n: 1, name: "moon-1" },
+  { n: 2, name: "moon-2" },
+];
+
+/**
+ * The aim a pointer gives (MMN-103): the angle from where the mammoth is drawn (under the view's
+ * middle by `below` px) to the pointer, in the mammoth's own frame: 0 to its right, a quarter turn
+ * up. The view is upright, so that is the screen's own right and up.
+ */
+export function aimFrom(pointer: { x: number; y: number }, vp: Viewport, below: number): number {
+  return Math.atan2(vp.height / 2 + below - pointer.y, pointer.x - vp.width / 2);
+}
+
+/** An aim brought to the nearest hundredth of a radian, within a turn: the aim is sent to the game only when it has changed by that. */
+export function snapAim(angle: number): number {
+  const turn = 2 * Math.PI;
+  const a = angle - turn * Math.round(angle / turn);
+  return Math.round(a * 100) / 100;
 }
 
 /** A time as the HUD shows it: 1:07.3, or 42.5 under a minute. */

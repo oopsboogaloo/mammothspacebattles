@@ -2,7 +2,7 @@
 // surface height given along its circumference, with its craters, boulders, ledges, spikes,
 // girders, falling rocks and flags; the mammoth; and the moves' numbers. The game itself is in the
 // world (src/core/moon.ts).
-//   node scripts/moon.ts            writes scenarios/moon-1.json and moon-test.json
+//   node scripts/moon.ts            writes scenarios/moon-1.json, moon-2.json, moon-test.json and moon-test-2.json
 //
 // Numbers here are the game's: the page runs it at one in two of the player's seconds, so a speed
 // the player sees is half of it here, an acceleration a quarter, and a time twice.
@@ -29,6 +29,25 @@ const MOVES = {
   slope: 0.5,
   reach: 2.5,
 };
+/**
+ * The rifle and the hook (level 2; first values). As the player sees them: a 1 kg slug at 200 m/s,
+ * eight a second, whose recoil takes 2 m/s off the mammoth; a rope cast at 75 m/s that reaches 14 m
+ * and is reeled at 4 m/s.
+ */
+const TOOLS = {
+  aim: 0.6,
+  rifle: { speed: 400, mass: 1, radius: 0.15, every: 0.125, life: 1 },
+  hook: { speed: 150, range: 14, reel: 8, stretch: 0.5, radius: 0.08, least: 1.5, retract: 120 },
+  breakable: "block-",
+};
+/**
+ * A block the rifle breaks: one slab 2 m thick, a tonne for each metre of its height, held where it
+ * stands by its weight. Its material takes no damage from less than 30 kJ in a hit, which is more
+ * than the mammoth delivers by rolling into it (half of 51 kJ); a shot delivers 40 kJ (half of its
+ * 80 kJ), so three shots break it (DMG-002). One slab, not a stack: a fast shot arriving near the
+ * join between two blocks has its blow shared between them, and neither then takes damage.
+ */
+const BLOCK = { thick: 2, mass: 1000, material: { name: "block", threshold: 30000, toughness: 20000 } };
 /** How far a running jump carries, m, and how high a jump is: what the level's checks hold it to. */
 const JUMP_LENGTH = (2 * MOVES.jump.speed * MOVES.run.speed) / GRAVITY;
 const JUMP_HEIGHT = (MOVES.jump.speed * MOVES.jump.speed) / (2 * GRAVITY);
@@ -42,7 +61,13 @@ const SPIKE = { width: 0.8, height: 0.7 };
 type Feature =
   | { kind: "crater"; at: number; width: number; depth: number; spikes?: number }
   | { kind: "boulder"; at: number; width: number; height: number }
-  | { kind: "ledge"; at: number; length: number; height: number }
+  | { kind: "ledge"; at: number; length: number; height: number; tall?: boolean }
+  /** A pit too wide to jump, spikes across its floor. */
+  | { kind: "pit"; at: number; width: number; depth: number }
+  /** A girder in the air, `above` the ground's level there (not a pit's floor): something for the hook. */
+  | { kind: "beam"; at: number; length: number; above: number }
+  /** A block the rifle breaks, `height` m high across the path, under a girder roof `roof` m long. */
+  | { kind: "gate"; at: number; height: number; roof: number }
   | { kind: "girder"; at: number; length: number; gap: number }
   | { kind: "rock"; at: number; height: number; within: number };
 
@@ -56,6 +81,8 @@ interface Level {
   features: Feature[];
   /** The flags: where, and the time for the leg that ends there, game s. */
   flags: { at: number; time: number }[];
+  /** The mammoth has its rifle and hook. */
+  tools?: boolean;
 }
 
 function build(level: Level): Json {
@@ -63,10 +90,28 @@ function build(level: Level): Json {
   const C = 2 * Math.PI * R;
   const problems: string[] = [];
 
-  /** The surface's height over the base radius at s. */
-  const height = (s: number): number => {
+  /** The ground's level at s, over the base radius: its long waves, with nothing cut in or built on. */
+  const level0 = (s: number): number => {
     let h = 0;
     for (const w of level.hills) h += w.height * Math.sin((2 * Math.PI * w.waves * s) / C + w.turn);
+    return h;
+  };
+  /**
+   * The ground's level, made flat under each gate (level for 4 m either side, easing back over the
+   * next 4 m): a block standing on a slope creeps down it.
+   */
+  const levelled = (s: number): number => {
+    let h = level0(s);
+    for (const f of level.features) {
+      if (f.kind !== "gate") continue;
+      const d = Math.abs(s - f.at);
+      if (d < 8) h += (level0(f.at) - h) * Math.min(1, (8 - d) / 4);
+    }
+    return h;
+  };
+  /** The surface's height over the base radius at s. */
+  const height = (s: number): number => {
+    let h = levelled(s);
     for (const f of level.features) {
       if (f.kind === "crater") {
         const u = (s - f.at) / (f.width / 2);
@@ -77,6 +122,8 @@ function build(level: Level): Json {
         if (d < f.width / 2) h += d <= top ? f.height : (f.height * (f.width / 2 - d)) / 0.3;
       } else if (f.kind === "ledge") {
         if (s >= f.at && s <= f.at + f.length) h += f.height;
+      } else if (f.kind === "pit") {
+        if (Math.abs(s - f.at) <= f.width / 2) h -= f.depth;
       }
     }
     return h;
@@ -100,6 +147,8 @@ function build(level: Level): Json {
     if (f.kind === "crater") for (let s = f.at - f.width / 2; s <= f.at + f.width / 2 + 1e-9; s += FINE) at.add(s);
     else if (f.kind === "boulder") [f.at - f.width / 2, f.at - f.width / 2 + 0.3, f.at + f.width / 2 - 0.3, f.at + f.width / 2].forEach((s) => at.add(s));
     else if (f.kind === "ledge") [f.at, f.at + f.length].forEach(corner);
+    else if (f.kind === "pit") [f.at - f.width / 2, f.at + f.width / 2].forEach(corner);
+    else if (f.kind === "gate") for (let k = -8; k <= 8; k += 2) at.add(f.at + k);
   }
   // The even samples, but none within a metre of a corner (short pieces of rock are more joins to cross).
   const corners = [...at];
@@ -124,8 +173,31 @@ function build(level: Level): Json {
         const vertices = [point(s - SPIKE.width / 2, -0.05), point(s + SPIKE.width / 2, -0.05), point(s, SPIKE.height)].map(round);
         bodies.push(fixed(`spike-${i}-${k}`, { kind: "polygon", vertices }, { x: 0, y: 0 }));
       }
+    } else if (f.kind === "pit") {
+      if (f.width < JUMP_LENGTH + 2) problems.push(`pit at ${f.at}: ${f.width} m could be jumped (a running jump clears ${JUMP_LENGTH.toFixed(1)} m)`);
+      const n = Math.floor((f.width - 2.4) / SPIKE.width);
+      for (let k = 0; k < n; k++) {
+        const s = f.at + (k - (n - 1) / 2) * SPIKE.width;
+        const vertices = [point(s - SPIKE.width / 2, -0.05), point(s + SPIKE.width / 2, -0.05), point(s, SPIKE.height)].map(round);
+        bodies.push(fixed(`spike-${i}-${k}`, { kind: "polygon", vertices }, { x: 0, y: 0 }));
+      }
+    } else if (f.kind === "beam") {
+      const u = up(f.at);
+      const r = R + level0(f.at) + f.above;
+      bodies.push(fixed(`girder-${i}`, { kind: "box", width: f.length, height: 0.5 }, { x: r * u.x, y: r * u.y }, -f.at / R));
+    } else if (f.kind === "gate") {
+      // The block stands on the ground, square to it; the roof just over it.
+      const a = point(f.at - 1);
+      const b = point(f.at + 1);
+      const lie = Math.atan2(b.y - a.y, b.x - a.x);
+      const u = up(f.at);
+      const foot = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const high = f.height / 2 + 0.01;
+      bodies.push({ id: `block-${i}`, mass: BLOCK.mass * f.height, restitution: 0, friction: 0.9, position: round({ x: foot.x + u.x * high, y: foot.y + u.y * high }), velocity: { x: 0, y: 0 }, angle: lie, angularVelocity: 0, shape: { kind: "box", width: BLOCK.thick, height: f.height }, material: BLOCK.material });
+      const top = f.height + 0.4;
+      bodies.push(fixed(`girder-${i}`, { kind: "box", width: f.roof, height: 0.5 }, { x: foot.x + u.x * top, y: foot.y + u.y * top }, lie));
     } else if (f.kind === "ledge") {
-      if (f.height + 0.3 > JUMP_HEIGHT) problems.push(`ledge at ${f.at}: ${f.height} m is more than a jump reaches (${JUMP_HEIGHT.toFixed(1)} m)`);
+      if (!f.tall && f.height + 0.3 > JUMP_HEIGHT) problems.push(`ledge at ${f.at}: ${f.height} m is more than a jump reaches (${JUMP_HEIGHT.toFixed(1)} m)`);
     } else if (f.kind === "boulder") {
       if (f.height + 0.3 > JUMP_HEIGHT) problems.push(`boulder at ${f.at}: ${f.height} m is more than a jump reaches`);
     } else if (f.kind === "girder") {
@@ -160,7 +232,7 @@ function build(level: Level): Json {
       // The open space is a square well outside the moon; the moon is an island of rock in it (TER-007).
       terrain: { outline: [{ x: -far, y: far }, { x: far, y: far }, { x: far, y: -far }, { x: -far, y: -far }], islands: [outline], restitution: 0 },
       bodies,
-      moon: { mammoth: "mammoth", centre: { x: 0, y: 0 }, ...MOVES, flags, spikes: "spike-", ...(rocks.length ? { rocks } : {}), view: { outline } },
+      moon: { mammoth: "mammoth", centre: { x: 0, y: 0 }, ...MOVES, flags, spikes: "spike-", ...(rocks.length ? { rocks } : {}), view: { outline }, ...(level.tools ? { tools: TOOLS } : {}) },
     },
     timeline: [],
     end: { steps: 240 },
@@ -237,7 +309,74 @@ const LEVEL_1: Level = {
   ],
 };
 
-for (const level of [TEST, LEVEL_1]) {
+/** The second test moon: small and smooth, with a gate, a pit under a beam and a cliff under a beam, and the tools (tests/core/moonTools.test.ts). */
+const TEST_2: Level = {
+  name: "moon-test-2",
+  title: "Moon Mammoth: test moon 2",
+  description: "A small smooth moon with a gate of blocks to shoot, a pit to swing across and a cliff to climb, for the tests of the mammoth's rifle and hook.",
+  radius: 40,
+  hills: [],
+  tools: true,
+  features: [
+    { kind: "gate", at: 20, height: 4, roof: 8 },
+    { kind: "pit", at: 60, width: 14, depth: 9 },
+    { kind: "beam", at: 60, length: 4, above: 8 },
+    { kind: "ledge", at: 100, length: 30, height: 7, tall: true },
+    { kind: "beam", at: 102, length: 4, above: 11.5 },
+  ],
+  flags: [
+    { at: 0, time: 0 },
+    { at: 40, time: 30 },
+    { at: 85, time: 30 },
+    { at: 120, time: 30 },
+  ],
+};
+
+/**
+ * Level 2: the rifle and the hook. Gates of blocks to shoot through, pits to swing across from a
+ * girder overhead, and cliffs to climb on the rope: each on its own first, then closer together.
+ * The girder over a cliff reaches out past its edge, so the hook has a clear line to it from the
+ * cliff's foot: aimed at one set back over the top, the hook strikes the cliff's face first.
+ */
+const LEVEL_2: Level = {
+  name: "moon-2",
+  title: "Moon Mammoth: level 2",
+  description: "A lap with the rifle and the grappling hook: shoot through the gates of blocks, swing across the pits from the girders overhead, and climb the cliffs on the rope.",
+  radius: 80,
+  hills: [
+    { waves: 2, height: 0.8, turn: 1.3 },
+    { waves: 5, height: 0.4, turn: 0.2 },
+  ],
+  tools: true,
+  features: [
+    { kind: "gate", at: 30, height: 4, roof: 10 },
+    { kind: "pit", at: 85, width: 14, depth: 9 },
+    { kind: "beam", at: 85, length: 4, above: 8 },
+    { kind: "ledge", at: 140, length: 40, height: 7, tall: true },
+    { kind: "beam", at: 141, length: 8, above: 11.5 },
+    { kind: "gate", at: 205, height: 4, roof: 10 },
+    { kind: "pit", at: 255, width: 18, depth: 9 },
+    { kind: "beam", at: 255, length: 8, above: 8 },
+    { kind: "ledge", at: 310, length: 34, height: 8.5, tall: true },
+    { kind: "beam", at: 311, length: 8, above: 12.4 },
+    { kind: "gate", at: 328, height: 4, roof: 8 },
+    { kind: "pit", at: 378, width: 14, depth: 9 },
+    { kind: "beam", at: 378, length: 4, above: 8 },
+    { kind: "gate", at: 408, height: 4, roof: 8 },
+  ],
+  flags: [
+    { at: 0, time: 0 },
+    { at: 55, time: 10 },
+    { at: 115, time: 9 },
+    { at: 165, time: 13 },
+    { at: 225, time: 11 },
+    { at: 290, time: 10 },
+    { at: 358, time: 17 },
+    { at: 440, time: 14 },
+  ],
+};
+
+for (const level of [TEST, LEVEL_1, TEST_2, LEVEL_2]) {
   const file = join(root, "scenarios", `${level.name}.json`);
   writeFileSync(file, `${JSON.stringify(build(level))}\n`);
   console.log(`wrote ${file}`);

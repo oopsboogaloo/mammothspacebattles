@@ -2,14 +2,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { COLUMNS, FRAME, frameOf, ROWS, SHEET, STAND_PX } from "../../src/app/moon/sheet.ts";
-import { bestTime, cameraFor, clock, LOWER, saveBest, zoomFor } from "../../src/app/moonHud.ts";
-import { moonTurn, moonView } from "../../src/app/moonRender.ts";
+import { aimFrom, bestTime, cameraFor, clock, LEVELS, LOWER, saveBest, snapAim, zoomFor } from "../../src/app/moonHud.ts";
+import { aimPath, moonTurn, moonView } from "../../src/app/moonRender.ts";
 import { renderFrame, type Ctx } from "../../src/app/render.ts";
 import { RockStubs } from "../../src/app/rockStubs.ts";
 import { unpackMoon } from "../../src/app/simClient.ts";
-import { initialWorld, parseScenario, type MoonAction, type World } from "../../src/core/index.ts";
+import { applyCommands, getProfile, initialWorld, parseScenario, type MoonAction, type World } from "../../src/core/index.ts";
 
-const world = (): World => initialWorld(parseScenario(JSON.parse(readFileSync(new URL("../../scenarios/moon-test.json", import.meta.url), "utf8"))));
+const world = (name = "moon-test"): World => initialWorld(parseScenario(JSON.parse(readFileSync(new URL(`../../scenarios/${name}.json`, import.meta.url), "utf8"))));
 const mam = (w: World) => w.bodies.find((b) => b.id === "mammoth")!;
 const R = 40;
 const place = (w: World, s: number, above = 1) => (mam(w).position = { x: (R + above) * Math.sin(s / R), y: (R + above) * Math.cos(s / R) });
@@ -94,6 +94,59 @@ describe("Moon Mammoth's view", () => {
     const ctx = new Proxy({} as Record<string, unknown>, { get: (t, k: string) => (k in t ? t[k] : () => void calls.push(k)), set: (t, k: string, v) => ((t[k] = v), true) }) as unknown as Ctx;
     renderFrame(ctx, world(), { x: 0, y: 40, zoom: 20 }, vp, { overlays: new Set(), selection: new Set(), hover: null, moon: true });
     expect(calls.length).toBeGreaterThan(0);
+  });
+});
+
+describe("Moon Mammoth's aim", () => {
+  const vp = { width: 1280, height: 720 };
+
+  it("MMN-103 a pointer aims from where the mammoth is drawn: to its right is 0, straight over it a quarter turn, to its left a half", () => {
+    const below = 40;
+    const at = { x: 640, y: 400 };
+    expect(aimFrom({ x: at.x + 100, y: at.y }, vp, below)).toBeCloseTo(0, 9);
+    expect(aimFrom({ x: at.x, y: at.y - 100 }, vp, below)).toBeCloseTo(Math.PI / 2, 9);
+    expect(Math.abs(aimFrom({ x: at.x - 100, y: at.y }, vp, below))).toBeCloseTo(Math.PI, 9);
+    expect(aimFrom({ x: at.x + 100, y: at.y + 100 }, vp, below)).toBeCloseTo(-Math.PI / 4, 9);
+    // And the view says how far under its middle the mammoth is drawn.
+    const w = world("moon-test-2");
+    const c = cameraFor(w, 0, vp, null, 0.016)!;
+    expect(c.below).toBeCloseTo(LOWER * vp.height, 6);
+  });
+
+  it("MMN-103 the aim is sent only when it has changed by a hundredth of a radian, and is kept within a turn", () => {
+    expect(snapAim(0.123)).toBe(0.12);
+    expect(snapAim(0.124)).toBe(snapAim(0.121));
+    expect(snapAim(2 * Math.PI + 0.5)).toBe(0.5);
+    expect(snapAim(-Math.PI - 0.1)).toBeCloseTo(Math.PI - 0.1, 2);
+  });
+
+  it("MMN-102 the aim's line is the path a shot would take: it starts along the aim, and bends toward the moon", () => {
+    const w = world("moon-test-2");
+    applyCommands(w, [{ type: "control.set", channel: "aim", value: 0 }], getProfile("sandbox"));
+    w.moon!.state.aim = 0;
+    const tools = w.moon!.spec.tools!;
+    const dots = aimPath(w, tools.rifle.speed, 26, 1.3);
+    expect(dots.length).toBe(20);
+    const m = w.bodies.find((b) => b.id === "mammoth")!.position;
+    // Aimed level to the right from the top of the moon: +x, and a little lower with each dot than a straight line would be.
+    expect(dots[0].x - m.x).toBeGreaterThanOrEqual(1.3);
+    expect(dots[0].x - m.x).toBeLessThan(1.5);
+    expect(Math.abs(dots[0].y - m.y)).toBeLessThan(0.01);
+    const drop = (k: number) => m.y - dots[k].y;
+    expect(drop(19)).toBeGreaterThan(drop(9));
+    expect(drop(9)).toBeGreaterThan(drop(1));
+    // 26 m at 400 m/s under about 100 m/s²: a fifth of a metre. Slight.
+    expect(drop(19)).toBeGreaterThan(0.1);
+    expect(drop(19)).toBeLessThan(0.5);
+    // The slower hook's path bends more over the same distance.
+    const hook = aimPath(w, tools.hook.speed, 13, 13);
+    expect(m.y - hook[0].y).toBeGreaterThan(drop(9));
+    // No tools, no line.
+    expect(aimPath(world(), 400, 26, 1.3)).toEqual([]);
+  });
+
+  it("the title offers levels 1 and 2", () => {
+    expect(LEVELS.map((l) => l.name)).toEqual(["moon-1", "moon-2"]);
   });
 });
 
