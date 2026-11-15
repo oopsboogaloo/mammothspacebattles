@@ -476,13 +476,13 @@ test("MTH-106 level 7, the station, opens from the title's test row, turns, and 
   expect(errors).toEqual([]);
 });
 
-test("MTH-107 level 8, the airbase, opens with five gunships parked and three buildings", async ({ page }) => {
+test("MTH-107 level 8, the airbase, opens with three gunships parked and three buildings", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.goto("./thrust.html");
   await page.getByTestId("mth-level-8").click();
   await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 8");
-  expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => /^g\d-hull$/.test(b.id)).length)).toBe(5);
+  expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => /^g\d-hull$/.test(b.id)).length)).toBe(3);
   expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => /^bldg-\d-base$/.test(b.id)).length)).toBe(3);
   await expect.poll(() => hook(page, (m) => m.sandbox().world.time), { timeout: 30_000 }).toBeGreaterThan(1);
   expect(errors).toEqual([]);

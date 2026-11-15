@@ -1297,22 +1297,25 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(st(w).pod).toBe("stand");
     expect(w.ledger.violations).toBe(0);
   }, 60_000);
-  it("MTH-107 level 8's gunships stay parked, pilots asleep, until the ship comes within 80 m; then the nearest lifts off and hunts, and another every 7.5 game s; one put out on the ground scores 1,000 and never lifts off", () => {
+  it("MTH-107 level 8's three gunships stay parked, pilots asleep, until the ship comes within 80 m; then the nearest lifts off and hunts, and the next once it is out of the fight and 7.5 game s have passed (one in the air at a time); one put out on the ground scores 1,000 and never lifts off", () => {
     const { w, step } = game(8);
     for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    const N = [1, 2, 3];
+    expect(N.every((n) => body(w, `g${n}-hull`))).toBe(true);
+    expect(body(w, "g4-hull")).toBeUndefined();
     const launches = () => w.events.filter((e) => e.type === "thrust.gunship").map((e) => e.data.n);
     const hullOf = (n: number) => body(w, `g${n}-hull`)!;
-    const parked0 = [1, 2, 3, 4, 5].map((n) => ({ ...hullOf(n).position }));
+    const parked0 = N.map((n) => ({ ...hullOf(n).position }));
     // Held off: the ship kept 150 m from the nearest gunship, at rest.
     moveShip(w, { x: -110, y: 60 });
     w.gravity = { x: 0, y: 0 };
     step(4);
     expect(launches()).toEqual([]);
-    [1, 2, 3, 4, 5].forEach((n, k) => expect(Math.hypot(hullOf(n).position.x - parked0[k].x, hullOf(n).position.y - parked0[k].y)).toBeLessThan(0.1));
-    expect([1, 2, 3, 4, 5].every((n) => hullOf(n).pilot?.mode === "manual")).toBe(true);
+    N.forEach((n, k) => expect(Math.hypot(hullOf(n).position.x - parked0[k].x, hullOf(n).position.y - parked0[k].y)).toBeLessThan(0.1));
+    expect(N.every((n) => hullOf(n).pilot?.mode === "manual")).toBe(true);
     // One put out on the ground (its hull destroyed): it scores, and never lifts off.
     const score = st(w).score;
-    const nearestTo = (p: { x: number; y: number }) => [1, 2, 3, 4, 5].filter((n) => body(w, `g${n}-hull`)).sort((a, b) => Math.hypot(hullOf(a).position.x - p.x, hullOf(a).position.y - p.y) - Math.hypot(hullOf(b).position.x - p.x, hullOf(b).position.y - p.y))[0];
+    const nearestTo = (p: { x: number; y: number }) => N.filter((n) => body(w, `g${n}-hull`) && !st(w).gunships!.find((g) => g.n === n)!.out).sort((a, b) => Math.hypot(hullOf(a).position.x - p.x, hullOf(a).position.y - p.y) - Math.hypot(hullOf(b).position.x - p.x, hullOf(b).position.y - p.y))[0];
     const near = { x: -60, y: 30 };
     const first = nearestTo(near);
     hullOf(first).integrity = 0;
@@ -1325,11 +1328,29 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     const second = nearestTo(near);
     expect(launches()).toEqual([second]);
     expect(hullOf(second).pilot?.mode).toBe("hunting");
-    step(7.3);
+    // Past 7.5 s, but it is still flying: no other lifts off.
+    step(8);
     expect(launches()).toHaveLength(1);
+    // Put out of the fight: the last lifts off.
+    hullOf(second).integrity = 0;
     step(0.2);
     expect(launches()).toHaveLength(2);
     expect(launches()).not.toContain(first);
+  }, 60_000);
+
+  it("MTH-107 a parked gunship that lost a part (its breech) but can still fly lifts off without its controls to that part", () => {
+    const { w, step } = game(8);
+    for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    body(w, "g1-breech")!.integrity = 0;
+    step(0.1);
+    expect(body(w, "g1-breech")).toBeUndefined();
+    expect(st(w).gunships!.find((g) => g.n === 1)!.out).toBe(false);
+    const g1 = body(w, "g1-hull")!.position;
+    moveShip(w, { x: g1.x - 20, y: g1.y + 25 });
+    expect(() => step(0.2)).not.toThrow();
+    expect(w.events.filter((e) => e.type === "thrust.gunship").map((e) => e.data.n)).toEqual([1]);
+    expect(w.links.some((l) => l.kind === "control" && l.to === "g1-breech")).toBe(false);
+    expect(w.links.some((l) => l.kind === "control" && l.to.startsWith("g1-"))).toBe(true);
   }, 60_000);
 
   it("MTH-108 level 8's buildings stand on their own, and a slug breaks a piece of one", () => {

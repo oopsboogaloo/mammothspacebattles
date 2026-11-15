@@ -1159,10 +1159,10 @@ write({
 }
 
 // Level 8, the airbase (Chloe's drawing, 14 November 2026, traced at 0.15 m a pixel): ground with a
-// radar dish, a control tower and a block (destructible scenery), five gunships parked on either
-// side of a shaft down into a cavern, and a power plant on the cavern's floor at the right. The
+// radar dish, a control tower and a block (destructible scenery), three gunships parked on either
+// side of a shaft down into a cavern (five drawn; three kept, Chloe, 15 November 2026), and a power plant on the cavern's floor at the right. The
 // first gunship lifts off when the ship comes within 80 m of one, and another every 15 s on screen
-// while any can still fly. The plant's lines feed the right-hand rock and the cavern's pillar; the
+// while any can still fly, one in the air at a time. The plant's lines feed the right-hand rock and the cavern's pillar; the
 // left-hand rock across the shaft by either of two transmitters. Fourteen electric turrets, five
 // fuel tanks; the pod stands on the cavern's floor at the left.
 {
@@ -1190,7 +1190,7 @@ write({
   write({
     n: 8,
     title: "The airbase",
-    description: "An airbase over a cavern, five gunships parked by the shaft: the first lifts off when you come near, another every 15 seconds. Fly down the shaft, take the pod on the tether, and carry it up past the top.",
+    description: "An airbase over a cavern, three gunships parked by the shaft: the first lifts off when you come near, the next once it is down. Fly down the shaft, take the pod on the tether, and carry it up past the top.",
     colour: "#1fd81f",
     top: 82,
     ground,
@@ -1220,14 +1220,12 @@ write({
       { at: P(-88.39, -120.87), angle: -0.0 },
       { at: P(-77.4, -120.87), angle: -0.0 },
     ],
-    // The gunships, parked; the first lifts off within 80 m, another every 7.5 game s (15 s on screen).
+    // The gunships, parked; the first lifts off within 80 m, another every 7.5 game s (15 s on screen), one at a time.
     gunships: {
       parked: [
         { at: P(54.68, 2.17), angle: -0.0 },
-        { at: P(38.1, 0.98), angle: -0.0 },
         { at: P(-0.45, -0.68), angle: -0.0 },
         { at: P(-29.1, -1.27), angle: -0.0 },
-        { at: P(-15.0, -0.98), angle: -0.0 },
       ],
       wake: 80,
       every: 7.5,

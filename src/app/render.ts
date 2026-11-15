@@ -1475,6 +1475,19 @@ function nodeColours(world: World): Map<string, boolean> {
  * as seen from where the camera is outside the frame. The world is drawn into a square view as wide
  * as the screen's diagonal, so no corner is left out whatever the turn.
  */
+/** How far off the screen a body may reach and still be drawn, px: its marks, labels and glow. */
+const CULL_MARGIN = 60;
+const radii = new WeakMap<object, number>();
+/** A shape's bounding radius about its centre, m (kept for each shape object). */
+function shapeRadius(shape: Body["shape"]): number {
+  let r = radii.get(shape);
+  if (r === undefined) {
+    r = shape.kind === "disc" ? shape.radius : Math.max(0, ...localVertices(shape).map((v) => Math.hypot(v.x, v.y)));
+    radii.set(shape, r);
+  }
+  return r;
+}
+
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   const f = world.frame;
   if (!f || !f.omega || !opts.thrust || !canPlume(ctx)) return drawFrame(ctx, world, c, vp, opts);
@@ -1562,6 +1575,10 @@ function drawFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: Render
   const nodes = nodeColours(world);
   const drawBodies = (cam: Camera): void => {
     for (const b of world.bodies) {
+      // Off the screen (its bounding circle, and a margin for what is drawn round it): not drawn.
+      const at0 = toScreen(cam, vp, b.position);
+      const r0 = shapeRadius(b.shape) * cam.zoom + CULL_MARGIN;
+      if (at0.x < -r0 || at0.y < -r0 || at0.x > vp.width + r0 || at0.y > vp.height + r0) continue;
       if (opts.groundLine && isGround(b)) continue;
       if (fields.has(b.id)) continue;
       if (opts.thrust && b.fixed && b.id.startsWith("rock-")) continue; // the rock is the lines behind
