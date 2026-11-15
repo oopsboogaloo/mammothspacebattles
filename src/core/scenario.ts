@@ -16,7 +16,7 @@ import type { ThrustSpec } from "./thrust.ts";
 import { PROFILES, getProfile, type Profile } from "./profile.ts";
 import type { ShipTemplate } from "./spawn.ts";
 import { polygonProblem } from "./shapes.ts";
-import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type GasFill, type JointInput, type LinkInput, type Vec2, type World } from "./world.ts";
+import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type Frame, type GasFill, type JointInput, type LinkInput, type Vec2, type World } from "./world.ts";
 
 export const SCENARIO_SCHEMA = 1;
 
@@ -70,7 +70,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[] };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -1035,6 +1035,19 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
     if (data.world.lander !== undefined) validateLander(v, data.world.lander, data.world.bodies, "$.world.lander");
     if (data.world.arcade !== undefined) validateArcade(v, data.world.arcade, data.world.bounds, "$.world.arcade");
     if (data.world.terrain !== undefined) validateTerrain(v, data.world.terrain, "$.world.terrain");
+    if (data.world.frame !== undefined) {
+      const f = data.world.frame as { centre?: unknown; omega?: unknown };
+      if (!isObj(f)) err(v, "$.world.frame", "must be an object {centre, omega}");
+      else {
+        const c = f.centre as { x?: unknown; y?: unknown } | undefined;
+        if (!isObj(c)) err(v, "$.world.frame.centre", "must be a point {x, y}");
+        else {
+          num(v, c.x, "$.world.frame.centre.x", {});
+          num(v, c.y, "$.world.frame.centre.y", {});
+        }
+        num(v, f.omega, "$.world.frame.omega", {});
+      }
+    }
     if (data.world.thrust !== undefined) validateThrust(v, data.world.thrust, data.world.bodies, "$.world.thrust");
   }
 
@@ -1159,7 +1172,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, terrain: scn.world.terrain },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, terrain: scn.world.terrain, frame: scn.world.frame },
     getProfile(scn.profile),
   );
 }
