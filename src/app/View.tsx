@@ -324,6 +324,7 @@ export function View() {
         groundLine: !!sb.world.lander,
         stars: sb.world.arcade ? "still" : !!sb.world.lander,
         arcade: !!sb.world.arcade,
+        moon: !!sb.world.moon,
         thrust: sb.world.thrust?.spec.view && { ...sb.world.thrust.spec.view, craters: sb.world.terrain?.holes },
         // In a challenge the parts' ids are clutter: the pad is marked instead.
         labels: !sb.world.challenge && sb.scenario.ui?.labels !== false,

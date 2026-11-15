@@ -92,7 +92,6 @@ function build(level: Level): Json {
 
   // Where the surface is sampled: evenly, and on each side of every corner.
   const at = new Set<number>();
-  for (let s = 0; s < C - STEP / 2; s += STEP) at.add(s);
   const corner = (s: number) => {
     at.add(s - 0.001);
     at.add(s + 0.001);
@@ -102,13 +101,10 @@ function build(level: Level): Json {
     else if (f.kind === "boulder") [f.at - f.width / 2, f.at - f.width / 2 + 0.3, f.at + f.width / 2 - 0.3, f.at + f.width / 2].forEach((s) => at.add(s));
     else if (f.kind === "ledge") [f.at, f.at + f.length].forEach(corner);
   }
-  const samples = [...at].filter((s) => s >= 0 && s < C).sort((a, b) => a - b);
-  // Not two within half a metre of each other, but at a ledge's corner (its face is 2 mm wide).
-  const kept: number[] = [];
-  for (const s of samples) {
-    const d = kept.length ? s - kept[kept.length - 1] : Infinity;
-    if (d > 0.5 || (d > 0.0005 && d < 0.01)) kept.push(s);
-  }
+  // The even samples, but none within a metre of a corner (short pieces of rock are more joins to cross).
+  const corners = [...at];
+  for (let s = 0; s < C - STEP / 2; s += STEP) if (!corners.some((k) => Math.abs(k - s) < 1)) at.add(s);
+  const kept = [...at].filter((s) => s >= 0 && s < C).sort((a, b) => a - b);
   // The island's outline runs counter-clockwise (its rock on its left): the samples run clockwise.
   let outline = kept.map((s) => round(point(s)));
   if (polygonArea(outline) < 0) outline = outline.reverse();
@@ -213,21 +209,21 @@ const LEVEL_1: Level = {
   features: [
     { kind: "boulder", at: 35, width: 2, height: 1.2 },
     { kind: "boulder", at: 50, width: 2.4, height: 1.6 },
-    { kind: "crater", at: 95, width: 16, depth: 3.5, spikes: 4 },
+    { kind: "crater", at: 95, width: 11, depth: 2.2, spikes: 2.4 },
     { kind: "ledge", at: 120, length: 14, height: 2.5 },
     { kind: "girder", at: 170, length: 5, gap: 1.5 },
     { kind: "girder", at: 186, length: 5, gap: 1.5 },
-    { kind: "crater", at: 205, width: 14, depth: 3, spikes: 4.8 },
+    { kind: "crater", at: 205, width: 11, depth: 2.2, spikes: 2.4 },
     { kind: "rock", at: 250, height: 11, within: 14.5 },
     { kind: "boulder", at: 264, width: 2, height: 1.5 },
     { kind: "rock", at: 282, height: 11, within: 14.5 },
     { kind: "ledge", at: 315, length: 10, height: 2.5 },
-    { kind: "crater", at: 340, width: 14, depth: 3, spikes: 4.8 },
+    { kind: "crater", at: 340, width: 11, depth: 2.2, spikes: 3.2 },
     { kind: "girder", at: 380, length: 5, gap: 1.5 },
     { kind: "boulder", at: 392, width: 2, height: 1.5 },
     { kind: "girder", at: 403, length: 5, gap: 1.5 },
     { kind: "rock", at: 422, height: 11, within: 14.5 },
-    { kind: "crater", at: 442, width: 16, depth: 3.5, spikes: 5.6 },
+    { kind: "crater", at: 442, width: 11, depth: 2.2, spikes: 3.2 },
     { kind: "ledge", at: 462, length: 8, height: 3 },
   ],
   flags: [

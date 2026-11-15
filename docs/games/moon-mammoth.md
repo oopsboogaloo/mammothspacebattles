@@ -6,8 +6,9 @@ the clock. The moon turns under you as you run, so the mammoth stays upright in 
 screen.
 
 Status: written 15 November 2026 from Chloe's spoken brief and her answers the same day (§9).
-**Nothing is built.** Design and plan: `moon-mammoth-design.md`. The requirement IDs (MMN-…) are
-this game's own.
+**Built the same day**, all five steps of the plan but the tuning after play: the movement in the
+engine, the page (`moon.html`), level 1, and the falling rocks. What the build found and changed is
+in `moon-mammoth-design.md` §8. The requirement IDs (MMN-…) are this game's own.
 
 **What this version is for.** Chloe, 15 November 2026: "This isn't a serious game… I mainly want
 to get the engine and the build for mammoth movement in here." So the mammoth's movement (run,
@@ -70,22 +71,27 @@ Sizes, speeds and times here are what the player sees. All are first values, to 
 - **Jump:** about 3.5 m high with the button held, about 1.5 m with a tap. At a run it clears about
   9 m. It steers in the air, less sharply than on the ground. A jump pressed just before landing,
   or just after running off an edge, still counts.
-- **Roll:** on the ground, the mammoth curls up and rolls the way it faces at 16 m/s for half a
-  second, then comes out of it running. It can't be steered or stopped during the roll, and can't
+- **Roll:** on the ground, the mammoth curls up and rolls the way it faces at 16 m/s for 0.6 s,
+  then comes out of it running. It can't be steered or stopped during the roll, and can't
   roll again for a second after. A jump during a roll carries the roll's speed, so a rolling jump
   goes further.
 - **Duck:** held while still, the mammoth sits. Held while moving, it slides: it keeps its speed at
   first and slows steadily, and is low enough to pass under a girder. It stays down until there is
-  room to stand, even if the button is let go.
+  room to stand, even if the button is let go. Ducked with a direction held, it creeps (2.5 m/s),
+  so a slide that stops under a girder isn't stuck there.
 - It slides on the rock rather than rolling like a ball: its legs and its roll are what move it.
 - Nothing hurts it but the hazards below. It can fall any distance.
 
 ### Hazards
 
 - **Spikes** at the bottom of some craters. Touching them sends the mammoth back to the last flag.
-- **Falling rocks.** A boulder sits on a ledge or girder above the path. It starts to fall when the
-  mammoth comes near. Hit by it while it is falling, the mammoth goes back to the last flag. Once
-  the rock has come to rest it is only an obstacle. When the mammoth is sent back, the leg's rocks
+  At a run the mammoth flies off a crater's rim and comes down in its middle, so the spikes are
+  jumped from the rim: level 1's craters are 11 m across with 2.4 or 3.2 m of spikes, and a running
+  jump clears about 9.5 m.
+- **Falling rocks.** A boulder hangs 11 m over the path. It starts to fall when the mammoth comes
+  within 14.5 m of it. Hit by it while it is falling, the mammoth goes back to the last flag. At a
+  run it lands on the mammoth; a roll gets out from under it, and so does stopping short. Once the
+  rock has come to rest it stays where it lies, an obstacle to jump. When the mammoth is sent back, the leg's rocks
   are back where they began.
 - No enemies.
 
@@ -145,13 +151,13 @@ Sizes, speeds and times here are what the player sees. All are first values, to 
 | MMN-031 | It can't roll again until the wait after a roll has passed. |
 | MMN-032 | A jump during a roll keeps the roll's speed along the ground. |
 | MMN-040 | Duck: the disc is its ducked size while ducked. Still, the mammoth sits and doesn't move. |
-| MMN-041 | Slide: ducked while moving, it keeps moving and slows at the slide's rate. |
+| MMN-041 | Slide: ducked while moving, it keeps moving and slows at the slide's rate. Ducked with a direction held, it creeps. |
 | MMN-042 | It passes under a gap lower than its standing height and higher than its ducked height only ducked. |
 | MMN-043 | It doesn't stand up where there isn't room, whatever the button. |
 | MMN-050 | Flags are reached in order. Reaching the next sets the timer to the next leg's time. |
 | MMN-051 | The timer at zero puts the mammoth back at the last flag reached, at rest, with the leg's full time. |
 | MMN-052 | Touching spikes does the same. |
-| MMN-053 | A rock starts to fall when the mammoth first comes within its distance. Touching it while it falls sends the mammoth back. At rest it is an obstacle. |
+| MMN-053 | A rock starts to fall when the mammoth first comes within its distance. Touching it while it falls sends the mammoth back. Come to rest, it is fixed where it lies: an obstacle. |
 | MMN-054 | When the mammoth is sent back, the leg's rocks are put back. |
 | MMN-055 | The last flag ends the run: its whole time and tries are shown, and the best time is kept on the device. |
 | MMN-056 | The clock starts at the first move. |
@@ -168,9 +174,9 @@ Sizes, speeds and times here are what the player sees. All are first values, to 
 Small, and each optional (off unless a scenario asks). Detail in `moon-mammoth-design.md` §2.
 
 1. **The mammoth's movement**, a new part of the world (`world.moon`): the moves above.
-2. **Rock that doesn't bounce**: the ground's rock can be given its own bounciness. Today it has
-   the default (0.5), and a contact takes the bouncier of the two bodies, so the mammoth would
-   bounce off every landing.
+2. **Rock that doesn't bounce** (TER-009 in `docs/spec.md`): the ground's rock can be given its
+   own bounciness. By default it has 0.5, and a contact takes the bouncier of the two bodies, so
+   the mammoth would bounce off every landing.
 3. **A view that turns** with a body. Level 7 of Mammoth Thrust already turns the drawing; this
    turns it by the mammoth's place on the moon.
 

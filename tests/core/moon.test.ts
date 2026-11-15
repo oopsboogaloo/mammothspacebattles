@@ -483,6 +483,43 @@ describe("Moon Mammoth: the engine's rules", () => {
     expect(spec(w).rocks?.length).toBe(3);
   });
 
+  it("level 1 can be run: a simple player (jump at a crater's rim or when stopped, duck at a girder, roll when a rock falls) finishes the lap inside every leg's time", () => {
+    const w = initialWorld(parseScenario(raw("moon-1")));
+    const C = 2 * Math.PI * 80;
+    const sOf = (q: { x: number; y: number }) => {
+      const a = 80 * Math.atan2(q.x, q.y);
+      return a < -1 ? a + C : a;
+    };
+    const girders = w.bodies.filter((b) => b.id.startsWith("girder-")).map((b) => sOf(b.position));
+    // Each crater's spikes, by the crater: where they start and how wide they are.
+    const rows = new Map<string, number[]>();
+    for (const b of w.bodies.filter((x) => x.id.startsWith("spike-"))) rows.set(b.id.split("-")[1], [...(rows.get(b.id.split("-")[1]) ?? []), sOf(b.position)]);
+    const rims = [...rows.values()].map((v) => Math.min(...v) - (5.5 - (Math.max(...v) - Math.min(...v)) / 2));
+    const held: Record<string, number> = {};
+    let slow = 0;
+    let jumpUntil = -100;
+    for (let i = 0; i < 240 * 60 && st(w).phase !== "won"; i++) {
+      const s = sOf(mam(w).position);
+      const out: Command[] = [];
+      const hold = (ch: string, on: boolean) => {
+        if ((held[ch] ?? 0) !== Number(on)) out.push(set(ch, (held[ch] = Number(on))));
+      };
+      const duck = girders.some((g) => s > g - 5.5 && s < g + 3.6);
+      slow = st(w).grounded && !duck && Math.hypot(mam(w).velocity.x, mam(w).velocity.y) < 6 ? slow + 1 : 0;
+      if (st(w).grounded && !duck && i > jumpUntil + 10 && (slow > 6 || rims.some((r) => s > r - 1.2 && s < r + 0.3))) jumpUntil = i + 70;
+      hold("right", true);
+      hold("duck", duck);
+      hold("roll", !duck && w.bodies.some((b) => b.id.startsWith("fall-") && !b.fixed && Math.hypot(b.velocity.x, b.velocity.y) > 1.5));
+      hold("jump", i <= jumpUntil);
+      stepInPlace(w, out, sandbox);
+    }
+    expect(st(w).phase).toBe("won");
+    expect(st(w).tries).toBe(0);
+    // About a minute as the player sees it.
+    expect(st(w).elapsed).toBeLessThan(35);
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("the scenario is checked: the mammoth must be a free disc, with at least two flags", () => {
     const bad = raw();
     bad.world.moon.mammoth = "moon-core";

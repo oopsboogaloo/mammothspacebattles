@@ -119,7 +119,7 @@ export class SimClient {
     // The run began from the page's world at this version, so its log is the one the change is to.
     res.run.world.events = applyEventDelta(f.sb.world.events, res.events);
     // Rock the worker had already sent comes back as stubs: the page's own copies go in their place.
-    if (!f.cancelled && (!unpackBodies(res.run.world, f.sb.world.bodies) || !unpackThrust(res.run.world, f.sb.world))) {
+    if (!f.cancelled && (!unpackBodies(res.run.world, f.sb.world.bodies) || !unpackThrust(res.run.world, f.sb.world) || !unpackMoon(res.run.world, f.sb.world))) {
       this.holds = null; // missing one: drop this run, and send the world whole next time
       return;
     }
@@ -155,5 +155,14 @@ export function unpackThrust(world: Pick<World, "thrust">, mine: Pick<World, "th
   if (!t || !("kept" in (t.spec as object))) return true;
   if (!mine.thrust) return false;
   world.thrust = { ...t, spec: mine.thrust.spec };
+  return true;
+}
+
+/** Puts the page's own Moon Mammoth spec in place of the worker's stub (rockStubs.ts packMoon). False if the page has none. */
+export function unpackMoon(world: Pick<World, "moon">, mine: Pick<World, "moon">): boolean {
+  const g = world.moon;
+  if (!g || !("kept" in (g.spec as object))) return true;
+  if (!mine.moon) return false;
+  world.moon = { ...g, spec: mine.moon.spec };
   return true;
 }

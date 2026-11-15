@@ -2,7 +2,8 @@
 
 How the game in `moon-mammoth.md` is built: what the engine already does, what it lacks, the
 mammoth's movement in the world, the level, the page, and the order of work. Written 15 November
-2026 from a reading of the code at `0bb0045`. Nothing here is built. Line numbers are that commit's.
+2026 from a reading of the code at `0bb0045`, before anything was built; line numbers are that
+commit's. It was built the same day: §8 is what the build found and changed.
 
 **Time.** As the other games: the page runs the world at `GAME_PACE = 0.5` (`state.ts:51`). The
 spec's numbers are what the player sees. The scenario stores game time: times are half as long,
@@ -69,12 +70,12 @@ interface MoonSpec {
   run: { speed: number; accel: number; brake: number; air: number };
   jump: { speed: number; cut: number; early: number; late: number };  // cut: share of rise kept on letting go
   roll: { speed: number; time: number; wait: number };
-  slide: { brake: number; least: number };          // below `least` m/s a slide is a sit
+  slide: { brake: number; least: number; crawl: number };  // below `least` m/s a slide is a sit; `crawl`: its creep, ducked, with a direction held
   slope: number;                   // the steepest ground it stands on, as cos of the angle (0.5 = 60°)
   flags: { at: Vec2; time: number }[];              // in order; `time` is the leg that ends at it (0 for the start)
   reach: number;                   // how near a flag counts, m
   spikes: string;                  // id prefix of the spikes' bodies
-  rocks?: { id: string; within: number }[];         // falling rocks: let go when the mammoth is within this of them
+  rocks?: { id: string; within: number; mass: number }[];  // falling rocks: let go, a free body of this mass, when the mammoth is within this of them
   view: { outline: Vec2[] };       // the moon's outline, for drawing
 }
 ```
@@ -240,3 +241,89 @@ One PR each, each playable or testable on its own.
 | Step time with about 350 fixed bodies and one free one. | Should be far under budget. | Step 1 |
 | The turn on a slow phone. | A turned drawing covers the screen's diagonal: about twice the pixels. | Step 2 |
 | The view's turn when the mammoth is put back at a flag. | A jump of up to 60° round the moon in one frame: cut, or a quick ease. | Step 2 |
+
+## 8. As built (15 November 2026)
+
+All of §6 but step 5. Files: `src/core/moon.ts`, `scripts/moon.ts`, `scenarios/moon-1.json` and
+`moon-test.json`, `src/app/Moon.tsx`, `moonMain.tsx`, `moonRender.ts`, `moonHud.ts`,
+`src/app/moon/sheet.ts` and `mammoth.svg` (from `scripts/moonSprites.ts`), `moon.html`. Tests:
+`tests/core/moon.test.ts` (34), `tests/app/moon.test.ts` (12), `e2e/moon-mammoth.spec.ts` (7).
+`moon.html?level=test` plays the small test moon.
+
+### 8.1 What §7 asked, measured
+
+| What | Found |
+|---|---|
+| The disc catching on the joins in the crust. | It does: see §8.2. Dealt with in the drive. |
+| Standing up under a girder. | Works: `blocked()` tests a standing disc with `collideDisc` against the bodies near it. |
+| A landing from a long fall. | Lands at 43 m/s (a 15 m fall) with no bounce and no sinking. But see §8.3. |
+| The ledger with the drive in. | No violations in any test, including a whole lap of level 1. The legs' work is under `power`. |
+| Step time. | 0.23 ms a step on the test moon (203 bodies); the budget is 8.3 ms. |
+| The turn on a slow phone. | Not measured: no phone here. The frame is not drawn larger for the turn (the moon is one path and a handful of bodies), so it should cost little. |
+| The view's turn when the mammoth is put back. | It cuts. The view's height snaps too when the change is over 8 m (`moonHud.ts`). |
+
+### 8.2 Knocks at the joins in the rock
+
+The crust is separate quads. A disc resting on one sits a few millimetres into it (the solver's
+slop), so the corner of the next quad is inside the disc as it arrives, and the contact with that
+corner has a normal leaning back against the way the disc is going. At 18 m/s that knocked the
+mammoth up at about 2 m/s and took 0.2 m/s off its run at every join: it hopped along (2 cm hops,
+enough to lose "on the ground" and so its jump), and a slide lost speed a third faster than its
+rate.
+
+The drive now undoes such a knock (`KNOCK` in `moon.ts`): if, since its moves last step, the
+mammoth has gained more than 0.3 m/s away from the ground and lost a little along it (under 7% of
+its speed, or 1 m/s), its velocity is put back. A real rise in the ground knocks again every step,
+so it still turns the mammoth. With this a roll at 32 m/s stays within 3 cm of the ground.
+
+Two smaller measures with it:
+
+- "On the ground" allows 0.04 s off it (`HOP`), and reads contacts up to 0.25 m off (`NEAR`).
+- The level's plain ground is sampled every 3 m, not 1.5 m (a crater's bowl every 1 m): fewer joins.
+
+### 8.3 Landing a step short
+
+The solver finishes a speculative contact in one step: a body about to land is stopped where it is
+when the contact is first seen, up to a step's travel short of the ground (18 cm at 43 m/s), and
+then falls the rest from rest. The mammoth hung over the ground for a moment on every landing, and
+a jump pressed just before landing came too early.
+
+On the step it lands, the drive gives the mammoth the speed that closes the gap exactly (the solver
+lets a body close the gap it has). Only then: doing it every step pulled the mammoth round the
+corner of a ledge it had run off.
+
+### 8.4 Other changes from the design
+
+- **Creep.** A slide that stopped under a girder left the mammoth stuck: ducked with a direction
+  held it now creeps at 5 m/s (2.5 as seen).
+- **Rocks come to rest.** A fallen rock rolled on slowly for ever, and the mammoth could shove it
+  along the ground. Slower than 1.5 m/s on something fixed, it is made fixed where it lies.
+  "Falling" is moving toward the moon's centre faster than 4 m/s, so a rock pushed sideways never
+  hurts.
+- **Rocks hang, they don't perch.** A rock on a ledge would not fall. They float 11 m up.
+- **The roll** is 0.3 game s (0.6 as seen), not 0.25: enough to clear a rock's landing with room.
+- **Craters are jumped from the rim.** At a run the mammoth flies off a rim for about 4 m, too long
+  to jump from the slope. The first craters (14 to 16 m, with 4 to 5.6 m of spikes) could only be
+  cleared from the last metre before the rim; they are now 11 m with 2.4 or 3.2 m of spikes.
+- **Gravity falls off with height** (the engine's ball of mass, FLT-015): a jump is nearer 3.9 m
+  than 3.5 m on the 40 m test moon, and rocks fall more slowly from 11 m than the surface's 100 m/s²
+  would have them.
+- **The page's drawing** is not inside `drawFrame`: `renderFrame` hands the frame to `drawMoon`.
+  A canvas that can't be turned (a test's recorder) gets the plain drawing.
+- **The worker** sends the game's spec (the outline) once, then a stub, as it does Thrust's.
+
+### 8.5 A lap
+
+A simple scripted player (hold right; jump at a crater's rim or when stopped; duck at a girder;
+roll when a rock is falling) runs level 1 in 59 s as the player sees it, with no tries. Its legs
+took 8.5, 9.5, 10, 7.6, 8.1 and 15.7 s against 14, 16, 16, 16, 14 and 24 s allowed. It is a test
+(`tests/core/moon.test.ts`), so a change to the level or the moves that makes the lap impossible
+shows.
+
+### 8.6 Still to do
+
+- Tuning after Chloe plays (step 5): the moves' numbers are at the top of `scripts/moon.ts`, the
+  course below them; `node scripts/moon.ts` writes the level again.
+- Real art: replace `src/app/moon/mammoth.svg`, keeping the layout in `sheet.ts` or changing the
+  table.
+- The open questions in the spec's §10.
