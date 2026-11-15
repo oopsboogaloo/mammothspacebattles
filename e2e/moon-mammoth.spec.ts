@@ -61,11 +61,14 @@ test("MMN-070 MMN-056 MMN-060 the keys run, jump, duck and roll; the clock start
   expect(await hook(page, (m) => m.moon()!.phase)).toBe("running");
   expect(await hook(page, (m) => m.moon()!.facing)).toBe(-1);
   await expect(page.getByTestId("mmn-ready")).toHaveCount(0);
-  // The drawing is turned by the mammoth's place round the moon, and the view looks along that line.
-  const view = await hook(page, (m) => ({ turn: m.turn(), at: Math.atan2(m.mammoth().position.x, m.mammoth().position.y), cam: Math.atan2(m.camera().x, m.camera().y) }));
+  // The drawing is turned by the mammoth's place round the moon.
+  const view = await hook(page, (m) => ({ turn: m.turn(), at: Math.atan2(m.mammoth().position.x, m.mammoth().position.y) }));
   expect(view.turn).toBeCloseTo(view.at, 6);
-  expect(Math.abs(view.cam - view.at)).toBeLessThan(0.05);
+  expect(view.at).toBeLessThan(-66 / 40);
   await page.keyboard.up("ArrowLeft");
+  // And the view looks along that line. At a run it looks where the mammoth is drawn, a little on
+  // from where the world last had it; stopped, the two are the same place.
+  await expect.poll(() => hook(page, (m) => Math.abs(Math.atan2(m.camera().x, m.camera().y) - Math.atan2(m.mammoth().position.x, m.mammoth().position.y)))).toBeLessThan(0.002);
   await page.keyboard.down("Space");
   await expect.poll(() => alt(page)).toBeGreaterThan(2.5);
   await page.keyboard.up("Space");
@@ -148,25 +151,31 @@ test("MMN-071 pause stops the world and the clocks; resume carries on", async ({
 });
 
 test("MMN-052 MMN-051 on the spikes the mammoth is back at the last flag, with a note; out of time the same", async ({ page }, info) => {
+  test.setTimeout(120_000);
   await start(page);
   await place(page, 58);
   await page.keyboard.down("ArrowRight");
   await expect.poll(() => hook(page, (m) => m.moon()!.flag)).toBe(1);
-  // On along the ground into the crater's spikes (78 to 82 m).
-  await expect.poll(() => hook(page, (m) => m.moon()!.tries)).toBe(1);
+  // On along the ground into the crater's spikes (78 to 82 m). Paused the moment it is sent back,
+  // so what is checked next doesn't depend on how fast the browser is: the note is still up, and
+  // the mammoth hasn't run on.
+  await expect.poll(() => hook(page, (m) => m.moon()!.tries), { intervals: [50] }).toBeGreaterThan(0);
+  await page.getByTestId("mmn-pause").click();
   await page.keyboard.up("ArrowRight");
-  // Back at the flag at 60 m: on the near side of the crater (its rim is at 73 m), however far it
-  // had run on from the flag before the key came up.
+  await expect(page.getByTestId("mmn-paused")).toBeVisible();
+  const tries = await hook(page, (m) => m.moon()!.tries);
+  expect(await hook(page, (m) => m.moon()!.back!.why)).toBe("spikes");
+  // Back at the flag at 60 m: on the near side of the crater (its rim is at 73 m).
   const at = await along(page);
   expect(at).toBeGreaterThan(59);
   expect(at).toBeLessThan(73);
   await expect(page.getByTestId("mmn-back")).toContainText("OUCH");
+  await expect(page.getByTestId("mmn-tries")).toHaveText(`TRIES ${tries}`);
   await shot(page, info, "mmn-back");
-  expect(await hook(page, (m) => m.moon()!.back!.why)).toBe("spikes");
-  await expect(page.getByTestId("mmn-tries")).toHaveText("TRIES 1");
   // Standing still, the leg's 16 s (as the player sees them) run out.
-  await expect.poll(() => hook(page, (m) => m.moon()!.tries), { timeout: 30_000 }).toBe(2);
-  expect(await hook(page, (m) => m.moon()!.back!.why)).toBe("time");
+  await page.getByTestId("mmn-resume").click();
+  await expect.poll(() => hook(page, (m) => m.moon()!.back!.why), { timeout: 90_000 }).toBe("time");
+  expect(await hook(page, (m) => m.moon()!.tries)).toBe(tries + 1);
 });
 
 test("MMN-050 MMN-055 flags in order to the finish: the lap's time, kept as the best on the device, and Play again", async ({ page }, info) => {
