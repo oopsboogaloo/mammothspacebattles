@@ -116,8 +116,8 @@
   <path class="dim" d="M222,240 H262" marker-end="url(#arr)"/>
   <path class="dim" d="M336,240 H300" marker-end="url(#arr)"/>
   <circle class="badge" cx="-28" cy="240" r="12"/><text class="badgeText" x="-28" y="245">3</text>
-  <text class="lblb" x="-8" y="237">Chamber wall thickness t</text>
-  <text class="small" x="-8" y="255">weld limits follow from it</text>
+  <text class="lblb" x="-8" y="237">Wall thickness t</text>
+  <text class="small" x="-8" y="255">all the engine's walls; weld limits ∝ t</text>
 
   <!-- Chamber wall label -->
   <path class="ext" d="M262,380 H200"/>
@@ -149,8 +149,8 @@
   <!-- Nozzle wall label -->
   <path class="ext" d="M626,650 H690"/>
   <text class="lbl" x="700" y="647">Nozzle wall</text>
-  <text class="small" x="700" y="665">carries little: the pressure falls to</text>
-  <text class="small" x="700" y="681">about 6% of p_c at the exit (ratio 2.8)</text>
+  <text class="small" x="700" y="665">same thickness: it may carry the craft</text>
+  <text class="small" x="700" y="681">on landing; the gas pressure is low here</text>
 
   <!-- Exit width (follows) -->
   <path class="ext" d="M292.5,708 V745 M607.5,708 V745"/>
@@ -172,7 +172,7 @@
     <circle class="badge" cx="1086" cy="192" r="12"/><text class="badgeText" x="1086" y="197">2</text>
     <text class="input" x="1108" y="197"><tspan font-weight="700">Throat width W_t</tspan></text>
     <circle class="badge" cx="1086" cy="224" r="12"/><text class="badgeText" x="1086" y="229">3</text>
-    <text class="input" x="1108" y="229"><tspan font-weight="700">Chamber wall thickness t</tspan>: weld limits follow</text>
+    <text class="input" x="1108" y="229"><tspan font-weight="700">Wall thickness t</tspan>: one for all walls; welds ∝ t</text>
     <circle class="badge" cx="1086" cy="256" r="12"/><text class="badgeText" x="1086" y="261">4</text>
     <text class="input" x="1108" y="261"><tspan font-weight="700">Nozzle wall angle α</tspan></text>
     <circle class="badge" cx="1086" cy="288" r="12"/><text class="badgeText" x="1086" y="293">5</text>
@@ -192,9 +192,9 @@
     <text class="follow" x="1074" y="534"><tspan font-weight="700">The chamber must hold that pressure.</tspan> Its</text>
     <text class="follow" x="1074" y="554">walls, throat pieces and their welds carry p_c;</text>
     <text class="follow" x="1074" y="574">too thin, and the engine bursts. A wall spanning</text>
-    <text class="follow" x="1074" y="594">L_c holds while roughly</text>
-    <text class="mono" x="1094" y="618">t ≥ L_c · √(p_c ÷ 2σ)</text>
-    <text class="follow" x="1074" y="642">(σ: the material's strength).</text>
+    <text class="follow" x="1074" y="594">L_c holds while, at the least,</text>
+    <text class="mono" x="1094" y="618">t ≥ p_c · L_c ÷ 2k_T</text>
+    <text class="follow" x="1074" y="642">(k_T: weld tension limit per metre of t).</text>
 
     <text class="follow" x="1074" y="676"><tspan font-weight="700">The nozzle only sets how much thrust it buys.</tspan></text>
     <text class="mono" x="1094" y="700">ε = W_e ÷ W_t,  F = ṁ · c* · C_F(ε, α)</text>

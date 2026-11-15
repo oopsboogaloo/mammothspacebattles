@@ -186,11 +186,15 @@ wall loads.
 Agreed 15 November 2026: the engine isn't simulated as gas in the game (the chamber model stays,
 for speed); the designer sets:
 
-- **burn rate:** the injector's flow, capped by its feed (PRP-002);
+- **burn rate:** the injector's flow, capped by its feed (PRP-002); the feed is pressure-fed by
+  default (below);
 - **throat width;**
-- **wall angle and wall length:** with the throat, they give the exit width,
+- **chamber length and width** (below);
+- **nozzle wall angle and length:** with the throat, they give the exit width,
   exit = throat + 2 × length × tan(angle), so any two of angle, length and exit width fix the third;
-- **chamber wall thickness:** the welds' limits follow from it (below).
+- **wall thickness:** one thickness for the whole engine, chamber and nozzle walls alike (decided
+  15 November 2026: nozzle walls often carry the craft's weight on landing); the welds' limits
+  follow from it (below).
 
 What follows, in order of cause:
 
@@ -220,29 +224,33 @@ doesn't depend on the throat's size. The throat trades structure against size:
 
 ### Wall thickness sets the weld limits
 
-Agreed 15 November 2026: weld limits follow from the parts' thickness, so the designer sets
-thickness and not limits. A first proposal, to calibrate:
+Decided 15 November 2026:
 
-- **Per metre of depth, for the thinner part at the joint, thickness t, of a material of strength
-  σ:**
-  - tension and compression ≈ σ · t;
-  - shear ≈ τ · t, with τ about 0.6 σ;
-  - torque (bending) ≈ σ · t² ÷ 6: the elastic section modulus of a strip t thick (÷ 4 if it may
-    yield fully).
+- **One wall thickness t for the whole engine**, chamber and nozzle walls alike. Nozzle walls carry
+  little of the chamber's pressure, but they often carry the craft's weight on landing.
+- **Every weld limit is proportional to the thickness of the thinner part it joins:**
+  tension = k_T · t, compression = k_C · t, shear = k_S · t, torque = k_M · t, with each k a
+  constant (per material, when there are materials). The designer sets thickness, not limits.
 - **Mass follows thickness too:** a wall's mass is its density × t × its length. Strength and mass
-  then rise together: high pressure means thick, heavy walls.
-- **A sizing rule falls out.** A chamber wall spanning L between its welds, under p_c, carries
-  p_c · L in all: p_c · L ÷ 2 at each end, and an end moment of about p_c · L² ÷ 12 (a beam held at
-  both ends). It holds while
-  - t ≥ p_c · L ÷ (2σ) (tension at the ends), and
-  - t ≥ L · √(p_c ÷ (2σ)) (bending at the ends), which usually decides it for thin walls.
+  rise together: high pressure means thick, heavy walls.
 
-  This is the game's form of the pressure vessel's t = p · r ÷ σ. The designer readout can show the
-  margin for each wall.
-- **Today's welds don't follow this.** Thrust's ship has tension 22,950 N and torque 5,520 N·m on
-  0.1 m walls (`scripts/asteroidShip.ts`): torque ÷ tension = 0.24 m, against t ÷ 6 ≈ 0.017 m for a
-  strip 0.1 m thick. Its welds are about 14 times stiffer in bending than the rule gives, so
-  adopting it means choosing σ per material and retuning existing ships (with step 3 of §7).
+**Why linear, though bending in a real plate grows with t²:** it is simpler, and it keeps the
+proportions of the game's welds today, whose torque and tension limits stand in a fixed ratio. So
+the existing ships map onto it directly: Thrust's ship (0.1 m walls; tension 22,950 N, compression
+45,900 N, shear 16,050 N, torque 5,520 N·m; `scripts/asteroidShip.ts`) gives k_T = 229,500 N/m,
+k_C = 459,000 N/m, k_S = 160,500 N/m and k_M = 55,200 N·m/m, and keeps every weld it has. Its gun's
+mount (twice as strong) is the exception: a thicker mount, or a stronger material, there.
+
+**A sizing rule falls out.** A chamber wall spanning L between its welds, under p_c, carries p_c · L
+in all: p_c · L ÷ 2 at each end, and an end moment of about p_c · L² ÷ 12 (a beam held at both ends).
+It holds while
+
+- t ≥ p_c · L ÷ (2 k_T) (tension at the ends), and
+- t ≥ p_c · L² ÷ (12 k_M) (bending at the ends).
+
+With k_M ÷ k_T = 0.24 m (today's welds), tension decides for walls shorter than about 1.4 m and
+bending for longer ones. Either way the thickness needed grows in proportion to the pressure: the
+game's form of the pressure vessel's t = p · r ÷ σ. The designer readout can show each wall's margin.
 
 ### Chamber length and width
 
@@ -252,8 +260,8 @@ alike, and the chamber's size isn't in it. What its size does change:
 1. **Structural load (the main effect in the game).** At a given pressure, a bigger chamber has more
    wall under it: a wall's load is about p_c × its length, so a longer chamber loads its side walls
    and their welds more, and a wider one the head and the throat pieces. With the thickness rule
-   the wall needed grows with its span (t ≥ L · √(p_c ÷ 2σ)), so a big chamber needs thick, heavy
-   walls.
+   the wall needed grows with its span (t ≥ p_c · L ÷ (2 k_T), or p_c · L² ÷ (12 k_M) where bending
+   decides), so a big chamber needs thick, heavy walls.
 2. **Throttle response.** The chamber holds gas, so its pressure (and the thrust) takes time to
    build and to fall. The time constant is about the chamber's area ÷ (the throat's width × the
    throat's gas speed). From the model's outflow (`runVessel`, `vessel.ts`), roughly: RS-08's
@@ -292,9 +300,9 @@ main engines.
 |---|---|---|
 | Throat width | ∝ ṁ | W_t = ṁ · c\* ÷ p_c; in 2D the flow passes a width, not an area |
 | Every length (chamber, nozzle, exit) | ∝ ṁ | the same shape, larger |
-| Wall thickness | ∝ ṁ | t ≥ L · √(p_c ÷ 2σ) |
-| Engine mass | ∝ ṁ² | thickness × length |
-| Thrust ÷ engine mass | ∝ 1 ÷ ṁ | big engines are heavier for their thrust |
+| Wall thickness | ∝ ṁ (short walls) to ṁ² (long walls) | t ≥ p_c · L ÷ (2 k_T), or p_c · L² ÷ (12 k_M) where bending decides |
+| Engine mass | ∝ ṁ² to ṁ³ | thickness × length |
+| Thrust ÷ engine mass | ∝ 1 ÷ ṁ to 1 ÷ ṁ² | big engines are heavier for their thrust |
 | Throttle response time | ∝ ṁ | a big chamber takes longer to fill and empty |
 
 **The 2D twist.** In 3D, ten times the flow needs a throat only about √10 ≈ 3.2 times wider (its
@@ -303,23 +311,25 @@ thruster would be 100 times as wide at the same pressure, too wide for a ship. S
 run at higher pressure:
 
 - raising the pressure shrinks every dimension ∝ 1 ÷ p_c;
-- the walls must thicken ∝ √p_c;
-- so engine mass ∝ ṁ² ÷ p_c^1.5: at higher pressure the same thrust comes from a lighter engine.
+- the walls' thickness stays the same where tension decides (p_c · L is unchanged) and falls ∝ 1 ÷ p_c
+  where bending does;
+- so engine mass ∝ ṁ² ÷ p_c (short walls) to ṁ³ ÷ p_c² (long walls): at higher pressure the same
+  thrust comes from a lighter engine.
 
 That is so in real rocketry too: high-pressure engines are compact and light.
 
 **The missing counterweight: the cost of feeding against the pressure.** Nothing in the game yet
 makes high pressure cost anything, so designers would run every engine at the limit of its welds.
-In reality the propellant has to be pushed into the chamber against its pressure. **Proposed**, one
-of:
+In reality the propellant has to be pushed into the chamber against its pressure.
 
-- **pump power** P = ṁ · p_c ÷ ρ (flow × pressure ÷ the propellant's density), drawn from the
-  ship's battery and generators. Thrust's ship already carries both, with "energy use to come"
-  (`scripts/asteroidShip.ts`): a natural link to power systems;
-- or, for **pressure-fed** engines, **heavier tanks**: they must be held above the chamber's
-  pressure, so their walls thicken with p_c.
-
-Either way high pressure buys a small, light engine at the price of a heavy pump or tanks.
+- **Decided 15 November 2026: engines are pressure-fed by default.** The tanks are held above the
+  chamber's pressure, so their walls (by the same thickness rule) thicken with the highest chamber
+  pressure they feed, and the tanks get heavier. High pressure buys a small, light engine at the
+  price of heavy tanks.
+- **Later, as an option: pumped engines.** A pump's power is P = ṁ · p_c ÷ ρ (flow × pressure ÷ the
+  propellant's density), drawn from the ship's battery and generators; the tanks can then be light.
+  Thrust's ship already carries both, with "energy use to come" (`scripts/asteroidShip.ts`): a
+  natural link to power systems.
 
 **Two families fall out:**
 
@@ -388,10 +398,10 @@ we can.
    nozzles). Lander, the gunships and Thrust's ship would need retuning, or their nozzles
    reshaping. Thrust's ship is left alone until then, and redesigned to the simplified engine
    here, keeping its handling and its damage model as they are (§5, the worked example).
-4. Weld limits from the parts' thickness and material (§5), with the existing ships' welds mapped
-   onto it in the same rebalance.
-5. The feed's cost (§5): pump power from the battery and generators, or pressure-fed tanks, so
-   chamber pressure has a price.
+4. Weld limits proportional to the thinner part's thickness (§5), one thickness for each engine's
+   walls; the existing ships' welds map onto it (Thrust's exactly), in the same rebalance.
+5. The feed's cost (§5): pressure-fed tanks whose walls thicken with the chamber pressure they
+   feed, so pressure has a price. Pumped engines, drawing power from the battery, later.
 6. Later: the designer readout: thrust, Isp, chamber pressure, each wall's margin, and the feed's
    power or tank mass.
 
@@ -404,9 +414,8 @@ we can.
 - Should the game ever have ambient air (planets with atmospheres)? Then sea-level against vacuum
   nozzles becomes a real design choice, and over-expansion and separation need modelling.
 - Is sin α ÷ α right for planar nozzles? To check against a textbook.
-- The feed's cost: pump power from the battery and generators, heavier tanks, or both (pumped and
-  pressure-fed engines as a design choice)? What propellant density for P = ṁ · p_c ÷ ρ?
+- Pressure-fed tanks: how much above the chamber's pressure they are held, and so how their mass
+  grows with it. For pumped engines later: what propellant density for P = ṁ · p_c ÷ ρ.
 - The L\* penalty: what curve (where c\* efficiency starts to fall, how steeply), and whether it
   depends on the propellant. Should a small contraction ratio cost a little too (§5)?
-- Weld limits from thickness: which materials and strengths; elastic (t² ÷ 6) or fully yielding
-  (t² ÷ 4) bending; and whether nozzle walls, which carry much less pressure, follow the same rule.
+- Weld limits from thickness: which materials, and their k values (Thrust's welds give one set).
