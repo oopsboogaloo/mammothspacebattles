@@ -340,6 +340,100 @@ describe("Moon Mammoth: the tools and the engine's rules", () => {
     expect(w.ledger.violations).toBe(0);
   });
 
+  it("level 2 can be run: a simple player shoots each gate, swings each pit from its beam and climbs each cliff on the rope, inside every leg's time", () => {
+    const w = initialWorld(parseScenario(raw("moon-2")));
+    const C = 2 * Math.PI * 80;
+    const pos = () => {
+      const a = 80 * Math.atan2(mam(w).position.x, mam(w).position.y);
+      return a < -1 ? a + C : a;
+    };
+    const held: Record<string, number> = {};
+    let queue: Command[] = [];
+    const hold = (ch: string, v: number) => {
+      if ((held[ch] ?? 0) !== v) queue.push(set(ch, (held[ch] = v)));
+    };
+    const tick = () => {
+      stepInPlace(w, queue, sandbox);
+      queue = [];
+    };
+    const until = (f: () => boolean, most = 240 * 8) => {
+      for (let n = 0; !f() && n < most && st(w).phase !== "won"; n++) tick();
+    };
+    const rise = () => (mam(w).velocity.x * mam(w).position.x + mam(w).velocity.y * mam(w).position.y) / Math.hypot(mam(w).position.x, mam(w).position.y);
+    const stopAt = (to: number) => {
+      hold("right", 1);
+      until(() => pos() >= to);
+      hold("right", 0);
+      until(() => Math.hypot(mam(w).velocity.x, mam(w).velocity.y) < 0.3);
+    };
+    const hookOn = (beam: string) => {
+      hold("aim", aimAt(w, beam));
+      tick();
+      hold("hook", 1);
+      until(() => moonRope(w)?.mode === "held", 120);
+      hold("hook", 0);
+      expect(moonRope(w)?.anchor?.body).toBe(beam);
+    };
+    type Ev = { kind: "gate"; at: number; block: string } | { kind: "pit"; at: number; width: number; beam: string } | { kind: "cliff"; at: number; beam: string };
+    const course: Ev[] = [
+      { kind: "gate", at: 30, block: "block-0" },
+      { kind: "pit", at: 85, width: 14, beam: "girder-2" },
+      { kind: "cliff", at: 140, beam: "girder-4" },
+      { kind: "gate", at: 205, block: "block-5" },
+      { kind: "pit", at: 255, width: 18, beam: "girder-7" },
+      { kind: "cliff", at: 310, beam: "girder-9" },
+      { kind: "gate", at: 328, block: "block-10" },
+      { kind: "pit", at: 378, width: 14, beam: "girder-12" },
+      { kind: "gate", at: 408, block: "block-13" },
+    ];
+    for (const e of course) {
+      if (e.kind === "gate") {
+        // Stop short, aim at the block, and fire until it is gone.
+        stopAt(e.at - 9);
+        hold("aim", aimAt(w, e.block) - 0.02);
+        tick();
+        hold("fire", 1);
+        until(() => !w.bodies.some((b) => b.id === e.block));
+        hold("fire", 0);
+      } else if (e.kind === "pit") {
+        // Hook the beam from the edge, run off reeling in, and let go on the way up past the middle.
+        stopAt(e.at - e.width / 2 - 1.5);
+        hookOn(e.beam);
+        hold("right", 1);
+        hold("up", 1);
+        until(() => pos() > e.at + 1.5 && rise() > 5, 480);
+        hold("up", 0);
+        hold("jump", 1);
+        tick();
+        tick();
+        hold("jump", 0);
+        until(() => st(w).grounded && pos() > e.at + e.width / 2, 480);
+      } else {
+        // Hook the beam from the cliff's foot, reel all the way up, lean over the top and let go.
+        stopAt(e.at - 3.5);
+        hookOn(e.beam);
+        hold("up", 1);
+        until(() => !moonRope(w) || ropeLength(moonRope(w)!) <= 1.8, 720);
+        hold("up", 0);
+        hold("right", 1);
+        for (let i = 0; i < 120; i++) tick();
+        hold("jump", 1);
+        tick();
+        tick();
+        hold("jump", 0);
+        until(() => st(w).grounded, 480);
+      }
+      expect(st(w).tries).toBe(0);
+    }
+    hold("right", 1);
+    until(() => st(w).phase === "won", 240 * 20);
+    expect(st(w).phase).toBe("won");
+    expect(st(w).tries).toBe(0);
+    // About a minute as the player sees it.
+    expect(st(w).elapsed).toBeLessThan(35);
+    expect(w.ledger.violations).toBe(0);
+  });
+
   it("the scenario is checked: the tools need a rifle and a hook", () => {
     const bad = raw();
     delete bad.world.moon.tools.hook;

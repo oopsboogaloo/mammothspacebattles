@@ -13,7 +13,7 @@
 // The step records what a rope does to its holder under `tractor`.
 
 import { collideDisc } from "./collide.ts";
-import { add, rotate, sinCos, type Vec2 } from "./math.ts";
+import { add, powPos, rotate, sinCos, type Vec2 } from "./math.ts";
 import { boundingRadiusOf } from "./shapes.ts";
 import type { Body, World } from "./world.ts";
 
@@ -127,6 +127,9 @@ export function releaseRope(rope: Rope): void {
   rope.reel = 0;
 }
 
+/** The length of (x, y), by the pinned square root. */
+const far = (x: number, y: number): number => Math.sqrt(x * x + y * y);
+
 const passes = (r: Rope, b: Body): boolean => b.id === r.holder || !!r.ignores?.some((p) => b.id.startsWith(p));
 
 /** The bodies a rope could touch this step: those near the box round its points and its holder. */
@@ -194,13 +197,13 @@ function setOut(pts: Vec2[], end: Vec2, stretch: number): void {
   const line = [...pts.map((p) => ({ x: p.x, y: p.y })), end];
   let k = 0;
   let from = 0;
-  let piece = Math.hypot(line[1].x - line[0].x, line[1].y - line[0].y);
+  let piece = far(line[1].x - line[0].x, line[1].y - line[0].y);
   for (let i = 1; i < pts.length; i++) {
     const at = i * stretch;
     while (k + 2 < line.length && from + piece < at) {
       from += piece;
       k++;
-      piece = Math.hypot(line[k + 1].x - line[k].x, line[k + 1].y - line[k].y);
+      piece = far(line[k + 1].x - line[k].x, line[k + 1].y - line[k].y);
     }
     const t = piece > 0 ? Math.min(1, (at - from) / piece) : 0;
     pts[i].x = line[k].x + (line[k + 1].x - line[k].x) * t;
@@ -270,7 +273,7 @@ function stepChain(world: World, r: Rope, holder: Body, dt: number): boolean {
   const held = r.mode === "held";
   const pts = r.points;
   const n = pts.length;
-  const keep = Math.pow(KEEP, dt);
+  const keep = powPos(KEEP, dt);
   // Where each point would be, left to itself.
   const next: Vec2[] = [];
   for (let i = 0; i < n; i++) {
@@ -316,13 +319,13 @@ function stepChain(world: World, r: Rope, holder: Body, dt: number): boolean {
     next[0].x = pin.x;
     next[0].y = pin.y;
     let path = 0;
-    for (let i = 1; i < n; i++) path += Math.hypot(next[i].x - next[i - 1].x, next[i].y - next[i - 1].y);
-    const over = path + Math.hypot(h.x - next[n - 1].x, h.y - next[n - 1].y) - ropeLength(r);
+    for (let i = 1; i < n; i++) path += far(next[i].x - next[i - 1].x, next[i].y - next[i - 1].y);
+    const over = path + far(h.x - next[n - 1].x, h.y - next[n - 1].y) - ropeLength(r);
     if (over > 0) {
       // Back along the rope's last stretch: from the last point that isn't on top of the holder
       // (the last stretch may have no length, the rope a whole number of stretches long).
       let j = n - 1;
-      while (j > 0 && Math.hypot(h.x - next[j].x, h.y - next[j].y) < 0.1 * r.stretch) j--;
+      while (j > 0 && far(h.x - next[j].x, h.y - next[j].y) < 0.1 * r.stretch) j--;
       const dx = h.x - next[j].x;
       const dy = h.y - next[j].y;
       const d = Math.sqrt(dx * dx + dy * dy);

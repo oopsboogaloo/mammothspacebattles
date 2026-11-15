@@ -4,7 +4,7 @@ import { useEffect } from "preact/hooks";
 import "./styles.css";
 import { MoonApp, moonKeyDown, moonKeyUp, startMoon } from "./Moon.tsx";
 import { camera, edit, sandbox } from "./state.ts";
-import { hashValue, type Command } from "../core/index.ts";
+import { hashValue, moonAim, moonRope, type Command } from "../core/index.ts";
 import { shown } from "./smooth.ts";
 import { sim } from "./View.tsx";
 import { moonTurn } from "./moonRender.ts";
@@ -35,7 +35,10 @@ function Game() {
   },
   // How far the drawing is turned, rad clockwise.
   turn: () => (sandbox.value ? moonTurn(sandbox.value.world, performance.now()) : 0),
-  play: () => startMoon(),
+  // Where the tools point, and the mammoth's rope, if it has one out.
+  aim: () => (sandbox.value ? moonAim(sandbox.value.world) : null),
+  rope: () => (sandbox.value ? (moonRope(sandbox.value.world) ?? null) : null),
+  play: (level?: string) => startMoon(level),
   // For tests: an edit to the world, as the sandbox makes them (to put the mammoth where a test needs it).
   edit: (commands: Command[]) => edit(commands, "Test", Math.floor(Math.random() * 1e9)),
 };

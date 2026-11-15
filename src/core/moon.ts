@@ -490,7 +490,8 @@ function runRifle(world: World, game: MoonGame, m: Body, ops: MoonOps): boolean 
     if (hit || world.time - f.at >= rifle.life || !world.bodies.some((b) => b.id === f.id)) spent.add(f.id);
   }
   if (spent.size) {
-    for (const b of world.bodies) if (spent.has(b.id)) burst(world, b);
+    // A puff where one struck (one that only flew its time goes without).
+    for (const b of world.bodies) if (spent.has(b.id) && world.contacts.some((c) => (c.a === b.id || c.b === b.id) && c.normalImpulse > 0)) burst(world, b);
     world.bodies = world.bodies.filter((b) => !spent.has(b.id));
     world.contacts = world.contacts.filter((c) => !spent.has(c.a) && !spent.has(c.b));
     s.flying = flying.filter((f) => !spent.has(f.id));

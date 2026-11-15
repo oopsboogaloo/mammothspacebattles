@@ -335,6 +335,8 @@ const TEST_2: Level = {
 /**
  * Level 2: the rifle and the hook. Gates of blocks to shoot through, pits to swing across from a
  * girder overhead, and cliffs to climb on the rope: each on its own first, then closer together.
+ * The girder over a cliff reaches out past its edge, so the hook has a clear line to it from the
+ * cliff's foot: aimed at one set back over the top, the hook strikes the cliff's face first.
  */
 const LEVEL_2: Level = {
   name: "moon-2",
@@ -351,12 +353,12 @@ const LEVEL_2: Level = {
     { kind: "pit", at: 85, width: 14, depth: 9 },
     { kind: "beam", at: 85, length: 4, above: 8 },
     { kind: "ledge", at: 140, length: 40, height: 7, tall: true },
-    { kind: "beam", at: 142, length: 4, above: 11.5 },
+    { kind: "beam", at: 141, length: 8, above: 11.5 },
     { kind: "gate", at: 205, height: 4, roof: 10 },
     { kind: "pit", at: 255, width: 18, depth: 9 },
     { kind: "beam", at: 255, length: 8, above: 8 },
     { kind: "ledge", at: 310, length: 34, height: 8.5, tall: true },
-    { kind: "beam", at: 312, length: 4, above: 12.4 },
+    { kind: "beam", at: 311, length: 8, above: 12.4 },
     { kind: "gate", at: 328, height: 4, roof: 8 },
     { kind: "pit", at: 378, width: 14, depth: 9 },
     { kind: "beam", at: 378, length: 4, above: 8 },
@@ -364,13 +366,13 @@ const LEVEL_2: Level = {
   ],
   flags: [
     { at: 0, time: 0 },
-    { at: 55, time: 12 },
-    { at: 115, time: 15 },
-    { at: 165, time: 15 },
-    { at: 225, time: 12 },
-    { at: 290, time: 15 },
-    { at: 358, time: 18 },
-    { at: 440, time: 18 },
+    { at: 55, time: 10 },
+    { at: 115, time: 9 },
+    { at: 165, time: 13 },
+    { at: 225, time: 11 },
+    { at: 290, time: 10 },
+    { at: 358, time: 17 },
+    { at: 440, time: 14 },
   ],
 };
 

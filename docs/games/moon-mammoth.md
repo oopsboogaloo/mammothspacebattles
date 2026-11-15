@@ -200,6 +200,24 @@ Damage to the rock. Moving platforms. The station.
 | Roll and duck? | "Roll is a temporary speed-up that you can use just to get out of the way of something… maybe you can have some things start to fall, and if you press the roll, you get out of the way. And duck lets you slide and duck under something." |
 | Controls? | "Keyboard, touch and gamepad is perfect." |
 
+## 9b. Answered (15 November 2026, second round: the rifle and the hook)
+
+| Question | Chloe's answer |
+|---|---|
+| Aim with the mouse on a desktop? | "That's a great idea." With keys to swing the aim for keyboard alone. |
+| A second on-screen stick for touch? | "Good idea." |
+| One aim for both tools, with a button each? | "Good idea. That's what I meant, in fact." |
+| What can the rifle destroy? | "Add specific breakable objects for now. I want it to do this via the physics: it does a certain damage and the breakable objects are broken by it." The ground and the spikes stay indestructible for now; "when we put this into the proper game, everything's destructible." |
+| How curved is the shot? | "Give it a velocity and let the gravity do its thing. For this, slight arc is fine." |
+| Recoil? | "Let's have a little bit of recoil." The shot never hurts the mammoth. |
+| Ammunition? | Unlimited for now. |
+| What does the hook grab? | "It attaches to anything solid." |
+| Using the rope? | "Up and down to reel in. Left and right to pump and swing. Jump to let go." |
+| How real is the rope? | "Let's do a proper segmented rope and see how it looks. We can always simplify it, but I think a segmented rope's what I want from the engine." |
+| Level 2? | "Level 2 with both tools from the start, and it should have all the things you describe. And leave level 1 as it is." |
+| Animations? | "Don't worry too much about the animations for it. Worry about the aiming controls, the aiming visual indication, and the physics of the two things." |
+| Also | "Add a link to the Moon Mammoth from the sandbox screen, the main page in Space Battles." |
+
 ## 10. Open questions
 
 Each has what the design assumes until Chloe says otherwise.
@@ -211,3 +229,93 @@ Each has what the design assumes until Chloe says otherwise.
 4. **Does the roll hurt anything?** No (assumed): it is only speed.
 5. **The speeds and sizes in §3:** first values. Chloe tunes after playing.
 6. **Direction of the course:** to the right, clockwise round the moon (assumed).
+
+## 11. Level 2: the rifle and the grappling hook (built 15 November 2026)
+
+Two tools, both aimed the same way, on a second level. Level 1 is as it was and has neither.
+
+### The aim
+
+- One direction for both tools, in the mammoth's own frame, so it means the same thing wherever on
+  the moon the mammoth is.
+- Before the player has aimed it points a little above the way the mammoth faces.
+- **On screen:** a line of dots from the mammoth along the path a shot would take, bending with the
+  moon's gravity, and a small ring where the hook's reach ends.
+
+### The rifle
+
+- Each shot is a real body: a 1 kg slug leaving at 200 m/s (as the player sees it) on top of the
+  mammoth's own speed, under the moon's gravity like anything else. Over the 26 m of its aim line
+  it drops about a fifth of a metre: a slight arc.
+- Held, it fires eight times a second. Ammunition is unlimited.
+- **Recoil:** the mammoth takes the shot's momentum the other way: 2 m/s. On the ground its legs
+  take that up at once; in the air it is pushed.
+- A shot never strikes the mammoth that fired it. It is gone when it strikes anything else, or
+  after two seconds.
+- **What breaks:** blocks. Each is a slab 2 m thick standing across the path under a girder roof,
+  so it can't be jumped. A block has a material in the engine's damage rule (DMG-002): a hit must
+  deliver more than 30 kJ to hurt it. A shot delivers about 37 kJ, and three break it. The mammoth
+  running or rolling into a block delivers at most 26 kJ, so it never hurts one, and the block is
+  too heavy to shove. Nothing in the game decides what breaks: only that rule.
+- The ground, the spikes and the girders have no material, so nothing damages them.
+
+### The grappling hook
+
+- Cast along the aim at 75 m/s, it catches the first solid thing it hits (rock, a girder, a
+  block) within 14 m. Further than that with nothing hit, it comes back.
+- The rope is the engine's segmented rope (ROP-001…ROP-008 in `docs/spec.md`): a chain of points
+  half a metre apart that hangs, drapes over a ledge and bends round a corner. It only pulls.
+- **Up** reels it in and **down** pays it out, at 4 m/s, between 1.5 m and 14 m. Hanging in the
+  air, down is not a duck. **Left and right** pump the swing. Reeling in while swinging speeds the
+  swing up, as it does for anything on a rope.
+- **Jump** lets go; so does the hook's button again. Let go, the rope comes back to the mammoth.
+- Sent back to a flag, the mammoth's rope and its shots in flight go with it.
+
+### The level
+
+One lap, eight flags. Three kinds of obstacle, each on its own first and then closer together:
+
+- **Gates** (four): a block to shoot through.
+- **Pits** (three): 14 or 18 m wide and 9 m deep, with spikes across the floor and a girder 8 m
+  overhead. Hook the girder from the edge, run off, and let go on the way up.
+- **Cliffs** (two): 7 and 8.5 m high, with a girder reaching out over the edge. Hook it from the
+  foot, reel up past the edge, lean over the top and let go. The second has a gate on top.
+
+### Controls
+
+| | Keyboard and mouse | Touch | Gamepad |
+|---|---|---|---|
+| Aim | the mouse pointer; or Q and E to swing it | the AIM stick | right stick |
+| Fire | left button, or F | FIRE | right trigger |
+| Hook | right button, or G | HOOK | left trigger, or Y |
+| Reel in, pay out | ↑ ↓ or W S | ▲, DUCK | stick or D-pad up and down |
+| Let go | Space | JUMP | A |
+
+Roll moves to X or the right bumper on a gamepad (the right trigger now fires). ↑ and W still jump
+when the mammoth isn't on the rope.
+
+### Requirements
+
+| ID | Requirement |
+|---|---|
+| MMN-100 | The tools share one aim, an angle in the mammoth's own frame. The player's is kept; before any, it is a little above the way the mammoth faces. |
+| MMN-101 | A level has the tools only if it says so. Level 1 doesn't; level 2 does. The title offers both levels, and the main Space Battles page links to the game. |
+| MMN-102 | The aim is shown as the path a shot would take under the moon's gravity, with the hook's reach marked. |
+| MMN-103 | The mouse aims from where the mammoth is drawn to the pointer; Q and E swing the aim; the touch stick and a controller's right stick set it. Fire and hook each have a mouse button, a key, a touch button and a controller button. |
+| MMN-110 | A shot is a body that leaves along the aim at the rifle's speed on top of the mammoth's; the mammoth recoils with its momentum. Held, the rifle fires at its rate. |
+| MMN-111 | A shot moves under the moon's gravity, and is gone after its time. |
+| MMN-112 | A shot never strikes the mammoth that fired it. |
+| MMN-113 | Shots break a block by the engine's damage rule alone. |
+| MMN-114 | The mammoth running or rolling into a block neither breaks it nor moves it out of the way. |
+| MMN-120 | The hook is cast along the aim and catches what it hits. |
+| MMN-121 | Cast at nothing within reach, it comes back. |
+| MMN-122 | Held, the rope lets the mammoth swing across a pit it can't jump. |
+| MMN-123 | Up reels in and down pays out; reeled up to a girder over a cliff, the mammoth can get onto the cliff's top. Hanging in the air, down is not a duck. |
+| MMN-124 | Jump lets the rope go; so does the hook's button again. |
+| MMN-125 | Sent back to a flag, the mammoth's rope and shots go with it. |
+
+### Not in this version
+
+Enemies to shoot. Ammunition. Animations for aiming, firing or swinging (the mammoth uses its jump
+and fall frames on the rope). A hook that pulls what it has caught toward the mammoth. Breaking the
+ground. Sound.

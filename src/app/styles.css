@@ -416,3 +416,12 @@ button { cursor: pointer; }
 .mmn-touch.roll { right: max(18px, env(safe-area-inset-right)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 96px); width: 84px; height: 56px; font-size: 13px; }
 /* A mouse and keyboard need no touch buttons. */
 @media (hover: hover) and (pointer: fine) { .mmn-touch { opacity: 0.35; } .mmn-touch:hover { opacity: 1; } }
+/* Moon Mammoth's tools: up (to reel the rope in) over the run buttons; the aim stick, FIRE and HOOK over the moves. */
+.mmn-touch.up { left: calc(max(18px, env(safe-area-inset-left)) + 48px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 96px); height: 56px; font-size: 20px; }
+.mmn-stick { position: absolute; right: calc(max(18px, env(safe-area-inset-right)) + 96px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px); width: 104px; height: 104px; border: 2px solid #7fe9ff; border-radius: 50%; background: #0008; color: #7fe9ff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; touch-action: none; -webkit-tap-highlight-color: transparent; }
+.mmn-touch.fire { right: max(18px, env(safe-area-inset-right)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 164px); width: 84px; height: 56px; font-size: 13px; border-color: #fff2a8; color: #fff2a8; }
+.mmn-touch.hook { right: max(18px, env(safe-area-inset-right)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 232px); width: 84px; height: 56px; font-size: 13px; border-color: #e3d2ae; color: #e3d2ae; }
+.mmn-mouse { cursor: crosshair; }
+.mmn-note small + small { margin-top: 4px; opacity: 0.85; }
+.mas-btn.small.on { background: #fff; color: #000; }
+@media (hover: hover) and (pointer: fine) { .mmn-stick { opacity: 0.35; } .mmn-stick:hover { opacity: 1; } }

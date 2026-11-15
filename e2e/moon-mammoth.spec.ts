@@ -202,3 +202,150 @@ test("MMN-050 MMN-055 flags in order to the finish: the lap's time, kept as the 
   await page.getByTestId("mmn-quit").click();
   await expect(page.getByTestId("mmn-best")).toContainText(time!);
 });
+
+// Level 2's tools, on the second test moon (moon.html?level=test2: a block under a roof at 20 m,
+// a pit at 60 m under a beam, a cliff at 100 m under a beam).
+interface Tools {
+  aim: () => { angle: number } | null;
+  rope: () => { mode: string; anchor?: { body: string }; points: unknown[] } | null;
+  sandbox: () => { world: { controls: Record<string, number>; bodies: { id: string; integrity: number }[] } };
+  moon: () => (State & { shots?: number }) | null;
+}
+const tools = <T,>(page: Page, f: (m: Tools) => T): Promise<T> => page.evaluate(`(${f.toString()})(window.__msb)`) as Promise<T>;
+/** Where the mammoth is drawn on the page: under the view's middle. */
+const drawnAt = async (page: Page) => {
+  const box = (await page.getByTestId("mmn-mouse").boundingBox())!;
+  const d = await page.evaluate(() => {
+    const m = (window as unknown as { __msb: Hook }).__msb;
+    const c = m.camera();
+    const p = m.mammoth().position;
+    return (Math.hypot(c.x, c.y) - Math.hypot(p.x, p.y)) * c.zoom;
+  });
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 + d };
+};
+
+test("MMN-101 the title offers level 2, which has the rifle and the hook; the main page links to the game", async ({ page }) => {
+  await page.goto("./");
+  await expect(page.getByTestId("open-moon")).toHaveAttribute("href", "moon.html");
+  await page.goto("./moon.html");
+  await page.getByTestId("mmn-level-2").click();
+  await expect(page.getByTestId("mmn-hud")).toBeVisible();
+  await expect(page.getByTestId("mmn-flag")).toHaveText("FLAG 0/7");
+  await expect(page.getByTestId("mmn-tools-note")).toBeVisible();
+  for (const id of ["mmn-aim", "mmn-fire", "mmn-hook", "mmn-up"]) await expect(page.getByTestId(id)).toBeVisible();
+  expect(await tools(page, (m) => !!m.aim())).toBe(true);
+  // Level 1 has none of them.
+  await page.getByTestId("mmn-pause").click();
+  await page.getByTestId("mmn-quit").click();
+  await page.getByTestId("mmn-level-1").click();
+  await expect(page.getByTestId("mmn-hud")).toBeVisible();
+  await expect(page.getByTestId("mmn-aim")).toHaveCount(0);
+  expect(await tools(page, (m) => m.aim())).toBeNull();
+});
+
+test("MMN-103 MMN-113 the mouse aims from the mammoth to the pointer; held down it fires, and the block breaks", async ({ page }, info) => {
+  await start(page, "?level=test2");
+  await place(page, 13);
+  await expect.poll(() => hook(page, (m) => Math.hypot(m.mammoth().velocity.x, m.mammoth().velocity.y))).toBeLessThan(0.05);
+  let at = await drawnAt(page);
+  // Up and to the left of it: three quarters of a turn's half.
+  await page.mouse.move(at.x - 150, at.y - 150);
+  await expect.poll(() => tools(page, (m) => m.aim()!.angle)).toBeCloseTo((3 * Math.PI) / 4, 1);
+  // At the block: ahead and a little up.
+  at = await drawnAt(page);
+  await page.mouse.move(at.x + 300, at.y - 40);
+  await expect.poll(() => tools(page, (m) => m.aim()!.angle)).toBeCloseTo(Math.atan2(40, 300), 1);
+  await shot(page, info, "mmn-aim");
+  await page.mouse.down();
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.fire)).toBe(1);
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.bodies.filter((b) => b.id.startsWith("block-")).length), { timeout: 15_000 }).toBe(0);
+  await page.mouse.up();
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.fire)).toBe(0);
+  expect(await tools(page, (m) => m.moon()!.shots)).toBeGreaterThanOrEqual(3);
+});
+
+test("MMN-103 MMN-120 MMN-124 the right button casts the hook where the mouse points, and jump lets it go", async ({ page }, info) => {
+  await start(page, "?level=test2");
+  await place(page, 51.5);
+  await expect.poll(() => hook(page, (m) => Math.hypot(m.mammoth().velocity.x, m.mammoth().velocity.y))).toBeLessThan(0.05);
+  // The beam over the pit: 8.5 m on and 7 m up, as the view draws it.
+  const at = await drawnAt(page);
+  const zoom = await hook(page, (m) => m.camera().zoom);
+  await page.mouse.move(at.x + 8.3 * zoom, at.y - 6.6 * zoom);
+  await expect.poll(() => tools(page, (m) => m.aim()!.angle)).toBeCloseTo(Math.atan2(6.6, 8.3), 1);
+  await page.mouse.down({ button: "right" });
+  await expect.poll(() => tools(page, (m) => m.rope()?.mode ?? null)).toBe("held");
+  await page.mouse.up({ button: "right" });
+  expect(await tools(page, (m) => m.rope()!.anchor!.body)).toBe("girder-2");
+  await shot(page, info, "mmn-rope");
+  await page.keyboard.down("Space");
+  await expect.poll(() => tools(page, (m) => m.rope())).toBeNull();
+  await page.keyboard.up("Space");
+});
+
+test("MMN-103 Q and E swing the aim; F fires and G casts the hook; the touch stick and its buttons do the same", async ({ page }) => {
+  await start(page, "?level=test2");
+  await place(page, -40);
+  const from = await tools(page, (m) => m.aim()!.angle);
+  await page.keyboard.down("KeyQ");
+  await expect.poll(() => tools(page, (m) => m.aim()!.angle)).toBeGreaterThan(from + 0.3);
+  await page.keyboard.up("KeyQ");
+  const up = await tools(page, (m) => m.aim()!.angle);
+  await page.keyboard.down("KeyE");
+  await expect.poll(() => tools(page, (m) => m.aim()!.angle)).toBeLessThan(up - 0.3);
+  await page.keyboard.up("KeyE");
+  await page.keyboard.down("KeyF");
+  await expect.poll(() => tools(page, (m) => m.moon()!.shots ?? 0)).toBeGreaterThan(0);
+  await page.keyboard.up("KeyF");
+  await page.keyboard.down("KeyG");
+  await expect.poll(() => tools(page, (m) => !!m.rope())).toBe(true);
+  await page.keyboard.up("KeyG");
+  await expect.poll(() => tools(page, (m) => m.rope())).toBeNull();
+  // The stick: pressed at its top, the aim is straight up; at its left, to the left.
+  const stick = (await page.getByTestId("mmn-aim").boundingBox())!;
+  const press = (dx: number, dy: number) =>
+    page.getByTestId("mmn-aim").dispatchEvent("pointerdown", { pointerId: 2, pointerType: "touch", bubbles: true, clientX: stick.x + stick.width / 2 + dx, clientY: stick.y + stick.height / 2 + dy });
+  await press(0, -40);
+  await expect.poll(() => tools(page, (m) => m.aim()!.angle)).toBeCloseTo(Math.PI / 2, 1);
+  await press(-40, 0);
+  await expect.poll(() => tools(page, (m) => Math.abs(m.aim()!.angle))).toBeCloseTo(Math.PI, 1);
+  const shotsBefore = await tools(page, (m) => m.moon()!.shots ?? 0);
+  await hold(page, "mmn-fire", true);
+  await expect.poll(() => tools(page, (m) => m.moon()!.shots ?? 0)).toBeGreaterThan(shotsBefore);
+  await hold(page, "mmn-fire", false);
+  await hold(page, "mmn-hook", true);
+  await expect.poll(() => tools(page, (m) => !!m.rope())).toBe(true);
+  await hold(page, "mmn-hook", false);
+});
+
+test("MMN-103 a controller: the right stick aims, the right trigger fires, the left trigger casts the hook", async ({ page }) => {
+  await page.addInitScript(() => {
+    const pad = { buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })), axes: [0, 0, 0, 0] };
+    (window as unknown as { __pad: typeof pad }).__pad = pad;
+    navigator.getGamepads = () => [pad as unknown as Gamepad];
+  });
+  const button = (i: number, on: boolean) =>
+    page.evaluate(([k, v]) => {
+      const b = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[] } }).__pad.buttons[k as number];
+      b.pressed = v as boolean;
+      b.value = v ? 1 : 0;
+    }, [i, on] as const);
+  const rightStick = (x: number, y: number) => page.evaluate(([a, b]) => void Object.assign((window as unknown as { __pad: { axes: number[] } }).__pad.axes, { 2: a, 3: b }), [x, y] as const);
+  await start(page, "?level=test2");
+  await place(page, -40);
+  // Pushed up (the stick's y runs down): straight up. Pushed left: to the left.
+  await rightStick(0, -1);
+  await expect.poll(() => tools(page, (m) => m.aim()!.angle)).toBeCloseTo(Math.PI / 2, 1);
+  await rightStick(-1, 0);
+  await expect.poll(() => tools(page, (m) => Math.abs(m.aim()!.angle))).toBeCloseTo(Math.PI, 1);
+  // Let go, the aim stays.
+  await rightStick(0, 0);
+  await button(7, true);
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.fire)).toBe(1);
+  await button(7, false);
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.fire)).toBe(0);
+  expect(Math.abs((await tools(page, (m) => m.aim()!.angle)))).toBeCloseTo(Math.PI, 1);
+  await button(6, true);
+  await expect.poll(() => tools(page, (m) => !!m.rope())).toBe(true);
+  await button(6, false);
+});

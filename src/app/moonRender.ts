@@ -1,6 +1,6 @@
 // Moon Mammoth's drawing (docs/games/moon-mammoth-design.md §5.2): the whole frame turned so the
 // mammoth is upright and the moon turns under it. After the turn everything is drawn in world metres.
-import { localVertices, type Body, type Vec2, type World } from "../core/index.ts";
+import { gravityAt, localVertices, MOON_SHOT, moonAim, moonRope, type Body, type Vec2, type World } from "../core/index.ts";
 import type { Camera, Viewport } from "./camera.ts";
 import { COLUMNS, FRAME, frameOf, ROWS, STAND_PX } from "./moon/sheet.ts";
 
@@ -16,6 +16,11 @@ const GIRDER = "#6f7a8f";
 const GIRDER_EDGE = "#c9d2e0";
 const BOULDER = "#6b6258";
 const BOULDER_EDGE = "#d8cfc0";
+const BLOCK = "#b9783f";
+const BLOCK_EDGE = "#f0c896";
+const ROPE = "#e3d2ae";
+const SHOT = "#fff2a8";
+const AIM = "#7fe9ff";
 const FLAG_NEXT = "#ffd23f";
 const FLAG_DONE = "#6c7180";
 const FLAG_LATER = "#c9d2e0";
@@ -75,6 +80,35 @@ function bodyPath(ctx: CanvasRenderingContext2D, b: Body): void {
     else ctx.lineTo(x, y);
   });
   ctx.closePath();
+}
+
+/**
+ * Where a thing thrown from the mammoth along its aim would go (MMN-102): points along its path
+ * under the moon's gravity, `every` m apart, out to `reach` m of path. The aim's line on the screen.
+ */
+export function aimPath(world: World, speed: number, reach: number, every: number): Vec2[] {
+  const aim = moonAim(world);
+  const m = world.moon && world.bodies.find((b) => b.id === world.moon!.spec.mammoth);
+  if (!aim || !m) return [];
+  const p = { x: aim.from.x, y: aim.from.y };
+  const v = { x: m.velocity.x + aim.dir.x * speed, y: m.velocity.y + aim.dir.y * speed };
+  const out: Vec2[] = [];
+  const dt = Math.min(every / 8, 0.25) / speed;
+  let gone = 0;
+  let next = every;
+  while (gone < reach) {
+    const g = gravityAt(world, p);
+    v.x += g.x * dt;
+    v.y += g.y * dt;
+    p.x += v.x * dt;
+    p.y += v.y * dt;
+    gone += Math.hypot(v.x, v.y) * dt;
+    if (gone >= next) {
+      out.push({ x: p.x, y: p.y });
+      next += every;
+    }
+  }
+  return out;
 }
 
 /** How far the view is turned, rad clockwise from the world's up: the mammoth's place round the moon, or the title's slow turn. */
@@ -187,9 +221,64 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
     }
   });
 
-  // Spikes, girders and the rocks that fall: from their bodies.
+  // Dust: what a shot or a broken block leaves, for its first few seconds.
+  for (const d of world.dust ?? []) {
+    if (d.age > 3) continue;
+    ctx.globalAlpha = 0.5 * (1 - d.age / 3);
+    ctx.fillStyle = "#cdb89a";
+    ctx.beginPath();
+    ctx.arc(d.position.x, d.position.y, Math.max(d.size, 1.5 * px), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Spikes, girders, blocks, shots and the rocks that fall: from their bodies.
   const falls = new Set((spec.rocks ?? []).map((r) => r.id));
+  const breakable = spec.tools?.breakable;
   for (const b of world.bodies) {
+    if (breakable && b.id.startsWith(breakable)) {
+      // A block the rifle breaks: darker, and cracked, as it is hurt.
+      bodyPath(ctx, b);
+      ctx.fillStyle = BLOCK;
+      ctx.fill();
+      ctx.fillStyle = `rgba(0,0,0,${(0.55 * (1 - b.integrity)).toFixed(3)})`;
+      ctx.fill();
+      ctx.strokeStyle = BLOCK_EDGE;
+      ctx.lineWidth = 2 * px;
+      ctx.stroke();
+      if (b.integrity < 0.99 && b.shape.kind === "box") {
+        const c = Math.cos(b.angle);
+        const sn = Math.sin(b.angle);
+        const at = (x: number, y: number) => ({ x: b.position.x + c * x - sn * y, y: b.position.y + sn * x + c * y });
+        const w = b.shape.width / 2;
+        const h = b.shape.height / 2;
+        const cracks = b.integrity < 0.4 ? 3 : b.integrity < 0.7 ? 2 : 1;
+        ctx.strokeStyle = "#2a1608";
+        ctx.lineWidth = 2.5 * px;
+        ctx.beginPath();
+        for (let k = 0; k < cracks; k++) {
+          const y0 = h * (0.6 - 0.6 * k);
+          const pts = [at(-w, y0), at(-w * 0.3, y0 - 0.25 * h), at(w * 0.2, y0 + 0.1 * h), at(w, y0 - 0.2 * h)];
+          pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+        }
+        ctx.stroke();
+      }
+      continue;
+    }
+    if (b.id.startsWith(MOON_SHOT)) {
+      // A shot: a bright dot with a short streak behind it.
+      const speed = Math.hypot(b.velocity.x, b.velocity.y) || 1;
+      const tail = Math.min(1.6, speed * 0.004);
+      ctx.strokeStyle = SHOT;
+      ctx.lineWidth = Math.max(3 * px, 0.14);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(b.position.x - (b.velocity.x / speed) * tail, b.position.y - (b.velocity.y / speed) * tail);
+      ctx.lineTo(b.position.x, b.position.y);
+      ctx.stroke();
+      ctx.lineCap = "butt";
+      continue;
+    }
     if (b.id.startsWith(spec.spikes)) {
       bodyPath(ctx, b);
       ctx.fillStyle = SPIKE;
@@ -212,6 +301,48 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
       ctx.lineWidth = 2 * px;
       ctx.stroke();
     }
+  }
+
+  // The rope (MMN-120): from its far end through each of its points to the mammoth, and its hook.
+  const rope = moonRope(world);
+  const holder = world.bodies.find((b) => b.id === spec.mammoth);
+  if (rope && holder) {
+    ctx.strokeStyle = ROPE;
+    ctx.lineWidth = Math.max(2 * px, 0.09);
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    rope.points.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+    ctx.lineTo(holder.position.x, holder.position.y);
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(rope.points[0].x, rope.points[0].y, Math.max(3.5 * px, 0.16), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // The aim (MMN-102): dots along the path a shot would take, bending with the moon's gravity,
+  // and a ring where the hook's reach ends.
+  const tools = spec.tools;
+  if (tools && state.phase !== "won" && !moonView.title) {
+    const dots = aimPath(world, tools.rifle.speed, 26, 1.3);
+    ctx.fillStyle = AIM;
+    dots.forEach((q, i) => {
+      if (i < 1) return;
+      ctx.globalAlpha = 0.85 * (1 - i / dots.length);
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, Math.max(1.6 * px, 0.07), 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 0.8;
+    const reach = aimPath(world, tools.hook.speed, tools.hook.range, tools.hook.range).pop();
+    if (reach && !rope) {
+      ctx.strokeStyle = AIM;
+      ctx.lineWidth = 1.5 * px;
+      ctx.beginPath();
+      ctx.arc(reach.x, reach.y, Math.max(5 * px, 0.28), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   // The mammoth: its frame from the sheet, upright at the body's place, flipped by the way it faces,
