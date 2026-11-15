@@ -245,8 +245,11 @@ interface Level {
    * square of open space `box` m from the centre each way; its gravity is a uniform ball's of
    * `radius` with `gravity` m/s² at the surface (FLT-015), pulling toward the centre (0, 0); and the
    * level is left by getting `escape` m from the centre. `ground` and `top` aren't used.
+   * `islands`: more than one island (a station of several pieces; `island` is then the first).
+   * No gravity source when `gravity` is 0. `spin`: the level turns about the centre at this many
+   * rad/s (negative: clockwise), simulated as a rotating frame (FLT-017).
    */
-  asteroid?: { island: Vec[]; radius: number; gravity: number; box: number; escape: number; core?: Vec };
+  asteroid?: { island: Vec[]; radius: number; gravity: number; box: number; escape: number; core?: Vec; islands?: Vec[][]; spin?: number };
   /**
    * Electric turrets with their own power (WPN-013; Chloe's drawings, 14 November 2026): turrets
    * numbered `turrets` (from 1) are powered by one capacitor, charged by a generator, fed by fuel
@@ -348,10 +351,11 @@ function write(l0: Level) {
       // they are open, not rock. An asteroid's square wraps on all four sides.
       bounds: ast ? { min: { x: -ast.box, y: -ast.box }, max: { x: ast.box, y: ast.box }, wrap: true, farField: 10, depth: 2 } : { min: { x: left, y: Math.min(...l.ground.map((p) => p.y)) - 40 }, max: { x: right, y: l.top + WALL + 20 }, wrap: true, farField: 10, depth: 2 },
       // The rock is made from the outline when the world is (TER-001), and explosions and shells crater it.
-      terrain: { outline: air, ...(ast ? { islands: [ast.island] } : {}), prefix: "rock-", craters: CRATERS },
+      terrain: { outline: air, ...(ast ? { islands: ast.islands ?? [ast.island] } : {}), prefix: "rock-", craters: CRATERS },
+      ...(ast?.spin ? { frame: { centre: P(0, 0), omega: ast.spin } } : {}),
       bodies: [
         // An asteroid's gravity: a source at its centre that pulls as a uniform ball (FLT-015), hidden in the rock.
-        ...(ast ? [{ ...fixed("rock-core", { kind: "disc", radius: 0.5 }, ast.core ?? P(0, 0)), gravity: { mu: ast.gravity * ast.radius * ast.radius, core: 1, radius: ast.radius } }] : []),
+        ...(ast && ast.gravity > 0 ? [{ ...fixed("rock-core", { kind: "disc", radius: 0.5 }, ast.core ?? P(0, 0)), gravity: { mu: ast.gravity * ast.radius * ast.radius, core: 1, radius: ast.radius } }] : []),
         ...pod(l.pod, l.podAngle ?? 0), ...turrets.flatMap((t) => t.bodies), ...tanks.flatMap((t) => t.bodies), ...(plant?.bodies ?? []), ...aerials.flatMap((a) => a.bodies), ...machines.flatMap((m) => m.bodies)],
       joints: [...turrets.flatMap((t) => t.joints), ...tanks.flatMap((t) => t.joints), ...(plant?.joints ?? []), ...aerials.flatMap((a) => a.joints), ...machines.flatMap((m) => m.joints)],
       links: [...turrets.flatMap((t) => t.links), ...machines.flatMap((m) => m.links)],
@@ -391,7 +395,7 @@ function write(l0: Level) {
         respawn: 1.25,
         grace: 1,
         level: l.n,
-        view: { colour: l.colour, pitch: 1, sky, caves: l.caves, ...(ast ? { islands: [ast.island] } : {}), ...(cables.length ? { cables } : {}) },
+        view: { colour: l.colour, pitch: 1, sky, caves: l.caves, ...(ast ? { islands: ast.islands ?? [ast.island] } : {}), ...(cables.length ? { cables } : {}) },
       },
     },
     timeline: [],
@@ -990,6 +994,146 @@ write({
       // The middle shelf (and the floor past its left end) through any of three transmitters from
       // the lower shelf; the roof through any of three more from the middle shelf.
       beyond: { 1: ["tx1|tx2|tx6", "tx3|tx4|tx5"], 2: ["tx1|tx2|tx6", "tx3|tx4|tx5"], 3: ["tx1|tx2|tx6", "tx3|tx4|tx5"], 4: ["tx1|tx2|tx6", "tx3|tx4|tx5"], 5: ["tx1|tx2|tx6", "tx3|tx4|tx5"], 6: ["tx1|tx2|tx6", "tx3|tx4|tx5"], 7: ["tx3|tx4|tx5"], 8: ["tx3|tx4|tx5"], 10: ["tx3|tx4|tx5"], 11: ["tx3|tx4|tx5"], 12: ["tx3|tx4|tx5"], 17: ["tx3|tx4|tx5"], 18: ["tx3|tx4|tx5"] },
+    },
+  });
+}
+
+// Level 7, the station (Chloe's drawing, 14 November 2026, traced at 0.15 m a pixel): a ring of four
+// pieces of rock about 215 m across round an open hub, in space, with no gravity, slowly turning
+// clockwise: a turn every 2 minutes on screen (Chloe), simulated as a rotating frame (FLT-017), so
+// what is free feels the turn as it would. The power plant hangs from the ceiling of a cavity in the
+// top piece, reached up a slot from the hub; its lines run through the top piece, and across the
+// gaps to the left and right pieces by either of two transmitters each, and on to the bottom piece
+// from either side. The pod stands in the bottom piece's slot. Twelve electric turrets, six tanks.
+// The level is left 200 m from the hub's middle.
+{
+  // The top piece, counter-clockwise.
+  const top = [
+    P(60.85, 75.71), P(53.8, 80.36), P(35.05, 95.06), P(25.6, 99.71), P(24.55, 99.71), P(23.05, 100.61), P(21.1, 100.61), P(20.5, 101.06),
+    P(20.35, 101.96), P(11.65, 106.01), P(-0.35, 105.86), P(-14.6, 104.51), P(-15.35, 104.81), P(-15.95, 104.21), P(-17.0, 104.66), P(-24.2, 104.51),
+    P(-31.55, 100.16), P(-48.8, 88.16), P(-50.6, 84.11), P(-44.15, 69.71), P(-31.85, 59.96), P(-21.2, 52.76), P(-13.1, 36.26), P(-10.85, 34.16),
+    P(-3.05, 29.36), P(2.2, 30.86), P(7.75, 31.31), P(4.15, 54.41), P(3.55, 54.71), P(-4.1, 52.61), P(-7.85, 55.76), P(-14.75, 74.21),
+    P(-14.75, 74.96), P(-11.75, 78.26), P(-6.2, 80.06), P(-5.15, 80.96), P(-4.4, 80.66), P(0.25, 82.16), P(1.3, 83.06), P(2.05, 82.76),
+    P(14.95, 86.96), P(16.15, 86.66), P(19.15, 83.96), P(26.5, 68.66), P(14.5, 55.91), P(16.0, 45.56), P(18.85, 33.26), P(30.1, 35.66),
+    P(36.85, 36.56), P(57.4, 51.11), P(64.45, 62.96), P(63.85, 66.41),
+  ];
+  // The left piece, counter-clockwise.
+  const left = [
+    P(-69.95, 68.51), P(-82.25, 62.96), P(-106.4, 6.41), P(-101.15, -35.74), P(-83.15, -50.74), P(-62.6, -40.54), P(-45.35, -13.54), P(-48.5, -11.14),
+    P(-52.55, -9.04), P(-71.45, -18.79), P(-73.7, -18.49), P(-78.2, -15.49), P(-81.5, -0.04), P(-79.25, 5.66), P(-79.55, 7.01), P(-77.75, 9.11),
+    P(-74.3, 18.56), P(-74.6, 20.21), P(-73.85, 20.96), P(-73.85, 22.01), P(-72.8, 22.76), P(-71.75, 25.91), P(-68.45, 29.36), P(-60.35, 30.86),
+    P(-58.85, 30.56), P(-55.85, 28.16), P(-54.65, 25.91), P(-51.8, 15.56), P(-47.6, 3.56), P(-38.6, -2.74), P(-31.55, 8.36), P(-25.7, 28.91),
+    P(-51.8, 60.86),
+  ];
+  // The right piece, counter-clockwise.
+  const right = [
+    P(84.85, 44.81), P(57.55, 33.86), P(48.25, 27.86), P(34.15, 17.21), P(32.8, 15.26), P(31.0, 10.76), P(31.0, 9.41), P(28.6, 4.01),
+    P(25.9, -5.44), P(29.35, -13.84), P(32.65, -23.74), P(35.65, -25.39), P(39.4, -20.74), P(40.9, -13.54), P(46.15, 2.21), P(47.35, 7.31),
+    P(51.7, 9.41), P(65.95, 7.61), P(70.15, -1.39), P(72.1, -4.54), P(73.6, -8.59), P(61.3, -21.64), P(61.0, -22.84), P(59.65, -23.44),
+    P(49.9, -33.79), P(61.0, -40.84), P(68.65, -45.19), P(70.45, -45.79), P(87.55, -44.44), P(95.65, -34.39), P(103.75, -23.44), P(105.25, -20.59),
+    P(104.8, -1.84), P(104.05, 0.11), P(104.65, 4.46), P(103.75, 12.71), P(87.85, 42.26),
+  ];
+  // The bottom piece, counter-clockwise.
+  const bottom = [
+    P(-70.55, -71.44), P(-66.2, -78.19), P(-63.2, -81.64), P(-14.15, -96.49), P(-3.65, -94.84), P(-1.4, -94.09), P(1.0, -94.09), P(3.1, -93.34),
+    P(5.65, -93.34), P(47.35, -86.59), P(67.3, -65.29), P(56.65, -49.99), P(44.8, -49.39), P(37.15, -58.24), P(31.9, -58.99), P(28.45, -56.29),
+    P(23.05, -50.89), P(14.8, -51.04), P(13.6, -50.29), P(7.6, -43.39), P(2.2, -40.84), P(-3.95, -59.89), P(10.6, -73.09), P(9.1, -77.89),
+    P(6.1, -81.94), P(-15.8, -84.19), P(-19.4, -81.94), P(-26.3, -75.04), P(-10.4, -36.79), P(-15.95, -37.54), P(-16.55, -37.99), P(-21.05, -38.14),
+    P(-24.5, -39.34), P(-26.75, -39.19), P(-32.3, -40.24),
+  ];
+  write({
+    n: 7,
+    seed: 700,
+    title: "The station",
+    description: "A ring of rock turning slowly in space, with no gravity, a power plant in its top piece and the pod in a slot in its bottom one. Fly in, take the pod on the tether, and carry it 200 m out from the middle.",
+    colour: "#14d98c",
+    top: 150,
+    ground: [],
+    caves: [],
+    start: P(0, 140),
+    pod: P(-7.26, -83.24),
+    podAngle: 0.185,
+    turrets: [
+      { at: P(25.6, 99.71), angle: -0.381, electric: true },
+      { at: P(-94.55, 34.46), angle: 1.158, electric: true },
+      { at: P(26.65, 34.76), angle: -2.956, electric: true },
+      { at: P(2.15, 30.32), angle: -2.897, electric: true },
+      { at: P(-29.75, 14.36), angle: -1.816, electric: true },
+      { at: P(29.32, 6.05), angle: 1.107, electric: true },
+      { at: P(104.95, 2.14), angle: -1.695, electric: true },
+      { at: P(29.5, -14.89), angle: 1.93, electric: true },
+      { at: P(-51.2, -22.84), angle: -2.129, electric: true },
+      { at: P(-21.05, -38.14), angle: 0.185, electric: true },
+      { at: P(11.2, -47.14), angle: -0.825, electric: true },
+      { at: P(-2.13, -94.64), angle: -2.956, electric: true },
+    ],
+    tanks: [
+      { at: P(-15.36, 104.86), angle: 0.261 },
+      { at: P(-73.85, 20.96), angle: -1.951 },
+      { at: P(-78.2, 8.51), angle: -2.214 },
+      { at: P(68.95, -13.54), angle: 0.818 },
+      { at: P(63.93, -18.72), angle: 0.751 },
+      { at: P(59.65, -23.44), angle: 0.633 },
+    ],
+    // No gravity; a turn every 2 minutes on screen (60 game seconds), clockwise.
+    asteroid: { island: top, islands: [top, left, right, bottom], radius: 107, gravity: 0, box: 240, escape: 200, spin: -(2 * Math.PI) / 60 },
+    plant: {
+      at: P(5.53, 83.39),
+      angle: -2.839,
+      transmitters: [
+        { id: "tx1", antennae: [{ at: P(-47.49, 77.19), angle: 1.983 }, { at: P(-59.6, 64.16), angle: -0.412 }] },
+        { id: "tx2", antennae: [{ at: P(58.99, 53.76), angle: -2.129 }, { at: P(71.8, 39.71), angle: 0.412 }] },
+        { id: "tx3", antennae: [{ at: P(-16.7, 43.01), angle: 2.061 }, { at: P(-30.05, 34.46), angle: -0.888 }] },
+        { id: "tx4", antennae: [{ at: P(42.55, 40.46), angle: -2.539 }, { at: P(50.63, 29.4), angle: 0.559 }] },
+        { id: "tx5", antennae: [{ at: P(-59.15, -35.44), angle: -2.173 }, { at: P(-45.8, -51.19), angle: 0.682 }] },
+        { id: "tx6", antennae: [{ at: P(53.67, -36.91), angle: 2.539 }, { at: P(49.15, -49.54), angle: -0.062 }] },
+        { id: "tx7", antennae: [{ at: P(68.65, -45.19), angle: 2.652 }, { at: P(62.2, -57.79), angle: -0.969 }] },
+        { id: "tx8", antennae: [{ at: P(-75.35, -46.99), angle: -2.678 }, { at: P(-62.9, -65.14), angle: 0.682 }] },
+      ],
+      // The power lines (Chloe's), each lit by what feeds its piece: the top straight from the plant,
+      // the left and right across a gap from the top, the bottom from the left or the right.
+      lines: [
+        { points: [P(-94.1, 34.31), P(-82.25, 28.46)], needs: ["tx1|tx3"] },
+        { points: [P(-82.25, 28.46), P(-71.15, 54.11), P(-65.0, 51.56)], needs: ["tx1|tx3"] },
+        { points: [P(-82.25, 28.46), P(-94.25, 0.11), P(-94.4, -1.39), P(-88.1, -24.19), P(-81.65, -36.04), P(-80.9, -36.64)], needs: ["tx1|tx3"] },
+        { points: [P(-80.9, -36.64), P(-69.05, -28.99), P(-68.3, -28.99), P(-59.6, -34.54)], needs: ["tx1|tx3"] },
+        { points: [P(-80.9, -36.64), P(-80.9, -37.39), P(-75.65, -46.69)], needs: ["tx1|tx3"] },
+        { points: [P(-65.0, 51.56), P(-59.75, 63.86)], needs: ["tx1|tx3"] },
+        { points: [P(-65.0, 51.56), P(-60.35, 49.31), P(-47.9, 34.31), P(-40.25, 25.91)], needs: ["tx1|tx3"] },
+        { points: [P(-62.3, -65.44), P(-49.85, -78.04), P(-37.55, -81.94)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(-47.15, 77.81), P(-36.65, 81.11), P(-26.9, 78.56), P(-24.65, 79.01)] },
+        { points: [P(-45.35, -51.94), P(-39.5, -60.34), P(-29.15, -63.64)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(-40.25, 25.91), P(-30.8, 33.71)], needs: ["tx1|tx3"] },
+        { points: [P(-40.25, 25.91), P(-38.45, 23.51), P(-39.8, 17.96), P(-30.35, 14.81)], needs: ["tx1|tx3"] },
+        { points: [P(-37.55, -81.94), P(-29.15, -63.64)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(-37.55, -81.94), P(-14.3, -89.44), P(-2.15, -87.64)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(-29.15, -63.64), P(-20.3, -45.04), P(-21.05, -38.59)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(-24.65, 79.01), P(-24.35, 79.46), P(2.8, 87.41)] },
+        { points: [P(-24.65, 79.01), P(-10.7, 42.56)] },
+        { points: [P(-15.95, 42.86), P(-10.7, 42.56)] },
+        { points: [P(-10.7, 42.56), P(-0.65, 41.96)] },
+        { points: [P(-2.15, -87.64), P(40.6, -80.59), P(48.85, -72.04), P(49.9, -70.24)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(-2.15, -87.64), P(-1.55, -93.64)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(-0.05, 41.81), P(2.05, 31.01)] },
+        { points: [P(2.8, 87.41), P(19.9, 92.81), P(22.3, 91.46)] },
+        { points: [P(2.8, 87.41), P(3.7, 83.96)] },
+        { points: [P(10.9, -47.59), P(6.4, -52.39), P(16.6, -58.84), P(19.75, -83.14)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(22.3, 91.46), P(25.15, 99.11)] },
+        { points: [P(22.3, 91.46), P(48.55, 73.31), P(49.45, 68.06), P(46.6, 65.06)] },
+        { points: [P(25.75, 35.21), P(24.55, 45.26), P(32.65, 52.31)] },
+        { points: [P(32.65, 52.31), P(32.95, 53.06), P(43.75, 62.96), P(46.6, 65.06)] },
+        { points: [P(32.65, 52.31), P(42.1, 41.06)] },
+        { points: [P(46.6, 65.06), P(57.85, 54.56)] },
+        { points: [P(48.55, -49.99), P(49.9, -70.24)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(49.9, -70.24), P(50.65, -70.09), P(61.75, -58.39)], needs: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
+        { points: [P(50.65, 28.91), P(55.6, 22.46), P(56.8, 21.86), P(71.05, 28.61), P(74.8, 29.96)], needs: ["tx2|tx4"] },
+        { points: [P(54.4, -35.74), P(68.65, -31.69)], needs: ["tx2|tx4"] },
+        { points: [P(68.65, -31.69), P(95.95, -0.04), P(103.6, 0.86)], needs: ["tx2|tx4"] },
+        { points: [P(68.65, -31.69), P(68.8, -44.59)], needs: ["tx2|tx4"] },
+        { points: [P(72.7, 39.41), P(78.1, 32.06), P(78.1, 31.61), P(75.85, 30.86), P(74.8, 29.96)], needs: ["tx2|tx4"] },
+        { points: [P(74.8, 29.96), P(95.5, 0.71)], needs: ["tx2|tx4"] },
+      ],
+      beyond: { 2: ["tx1|tx3"], 5: ["tx1|tx3"], 6: ["tx2|tx4"], 7: ["tx2|tx4"], 8: ["tx2|tx4"], 9: ["tx1|tx3"], 10: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"], 11: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"], 12: ["tx5+tx1|tx5+tx3|tx8+tx1|tx8+tx3|tx6+tx2|tx6+tx4|tx7+tx2|tx7+tx4"] },
     },
   });
 }

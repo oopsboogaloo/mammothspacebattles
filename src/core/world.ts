@@ -352,6 +352,11 @@ export interface WorldEvent {
   data: Record<string, number | string | boolean>;
 }
 
+export interface Frame {
+  centre: Vec2;
+  omega: number;
+}
+
 export interface World {
   schema: number;
   tick: number;
@@ -370,6 +375,14 @@ export interface World {
   drags: Drag[];
   contacts: Contact[];
   ledger: Ledger;
+  /**
+   * A rotating frame (FLT-017; Chloe, 14 November 2026: level 7's station turns). The world is
+   * simulated in a frame turning at `omega` rad/s about `centre` (negative: clockwise): what is fixed
+   * turns with it, and everything free feels the frame's forces, Coriolis (−2Ω×v, applied as an exact
+   * turn of its velocity) and centrifugal (Ω²r, outward). Exact for a steady spin: a body at rest
+   * outside the frame stays put on screen while the frame turns under it. Their work is the field's.
+   */
+  frame?: Frame;
   /**
    * The ledger's bookkeeping skipped (Chloe, 14 November 2026: in a game nothing reads it). The
    * physics is the same either way: the ledger only records. Set by Mammoth Thrust's page in play;
@@ -455,7 +468,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; terrain?: TerrainSpec } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; terrain?: TerrainSpec; frame?: Frame } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -478,6 +491,7 @@ export function createWorld(
     pendingUser: zeroDelta(),
     pendingDebug: [],
   };
+  if (extra.frame) world.frame = { centre: { ...extra.frame.centre }, omega: extra.frame.omega };
   for (const body of bodies) addBody(world, body);
   // The ground's rock, from its outline (TER-001).
   if (extra.terrain) world.terrain = startTerrain(world, extra.terrain, TERRAIN_OPS);
@@ -746,6 +760,39 @@ function applyAttractors(world: World, rbs: RB[], dt: number, field: { impulse: 
     field.impulse.x += Jx;
     field.impulse.y += Jy;
     field.angular += at.x * Jy - at.y * Jx;
+  }
+}
+
+/**
+ * The rotating frame's forces (FLT-017) on every free body and gas parcel, for one step. Coriolis
+ * turns a velocity by −2Ω·dt without changing its speed (done exactly, so it can't add energy);
+ * centrifugal pushes out from the centre at Ω²r. A body's own spin isn't changed by a steady frame.
+ */
+function applyFrame(world: World, rbs: RB[], dt: number, field: { impulse: Vec2; angular: number }): void {
+  const { centre, omega } = world.frame!;
+  const { c, s } = sinCos(-2 * omega * dt);
+  const w2 = omega * omega * dt;
+  const kick = (x: number, y: number, vx: number, vy: number, m: number): [number, number] => {
+    const nx = c * vx - s * vy + w2 * (x - centre.x);
+    const ny = s * vx + c * vy + w2 * (y - centre.y);
+    const Jx = m * (nx - vx);
+    const Jy = m * (ny - vy);
+    field.impulse.x += Jx;
+    field.impulse.y += Jy;
+    field.angular += x * Jy - y * Jx;
+    return [nx, ny];
+  };
+  for (const r of rbs) {
+    if (r.invMass === 0) continue;
+    const b = r.body;
+    const [vx, vy] = kick(b.position.x, b.position.y, b.velocity.x, b.velocity.y, r.mass);
+    b.velocity = { x: vx, y: vy };
+  }
+  const gas = world.gas;
+  for (let i = 0; i < gas.count; i++) {
+    const [vx, vy] = kick(gas.x[i], gas.y[i], gas.vx[i], gas.vy[i], gas.mass[i]);
+    gas.vx[i] = vx;
+    gas.vy[i] = vy;
   }
 }
 
@@ -1493,6 +1540,7 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     }
   }
   applyAttractors(world, rbs, dt, field);
+  if (world.frame && world.frame.omega !== 0) applyFrame(world, rbs, dt, field);
   let after = totals(world);
   sources.field.momentumX = field.impulse.x;
   sources.field.momentumY = field.impulse.y;

@@ -13,7 +13,7 @@ import { PLANT_BONUS, runPlant, startPlant, type PlantSpec, type PlantState } fr
 import { cutControl, cutShipLines } from "./arcade.ts";
 import { shipState } from "./duel.ts";
 import { assemblyOf } from "./joints.ts";
-import { invRotate, length, sinCos, sub, type Vec2 } from "./math.ts";
+import { add, invRotate, length, rotate, sinCos, sub, type Vec2 } from "./math.ts";
 import { turretLookup, turretWorks } from "./turret.ts";
 import type { BodyInput, JointInput, LinkInput, World } from "./world.ts";
 
@@ -142,12 +142,35 @@ const REST_TIME = 1;
 const withN = <T>(x: T, n: number): T => JSON.parse(JSON.stringify(x).replaceAll("{n}", String(n))) as T;
 const idOf = (id: string, n: number): string => id.replaceAll("{n}", String(n));
 
+/**
+ * In a rotating level (FLT-017), "at rest" and "upright" mean as the player sees it, not as the
+ * station does: at rest on screen, a point moves against the frame's turn (−Ω×r), and spins
+ * against it; upright, it is turned back by as much as the frame has turned. Elsewhere, plain.
+ */
+function restAt(world: World, p: Vec2): { velocity: Vec2; angularVelocity: number } {
+  const f = world.frame;
+  if (!f || f.omega === 0) return { velocity: { x: 0, y: 0 }, angularVelocity: 0 };
+  return { velocity: { x: f.omega * (p.y - f.centre.y), y: -f.omega * (p.x - f.centre.x) }, angularVelocity: -f.omega };
+}
+const uprightAngle = (world: World): number => (world.frame ? -world.frame.omega * world.time : 0);
+/** Where a ship beams in: the level's start, and in a rotating level the same place on screen whatever the turn. */
+function startAt(world: World, start: Vec2): Vec2 {
+  const f = world.frame;
+  if (!f || f.omega === 0) return start;
+  return add(f.centre, rotate(sinCos(-f.omega * world.time), sub(start, f.centre)));
+}
+
 /** Adds ship number `state.n` at the start, pointing up and at rest. With `grace`, its parts carry no material for that long. */
 function addShip(world: World, game: ThrustGame, ops: ThrustOps, grace: number): void {
   const { spec, state } = game;
   const t = withN(spec.ship, state.n);
+  const up = uprightAngle(world);
+  const q = sinCos(up);
+  const start = startAt(world, spec.start);
   for (const b of t.bodies) {
-    const body: BodyInput = { ...b, position: { x: spec.start.x + b.position.x, y: spec.start.y + b.position.y }, velocity: { x: 0, y: 0 }, angularVelocity: 0 };
+    const off = up ? rotate(q, b.position) : b.position;
+    const position = { x: start.x + off.x, y: start.y + off.y };
+    const body: BodyInput = { ...b, position, angle: (b.angle ?? 0) + up, ...restAt(world, position) };
     if (grace > 0) delete body.material;
     ops.addBody(world, body);
   }
@@ -158,8 +181,8 @@ function addShip(world: World, game: ThrustGame, ops: ThrustOps, grace: number):
   state.cut = undefined;
   state.burning = undefined;
   state.stats.ships += 1;
-  state.beams.push({ at: world.tick, x: spec.start.x, y: spec.start.y, r: 4 });
-  world.events.push({ tick: world.tick, type: "thrust.ship", data: { n: state.n, x: spec.start.x, y: spec.start.y, protected: grace > 0 } });
+  state.beams.push({ at: world.tick, x: start.x, y: start.y, r: 4 });
+  world.events.push({ tick: world.tick, type: "thrust.ship", data: { n: state.n, x: start.x, y: start.y, protected: grace > 0 } });
 }
 
 /** The ship's protection is over: its parts get their materials back. */
@@ -406,13 +429,16 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       const q = sinCos(hull.angle);
       const from = { ...hull.position };
       const turn = hull.angle;
+      const up = uprightAngle(world);
+      const qUp = sinCos(up);
+      const start = startAt(world, spec.start);
       for (const b of world.bodies) {
         if (!ship.has(b.id)) continue;
         const r = invRotate(q, { x: b.position.x - from.x, y: b.position.y - from.y });
-        b.position = { x: spec.start.x + r.x, y: spec.start.y + r.y };
-        b.angle -= turn;
-        b.velocity = { x: 0, y: 0 };
-        b.angularVelocity = 0;
+        const off = up ? rotate(qUp, r) : r;
+        b.position = { x: start.x + off.x, y: start.y + off.y };
+        b.angle += up - turn;
+        Object.assign(b, restAt(world, b.position));
         if (b.tractor && b.tractor.mode !== "off") {
           b.tractor.mode = "off";
           b.tractor.cargo = undefined;
@@ -423,7 +449,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       world.contacts = world.contacts.filter((c) => !ship.has(c.a) && !ship.has(c.b));
       s.stats.back += 1;
       s.backAt = now;
-      s.beams.push({ at: world.tick, x: from.x, y: from.y, r: 4, out: true }, { at: world.tick, x: spec.start.x, y: spec.start.y, r: 4 });
+      s.beams.push({ at: world.tick, x: from.x, y: from.y, r: 4, out: true }, { at: world.tick, x: start.x, y: start.y, r: 4 });
       world.events.push({ tick: world.tick, type: "thrust.back", data: { n: s.n } });
       changed = true;
     }

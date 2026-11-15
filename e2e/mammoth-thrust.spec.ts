@@ -464,6 +464,18 @@ test("MTH-091 level 5, the asteroid, opens from the title's test row", async ({ 
   expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(13);
 });
 
+test("MTH-106 level 7, the station, opens from the title's test row, turns, and draws without errors", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await page.goto("./thrust.html");
+  await page.getByTestId("mth-level-7").click();
+  await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 7");
+  expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(12);
+  expect(await hook(page, (m) => (m.sandbox().world as unknown as { frame?: { omega: number } }).frame?.omega)).toBeLessThan(0);
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.time), { timeout: 30_000 }).toBeGreaterThan(1);
+  expect(errors).toEqual([]);
+});
+
 test("MTH-093 a new ship beaming in after one lost deep in level 4's cave is in view: the view doesn't go under the rock", async ({ page }) => {
   test.setTimeout(150_000);
   await page.goto("./thrust.html?level=4");

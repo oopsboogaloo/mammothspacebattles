@@ -1,7 +1,7 @@
 // Mammoth Thrust's game in the world (docs/games/mammoth-thrust.md; src/core/thrust.ts) and its levels (scripts/thrust.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TERRAIN_OPS, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, generatorOnline, turretOnline, turretWorks, type Command, type World } from "../../src/core/index.ts";
+import { TERRAIN_OPS, powered, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, generatorOnline, turretOnline, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 import { bearingsOnto } from "../../scripts/aim.ts";
 
@@ -1261,6 +1261,41 @@ it("MTH-060 the level's rock can be cratered by explosions: a ship destroyed on 
     expect(on.ledger.last).not.toBeNull();
     expect(off.ledger.last).toBeNull();
     expect(on.ledger.violations).toBe(0);
+  }, 60_000);
+  it("MTH-095 a need may join transmitters with + (a route across two gaps): any one route of a | list will do", () => {
+    const s = { offlineUntil: 0, hits: 0, holes: 0, seen: [], up: { a: true, b: false, c: true, d: true } } as never;
+    expect(powered(s, 1, ["a+b|c+d"])).toBe(true); // c and d
+    expect(powered(s, 1, ["a+b"])).toBe(false); // b is down
+    expect(powered(s, 1, ["a|b", "c+d"])).toBe(true);
+    expect(powered(s, 1, ["b|a+b"])).toBe(false);
+  });
+
+  it("MTH-106 FLT-017 level 7 turns clockwise a turn every 60 game s; a ship beams in upright and at rest on screen, at the same place whatever the turn; left alone (turrets off) nothing on the station breaks and the pod stays on its stand", () => {
+    const { w, step } = game(7);
+    expect(w.frame!.omega).toBeCloseTo(-(2 * Math.PI) / 60, 9);
+    for (const b of w.bodies) if (b.turret) b.turret.enabled = false;
+    const seen = (b: { position: { x: number; y: number }; angle: number }) => {
+      const t = w.frame!.omega * w.time;
+      return { x: Math.cos(t) * b.position.x - Math.sin(t) * b.position.y, y: Math.sin(t) * b.position.x + Math.cos(t) * b.position.y, angle: b.angle + t };
+    };
+    const pod0 = { ...pod(w).position };
+    step(10);
+    const h = seen(hull(w));
+    expect(Math.hypot(h.x - w.thrust!.spec.start.x, h.y - w.thrust!.spec.start.y)).toBeLessThan(0.2);
+    expect(Math.abs(h.angle)).toBeLessThan(0.01);
+    // A sixth of a turn on: lost and beamed in again, at the same place on screen and upright.
+    step(2 / 240, [set("destruct", 1)]);
+    step(3, [set("destruct", 0)]);
+    expect(st(w).n).toBe(2);
+    const h2 = seen(hull(w));
+    expect(Math.hypot(h2.x - w.thrust!.spec.start.x, h2.y - w.thrust!.spec.start.y)).toBeLessThan(0.5);
+    expect(Math.abs(h2.angle)).toBeLessThan(0.02);
+    // Nothing of the station broke (only the ship's own pieces), and the pod sits where it stood.
+    const broken = w.events.filter((e) => e.type === "joint.break" && !String(e.data.id).startsWith("p1-") && !String(e.data.id).startsWith("p2-"));
+    expect(broken.map((e) => e.data.id)).toEqual([]);
+    expect(Math.hypot(pod(w).position.x - pod0.x, pod(w).position.y - pod0.y)).toBeLessThan(0.3);
+    expect(st(w).pod).toBe("stand");
+    expect(w.ledger.violations).toBe(0);
   }, 60_000);
   it("MTH-088 an explosion that reaches a dome punches several leaks in it, more the nearer it went off, and knocks the plant offline", () => {
     const blast = (gap: number) => {

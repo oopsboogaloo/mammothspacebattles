@@ -1,6 +1,6 @@
 // Draws a world onto a 2D canvas context (TST-011): a pure function of
 // world, camera and options, usable without the UI shell.
-import { add, assemblyRoots, fieldId, generatorOnline, nearestOffset, turretOnline, turretLookup, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
+import { add, sub, assemblyRoots, fieldId, generatorOnline, nearestOffset, turretOnline, turretLookup, plantOn, powered, transmitterTips, assemblyTotals, collectorMouth, tractorFrame, bodyMass, localVertices, massProps, rotate, scale, sinCos, SPECIES, temperatureAt, temperatureOf, vesselShape, wispFade, wispRadius, type Body, type DustKind, type Parcel, type Vec2, type World } from "../core/index.ts";
 import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
@@ -410,6 +410,8 @@ export interface RenderOptions {
    * glowing plume, and the transmitters' shock as one line, not three.
    */
   lite?: boolean;
+  /** Drawn inside a turning level's turn (renderFrame): no background, and no stars of its own. */
+  turning?: boolean;
   /** A landing pad to mark (FLT-009). */
   pad?: string;
   /** Draw fixed bodies as plain ground with a single surface line (Mammoth Lander). */
@@ -982,9 +984,11 @@ const GROUND_MARGIN = 0.25;
 /** Its largest side, device px. */
 const GROUND_MAX = 4096;
 
-function drawGroundCached(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport, world: World, vertical: boolean): boolean {
+function drawGroundCached(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, c: Camera, vp: Viewport, world: World, vertical: boolean, turning = false): boolean {
   if (!canPlume(ctx) || typeof ctx.getTransform !== "function") return false;
-  const dpr = ctx.getTransform().a || 1;
+  // The canvas's pixels a CSS pixel (its scale, whatever turn it has: a turning level's, renderFrame).
+  const t = ctx.getTransform();
+  const dpr = Math.hypot(t.a, t.b) || 1;
   const w = Math.min(Math.ceil(vp.width * (1 + 2 * GROUND_MARGIN)), Math.floor(GROUND_MAX / dpr));
   const h = Math.min(Math.ceil(vp.height * (1 + 2 * GROUND_MARGIN)), Math.floor(GROUND_MAX / dpr));
   if (w < vp.width || h < vp.height) return false; // a screen too big for the picture: draw directly
@@ -1007,7 +1011,7 @@ function drawGroundCached(ctx: Ctx, view: NonNullable<RenderOptions["thrust"]>, 
     rockLayer(pc, view, at, pv, copies);
     g = groundPicture = { canvas, sky: view.sky, craters, zoom: c.zoom, dpr, w, h, x: c.x, y: c.y };
   }
-  drawStars(ctx, c, vp);
+  if (!turning) drawStars(ctx, c, vp);
   // Its top left on screen, on a whole device pixel so the lines stay sharp.
   const left = Math.round(((g.x - c.x) * c.zoom + (vp.width - g.w) / 2) * dpr) / dpr;
   const top = Math.round(((c.y - g.y) * c.zoom + (vp.height - g.h) / 2) * dpr) / dpr;
@@ -1464,17 +1468,46 @@ function nodeColours(world: World): Map<string, boolean> {
   return nodes;
 }
 
+/**
+ * A turning level (FLT-017: Mammoth Thrust's level 7): the world is simulated in the station's frame
+ * and drawn turned as the station has turned so far, about the middle of the screen, so on screen
+ * the station turns and what is free moves as it would. The stars don't turn: they are drawn first,
+ * as seen from where the camera is outside the frame. The world is drawn into a square view as wide
+ * as the screen's diagonal, so no corner is left out whatever the turn.
+ */
 export function renderFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
+  const f = world.frame;
+  if (!f || !f.omega || !opts.thrust || !canPlume(ctx)) return drawFrame(ctx, world, c, vp, opts);
+  const turn = f.omega * world.time; // the frame's turn, counter-clockwise, rad
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, vp.width, vp.height);
+  const q = sinCos(turn);
+  const out = add(f.centre, rotate(q, sub(c, f.centre)));
+  drawStars(ctx, out, vp);
+  const d = Math.ceil(Math.hypot(vp.width, vp.height));
+  ctx.save();
+  ctx.translate(vp.width / 2, vp.height / 2);
+  // Counter-clockwise in the world (y up) is anticlockwise on screen (y down): a negative turn here.
+  ctx.rotate(-turn);
+  ctx.translate(-d / 2, -d / 2);
+  drawFrame(ctx, world, c, { width: d, height: d }, { ...opts, turning: true });
+  ctx.restore();
+}
+
+function drawFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: RenderOptions): void {
   // The games' look: Mammoth Asteroids' and Mammoth Thrust's.
   const game = !!opts.arcade || !!opts.thrust;
-  ctx.fillStyle = game ? "#000" : COLORS.background;
-  ctx.fillRect(0, 0, vp.width, vp.height);
+  // A turning level's background and stars are drawn already (renderFrame).
+  if (!opts.turning) {
+    ctx.fillStyle = game ? "#000" : COLORS.background;
+    ctx.fillRect(0, 0, vp.width, vp.height);
+  }
   // Mammoth Thrust's levels wrap round (MTH-093): the ground, its lines and everything on it are
   // drawn again one level's width (and an asteroid's square's height) either way, where the view
   // reaches. A level of ground doesn't wrap up and down in play (rock closes over it), so only its sides.
   const copies: [number, number][] = [[0, 0], ...(opts.thrust && world.bounds.wrap ? levelCopies(world, c, vp, !!opts.thrust.islands?.length) : [])];
   if (opts.thrust) {
-    if (!drawGroundCached(ctx, opts.thrust, c, vp, world, !!opts.thrust.islands?.length)) drawStripedGround(ctx, opts.thrust, c, vp, copies, world.bounds);
+    if (!drawGroundCached(ctx, opts.thrust, c, vp, world, !!opts.thrust.islands?.length, !!opts.turning)) drawStripedGround(ctx, opts.thrust, c, vp, copies, world.bounds);
     for (const [ox, oy] of copies) drawPowerLines(ctx, world, { ...c, x: c.x - ox, y: c.y - oy }, vp);
   }
   else if (opts.stars) drawStars(ctx, opts.stars === "still" ? { x: 0, y: 0 } : c, vp);

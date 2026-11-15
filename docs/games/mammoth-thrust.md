@@ -146,6 +146,20 @@ other sources in §12):
   its left end) through any of three transmitters, and the roof through any of three more. Eighteen
   electric turrets, six fuel tanks. Its passages aren't held to a least width: some gaps between
   stalactites are tight, as sketched. A step takes about 4.7 ms (557 bodies; level 5: 2.8 ms).
+- **Level 7: the station** (Chloe's drawing, 14 November 2026, traced at 0.15 m a pixel). A ring of
+  four pieces of rock about 215 m across round an open hub, in space with no gravity, turning
+  slowly clockwise: a turn every 2 minutes on screen (Chloe). It is simulated as a rotating frame
+  (FLT-017): the rock is fixed in the frame, and everything free (the ship, the pod off its stand,
+  debris, slugs, bolts, gas) feels the frame's Coriolis and centrifugal forces, so on screen it
+  moves as it would in open space while the station turns under it; the stars don't turn. A ship
+  beams in upright and at rest on screen, always at the same place above the station. The power
+  plant hangs from the ceiling of a cavity in the top piece, up a slot from the hub; its lines run
+  through the top piece, across the gaps to the left and right pieces by either of two
+  transmitters each, and on to the bottom piece from either side (`"tx5+tx1|…"`, MTH-095). Twelve
+  electric turrets, six fuel tanks; the pod stands in the bottom piece's slot. The level is left
+  200 m from the hub's middle. Objects are seated clear of the rock: one sat 15 cm into it at a
+  corner, and the frame's push made its weld fight the contact until it broke. A step takes about
+  2.9 ms (347 bodies). The rim moves at about 11 m/s and the pod at about 9 m/s.
 - No passage is narrower than about 25 m (the tether is 12 to 15 m, and the pod must swing
   through). Levels 3 and 4 are drawn tighter (18 m): level 4 at the chamber's left end, where the roof is 19 m over the pod;
   the tips of its two dead-end alcoves narrow to nothing.
@@ -536,7 +550,11 @@ Priority: **M** must, **S** should.
   300 m from its middle, about 175 m past its furthest rock. Thirteen electric turrets, four fuel
   tanks, the plant in its lower cave; nothing on it moves as it starts.
 - **MTH-095** `[M]` A turret or power line may take power through any one of several transmitters
-  (`"tx1|tx2"`): it keeps power while one of them stands.
+  (`"tx1|tx2"`): it keeps power while one of them stands. A route across two gaps joins its
+  transmitters with `+` (`"tx5+tx1|tx6+tx2"`): it keeps power while every one of some route stands.
+- **MTH-106** `[M]` Level 7 turns clockwise, a turn every 60 game seconds (FLT-017). A ship beams in
+  upright and at rest on screen, at the same place whatever the turn; left alone, nothing on the
+  station breaks and the pod stays on its stand.
 - **MTH-100** `[M]` A ship beaming in or out shows a four-pointed hyperspace star (Chloe, 14
   November 2026): out (leaving with the pod, or beamed back without it), it grows from the ship and
   fades, and the level's result follows; in, it shrinks onto the ship as it appears. A lost ship is

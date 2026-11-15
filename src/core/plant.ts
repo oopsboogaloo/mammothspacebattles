@@ -161,8 +161,13 @@ export function plantCoolant(world: World, spec: PlantSpec): number {
  * Whether a power line (or turret) with these needs has power now. Each need is a transmitter's id,
  * or several joined by "|": power through any one of them will do (two links into the same rock).
  */
+/**
+ * Whether the plant's power reaches what needs these transmitters: every need met, a need being any
+ * one of its `|` alternatives, and an alternative every transmitter of it joined by `+` (a route
+ * across two gaps: level 7's bottom piece is fed through the left piece or the right).
+ */
 export function powered(state: PlantState, now: number, needs: string[] | undefined): boolean {
-  return plantOn(state, now) && (needs ?? []).every((need) => need.split("|").some((id) => state.up[id]));
+  return plantOn(state, now) && (needs ?? []).every((need) => need.split("|").some((alt) => alt.split("+").every((id) => state.up[id])));
 }
 
 /** A transmitter's two tips, in the world, if both antennae are there. */
