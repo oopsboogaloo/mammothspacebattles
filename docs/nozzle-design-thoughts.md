@@ -129,9 +129,22 @@ Thrust ÷ throat-only, ideal, in vacuum:
 - **The gas's chamber runs at 3–4 times the model's pressure** (about 600–900 N/m against 214) for
   less thrust: the gas struggles through a throat only a few parcels wide.
 
-**The full sweep** (ten engines, up to 8,000 parcels a second) is to show where the gas settles:
-near the model, near the theory, or elsewhere. Its results go in `docs/perf/engine-validation.json`
-and `docs/perf/engine-validation.md` when it finishes.
+**The full sweep** (nine engines run, up to 8,000 parcels a second; `docs/perf/engine-validation.md`,
+with the numbers in `docs/perf/engine-validation.json`):
+
+- **Finely resolved, the gas follows textbook nozzle theory within about ±5%:** extrapolated, 0.95–1.05
+  of ideal 1D flow with the divergence loss, across area ratios 1 to 5, half-angles 10° to 61° and
+  sizes ×1 and ×2 (a straight extension reads 1.08). So 1D theory is a sound model for the game's
+  nozzles.
+- **The divergence loss sin α ÷ α holds:** the 61° nozzle gives 94 N, against 98 N ideal with the loss
+  and 117 N without.
+- **The chamber model is off by up to about 15%,** high for poor nozzles (throat only +14%) and low
+  for good ones (ratio 5 −10%, RS-08 ×2 −12%): it gives every nozzle about the same thrust. A nozzle
+  term from theory would bring it within the gas's ±5%.
+- **At the game's resolution the gas is far off** (30–70% of converged, worse the bigger the
+  engine), and converging it costs 50 to 300 times the model's step: the chamber model was the right
+  choice, and the nozzle should come from theory.
+- Not run: the ×0.5 engine (too slow). Not converged: ×4.
 
 **A caveat:** at game resolution the gas is too coarse to be the truth. Real-world measurements
 anchor the theory; the gas checks the game's own behaviour (2D, heavy gas) and the edge cases
@@ -458,7 +471,8 @@ we can.
   their nozzles?
 - Should the game ever have ambient air (planets with atmospheres)? Then sea-level against vacuum
   nozzles becomes a real design choice, and over-expansion and separation need modelling.
-- Is sin α ÷ α right for planar nozzles? To check against a textbook.
+- Is sin α ÷ α right for planar nozzles? The sweep supports it (the 61° nozzle within 4%); still to
+  check against a textbook.
 - Propellant: give stores a volume (the densities in §5), separate hydrogen and oxygen tanks, and
   whether to keep 300 K or go cryogenic (boil-off, insulation). How these sit with `economy`.
 - Pressure-fed tanks: how much above the chamber's pressure they are held, and so how their mass
