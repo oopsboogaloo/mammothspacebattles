@@ -2,12 +2,13 @@
 // blueprints drawer.
 import { useState } from "preact/hooks";
 import { NumberControl } from "./NumberControl.tsx";
+import { loadsFor } from "./tryLoads.ts";
 import { layout, StatsFold } from "./Layout.tsx";
 import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
-import { addComponent, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { addComponent, mirrorComponent, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
 import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
@@ -376,6 +377,18 @@ function ComponentProps({ id }: { id: string }) {
         <button data-testid="duplicate-part" title="Another like it, placed where it welds (Ctrl+D)" onClick={() => addAtFreeSpot(current.value, id)}>
           ⧉ Duplicate
         </button>
+        <button
+          data-testid="mirror-part"
+          title="A mirror image on the other side of the ship's middle line, wired as the mirror of this one (turn left and right swapped)"
+          onClick={() => {
+            const r = mirrorComponent(current.value, id);
+            if ("error" in r) return say(r.error);
+            edit(() => r.bp);
+            selection.value = { type: "component", id: r.id };
+          }}
+        >
+          ⇋ Mirror
+        </button>
         {c.kind === "engine" && (
           <button data-testid="flip-part" title="Turn it round to push the other way" onClick={() => edit((b) => flipComponent(b, id))}>
             ↕ Flip
@@ -407,6 +420,7 @@ function WeldProps({ id }: { id: string }) {
   const a = component(bp, w.a);
   const b = component(bp, w.b);
   const pts = w.joints.length;
+  const flown = loadsFor(bp)?.[id] ?? null;
   const weakest = (["tension", "shear", "torque"] as const).reduce((p, k) => (lim[k] / (k === "torque" ? 0.5 : 1) < lim[p] / (p === "torque" ? 0.5 : 1) ? k : p), "tension" as "tension" | "shear" | "torque");
   const field = (key: keyof typeof lim, label: string, unit: string) => (
     <NumberControl key={key} label={label} unit={unit} value={lim[key]} min={100} max={200000} step={50} decimals={0} onLive={(v) => live((bb) => setWeld(bb, id, { [key]: v }))} onEnd={endGesture} />
@@ -461,8 +475,10 @@ function WeldProps({ id }: { id: string }) {
           <b>{pts}</b>
         </div>
         <div>
-          <small>LIVE LOAD</small>
-          <b>— (try it)</b>
+          <small>LAST TRY-OUT</small>
+          <b data-testid="weld-load" class={flown ? (flown.broke ? "bad" : flown.peak >= 0.8 ? "hot" : flown.peak >= 0.5 ? "warm" : "") : ""} title={flown ? `Its hardest load in the last try-out: ${Math.round(flown.peak * 100)}% of its limit, in ${flown.kind}` : "Fly it with Try it to see how hard each weld works"}>
+            {flown ? (flown.broke ? "BROKE" : `${Math.round(flown.peak * 100)}% ${flown.kind}`) : "— (try it)"}
+          </b>
         </div>
       </div>
       <div class="actions">

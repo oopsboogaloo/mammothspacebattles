@@ -265,3 +265,69 @@ describe("measure", () => {
     expect(measureKey(structuredClone(bp))).toBe(measureKey(bp));
   }, 60_000);
 });
+
+describe("mirror", () => {
+  it("BPD-027 mirroring Thruster BL, with BR removed, makes BR again: the same outline, welds and wiring, named BR", async () => {
+    const { mirrorComponent, removeComponent, channelsOf, worldVertices: wv } = await import("../../src/app/blueprint/model.ts");
+    const b = removeComponent(bp, "back-r");
+    const r = mirrorComponent(b, "back-l");
+    if ("error" in r) throw new Error(r.error);
+    const c = component(r.bp, r.id);
+    expect(c.label).toBe("Thruster BR");
+    const want = component(bp, "back-r").bodies.flatMap((id) => wv(body(bp, id)));
+    const got = c.bodies.flatMap((id) => wv(body(r.bp, id)));
+    for (const v of want) expect(got.some((g) => Math.hypot(g.x - v.x, g.y - v.y) < 1e-6)).toBe(true);
+    // Welded to Tank R by the touch rule: two points along their 0.8 m shared side (the preset's BR has one).
+    expect(welds(r.bp).find((w) => w.id === `${r.id}|tank-r` || w.id === `tank-r|${r.id}`)?.joints.length).toBe(2);
+    // Its wiring is BR's: turn left, and forward eased by turn right.
+    const row = r.bp.mix.rows.find((x) => x.channel === channelsOf(r.bp, r.id)[0])!;
+    expect(row.lines).toEqual(bp.mix.rows.find((x) => x.channel === "br")!.lines);
+    // It exhausts downward, as the original.
+    const h = body(r.bp, c.bodies[0]);
+    expect(h.injector!.direction).toEqual(body(bp, "back-l").injector!.direction);
+  });
+
+  it("BPD-027 mirroring is refused, with the reason, where the other side is taken or the part is on the middle line", async () => {
+    const { mirrorComponent } = await import("../../src/app/blueprint/model.ts");
+    expect(mirrorComponent(bp, "tank-l")).toEqual({ error: expect.stringContaining("other side is taken") });
+    expect(mirrorComponent(bp, "main")).toEqual({ error: expect.stringContaining("middle line") });
+  });
+});
+
+describe("only what is welded to the cockpit answers", () => {
+  it("BPD-030 a thruster off the ship stops answering: it burns off its own store, held on, and is dead; the rest still answer; the estimate leaves it out", async () => {
+    const { measureWorld } = await import("../../src/app/blueprint/measure.ts");
+    const { removeWeld, response, wiringChecks } = await import("../../src/app/blueprint/model.ts");
+    const { getProfile, stepInPlace } = await import("../../src/core/index.ts");
+    const loose = removeWeld(bp, "battery|main");
+    const w = measureWorld(loose);
+    const profile = getProfile("sandbox");
+    stepInPlace(w, [{ type: "control.set", channel: "forward", value: 1 }], profile);
+    const main = () => w.bodies.find((b) => b.id === "main")!;
+    // At once its line is cut and it is held on, on a channel of its own the controls don't reach.
+    expect(main().injector!.channel).toBe("main.residual");
+    expect(w.controls["main.residual"]).toBe(1);
+    expect(w.links.some((l) => l.kind === "feed" && l.to === "main")).toBe(false);
+    // The back pair, still on the ship, answer Forward.
+    expect(w.controls.bl).toBe(1);
+    for (let i = 0; i < 240; i++) stepInPlace(w, [], profile);
+    // Within a second its store is burned: it is dead.
+    expect((main().contents ?? []).reduce((m, c) => m + c.mass, 0)).toBeLessThan(1e-4); // of 0.156 kg
+    // The estimate and the checks agree.
+    expect(response(loose, { forward: 1 }).throttles.main).toBe(0);
+    expect(wiringChecks(loose, [{ id: "forward", name: "Forward" }]).map((c) => c.text)).toContain("Not welded to the cockpit, so they won't answer: Main thruster");
+  });
+
+  it("BPD-030 a gun knocked off loses its control; with no cockpit nothing answers", async () => {
+    const { measureWorld } = await import("../../src/app/blueprint/measure.ts");
+    const { removeComponent, removeWeld } = await import("../../src/app/blueprint/model.ts");
+    const { getProfile, stepInPlace } = await import("../../src/core/index.ts");
+    let b = removeWeld(bp, "gun|hull");
+    b = removeWeld(b, "gun|shield");
+    const w = measureWorld(b);
+    stepInPlace(w, [], getProfile("sandbox"));
+    expect(w.links.some((l) => l.kind === "control" && l.to === "gun")).toBe(false);
+    const none = measureWorld(removeComponent(bp, "hull"));
+    expect(none.mix).toBeUndefined();
+  });
+});

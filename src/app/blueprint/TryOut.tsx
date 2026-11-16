@@ -3,13 +3,20 @@
 // the blueprint; Back returns to it as it was left.
 import { useEffect, useState } from "preact/hooks";
 import { camera, openScenario, overlays as sandboxOverlays, playing, sandbox, screen, setFollow, timeScale, viewport } from "../state.ts";
-import { sendControl } from "../Lander.tsx";
+import { sendControl, Thrust } from "../Lander.tsx";
 import { View } from "../View.tsx";
 import { keyLabel, loadKeys, playerControls } from "./bindings.ts";
 import { type Blueprint } from "./model.ts";
-import { current, tryOut } from "./store.ts";
+import { current, say, tryOut } from "./store.ts";
+import { loadSummary, useWeldLoads } from "./tryLoads.ts";
+import { shipControls } from "./measure.ts";
+import { usePad, type PadAnalog, type PadGame, type PadState } from "../gamepad.ts";
+import { wrapShift } from "../thrustHud.ts";
 
-const HALF = { x: 30, y: 18.75 };
+/** The field: 120 × 75 m, wrapping (twice the first try-outs' 60 × 37.5). */
+const HALF = { x: 60, y: 37.5 };
+/** How much of it the view shows at once, m: the view follows the ship round the field. */
+const VIEW = { x: 60, y: 37.5 };
 
 /** The rock: Flight test asteroids' rock A, without its gravity (no gravity here). */
 const ROCK = {
@@ -58,7 +65,9 @@ export function tryScenario(bp: Blueprint, withRock = true): Record<string, unkn
       bodies: withRock ? [...ship.bodies, structuredClone(ROCK)] : ship.bodies,
       joints: ship.joints,
       links: ship.links,
-      mix: bp.mix,
+      // The controls reach only what is welded to the cockpit; what comes off it stops answering, as
+      // in the games (shipRules.ts). With no cockpit nothing answers.
+      ...shipControls(bp),
     },
     timeline: [],
     end: { steps: 240 },
@@ -78,7 +87,21 @@ function launch(): boolean {
   timeScale.value = 1;
   sandboxOverlays.value = new Set();
   playing.value = true;
+  replayHeld();
   return true;
+}
+
+/**
+ * What the player is holding (keys, controller buttons, the stick and triggers), so a fresh flight
+ * (Refuel & reset, the rock toggled) gets it at once: its world starts with no controls set, and
+ * the inputs, unchanged, would not be sent again until let go and pressed (Codex review on #156).
+ */
+const keysHeld = new Map<string, string>();
+const padAnalog = new Map<string, number>();
+function replayHeld(): void {
+  const on = new Set([...keysHeld.values(), ...padHeld]);
+  for (const c of on) sendControl(c, 1, `Held ${c}`, 9_000_002);
+  for (const [c, v] of padAnalog) if (v > 0 && !on.has(c)) sendControl(c, v, "Pad", 9_000_000);
 }
 
 export function startTry(): void {
@@ -86,27 +109,97 @@ export function startTry(): void {
   if (launch()) tryOut.value = true;
 }
 
+/**
+ * A game controller, as Mammoth Thrust's (src/app/Thrust.tsx): the stick turns as far as it is
+ * pushed; forward is the stick up, the right trigger or A; reverse the stick down, the left trigger
+ * or B; X or the right bumper fires, Y is the tractor, the left bumper the shield; Start pauses.
+ * They set the player's controls, which the blueprint's wiring then mixes.
+ */
+const PAD_BUTTONS: [keyof PadState, string][] = [
+  ["x", "fire"],
+  ["rb", "fire"],
+  ["y", "tractor"],
+  ["lb", "shield"],
+];
+const padHeld = new Set<string>();
+const PAD: PadGame = {
+  flying: () => tryOut.value && !!sandbox.value && playing.value,
+  controls: (p) => [...new Set(PAD_BUTTONS.filter(([b]) => p[b]).map(([, c]) => c))],
+  set: (control, on) => {
+    if (!sandbox.value) return;
+    if (on === padHeld.has(control)) return;
+    if (on) padHeld.add(control);
+    else padHeld.delete(control);
+    sendControl(control, on ? 1 : 0, "Pad", 9_000_001);
+  },
+  pause: () => {
+    if (!tryOut.value || !sandbox.value) return false;
+    playing.value = !playing.value;
+    return true;
+  },
+  analog: {
+    values: (p: PadState, a: PadAnalog) => {
+      const on = (b: boolean) => (b ? 1 : 0);
+      return {
+        left: Math.max(a.left, on(p.left && a.left === 0)),
+        right: Math.max(a.right, on(p.right && a.right === 0)),
+        forward: Math.max(a.up, a.rt, on(p.a), on(p.up && a.up === 0)),
+        reverse: Math.max(a.down, a.lt, on(p.b), on(p.down && a.down === 0)),
+      };
+    },
+    set: (channel, value) => {
+      padAnalog.set(channel, value);
+      if (sandbox.value) sendControl(channel, value, "Pad", 9_000_000);
+    },
+  },
+};
+
 function back(): void {
+  const summary = loadSummary(current.value);
+  if (summary) say(summary);
   playing.value = false;
   tryOut.value = false;
 }
 
-/** The whole field in view, as Mammoth Asteroids' arena. */
-function useFieldCamera(): void {
+/**
+ * The view follows the ship (its cockpit, or its first part), showing 60 × 37.5 m of the field; when
+ * the ship goes off one edge and comes in at the other, the view goes on past the edge with it (the
+ * renderer draws the field's copies there) rather than jumping back, as Mammoth Thrust's (wrapShift).
+ */
+function useFollowCamera(bp: Blueprint): void {
   useEffect(() => {
     setFollow(false);
+    const id = bp.components.find((c) => c.kind === "cockpit")?.bodies[0] ?? bp.ship.bodies[0]?.id;
     let raf = 0;
+    let shift = { x: 0, y: 0 };
+    let seen: { n: string; alive: boolean; at: { x: number; y: number } } | null = null;
+    let lastTime = Infinity;
+    let at = { x: 0, y: 0 };
     const tick = () => {
       raf = requestAnimationFrame(tick);
       const vp = viewport.value;
-      if (!vp.width || !vp.height) return;
-      const zoom = Math.min(vp.width / (2 * HALF.x), vp.height / (2 * HALF.y));
+      const w = sandbox.value?.world;
+      if (!vp.width || !vp.height || !w) return;
+      if (w.time < lastTime) {
+        // A fresh flight (reset & refuel): start the view afresh.
+        shift = { x: 0, y: 0 };
+        seen = null;
+      }
+      lastTime = w.time;
+      const b = w.bodies.find((x) => x.id === id);
+      if (b) at = { x: b.position.x, y: b.position.y };
+      const now = { n: "1", alive: !!b, at };
+      shift = wrapShift(shift, seen, now, w.bounds, true);
+      seen = now;
+      const zoom = Math.min(vp.width / VIEW.x, vp.height / VIEW.y);
       const c = camera.value;
-      if (c.x !== 0 || c.y !== 0 || c.zoom !== zoom) camera.value = { x: 0, y: 0, zoom };
+      const x = at.x + shift.x;
+      const y = at.y + shift.y;
+      if (c.x !== x || c.y !== y || c.zoom !== zoom) camera.value = { x, y, zoom };
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [bp]);
 }
 
 /** What the gauges show, read from the world a few times a second. */
@@ -143,13 +236,17 @@ function useGauges(bp: Blueprint) {
 export function TryOut() {
   const bp = current.value;
   const g = useGauges(bp);
+  // Touch buttons on a touch screen (or `?touch=1`, to try them with a mouse).
+  const touch = typeof window !== "undefined" && (window.matchMedia?.("(pointer: coarse)").matches || new URLSearchParams(window.location.search).get("touch") === "1");
+  useWeldLoads(bp);
+  usePad(PAD);
   const [paused, setPaused] = useState(false);
   const [rock, setRock] = useState(rockOn);
-  useFieldCamera();
+  useFollowCamera(bp);
 
   useEffect(() => {
     const keys = loadKeys();
-    const held = new Map<string, string>();
+    const held = keysHeld;
     let group = Math.floor(Math.random() * 1e9);
     const down = (e: KeyboardEvent) => {
       if (e.code === "Escape") return back();
@@ -198,7 +295,7 @@ export function TryOut() {
       .map(([k]) => keyLabel(k));
   const bar = (v: number, m: number) => `${m > 0 ? Math.max(0, Math.min(100, (100 * v) / m)) : 0}%`;
   return (
-    <div class="tryview" data-testid="try-view">
+    <div class={`tryview${touch ? " touch" : ""}`} data-testid="try-view">
       <div class="tryfield">
         <View />
         <div class="mas-shield" />
@@ -210,7 +307,7 @@ export function TryOut() {
         <div class="tt">
           <small>TRY-OUT</small>
           <b>{bp.name}</b>
-          <span>no gravity · edges wrap · nothing is saved</span>
+          <span>{bp.components.some((c) => c.kind === "cockpit") ? "no gravity · edges wrap · nothing is saved" : "no cockpit: nothing answers the controls"}</span>
         </div>
         <div class="spacer" />
         <button class="ib" onClick={() => launch()} data-testid="try-reset">
@@ -270,6 +367,19 @@ export function TryOut() {
           <b class="big">{g.lost} parts lost</b>
         </div>
       </div>
+      {touch && (
+        // On a touch screen, Mammoth Thrust's buttons: L and R in the corners (both together are
+        // Forward, through the Thrust ships' wiring), and FWD for a ship wired without that rule.
+        <div class="trytouch" data-testid="try-touch">
+          <Thrust channel="left" label="L" side="left" className="mas-thrust" />
+          <Thrust channel="forward" label="FWD" side="forward" className="mas-thrust" />
+          <Thrust channel="reverse" label="REV" side="reverse" className="mas-thrust" />
+          <Thrust channel="shield" label="SHIELD" side="shield" className="mas-thrust" />
+          <Thrust channel="tractor" label="BEAM" side="tractor" className="mas-thrust" />
+          <Thrust channel="fire" label="FIRE" side="fire" className="mas-thrust" />
+          <Thrust channel="right" label="R" side="right" className="mas-thrust" />
+        </div>
+      )}
       <div class="keys">
         <b>CONTROLS</b>
         {playerControls.value.map((c) => (

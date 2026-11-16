@@ -12,6 +12,7 @@ import type { LandingGoal } from "./landing.ts";
 import type { DuelGoal } from "./duel.ts";
 import type { ArcadeSpec } from "./arcade.ts";
 import type { Mixer } from "./mixer.ts";
+import type { ShipRules } from "./shipRules.ts";
 import type { TerrainSpec } from "./terrain.ts";
 import type { ThrustSpec } from "./thrust.ts";
 import type { MoonSpec } from "./moon.ts";
@@ -72,7 +73,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame; mix?: Mixer };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame; mix?: Mixer; shipRules?: ShipRules };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -1164,6 +1165,11 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
       }
     }
     if (data.world.mix !== undefined) validateMixer(v, data.world.mix, "$.world.mix");
+    if (data.world.shipRules !== undefined) {
+      const r = data.world.shipRules as { hull?: unknown; ship?: { bodies?: unknown } };
+      if (!isObj(r) || typeof r.hull !== "string" || !isObj(r.ship) || !Array.isArray(r.ship.bodies)) err(v, "$.world.shipRules", "must be {hull, ship: {bodies, links?}}");
+      else if (!data.world.bodies.some((b) => isObj(b) && b.id === r.hull)) err(v, "$.world.shipRules.hull", `no body "${r.hull}"`);
+    }
     if (data.world.thrust !== undefined) validateThrust(v, data.world.thrust, data.world.bodies, "$.world.thrust");
     if (data.world.moon !== undefined) validateMoon(v, data.world.moon, data.world.bodies, "$.world.moon");
   }
@@ -1289,7 +1295,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, moon: scn.world.moon, terrain: scn.world.terrain, frame: scn.world.frame, mix: scn.world.mix },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, moon: scn.world.moon, terrain: scn.world.terrain, frame: scn.world.frame, mix: scn.world.mix, shipRules: scn.world.shipRules },
     getProfile(scn.profile),
   );
 }

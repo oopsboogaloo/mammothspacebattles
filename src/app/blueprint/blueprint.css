@@ -436,3 +436,12 @@ html, body, #root { height: 100%; overflow: hidden; }
 @media (max-width: 1000px) {
   .bpapp .bp-menu span, .bpapp .fitbtn .lbl { display: none; }
 }
+.bpapp .derived b.bad { color: var(--bad); } .bpapp .derived b.hot { color: var(--bad); } .bpapp .derived b.warm { color: var(--warn); }
+.bpapp .actions { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); }
+/* Try it on a touch screen: Mammoth Thrust's buttons (styles.css .mas-thrust), the gauges up top. */
+.tryview .trytouch .mas-thrust { z-index: 6; }
+.tryview .mas-thrust.forward { left: max(18px, env(safe-area-inset-left)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 104px); width: 92px; height: 64px; font-size: 16px; letter-spacing: 0.08em; }
+.tryview.touch .gauges { top: 58px; bottom: auto; left: 10px; }
+.tryview.touch .keys { display: none; }
+.tryview.touch .g { min-width: 0; padding: 4px 8px; }
+.tryview.touch .bar { width: 70px; }

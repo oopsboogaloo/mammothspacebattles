@@ -298,6 +298,13 @@ export function pieces(bp: Blueprint): string[][] {
   return [...groups.values()];
 }
 
+/** The components welded, directly or through others, to the (first) cockpit: the ship the controls reach. */
+export function joinedToCockpit(bp: Blueprint): Set<string> {
+  const cockpit = bp.components.find((c) => c.kind === "cockpit");
+  if (!cockpit) return new Set();
+  return new Set(pieces(bp).find((p) => p.includes(cockpit.id)) ?? [cockpit.id]);
+}
+
 export function stats(bp: Blueprint): Stats {
   let m = 0;
   let mx = 0;
@@ -337,12 +344,14 @@ export function stats(bp: Blueprint): Stats {
 /** What holding these controls does, estimated: acceleration ahead (+y) and sideways (+x), m/s², and turn, rad/s² (+ anticlockwise). */
 export function response(bp: Blueprint, controls: Record<string, number>, st: Stats = stats(bp)): { ahead: number; side: number; turn: number; throttles: Record<string, number> } {
   const values = mixerValues(bp.mix, controls);
+  // Only what is welded to the cockpit answers the controls (shipRules.ts).
+  const joined = joinedToCockpit(bp);
   let fx = 0;
   let fy = 0;
   let tau = 0;
   const throttles: Record<string, number> = {};
   for (const e of engines(bp)) {
-    const t = values[e.channel] ?? 0;
+    const t = joined.has(e.id) ? (values[e.channel] ?? 0) : 0;
     throttles[e.id] = t;
     const f = { x: e.dir.x * e.thrust * t, y: e.dir.y * e.thrust * t };
     fx += f.x;
@@ -1036,8 +1045,13 @@ export function describeRow(row: MixerRow | undefined, name: (control: string) =
 export function wiringChecks(bp: Blueprint, controls: { id: string; name: string }[]): { ok: boolean; text: string }[] {
   const out: { ok: boolean; text: string }[] = [];
   const name = (id: string) => controls.find((c) => c.id === id)?.name ?? id;
+  const joined = joinedToCockpit(bp);
+  if (!bp.components.some((c) => c.kind === "cockpit")) out.push({ ok: false, text: "No cockpit: nothing answers the controls" });
+  const loose = bp.components.filter((c) => channelsOf(bp, c.id).length && !joined.has(c.id));
+  if (loose.length && joined.size) out.push({ ok: false, text: `Not welded to the cockpit, so they won't answer: ${loose.map((c) => c.label).join(", ")}` });
   const unwired = bp.components.filter((c) => channelsOf(bp, c.id).some((ch) => !bp.mix.rows.find((r) => r.channel === ch)?.lines.length));
   out.push(unwired.length ? { ok: false, text: `Not wired: ${unwired.map((c) => c.label).join(", ")}` } : { ok: true, text: "Every engine and device is driven by a control" });
+  out.sort((a, b) => Number(a.ok) - Number(b.ok));
   const st = stats(bp);
   for (const c of ["forward", "reverse"]) {
     const r = response(bp, { [c]: 1 }, st);
@@ -1050,4 +1064,54 @@ export function wiringChecks(bp: Blueprint, controls: { id: string; name: string
   if (l > 0 && r < 0 && Math.abs(l + r) > 0.05 * Math.max(Math.abs(l), Math.abs(r))) out.push({ ok: false, text: `${name("left")} and ${name("right")} turn unequally (${l.toFixed(2)} / ${(-r).toFixed(2)} rad/s²)` });
   if (out.length === 1 && out[0].ok) out.push({ ok: true, text: "Forward and Reverse don't turn the ship; the turns mirror each other" });
   return out;
+}
+
+// ---------- mirror (§5) ----------
+
+/** The other side's name: "Thruster BL" ↔ "Thruster BR", "Tank L" ↔ "Tank R". */
+function mirrorLabel(label: string): string {
+  const m = /^(.*?)(\s)(L|R|BL|BR|FL|FR)$/.exec(label);
+  if (!m) return `${label} (mirror)`;
+  const swap: Record<string, string> = { L: "R", R: "L", BL: "BR", BR: "BL", FL: "FR", FR: "FL" };
+  return `${m[1]}${m[2]}${swap[m[3]]}`;
+}
+
+/**
+ * A mirror image of a component on the other side of the ship's middle line (x = 0, the cockpit's
+ * axis): its shape reflected, welded where it then touches, fed if an engine, and wired as the
+ * mirror of its own wiring (turn left and turn right swapped). Returns null, with the reason, if the
+ * other side is taken or the part sits on the middle line.
+ */
+export function mirrorComponent(bp: Blueprint, compId: string, controls: { left: string; right: string } = { left: "left", right: "right" }): { bp: Blueprint; id: string } | { error: string } {
+  const c = component(bp, compId);
+  const box = componentBounds(bp, c);
+  if (box.minX < -1e-6 && box.maxX > 1e-6) return { error: `${c.label} sits across the ship's middle line: there is no other side to mirror it to.` };
+  const made = instantiate(bp, bp, compId, mirrorLabel(c.label));
+  for (const b of made.bodies) {
+    b.position = { x: round(-b.position.x), y: b.position.y };
+    b.angle = b.angle ? round(-b.angle, 9) : 0;
+    // Reflected across the body's own vertical axis, then turned back to anticlockwise.
+    if (b.shape.kind === "polygon") b.shape = { kind: "polygon", vertices: b.shape.vertices.map((v) => ({ x: -v.x, y: v.y })).reverse() };
+    for (const a of ["outlet", "direction"] as const) {
+      const v = b.injector?.[a];
+      if (v && b.injector) b.injector[a] = { x: 0 - v.x || 0, y: v.y }; // no −0
+    }
+  }
+  for (const j of made.joints) {
+    j.anchorA = { x: -j.anchorA.x, y: j.anchorA.y };
+    j.anchorB = { x: -j.anchorB.x, y: j.anchorB.y };
+  }
+  const others = bp.components.flatMap((o) => o.bodies.map((id) => body(bp, id)));
+  if (made.bodies.some((m) => others.some((o) => overlaps(worldVertices(m), worldVertices(o))))) return { error: `The other side is taken: a mirrored ${c.label} would overlap a part there.` };
+  let out = addComponent(bp, made, 0, 0);
+  // Its wiring: the original's lines with left and right swapped.
+  const swap = (k: string) => (k === controls.left ? controls.right : k === controls.right ? controls.left : k);
+  const from = channelsOf(bp, compId);
+  const to = channelsOf(out, made.comp.id);
+  from.forEach((ch, i) => {
+    const row = bp.mix.rows.find((r) => r.channel === ch);
+    if (!row || !to[i]) return;
+    out = setRow(out, to[i], () => ({ ...structuredClone(row), channel: to[i], lines: row.lines.map((l) => ({ ...l, control: swap(l.control), ...(l.ease ? { ease: { ...l.ease, control: swap(l.ease.control) } } : {}) })) }));
+  });
+  return { bp: out, id: made.comp.id };
 }
