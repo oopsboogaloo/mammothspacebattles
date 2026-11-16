@@ -87,7 +87,7 @@ test("BPD-022 drag a tank in from the list: it snaps flush, shows green weld poi
   await page.mouse.move(gen.x + gen.width + 75, gen.y + gen.height / 2 + 10, { steps: 10 });
   await expect(page.getByTestId("ghost")).toHaveAttribute("data-state", "weld");
   await page.mouse.up();
-  await expect(page.getByTestId("selected-name")).toHaveText("Tank");
+  await expect(page.getByTestId("selected-name")).toHaveText("Propellant tank");
   const bp = await page.evaluate(() => (window as unknown as { __msb: { blueprint: () => { ship: { joints: { a: string; b: string }[] } } } }).__msb.blueprint());
   expect(bp.ship.joints.filter((j) => (j.a === "tank" && j.b === "gen-r") || (j.a === "gen-r" && j.b === "tank")).length).toBe(2);
   await expect(page.getByTestId("loose")).toHaveCount(0);
@@ -105,4 +105,21 @@ test("BPD-022 ＋ adds a part where it welds, and moving a part off the ship war
   await page.mouse.move(bat.x + bat.width * 0.25, bat.y + bat.height * 0.7 + 200, { steps: 8 });
   await page.mouse.up();
   await expect(page.getByTestId("loose")).toContainText("pieces");
+});
+
+test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothing is wired until the player does it", async ({ page }) => {
+  await openFresh(page);
+  await page.getByRole("tab", { name: "EN" }).click();
+  await page.getByRole("button", { name: "Add Light thruster" }).click();
+  await page.getByTestId("mode-controls").click();
+  await expect(page.getByTestId("mixer")).toContainText("not wired");
+  await expect(page.getByTestId("response")).toContainText("Not wired: Light thruster");
+  await page.getByTestId("cell-back-fire").click();
+  await expect(page.getByTestId("lines-back").getByTestId("say")).toHaveText("Fires fully on Fire.");
+  await page.keyboard.down("Space");
+  await expect(page.getByTestId("control-fire")).toHaveClass(/held/);
+  await expect(page.getByTestId("mixer").locator("tr", { hasText: "Light thruster" })).toContainText("100%");
+  await page.keyboard.up("Space");
+  await page.getByTestId("mode-build").click();
+  await expect(page.getByTestId("performance")).toBeVisible();
 });

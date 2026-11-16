@@ -313,6 +313,35 @@ each blueprint's `mix` (its rules, and per driven channel its lines and how they
 - **Key bindings are the player's: one set, shared by every ship.** A ship stores only its wiring
   (the mixer). Binding a key in the designer changes it for all ships.
 
+## 15. As built (16 November 2026)
+
+The page is `blueprint.html`, linked from the sandbox's start screen. Code: `src/app/blueprint/`
+(model, store, view, panels, controls, Try it), and the core mixer `src/core/mixer.ts`.
+
+| Built | Tests |
+|---|---|
+| The core mixer: rows of lines, eased lines, opposites, largest / sum / least, limit; in the world step and in scenarios (`world.mix`). The Thrust mix as lines equals `steerValues` for every combination tried. | BPD-010, BPD-011 |
+| Thrust 1 preset: the game's ship exactly (ids without `p{n}-`), 17 components, 20 welds of 26 points, 61.2 kg, 5.6 × 3.65 m. | BPD-012, BPD-013 |
+| Engine shape from and to six numbers; flow sets the parcel size and the head's store. | BPD-014 |
+| Welds by touch: two points 0.1 m in from the ends of a shared side (one if under 0.3 m), as the preset's. Only sides that face each other and share length weld or snap. | BPD-015 |
+| Estimated response per control; properties for every part. | BPD-016 |
+| Page: one screen at 1280×800 and iPad landscape; select, type, slider, held steppers, label scrub, undo/redo (one step per gesture); weld strength; blueprints drawer; Try it and back. | BPD-017 to BPD-021 |
+| Add (drag from the list, double-click, ＋), drag parts, snapping with a green / blue / red preview and weld points, Duplicate, Flip; a warning when the ship is in pieces. | BPD-022, BPD-023 |
+| Controls: BUILD / CONTROLS, the player's controls and keys (one set for every ship, bound by pressing a key), the mixer table, a part's lines in words, rules, checks, testing by holding keys. | BPD-024 |
+
+Differences from the design above:
+
+- **Editing a preset makes the copy at once and says so** (a message), rather than asking first:
+  one less step, and undo is there.
+- **New parts are made from the Thrust 1 preset's parts** (11 in the list). Cockpit shape editing,
+  the tractor and tether on a second cockpit, and power for generators and batteries are not built.
+- **New engines draw fuel from every tank** (fuel lines are plumbing, not controls); their controls
+  stay unwired until the player wires them.
+- **Estimates differ from the measured figures**: forward 33.1 against 28.3 m/s², reverse 9.0
+  against 4.2, turn 8.5 rad/s² against "about 7". The estimate takes every engine's exhaust at
+  190 m/s; the side thrusters are much weaker than that in the physics. Measure (§7) is not built
+  yet, nor live weld loads after Try it, nor a game controller in Try it.
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):

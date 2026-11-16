@@ -857,7 +857,7 @@ function uniqueId(bp: Blueprint, base: string): string {
 }
 
 /** A copy of a template's component (from a preset), as new bodies with new ids, unplaced. */
-export function instantiate(bp: Blueprint, tpl: Blueprint, compId: string): { comp: Component; bodies: BodyInput[]; joints: JointInput[] } {
+export function instantiate(bp: Blueprint, tpl: Blueprint, compId: string, label?: string): { comp: Component; bodies: BodyInput[]; joints: JointInput[] } {
   const c = component(tpl, compId);
   const base = compId.replace(/-(l|r)$/, "");
   const id = uniqueId(bp, base === "hull" ? "cockpit" : base);
@@ -872,7 +872,7 @@ export function instantiate(bp: Blueprint, tpl: Blueprint, compId: string): { co
     return b;
   });
   const joints = tpl.ship.joints.filter((j) => c.bodies.includes(j.a) && c.bodies.includes(j.b)).map((j) => ({ ...structuredClone(j), id: `${id}-${j.id}`, a: rename(j.a), b: rename(j.b) }));
-  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, c.label.replace(/ (L|R|BL|BR|FL|FR)$/, "")), bodies: bodies.map((b) => b.id) }, bodies, joints };
+  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, label ?? c.label.replace(/ (L|R|BL|BR|FL|FR)$/, "")), bodies: bodies.map((b) => b.id) }, bodies, joints };
 }
 
 function uniqueLabel(bp: Blueprint, base: string): string {
@@ -974,4 +974,72 @@ export function flipComponent(bp: Blueprint, compId: string): Blueprint {
 /** Moves a component to where `place` put it, without its old welds; rewelded where it lands. */
 export function moveTo(bp: Blueprint, compId: string, p: Placement): Blueprint {
   return moveComponent(bp, compId, p.dx, p.dy);
+}
+
+// ---------- wiring (§10) ----------
+
+/** The channels a component's bodies answer to: an engine's injector, a gun, a shield, a tractor. */
+export function channelsOf(bp: Blueprint, compId: string): string[] {
+  const out: string[] = [];
+  for (const id of component(bp, compId).bodies) {
+    const b = body(bp, id);
+    for (const ch of [b.injector?.channel, b.magazine?.railgun?.channel, b.shield?.channel, b.tractor?.channel]) if (ch && !out.includes(ch)) out.push(ch);
+  }
+  return out;
+}
+
+/** Which component a driven channel belongs to. */
+export function componentOfChannel(bp: Blueprint, channel: string): Component | undefined {
+  return bp.components.find((c) => channelsOf(bp, c.id).includes(channel));
+}
+
+/** Changes the row driving a channel (making it if there is none). */
+export function setRow(bp: Blueprint, channel: string, change: (row: MixerRow) => MixerRow): Blueprint {
+  const out = clone(bp);
+  const rows = out.mix.rows;
+  const i = rows.findIndex((r) => r.channel === channel);
+  const row = i >= 0 ? rows[i] : { channel, lines: [] };
+  const next = change(structuredClone(row));
+  out.mix = { ...out.mix, rows: i >= 0 ? rows.map((r, k) => (k === i ? next : r)) : [...rows, next] };
+  return out;
+}
+
+export function setRules(bp: Blueprint, rules: NonNullable<Mixer["rules"]>): Blueprint {
+  return { ...clone(bp), mix: { ...bp.mix, rules: structuredClone(rules) } };
+}
+
+const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+/** A row in words, as the properties panel says it: "Fires fully on Turn right. Fires on Forward, except while Turn left is held." */
+export function describeRow(row: MixerRow | undefined, name: (control: string) => string): string {
+  if (!row || !row.lines.length) return "Not wired: no control drives it.";
+  const parts = row.lines.map((l) => {
+    const how = l.weight >= 1 ? "fully" : `at ${pct(l.weight)}`;
+    if (!l.ease) return `Fires ${how} on ${name(l.control)}.`;
+    if (l.ease.amount >= 1) return `Fires ${how} on ${name(l.control)}, except while ${name(l.ease.control)} is held.`;
+    return `Fires ${how} on ${name(l.control)}, ${pct(l.ease.amount)} less while ${name(l.ease.control)} is held.`;
+  });
+  const combine = row.combine === "sum" ? " Lines add up." : row.combine === "min" ? " The least line wins." : "";
+  const limit = row.limit !== undefined && row.limit < 1 ? ` Never above ${pct(row.limit)}.` : "";
+  return parts.join(" ") + combine + limit;
+}
+
+/** The checks under the response table: helpful warnings, never refusals. */
+export function wiringChecks(bp: Blueprint, controls: { id: string; name: string }[]): { ok: boolean; text: string }[] {
+  const out: { ok: boolean; text: string }[] = [];
+  const name = (id: string) => controls.find((c) => c.id === id)?.name ?? id;
+  const unwired = bp.components.filter((c) => channelsOf(bp, c.id).some((ch) => !bp.mix.rows.find((r) => r.channel === ch)?.lines.length));
+  out.push(unwired.length ? { ok: false, text: `Not wired: ${unwired.map((c) => c.label).join(", ")}` } : { ok: true, text: "Every engine and device is driven by a control" });
+  const st = stats(bp);
+  for (const c of ["forward", "reverse"]) {
+    const r = response(bp, { [c]: 1 }, st);
+    if (Math.abs(r.turn) > 0.05) out.push({ ok: false, text: `${name(c)} also turns the ship (${r.turn.toFixed(2)} rad/s²)` });
+  }
+  const l = response(bp, { left: 1 }, st).turn;
+  const r = response(bp, { right: 1 }, st).turn;
+  if (l <= 0 && Math.abs(l) > 1e-6) out.push({ ok: false, text: `${name("left")} turns the ship right` });
+  if (r >= 0 && Math.abs(r) > 1e-6) out.push({ ok: false, text: `${name("right")} turns the ship left` });
+  if (l > 0 && r < 0 && Math.abs(l + r) > 0.05 * Math.max(Math.abs(l), Math.abs(r))) out.push({ ok: false, text: `${name("left")} and ${name("right")} turn unequally (${l.toFixed(2)} / ${(-r).toFixed(2)} rad/s²)` });
+  if (out.length === 1 && out[0].ok) out.push({ ok: true, text: "Forward and Reverse don't turn the ship; the turns mirror each other" });
+  return out;
 }

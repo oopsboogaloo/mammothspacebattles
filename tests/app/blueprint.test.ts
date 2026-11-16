@@ -223,3 +223,21 @@ describe("pieces", () => {
     expect(pieces(moved).length).toBe(3);
   });
 });
+
+describe("wiring", () => {
+  it("BPD-024 each row is said in words, and the checks find an unwired engine and a forward that turns", async () => {
+    const { describeRow, setRow, wiringChecks } = await import("../../src/app/blueprint/model.ts");
+    const names: Record<string, string> = { forward: "Forward", left: "Turn left", right: "Turn right", reverse: "Reverse" };
+    const n = (id: string) => names[id] ?? id;
+    expect(describeRow(bp.mix.rows.find((r) => r.channel === "bl"), n)).toBe("Fires fully on Turn right. Fires fully on Forward, except while Turn left is held.");
+    expect(describeRow(bp.mix.rows.find((r) => r.channel === "fr"), n)).toBe("Fires fully on Reverse. Fires fully on Turn right, 50% less while Forward is held.");
+    expect(describeRow(undefined, n)).toBe("Not wired: no control drives it.");
+    const controls = Object.entries(names).map(([id, name]) => ({ id, name }));
+    expect(wiringChecks(bp, controls).every((c) => c.ok)).toBe(true);
+    // Unwire the back-left thruster: it is named, and forward now turns the ship.
+    const b = setRow(bp, "bl", (r) => ({ ...r, lines: [] }));
+    const checks = wiringChecks(b, controls).filter((c) => !c.ok).map((c) => c.text);
+    expect(checks[0]).toBe("Not wired: Thruster BL");
+    expect(checks.some((t) => t.startsWith("Forward also turns the ship"))).toBe(true);
+  });
+});

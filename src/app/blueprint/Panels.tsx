@@ -2,8 +2,9 @@
 // blueprints drawer.
 import { useState } from "preact/hooks";
 import { NumberControl } from "./NumberControl.tsx";
+import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
-import { addComponent, body, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { addComponent, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
 import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
@@ -30,8 +31,8 @@ export const CATALOGUE: CatalogueItem[] = [
 ];
 
 /** Adds a part at the nearest free place that welds it to the ship (＋, double-click, Duplicate). */
-export function addAtFreeSpot(tpl: Blueprint, from: string): void {
-  const made = instantiate(current.value, tpl, from);
+export function addAtFreeSpot(tpl: Blueprint, from: string, label?: string): void {
+  const made = instantiate(current.value, tpl, from, label);
   const spot = freeSpot(current.value, made.bodies, weldingOf(made.comp));
   let welded = false;
   edit((b) => {
@@ -44,7 +45,7 @@ export function addAtFreeSpot(tpl: Blueprint, from: string): void {
 }
 
 /** Dragging a card from the list onto the blueprint (§3.1). */
-function dragFromList(e: PointerEvent, tpl: Blueprint, from: string): void {
+function dragFromList(e: PointerEvent, tpl: Blueprint, from: string, label: string): void {
   if (e.button !== 0) return;
   e.preventDefault(); // no text selection while dragging
   const start = { x: e.clientX, y: e.clientY };
@@ -53,7 +54,7 @@ function dragFromList(e: PointerEvent, tpl: Blueprint, from: string): void {
     if (!started) {
       if (Math.hypot(m.clientX - start.x, m.clientY - start.y) < 6) return;
       started = true;
-      placing.value = { made: instantiate(current.value, tpl, from), at: null };
+      placing.value = { made: instantiate(current.value, tpl, from, label), at: null };
     }
     const w = view.clientToWorld?.(m.clientX, m.clientY);
     const pl = placing.value;
@@ -141,8 +142,8 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
               key={it.name}
               data-testid={`card-${it.from}`}
               title="Drag onto the blueprint, double-click, or ＋"
-              onPointerDown={(e) => !(e.target as HTMLElement).closest("button") && dragFromList(e, preset, it.from)}
-              onDblClick={() => addAtFreeSpot(preset, it.from)}
+              onPointerDown={(e) => !(e.target as HTMLElement).closest("button") && dragFromList(e, preset, it.from, it.name)}
+              onDblClick={() => addAtFreeSpot(preset, it.from, it.name)}
             >
               <div class="thumb">{c && <Thumb bp={preset} ids={c.bodies} />}</div>
               <div class="ctext">
@@ -150,7 +151,7 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
                 <div class="cstat">{size || `${b?.injector ? `${b.injector.rate} kg/s` : ""}`}</div>
                 <div class="cstat">{mass.toFixed(2)} kg</div>
               </div>
-              <button class="add" title="Add to the blueprint" aria-label={`Add ${it.name}`} onClick={() => addAtFreeSpot(preset, it.from)}>
+              <button class="add" title="Add to the blueprint" aria-label={`Add ${it.name}`} onClick={() => addAtFreeSpot(preset, it.from, it.name)}>
                 ＋
               </button>
             </div>
@@ -225,7 +226,7 @@ export function PerformanceBox() {
 
 // ---------- properties ----------
 
-const TAB_NAMES: Record<Tab, string> = { shape: "SHAPE", fuel: "FUEL", function: "FUNCTION", build: "BUILD" };
+const TAB_NAMES: Record<Tab | "controls", string> = { shape: "SHAPE", fuel: "FUEL", function: "FUNCTION", build: "BUILD", controls: "CONTROLS" };
 
 export function PropertiesPanel() {
   const sel = selection.value;
@@ -264,9 +265,12 @@ function ComponentProps({ id }: { id: string }) {
   const bp = current.value;
   const c = component(bp, id);
   const ps = params(bp, id);
-  const tabs = (["shape", "fuel", "function", "build"] as Tab[]).filter((t) => ps.some((p) => p.tab === t));
-  const [tab, setTab] = useState<Tab>(tabs[0]);
-  const shown = ps.filter((p) => p.tab === (tabs.includes(tab) ? tab : tabs[0]));
+  const channels = channelsOf(bp, id);
+  const wired = c.kind === "cockpit" || channels.length > 0;
+  const tabs = [...(["shape", "fuel", "function", "build"] as Tab[]).filter((t) => ps.some((p) => p.tab === t)), ...(wired ? (["controls"] as const) : [])];
+  const [tab, setTab] = useState<Tab | "controls">(tabs[0]);
+  const showing = tabs.includes(tab) ? tab : tabs[0];
+  const shown = ps.filter((p) => p.tab === showing);
   const base = baseline.value.components.some((x) => x.id === id) ? params(baseline.value, id) : null;
   const was = (p: Param) => base?.find((q) => q.key === p.key)?.value;
   const nWelds = welds(bp).filter((w) => w.a === id || w.b === id).length;
@@ -286,13 +290,19 @@ function ComponentProps({ id }: { id: string }) {
       {tabs.length > 1 && (
         <div class="tabs" role="tablist">
           {tabs.map((t) => (
-            <button key={t} role="tab" aria-selected={t === tab} class={t === tab ? "on" : ""} onClick={() => setTab(t)}>
+            <button key={t} role="tab" aria-selected={t === showing} class={t === showing ? "on" : ""} onClick={() => setTab(t)}>
               {TAB_NAMES[t]}
             </button>
           ))}
         </div>
       )}
-      <div class="fields">
+      {showing === "controls" && (
+        <div class="fields">
+          {c.kind === "cockpit" ? <CockpitControls /> : null}
+          {c.kind !== "cockpit" && channels.map((ch) => <LineEditor key={ch} channel={ch} />)}
+        </div>
+      )}
+      <div class="fields" hidden={showing === "controls"}>
         {shown.map((p) => {
           const w = was(p);
           const changed = w !== undefined && Math.abs(w - p.value) > 1e-9;

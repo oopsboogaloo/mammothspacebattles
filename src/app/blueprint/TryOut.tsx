@@ -5,7 +5,7 @@ import { useEffect, useState } from "preact/hooks";
 import { camera, openScenario, overlays as sandboxOverlays, playing, sandbox, screen, setFollow, timeScale, viewport } from "../state.ts";
 import { sendControl } from "../Lander.tsx";
 import { View } from "../View.tsx";
-import { keyLabel, loadKeys, DEFAULT_CONTROLS } from "./bindings.ts";
+import { keyLabel, loadKeys, playerControls } from "./bindings.ts";
 import { type Blueprint } from "./model.ts";
 import { current, tryOut } from "./store.ts";
 
@@ -272,7 +272,7 @@ export function TryOut() {
       </div>
       <div class="keys">
         <b>CONTROLS</b>
-        {DEFAULT_CONTROLS.map((c) => (
+        {playerControls.value.map((c) => (
           <span key={c.id}>
             {keysFor(c.id).map((k) => (
               <kbd key={k}>{k}</kbd>

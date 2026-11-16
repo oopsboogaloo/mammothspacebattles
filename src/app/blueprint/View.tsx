@@ -3,7 +3,9 @@
 // or the buttons.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { addComponent, body, component, componentBounds, engineGeom, engines, jointPoint, moveComponent, place, SNAP, stats, weldingOf, welds, worldVertices, type Blueprint, type Kind } from "./model.ts";
-import { current, edit, overlays, placing, preview, say, selection, type Placing } from "./store.ts";
+import { current, edit, mode, overlays, placing, preview, say, selection, type Placing } from "./store.ts";
+import { testHeld } from "./Controls.tsx";
+import { response } from "./model.ts";
 
 export const KIND_COLOUR: Record<Kind, string> = {
   cockpit: "#a9b4ff",
@@ -23,7 +25,10 @@ export interface ViewState {
 }
 
 /** The view that shows the whole ship, with room round it. */
-export function fitView(bp: Blueprint, w: number, h: number): ViewState {
+export function fitView(bp: Blueprint, w0: number, h: number): ViewState {
+  // In Controls mode the response table takes the top right: fit the ship in the space beside it.
+  const right = mode.value === "controls" ? Math.min(370, w0 * 0.4) : 0;
+  const w = w0 - right;
   if (!bp.ship.bodies.length) return { x: 0, y: 0, zoom: 80 };
   const pts = bp.ship.bodies.flatMap(worldVertices);
   const minX = Math.min(...pts.map((p) => p.x));
@@ -31,7 +36,7 @@ export function fitView(bp: Blueprint, w: number, h: number): ViewState {
   const minY = Math.min(...pts.map((p) => p.y));
   const maxY = Math.max(...pts.map((p) => p.y));
   const zoom = Math.min((w * 0.62) / Math.max(1, maxX - minX), (h * 0.62) / Math.max(1, maxY - minY), 220);
-  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, zoom };
+  return { x: (minX + maxX) / 2 + right / 2 / zoom, y: (minY + maxY) / 2, zoom };
 }
 
 export const view: { fit: () => void; zoomBy?: (k: number) => void; clientToWorld?: (x: number, y: number) => { x: number; y: number; inside: boolean }; tol?: () => number } = { fit: () => {} };
@@ -92,6 +97,14 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
     }
   }, [bp.id, size.w, size.h]);
   view.fit = () => setV(fitView(current.value, size.w, size.h));
+  // Switching between Build and Controls changes the view's size: show the whole ship again.
+  const lastMode = useRef(mode.value);
+  useEffect(() => {
+    if (lastMode.current !== mode.value && size.w > 50) {
+      lastMode.current = mode.value;
+      setV(fitView(current.value, size.w, size.h));
+    }
+  }, [mode.value, size.w, size.h]);
   useEffect(() => onZoom?.(v.zoom), [v.zoom]);
 
   const sx = (x: number) => size.w / 2 + (x - v.x) * v.zoom;
@@ -198,6 +211,14 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
         <marker id="bp-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="#7fd4ff" />
         </marker>
+        <marker id="bp-arrg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#7dffb0" />
+        </marker>
+        <linearGradient id="bp-plume" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+          <stop offset="0" stop-color="#fff3c0" />
+          <stop offset=".5" stop-color="#ffb35a" />
+          <stop offset="1" stop-color="#ff6a2a" stop-opacity="0" />
+        </linearGradient>
       </defs>
       {grid}
       {bp.components.map((c) => {
@@ -245,6 +266,7 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
             </g>
           );
         })}
+      {mode.value === "controls" && <Testing bp={bp} sx={sx} sy={sy} zoom={v.zoom} com={st.com} />}
       {ov.com && st.mass > 0 && <ComMarker x={sx(st.com.x)} y={sy(st.com.y)} />}
       {placing.value?.at && <Ghost pl={placing.value} sx={sx} sy={sy} />}
       {placing.value?.at && preview.value && ov.com && (() => {
@@ -324,6 +346,56 @@ function Selected({ bp, id, sx, sy, dims, zoom }: { bp: Blueprint; id: string; s
         <rect key={i} x={x - 4} y={y - 4} width={8} height={8} fill="#0b1430" stroke="#ffe08a" stroke-width={1.5} />
       ))}
       {dimEls}
+    </g>
+  );
+}
+
+/** Controls mode: each engine's throttle as a tag and a plume, and what the controls held do to the ship. */
+function Testing({ bp, sx, sy, zoom, com }: { bp: Blueprint; sx: (x: number) => number; sy: (y: number) => number; zoom: number; com: { x: number; y: number } }) {
+  const held = testHeld.value;
+  const r = response(bp, held);
+  const any = Object.keys(held).length > 0;
+  return (
+    <g pointer-events="none" data-testid="testing">
+      {engines(bp).map((e) => {
+        const t = r.throttles[e.id] ?? 0;
+        const h = body(bp, e.id);
+        const c = component(bp, e.id);
+        const walls = c.bodies.slice(1).map((id) => body(bp, id));
+        const exitDepth = walls.length ? Math.max(...walls.flatMap((w) => worldVertices(w).map((p) => -((p.x - h.position.x) * e.dir.x + (p.y - h.position.y) * e.dir.y)))) : 0.2;
+        const base = { x: h.position.x - e.dir.x * exitDepth, y: h.position.y - e.dir.y * exitDepth };
+        const n = { x: -e.dir.y, y: e.dir.x };
+        const w = (h.shape.kind === "box" ? h.shape.width : 0.6) * 0.5;
+        const len = 0.25 + 1.4 * t;
+        const tip = { x: base.x - e.dir.x * len, y: base.y - e.dir.y * len };
+        const tag = { x: h.position.x + (h.position.x >= com.x ? 1 : -1) * ((h.shape.kind === "box" ? h.shape.width / 2 : 0.3) + 0.45), y: h.position.y };
+        return (
+          <g key={e.id}>
+            {t > 0 && (
+              <>
+                <linearGradient id={`plume-${e.id}`} gradientUnits="userSpaceOnUse" x1={sx(base.x)} y1={sy(base.y)} x2={sx(tip.x)} y2={sy(tip.y)}>
+                  <stop offset="0" stop-color="#fff3c0" />
+                  <stop offset=".5" stop-color="#ffb35a" />
+                  <stop offset="1" stop-color="#ff6a2a" stop-opacity="0" />
+                </linearGradient>
+                <polygon points={`${sx(base.x + n.x * w)},${sy(base.y + n.y * w)} ${sx(base.x - n.x * w)},${sy(base.y - n.y * w)} ${sx(tip.x)},${sy(tip.y)}`} fill={`url(#plume-${e.id})`} opacity={0.45 + 0.5 * t} />
+              </>
+            )}
+            <g transform={`translate(${sx(tag.x)},${sy(tag.y)})`}>
+              <rect x={-30} y={-10} width={60} height={20} rx={2} fill="#0b1430" stroke={t > 0 ? "#ffd36a" : "#5a6890"} />
+              <text x={0} y={4} text-anchor="middle" class="tagtxt" fill={t > 0 ? "#ffd36a" : "#93a3c8"}>
+                {Math.round(t * 100)}%
+              </text>
+            </g>
+          </g>
+        );
+      })}
+      {any && (Math.abs(r.ahead) > 0.01 || Math.abs(r.side) > 0.01) && (
+        <line x1={sx(com.x)} y1={sy(com.y)} x2={sx(com.x) + r.side * 0.04 * zoom} y2={sy(com.y) - r.ahead * 0.04 * zoom} stroke="#7dffb0" stroke-width={3} marker-end="url(#bp-arrg)" />
+      )}
+      {any && Math.abs(r.turn) > 0.01 && (
+        <path d={r.turn < 0 ? `M ${sx(com.x) - 40} ${sy(com.y) - 30} A 50 50 0 0 1 ${sx(com.x) + 40} ${sy(com.y) - 30}` : `M ${sx(com.x) + 40} ${sy(com.y) - 30} A 50 50 0 0 0 ${sx(com.x) - 40} ${sy(com.y) - 30}`} fill="none" stroke="#7dffb0" stroke-width={2.5} marker-end="url(#bp-arrg)" />
+      )}
     </g>
   );
 }

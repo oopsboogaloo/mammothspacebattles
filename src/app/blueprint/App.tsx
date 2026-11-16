@@ -3,8 +3,9 @@ import { useEffect, useState } from "preact/hooks";
 import { addAtFreeSpot, BlueprintsDrawer, ComponentsPanel, PerformanceBox, PropertiesPanel } from "./Panels.tsx";
 import { BlueprintView, view } from "./View.tsx";
 import { removeComponent, removeWeld, KINDS } from "./model.ts";
-import { canRedo, canUndo, current, drawerOpen, edit, overlays, placing, preview, redo, selection, toast, tryOut, undo } from "./store.ts";
+import { canRedo, canUndo, current, drawerOpen, edit, mode, overlays, placing, preview, redo, selection, toast, tryOut, undo } from "./store.ts";
 import { TryOut, startTry } from "./TryOut.tsx";
+import { ControlsPanel, MixerTable, ResponseBox, testHeld, useTestKeys, WiringPanel } from "./Controls.tsx";
 
 type Toggle = keyof typeof overlays.value;
 const TOGGLES: [Toggle, string, string, string][] = [
@@ -31,6 +32,14 @@ function TopBar() {
           {bp.name}
         </span>
         {bp.preset ? <span class="badge">PRESET</span> : <span class="badge edit">EDITING</span>}
+      </div>
+      <div class="modes" role="tablist">
+        <button role="tab" aria-selected={mode.value === "build"} class={mode.value === "build" ? "on" : ""} title="Build: place and shape parts (B)" onClick={() => (mode.value = "build")} data-testid="mode-build">
+          BUILD
+        </button>
+        <button role="tab" aria-selected={mode.value === "controls"} class={mode.value === "controls" ? "on" : ""} title="Controls: wire your controls to the engines and devices (K)" onClick={() => (mode.value = "controls")} data-testid="mode-controls">
+          CONTROLS
+        </button>
       </div>
       <div class="grp">
         <button class="ib" title="Undo (Ctrl+Z)" aria-label="Undo" disabled={!canUndo.value} onClick={undo}>
@@ -59,6 +68,7 @@ function TopBar() {
 }
 
 function hint(): string {
+  if (mode.value === "controls") return "Controls · click a cell to wire a control to a part · hold a control's key to test it · B: back to Build";
   const pl = placing.value;
   if (pl?.at) return pl.at.overlap ? "Red: it would overlap a part · move it clear · Esc: cancel" : pl.at.touches.length ? "Green: it will weld there · release to place · Shift: no snapping · Esc: cancel" : "Blue: it won't touch the ship, so it won't be welded · Shift: no snapping · Esc: cancel";
   const s = selection.value;
@@ -111,8 +121,11 @@ export function BlueprintApp() {
         const next = cs[(i + (e.shiftKey ? cs.length - 1 : 1) + cs.length) % cs.length];
         selection.value = { type: "component", id: next.id };
       } else if (e.key === "Enter") startTry();
+      else if (k === "k") mode.value = "controls";
+      else if (k === "b") mode.value = "build";
       else if (e.key === "[") setKind((x) => (x + KINDS.length - 1) % KINDS.length);
       else if (e.key === "]") setKind((x) => (x + 1) % KINDS.length);
+      else if (mode.value === "controls") return;
       else if (k === "z") view.fit();
       else if (k === "o") drawerOpen.value = true;
       else if (k === "c") toggle("com");
@@ -124,16 +137,22 @@ export function BlueprintApp() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  useTestKeys();
+  useEffect(() => {
+    if (mode.value === "build") testHeld.value = {};
+  }, [mode.value]);
   if (tryOut.value) return <TryOut />;
+  const controls = mode.value === "controls";
   const bp = current.value;
   return (
     <div class="bpapp">
       <div class="grid">
         <TopBar />
-        <ComponentsPanel kindIndex={kind} setKind={setKind} />
-        <main class="canvas">
+        {controls ? <ControlsPanel /> : <ComponentsPanel kindIndex={kind} setKind={setKind} />}
+        <main class={`canvas${controls ? " ctlmode" : ""}`}>
+          <div class="ctltop">
           <BlueprintView onZoom={setZoom} />
-          <PerformanceBox />
+          {controls ? <ResponseBox /> : <PerformanceBox />}
           <div class="tblock">
             <div>
               <small>DRAWING</small>
@@ -161,9 +180,11 @@ export function BlueprintApp() {
               −
             </button>
           </div>
+          </div>
+          {controls && <MixerTable />}
           {!bp.ship.bodies.length && <div class="emptyhint">An empty blueprint. Start with a cockpit: drag one in from the left (Cockpits), double-click it, or press its ＋.</div>}
         </main>
-        <PropertiesPanel />
+        {controls ? <WiringPanel /> : <PropertiesPanel />}
         <footer class="status">{hint()}</footer>
       </div>
       {drawerOpen.value && <BlueprintsDrawer />}
