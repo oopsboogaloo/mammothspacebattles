@@ -784,4 +784,166 @@ describe("engines with chambers (design rules §5; Chloe, 16 November 2026)", as
     // The estimate is the same, engine by engine (the model's jet is the throat's, as before).
     expect(engines(regular).map((e) => e.thrust)).toEqual(engines(bp).map((e) => e.thrust));
   }, 60_000);
+  it("BPD-048 in a 10 s flight, forward and turning both ways, THRUST 1's engine walls hold their angles to their heads (within 1°) and no weld breaks", () => {
+    const w = measureWorld(regular);
+    const profile = getProfile("sandbox");
+    const welds0 = new Set(w.joints.map((j) => j.id));
+    const walls = regular.components.filter((c) => c.rocket).flatMap((c) => c.bodies.slice(1).map((id) => [c.bodies[0], id] as const));
+    const angle = (id: string) => w.bodies.find((b) => b.id === id)!.angle;
+    const rel0 = new Map(walls.map(([h, id]) => [id, angle(id) - angle(h)]));
+    const plan: Record<number, Record<string, number>> = { 0: { forward: 1 }, 720: { forward: 1, left: 1 }, 1200: { forward: 1, left: 0, right: 1 }, 1680: { forward: 1, right: 0 } };
+    let worst = 0;
+    for (let i = 0; i < 2400; i++) {
+      const set = plan[i] ? Object.entries(plan[i]).map(([channel, value]) => ({ type: "control.set" as const, channel, value })) : [];
+      stepInPlace(w, set, profile);
+      for (const [h, id] of walls) {
+        const d = angle(id) - angle(h) - rel0.get(id)!;
+        worst = Math.max(worst, Math.abs(Math.atan2(Math.sin(d), Math.cos(d))));
+      }
+    }
+    expect((worst * 180) / Math.PI).toBeLessThan(1);
+    expect([...welds0].filter((id) => !w.joints.some((j) => j.id === id))).toEqual([]);
+  }, 120_000);
+});
+
+describe("the Stegodon (Chloe's sketch, 16 November 2026)", async () => {
+  const { stegodonPreset, mastodonPreset, allOverlaps, pieces, wiringChecks, response, powerStats } = await import("../../src/app/blueprint/model.ts");
+  const { measureNow } = await import("../../src/app/blueprint/measure.ts");
+  const st = stegodonPreset(scn);
+  const moves = [{ id: "forward", name: "Forward" }, { id: "reverse", name: "Reverse" }, { id: "left", name: "Turn left" }, { id: "right", name: "Turn right" }];
+
+  it("BPD-049 a lighter gunship in one piece: the Mastodon's cockpit, main engines angled out along its slope and welded there, guns and bullet magazines, a small double engine across its tail; no power system", () => {
+    expect(pieces(st)).toHaveLength(1);
+    expect(allOverlaps(st)).toEqual([]);
+    expect(stats(st).mass).toBeLessThan(stats(mastodonPreset(scn)).mass);
+    expect(Math.abs(stats(st).com.x)).toBeLessThan(1e-9);
+    // The main engines: rockets at 36.87° (the cockpit's top corners), their chambers welded along the cockpit.
+    for (const [id, s] of [["eng-l", -1], ["eng-r", 1]] as const) {
+      expect(component(st, id).rocket).toBeDefined();
+      expect(body(st, id).angle).toBeCloseTo(s * Math.asin(0.6), 9);
+      expect(welds(st).some((w) => [w.a, w.b].includes(id) && [w.a, w.b].includes("hull"))).toBe(true);
+    }
+    expect(component(st, "tail-l").heads).toEqual(["tail-l", "tail-r"]);
+    expect(st.components.filter((c) => c.part === "gun")).toHaveLength(2);
+    expect(st.components.filter((c) => c.part === "bullet-magazine")).toHaveLength(3);
+    expect(powerStats(st)).toBeNull();
+    expect(wiringChecks(st, moves).every((c) => c.ok)).toBe(true);
+  });
+
+  it("BPD-049 its wiring as drawn: forward fires both main engines; a turn alone, only the tail; forward and a turn, one main engine and the opposite side of the tail", () => {
+    const fired = (controls: Record<string, number>) => Object.entries(response(st, controls).throttles).filter(([, v]) => v > 0).map(([k]) => k).sort();
+    expect(fired({ forward: 1 })).toEqual(["eng-l", "eng-r"]);
+    expect(fired({ left: 1 })).toEqual(["tail-l"]);
+    expect(fired({ right: 1 })).toEqual(["tail-r"]);
+    expect(fired({ forward: 1, left: 1 })).toEqual(["eng-r", "tail-l"]);
+    expect(fired({ forward: 1, right: 1 })).toEqual(["eng-l", "tail-r"]);
+    // And they turn it the way asked.
+    expect(response(st, { left: 1 }).turn).toBeGreaterThan(0);
+    expect(response(st, { forward: 1, left: 1 }).turn).toBeGreaterThan(0);
+  });
+
+  it("BPD-049 changing a main engine's nozzle or chamber keeps what is welded to its chamber walls", () => {
+    const held = (bp: typeof st) => welds(bp).filter((w) => w.a.startsWith("eng-l") !== w.b.startsWith("eng-l") && [w.a, w.b].some((id) => id.startsWith("eng-l"))).map((w) => [w.a, w.b].sort().join("|")).sort();
+    const before = held(st);
+    expect(before.length).toBeGreaterThan(0);
+    for (const key of ["flare", "throat", "wall", "chamberLength", "length"]) {
+      const p = params(st, "eng-l").find((x) => x.key === key);
+      expect(p, key).toBeDefined();
+      const out = setParam(st, "eng-l", key, p!.value as number);
+      expect(held(out), key).toEqual(before);
+      expect(pieces(out), key).toHaveLength(1);
+    }
+  });
+
+  it("BPD-049 a tank shrunk until it holds nothing has no blast; grown back, it has its blast again", () => {
+    const m = mastodonPreset(scn);
+    const charge = body(m, "tank-l").explosive?.charge ?? 0;
+    expect(charge).toBeGreaterThan(0);
+    let bp = setParam(m, "tank-l", "fTop", 0.05);
+    bp = setParam(bp, "tank-l", "fHeight", 0.3);
+    bp = setParam(bp, "tank-l", "fBase", 0.3);
+    bp = setParam(bp, "tank-l", "wall", 0.075);
+    expect(body(bp, "tank-l").explosive).toBeUndefined();
+    bp = setParam(bp, "tank-l", "wall", 0.02);
+    expect(body(bp, "tank-l").explosive?.charge ?? 0).toBeGreaterThan(0);
+    for (const [k, v] of Object.entries(component(m, "tank-l").form!)) if (k !== "kind" && k !== "turn") bp = setParam(bp, "tank-l", "f" + k[0].toUpperCase() + k.slice(1), v as number);
+    bp = setParam(bp, "tank-l", "wall", component(m, "tank-l").wall ?? 0.1);
+    expect(body(bp, "tank-l").explosive).toEqual(body(m, "tank-l").explosive);
+  });
+
+  it("BPD-049 measured: about 32 m/s² forward, 6 rad/s² turning on the tail alone, both ways alike", () => {
+    const r = measureNow(st, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
+    expect(r[0].ahead).toBeGreaterThan(28);
+    expect(r[0].ahead).toBeLessThan(36);
+    expect(r[1].turn).toBeGreaterThan(5);
+    expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.5);
+    expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
+  }, 120_000);
+});
+
+describe("the Phiomia (Chloe's sketch, 16 November 2026)", async () => {
+  const { phiomiaPreset, mastodonPreset, allOverlaps, pieces, wiringChecks, response, powerStats } = await import("../../src/app/blueprint/model.ts");
+  const { measureNow, measureWorld } = await import("../../src/app/blueprint/measure.ts");
+  const { getProfile, stepInPlace } = await import("../../src/core/index.ts");
+  const ph = phiomiaPreset(scn);
+  const moves = [{ id: "forward", name: "Forward" }, { id: "left", name: "Turn left" }, { id: "right", name: "Turn right" }];
+
+  it("BPD-050 the simplest ship in one piece: the Mastodon's cockpit, a tank, a spine to a crossbar, a rocket hanging at each end; no weapon, no power system", () => {
+    expect(pieces(ph)).toHaveLength(1);
+    expect(allOverlaps(ph)).toEqual([]);
+    expect(body(ph, "hull").shape).toEqual(body(mastodonPreset(scn), "hull").shape);
+    expect(Math.abs(stats(ph).com.x)).toBeLessThan(1e-9);
+    expect(ph.components.map((c) => c.kind).sort()).toEqual(["cockpit", "engine", "engine", "frame", "frame", "tank"]);
+    const joined = (a: string, b: string) => welds(ph).some((w) => [w.a, w.b].includes(a) && [w.a, w.b].includes(b));
+    expect([joined("hull", "tank"), joined("tank", "spine"), joined("spine", "bar"), joined("bar", "eng-l"), joined("bar", "eng-r")]).toEqual([true, true, true, true, true]);
+    for (const id of ["eng-l", "eng-r"]) {
+      expect(component(ph, id).rocket).toBeDefined();
+      // Hanging down, firing past the cockpit's sides.
+      expect(body(ph, id).angle).toBe(0);
+      expect(Math.abs(body(ph, id).position.x)).toBeGreaterThan(0.6 + 0.25);
+    }
+    expect(powerStats(ph)).toBeNull();
+    expect(wiringChecks(ph, moves).every((c) => c.ok)).toBe(true);
+  });
+
+  it("BPD-050 its wiring: forward fires both engines; a turn, the engine away from it; forward and a turn, that engine alone", () => {
+    const fired = (controls: Record<string, number>) => Object.entries(response(ph, controls).throttles).filter(([, v]) => v > 0).map(([k]) => k).sort();
+    expect(fired({ forward: 1 })).toEqual(["eng-l", "eng-r"]);
+    expect(fired({ left: 1 })).toEqual(["eng-r"]);
+    expect(fired({ right: 1 })).toEqual(["eng-l"]);
+    expect(fired({ forward: 1, left: 1 })).toEqual(["eng-r"]);
+    expect(fired({ forward: 1, right: 1 })).toEqual(["eng-l"]);
+    expect(response(ph, { left: 1 }).turn).toBeGreaterThan(0);
+  });
+
+  it("BPD-050 measured: gentle, about 11.6 m/s² forward and 4.5 rad/s² turning, both ways alike; forward alone goes straight", () => {
+    const r = measureNow(ph, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
+    expect(r[0].ahead).toBeGreaterThan(9);
+    expect(r[0].ahead).toBeLessThan(14);
+    expect(Math.abs(r[0].turn)).toBeLessThan(0.5);
+    expect(Math.abs(r[0].side)).toBeLessThan(0.5);
+    expect(r[1].turn).toBeGreaterThan(3.5);
+    expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.5);
+    expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
+  }, 120_000);
+
+  it("BPD-050 its beams hold: in a 20 s flight, forward and turning both ways (no more than 1 s at a time), no weld breaks and its parts stay within 5° of the cockpit", () => {
+    const w = measureWorld(ph);
+    const profile = getProfile("sandbox");
+    const welds0 = w.joints.map((j) => j.id);
+    const ids = ["tank", "spine", "bar", "eng-l", "eng-r"];
+    const angle = (id: string) => w.bodies.find((b) => b.id === id)!.angle;
+    const rel0 = new Map(ids.map((id) => [id, angle(id) - angle("hull")]));
+    const plan: Record<number, Record<string, number>> = { 0: { forward: 1 }, 240: { forward: 1, left: 1 }, 480: { forward: 1, left: 0, right: 1 }, 720: { forward: 0, right: 0, left: 1 }, 960: { left: 0, right: 1 }, 1200: { right: 0 } };
+    let worst = 0;
+    for (let i = 0; i < 4800; i++) {
+      stepInPlace(w, plan[i] ? Object.entries(plan[i]).map(([channel, value]) => ({ type: "control.set" as const, channel, value })) : [], profile);
+      for (const id of ids) {
+        const d = angle(id) - angle("hull") - rel0.get(id)!;
+        worst = Math.max(worst, Math.abs(Math.atan2(Math.sin(d), Math.cos(d))));
+      }
+    }
+    expect((worst * 180) / Math.PI).toBeLessThan(5);
+    expect(welds0.filter((id) => !w.joints.some((j) => j.id === id))).toEqual([]);
+  }, 120_000);
 });

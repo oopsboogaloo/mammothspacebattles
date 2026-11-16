@@ -119,6 +119,14 @@ test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothi
   await openOg(page);
   await page.getByRole("tab", { name: "EN" }).click();
   await page.getByRole("button", { name: "Add Light thruster", exact: true }).click();
+  // Dragged off the ship, into the open: not welded to anything.
+  const part = (await page.getByTestId("part-back").locator("polygon").first().boundingBox())!;
+  const view = (await page.getByTestId("blueprint-view").boundingBox())!;
+  await page.mouse.move(part.x + part.width / 2, part.y + part.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(view.x + view.width - 60, view.y + 60, { steps: 12 });
+  await page.mouse.up();
+  await expect(page.getByTestId("loose")).toBeVisible();
   await page.getByTestId("mode-controls").click();
   await expect(page.getByTestId("mixer")).toContainText("not wired");
   await expect(page.getByTestId("response")).toContainText("Not wired: Light thruster");
@@ -126,8 +134,7 @@ test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothi
   await expect(page.getByTestId("lines-back").getByTestId("say")).toHaveText("Fires fully on Action A.");
   await page.keyboard.down("Space");
   await expect(page.getByTestId("control-action-a")).toHaveClass(/held/);
-  // THRUST OG has no free side for it, so it was placed clear of the ship: not welded to the
-  // cockpit, it doesn't answer even when wired, and the checks say so.
+  // Not welded to the cockpit, it doesn't answer even when wired, and the checks say so.
   await expect(page.getByTestId("response")).toContainText("Not welded to the cockpit, so they won't answer: Light thruster");
   await expect(page.getByTestId("mixer").locator("tr", { hasText: "Light thruster" })).toContainText("0%");
   // An engine on the ship does answer.

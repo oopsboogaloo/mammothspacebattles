@@ -571,6 +571,11 @@ double engine, whose heads are box chambers.
 - **A rocket** (`buildRocket`, the component's `rocket`): a head, two chamber walls, two throat
   pieces closing the chamber to a throat narrower than it, and two nozzle walls. Each is welded to
   the one before, Standard for its 0.1 m walls.
+  - Each throat piece and nozzle wall is also welded to the head, at the same point (Chloe, 16
+    November 2026). Welded only in a chain, the light pieces two or more welds from the head could
+    not hold their angles under the chamber's pressure, and the walls flapped, closed the throat and
+    broke away (55° in a 10 s flight). Held by the head as well, they stay within 0.2°, as THRUST OG's
+    walls do (0.08°).
   - Its shape is set in Shape: chamber width and length, head depth, throat, nozzle length and
     flare, and wall thickness.
   - What follows is shown:
@@ -605,6 +610,73 @@ double engine, whose heads are box chambers.
   The ship is lighter, and lightest at its wings.
 
 Test: BPD-048.
+
+## 24. The Stegodon (Chloe's sketch, 16 November 2026)
+
+A lighter gunship (`stegodonPreset`), using the Mastodon's cockpit for scale. It is the first angled
+layout.
+
+- **Down the middle:**
+  - the cockpit;
+  - a bullet magazine across the ship (1.2 × 0.3 m, 24 bullets);
+  - a fuel tank (1.2 × 0.95 m, 2.9 kg);
+  - a trapezoid taper to a 0.3 × 0.9 m boom;
+  - a small double engine across the tail. It is the smallest engine yet: 0.3 m heads, 0.4 m
+    nozzles, 0.5 kg/s each. It fires left and right to steer.
+- **Each side:**
+  - **A main engine,** a rocket (0.8 × 0.6 m chamber, 0.25 m throat, 1.0 m nozzle, 3.4 kg/s),
+    angled out 36.87°: the slope of the cockpit's top corners. Its head and chamber wall lie along
+    that slope and weld there. Rockets now weld by their chamber walls as well as their heads, so an
+    angled engine can lie along the ship.
+  - **A triangular side magazine** in the wedge between the engine and the cockpit (20 bullets).
+  - **A gun** outboard of the engine, on a triangular mount that welds its upright side to the
+    engine's angled one.
+- **Wiring, as drawn:**
+  - forward fires both main engines;
+  - a turn alone fires the tail;
+  - forward with a turn fires one main engine and the opposite side of the tail.
+  - There is no reverse. The guns are on Action A. It has no power system.
+- **Measured:** 44.1 kg; 31.8 m/s² forward; 6.0 rad/s² turning on the tail alone.
+  - Forward with a turn is much stronger: 24 rad/s², one main engine being far off the centre of
+    mass.
+  - Held for 1.4 s it spins the ship to 35 rad/s, and the turning main engine's head-to-chamber
+    weld breaks under the twist.
+- A container that can hold nothing has no explosive charge (the taper is a frame).
+
+Test: BPD-049.
+
+## 25. The Phiomia (16 November 2026, Chloe)
+
+The simplest ship (`phiomiaPreset`), using the Mastodon's cockpit for scale.
+
+- **Down the middle:**
+  - the cockpit;
+  - a fuel tank on its top, as wide (0.6 × 0.7 m, 0.78 kg);
+  - a spine (0.15 × 0.9 m) up to a crossbar (1.7 × 0.15 m). Both are frames: structure only.
+- **At each end of the crossbar, a small rocket** hanging down, firing past the cockpit's sides:
+  - 0.5 m chamber, 0.35 m long; 0.25 m throat; 0.5 m nozzle; 0.3 kg/s.
+  - Its head is level with the crossbar and welded to its end.
+- **Wiring:**
+  - forward fires both engines;
+  - a turn fires the engine on the side away from it;
+  - forward with a turn fires that engine alone.
+  - There is no reverse, no weapon and no power system.
+- **Measured:** 12.6 kg; 11.6 m/s² forward (THRUST OG: 36); 4.5 rad/s² turning, both ways alike.
+  - The tank gives about 80 s of full forward, at the game's fuel economy of 66.
+  - It holds together: no weld breaks in a 20 s flight, forward and turning, and its parts stay
+    within 3° of each other.
+  - A turn held for many seconds spins it up past 30 rad/s, and an engine then tears off the
+    crossbar, as it would from any of the presets.
+- **Why a 0.25 m throat, not the sketch's narrower one:**
+  - The exhaust is gas parcels about 0.07 m across, so a 0.15 m throat is two parcels wide. The jet
+    through it is lumpy and clings to one side.
+  - Both engines are exact copies in a deterministic simulation, so they cling to the same side, and
+    the errors add up instead of cancelling.
+  - With a 0.15 m throat, forward alone turned the ship at 2.6 rad/s² and pushed it sideways at
+    2.3 m/s². At 0.25 m those are 0.2 rad/s² and 0.25 m/s².
+  - The narrowest throat a small engine should have is about four parcels (0.25 m).
+
+Test: BPD-050.
 
 ## Sources
 

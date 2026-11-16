@@ -40,6 +40,8 @@ export interface Component {
   rocket?: Rocket;
   /** A trapezoid or triangle part: its outline as the player sets it (§16). */
   form?: Form;
+  /** A container's blast while it can hold nothing (its body then has none), kept for when it can again. */
+  blast?: NonNullable<BodyInput["explosive"]>;
 }
 
 /**
@@ -460,6 +462,200 @@ export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
 const MASTODON_FLOW = 5.4;
 const MASTODON_TURN = 0.25;
 
+// ---------- the Stegodon (Chloe's sketch, 16 November 2026) ----------
+
+/**
+ * The Stegodon: a lighter gunship, from Chloe's drawing, with the cockpit of the Mastodon's size for
+ * scale. Down the middle: the cockpit, a bullet magazine across the ship, a fuel tank tapering to a
+ * boom, and a small double engine across the tail, firing left and right to steer. Each side: a main
+ * engine angled out at the slope of the cockpit's top corners (its chamber lying along them), a
+ * triangular bullet magazine in the wedge between engine and cockpit, and a gun outboard of the
+ * engine on a triangular mount. Forward fires both main engines; turning alone fires the tail;
+ * forward and a turn fire one main engine and the opposite side of the tail.
+ */
+export function stegodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
+  const t = thrustShip(scenario).ship;
+  const src = (id: string): BodyInput => structuredClone(t.bodies.find((b) => b.id === id)!);
+  const at = (b: BodyInput, id: string, x: number, y: number, angle = 0): BodyInput => ({ ...b, id, position: { x: round(x), y: round(y) }, velocity: { x: 0, y: 0 }, angle, angularVelocity: 0 });
+  const hull = src("hull");
+  delete hull.tractor;
+  const plate = (id: string, shape: Shape, mass: number, x: number, y: number): BodyInput => ({ id, shape, mass, position: { x: round(x), y: round(y) }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.3, material: { ...hull.material! } });
+  const bodies: BodyInput[] = [];
+  const components: Component[] = [];
+  const add = (c: Component, ...bs: BodyInput[]) => {
+    bodies.push(...bs);
+    components.push(c);
+  };
+  // Down the middle: the cockpit (the Mastodon's), its bottom at y = 0.
+  hull.shape = { kind: "polygon", vertices: [{ x: -0.6, y: -0.375 }, { x: 0.6, y: -0.375 }, { x: 0.6, y: 0.375 }, { x: 0.3, y: 0.775 }, { x: -0.3, y: 0.775 }, { x: -0.6, y: 0.375 }] };
+  add({ id: "hull", kind: "cockpit", label: "Cockpit", part: "cockpit", bodies: ["hull"] }, at(hull, "hull", 0, 0.375));
+  const mag = src("mag-l");
+  const bulletMag = (id: string, shape: Shape, x: number, y: number): BodyInput => ({ ...at(structuredClone(mag), id, x, y), shape, ammo: { count: 0, shell: structuredClone(BULLET) } });
+  add({ id: "mag-c", kind: "storage", label: "Bullet magazine", part: "bullet-magazine", bodies: ["mag-c"] }, bulletMag("mag-c", { kind: "box", width: 1.2, height: 0.3 }, 0, -0.15));
+  const tank = src("tank-l");
+  add({ id: "tank", kind: "tank", label: "Tank", part: "tank", bodies: ["tank"] }, { ...at(tank, "tank", 0, -0.775), shape: { kind: "box", width: 1.2, height: 0.95 } });
+  const taper: Form = { kind: "trapezoid", base: 1.2, top: 0.3, height: 0.2, turn: 180 };
+  add({ id: "taper", kind: "frame", label: "Taper", part: "trapezoid", bodies: ["taper"], form: taper }, plate("taper", { kind: "polygon", vertices: formVertices(taper) }, 0.6, 0, -1.35));
+  const boom: Form = { kind: "trapezoid", base: 0.3, top: 0.3, height: 0.9, turn: 0 };
+  add({ id: "boom", kind: "frame", label: "Boom", part: "trapezoid", bodies: ["boom"], form: boom }, plate("boom", { kind: "polygon", vertices: formVertices(boom) }, 1.0, 0, -1.9));
+  // Each side.
+  const slope = { x: 0.6, y: 0.8 }; // the cockpit's top corners, and the main engines' axis: 36.87° from upright
+  const engine: Rocket = { chamberWidth: 0.8, chamberLength: 0.6, headHeight: 0.15, throat: 0.25, nozzleLength: 1.0, flare: round(Math.atan((0.8 - 2 * 0.1 - 0.25) / 2 / 1.0) / DEG, 6), wall: 0.1, nozzleMass: 0.6 };
+  const gunBody = src("gun");
+  for (const [s, l] of [[-1, "L"], [1, "R"]] as const) {
+    const side = l.toLowerCase();
+    // The main engine: its inner side along the cockpit's slope, its head's back at the cockpit's top corner.
+    const u = { x: -s * slope.x, y: slope.y }; // from the nozzle to the head
+    const inward = { x: -s * slope.y, y: -slope.x }; // its inner side's way, toward the cockpit
+    const corner = { x: s * 0.3, y: 1.15 };
+    const centre = { x: corner.x - u.x * (engine.headHeight / 2) - inward.x * (engine.chamberWidth / 2), y: corner.y - u.y * (engine.headHeight / 2) - inward.y * (engine.chamberWidth / 2) };
+    const head = at(src("main"), `eng-${side}`, centre.x, centre.y, s === -1 ? -Math.asin(0.6) : Math.asin(0.6));
+    head.shape = { kind: "box", width: engine.chamberWidth, height: engine.headHeight };
+    head.mass = 1.0;
+    head.injector = { ...head.injector!, channel: `eng-${side}` };
+    add({ id: `eng-${side}`, kind: "engine", label: `Engine ${l}`, part: "main-thruster", bodies: [`eng-${side}`], rocket: engine }, head);
+    // The side magazine: a triangle in the wedge between the engine's inner side and the cockpit, centre magazine and tank.
+    const p1 = { x: s * 0.6, y: 0.75 };
+    const p2 = { x: p1.x + u.x * -0.9, y: p1.y - u.y * 0.9 };
+    const p3 = { x: s * 0.6, y: -0.3 };
+    const c3 = { x: (p1.x + p2.x + p3.x) / 3, y: (p1.y + p2.y + p3.y) / 3 };
+    const tri = [p1, p2, p3].map((p) => ({ x: round(p.x - c3.x), y: round(p.y - c3.y) }));
+    add({ id: `mag-${side}`, kind: "storage", label: `Side magazine ${l}`, part: "bullet-magazine", bodies: [`mag-${side}`] }, bulletMag(`mag-${side}`, { kind: "polygon", vertices: polygonArea(tri) < 0 ? [...tri].reverse() : tri }, c3.x, c3.y));
+    // The gun, outboard of the engine, upright; a triangular mount between its inner face and the engine's outer side.
+    const outer = { x: corner.x - inward.x * engine.chamberWidth, y: corner.y - inward.y * engine.chamberWidth }; // the head's outer back corner
+    const face = s * 1.3; // the gun's inner face
+    const along = (face - outer.x) / u.x;
+    const xPt = { x: face, y: outer.y + u.y * along };
+    const yPt = { x: xPt.x + u.x * 0.3, y: xPt.y + u.y * 0.3 };
+    const zPt = { x: face, y: xPt.y + 0.5 };
+    const cm = { x: (xPt.x + yPt.x + zPt.x) / 3, y: (xPt.y + yPt.y + zPt.y) / 3 };
+    const mt = [xPt, yPt, zPt].map((p) => ({ x: round(p.x - cm.x), y: round(p.y - cm.y) }));
+    add({ id: `mount-${side}`, kind: "frame", label: `Mount ${l}`, part: "triangle", bodies: [`mount-${side}`] }, plate(`mount-${side}`, { kind: "polygon", vertices: polygonArea(mt) < 0 ? [...mt].reverse() : mt }, 0.5, cm.x, cm.y));
+    const g = at(structuredClone(gunBody), `gun-${side}`, face + s * 0.15, xPt.y + 0.35);
+    g.magazine = { ...g.magazine!, count: 0, shell: structuredClone(BULLET), railgun: { ...g.magazine!.railgun!, channel: `gun-${side}` } };
+    add({ id: `gun-${side}`, kind: "weapon", label: `Gun ${l}`, part: "gun", bodies: [`gun-${side}`] }, g);
+  }
+  let bp: Blueprint = { format: 1, id: "preset-stegodon", name: "STEGODON", preset: true, rev: 1, ship: { bodies, joints: [], links: [] }, components, mix: { rules: structuredClone(thrustShip(scenario).mix.rules ?? []), rows: [] } };
+  // The main engines' walls, chambers and nozzles.
+  for (const id of ["eng-l", "eng-r"]) {
+    bp = buildRocket(bp, id, engine);
+    bp = setParam(bp, id, "rate", STEGODON_MAIN_FLOW);
+  }
+  // The tail: a small double engine across the boom's end, firing left (eng-tail-l) and right (eng-tail-r).
+  const mh = src("main");
+  const tailHeads: BodyInput[] = [];
+  const tailJoints: JointInput[] = [];
+  const wall = src("main-wall-a");
+  for (const [id, x, angle] of [["tail-l", -0.09, -Math.PI / 2], ["tail-r", 0.09, Math.PI / 2]] as const) {
+    const h = at(structuredClone(mh), id, x, -2.5, angle);
+    h.shape = { kind: "box", width: 0.3, height: 0.18 };
+    h.mass = 0.3;
+    h.explosive = { ...h.explosive!, charge: round(0.3 * 0.008, 9) };
+    h.injector = { ...h.injector!, channel: id };
+    tailHeads.push(h);
+    for (const [w, wx] of [["a", -0.1], ["b", 0.1]] as const) {
+      const wb = at(structuredClone(wall), `${id}-w${w}`, 0, 0, angle);
+      wb.mass = 0.1;
+      wb.position = worldPoint(h, { x: wx, y: -0.3 });
+      bp.ship.bodies.push(wb);
+      tailJoints.push({ id: `${id}-w${w}`, a: id, b: wb.id, anchorA: { x: 0, y: 0 }, anchorB: { x: 0, y: 0 }, limits: { ...WELD_PRESETS[1].limits }, yield: WELD_PRESETS[1].yield });
+    }
+  }
+  bp.ship.bodies.push(...tailHeads);
+  bp.ship.joints.push(...tailJoints);
+  bp.components.push({ id: "tail-l", kind: "engine", label: "Tail engine", part: "double-engine", bodies: ["tail-l", "tail-l-wa", "tail-l-wb", "tail-r", "tail-r-wa", "tail-r-wb"], heads: ["tail-l", "tail-r"] });
+  bp = buildEngine(bp, component(bp, "tail-l"), { headWidth: 0.3, headHeight: 0.18, throat: 0.2, wall: 0.05, length: 0.4, flare: 5 });
+  bp = setParam(bp, "tail-l", "rate", STEGODON_TAIL_FLOW);
+  for (const c of bp.components) applyRules(bp, c.id);
+  for (const c of bp.components) bp = reweld(bp, c.id);
+  refeed(bp);
+  reammo(bp);
+  relink(bp);
+  // Its wiring, as Chloe drew it: forward, both main engines; a turn alone, the tail; forward and a
+  // turn, the main engine on the side away from the turn (it turns the ship that way) and the tail.
+  const row = (channel: string, lines: MixerRow["lines"]): MixerRow => ({ channel, lines });
+  bp.mix.rows = [
+    row("eng-l", [{ control: "forward", weight: 1, ease: { control: "left", amount: 1 } }]),
+    row("eng-r", [{ control: "forward", weight: 1, ease: { control: "right", amount: 1 } }]),
+    row("tail-l", [{ control: "left", weight: 1 }]),
+    row("tail-r", [{ control: "right", weight: 1 }]),
+    row("gun-l", [{ control: "action-a", weight: 1 }]),
+    row("gun-r", [{ control: "action-a", weight: 1 }]),
+  ];
+  return bp;
+}
+
+/** The Stegodon's main engines' flow and its tail's, each head, kg/s. */
+const STEGODON_MAIN_FLOW = 3.4;
+const STEGODON_TAIL_FLOW = 0.5;
+
+// ---------- the Phiomia (Chloe's sketch, 16 November 2026) ----------
+
+/**
+ * The Phiomia: the simplest ship, from Chloe's drawing, with the Mastodon's cockpit for scale. The
+ * cockpit, a fuel tank on its top, and a spine up from the tank to a crossbar; at each end of the
+ * crossbar a small rocket hangs, firing down past the cockpit's sides. The spine and crossbar are
+ * only structure, so the engines are gentle. Forward fires both; a turn, the engine on the side
+ * away from it; forward and a turn, that engine alone.
+ */
+export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
+  const t = thrustShip(scenario).ship;
+  const src = (id: string): BodyInput => structuredClone(t.bodies.find((b) => b.id === id)!);
+  const at = (b: BodyInput, id: string, x: number, y: number): BodyInput => ({ ...b, id, position: { x: round(x), y: round(y) }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
+  const hull = src("hull");
+  delete hull.tractor;
+  const engine = phiomiaEngine();
+  const bodies: BodyInput[] = [];
+  const components: Component[] = [];
+  const add = (c: Component, b: BodyInput) => {
+    bodies.push(b);
+    components.push(c);
+  };
+  const beam = (id: string, label: string, width: number, height: number, mass: number, x: number, y: number) => {
+    const form: Form = { kind: "trapezoid", base: width, top: width, height, turn: 0 };
+    add({ id, kind: "frame", label, part: "trapezoid", bodies: [id], form }, { id, shape: { kind: "polygon", vertices: formVertices(form) }, mass, position: { x: round(x), y: round(y) }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.3, material: { ...hull.material! } });
+  };
+  // The cockpit (the Mastodon's), its bottom at y = 0, its top 0.6 m across at y = 1.15.
+  hull.shape = { kind: "polygon", vertices: [{ x: -0.6, y: -0.375 }, { x: 0.6, y: -0.375 }, { x: 0.6, y: 0.375 }, { x: 0.3, y: 0.775 }, { x: -0.3, y: 0.775 }, { x: -0.6, y: 0.375 }] };
+  add({ id: "hull", kind: "cockpit", label: "Cockpit", part: "cockpit", bodies: ["hull"] }, at(hull, "hull", 0, 0.375));
+  // The tank on the cockpit's top, as wide.
+  add({ id: "tank", kind: "tank", label: "Tank", part: "tank", bodies: ["tank"] }, { ...at(src("tank-l"), "tank", 0, 1.5), shape: { kind: "box", width: 0.6, height: 0.7 } });
+  // The spine, up to the crossbar; the crossbar between the engines' heads.
+  beam("spine", "Spine", 0.15, 0.9, 0.5, 0, 2.3);
+  beam("bar", "Crossbar", 1.7, 0.15, 0.9, 0, 2.825);
+  // The engines: their heads level with the crossbar, at its ends.
+  for (const [s, l] of [[-1, "L"], [1, "R"]] as const) {
+    const id = `eng-${l.toLowerCase()}`;
+    const head = at(src("main"), id, s * 1.1, 2.825);
+    head.shape = { kind: "box", width: engine.chamberWidth, height: engine.headHeight };
+    head.mass = 0.5;
+    head.explosive = { ...head.explosive!, charge: round(0.5 * 0.008, 9) };
+    head.injector = { ...head.injector!, channel: id };
+    add({ id, kind: "engine", label: `Engine ${l}`, part: "main-thruster", bodies: [id], rocket: engine }, head);
+  }
+  let bp: Blueprint = { format: 1, id: "preset-phiomia", name: "PHIOMIA", preset: true, rev: 1, ship: { bodies, joints: [], links: [] }, components, mix: { rules: structuredClone(thrustShip(scenario).mix.rules ?? []), rows: [] } };
+  for (const id of ["eng-l", "eng-r"]) {
+    bp = buildRocket(bp, id, engine);
+    bp = setParam(bp, id, "rate", PHIOMIA_FLOW);
+  }
+  for (const c of bp.components) applyRules(bp, c.id);
+  for (const c of bp.components) bp = reweld(bp, c.id);
+  refeed(bp);
+  reammo(bp);
+  relink(bp);
+  const row = (channel: string, lines: MixerRow["lines"]): MixerRow => ({ channel, lines });
+  bp.mix.rows = [
+    row("eng-l", [{ control: "forward", weight: 1, ease: { control: "left", amount: 1 } }, { control: "right", weight: 1 }]),
+    row("eng-r", [{ control: "forward", weight: 1, ease: { control: "right", amount: 1 } }, { control: "left", weight: 1 }]),
+  ];
+  return bp;
+}
+
+/** The Phiomia's engines: 0.5 m chambers, a 0.25 m throat, nozzles flared to the chamber's inside. */
+const phiomiaEngine = (): Rocket => ({ chamberWidth: 0.5, chamberLength: 0.35, headHeight: 0.15, throat: 0.25, nozzleLength: 0.5, flare: round(Math.atan((0.5 - 2 * 0.1 - 0.25) / 2 / 0.5) / DEG, 6), wall: 0.1, nozzleMass: 0.3 });
+/** Each engine's flow at full, kg/s: gentle, for a ship held together by its beams. */
+const PHIOMIA_FLOW = 0.3;
+
 /**
  * Parts with no preset to come from (a triangle), for the components list only: never opened.
  */
@@ -520,7 +716,15 @@ export function applyContainer(bp: Blueprint, compId: string): void {
   const s = containerSpec(kind, shapeVertices(b.shape), wallOf(c));
   b.mass = s.dryMass;
   b.material = { ...s.material };
-  if (b.explosive) b.explosive = { ...b.explosive, charge: s.charge };
+  // Nothing it can hold, nothing to go off.
+  const blast = b.explosive ?? c.blast;
+  if (blast && s.charge > 0) {
+    b.explosive = { ...blast, charge: s.charge };
+    delete c.blast;
+  } else if (blast) {
+    c.blast = blast;
+    delete b.explosive;
+  }
   if (kind === "tank") {
     b.contents = (Object.entries(MIXTURE) as [string, number][]).map(([resource, f]) => {
       const kg = round(s.holds * f, 9);
@@ -877,7 +1081,8 @@ const WALL_DENSITY = 0.75 / 0.11;
 /**
  * Builds (or rebuilds) a regular engine's walls from its head and its shape, the head's back face
  * staying where it is. Its walls are new bodies, welded in a chain: head, chamber walls, throat
- * pieces, nozzle walls; their welds Standard for their thickness.
+ * pieces, nozzle walls; and each throat piece and nozzle wall welded to the head as well, so the
+ * head holds every piece. Their welds are Standard for their thickness.
  */
 export function buildRocket(bp: Blueprint, compId: string, r: Rocket): Blueprint {
   const out = clone(bp);
@@ -920,6 +1125,11 @@ export function buildRocket(bp: Blueprint, compId: string, r: Rocket): Blueprint
     join(`${h.id}-w-cw-${k}`, h, cw, { x: s * (r.chamberWidth / 2 - t / 2), y: top });
     join(`${h.id}-w-th-${k}`, cw, th, { x: s * (r.chamberWidth / 2 - t / 2), y: chamberBottom });
     join(`${h.id}-w-nz-${k}`, th, nz, { x: s * (r.throat / 2 + t / 2), y: throatBottom });
+    // And each held by the head directly, at the same points: through a chain of light pieces the
+    // welds could not hold their angles under the chamber's pressure, and the walls flapped (55° in
+    // a 10 s flight; 0.18° like this, THRUST OG's 0.08°).
+    join(`${h.id}-s-th-${k}`, h, th, { x: s * (r.chamberWidth / 2 - t / 2), y: chamberBottom });
+    join(`${h.id}-s-nz-${k}`, h, nz, { x: s * (r.throat / 2 + t / 2), y: throatBottom });
   }
   out.ship.bodies.push(...made);
   out.ship.joints.push(...joints);
@@ -1146,8 +1356,8 @@ export function setParam(bp: Blueprint, compId: string, key: string, value: numb
       const r = { ...c.rocket, [map[key]]: value };
       // The throat narrower than the chamber, inside its walls.
       r.throat = Math.min(r.throat, r.chamberWidth - 2 * r.wall);
-      const out = buildRocket(bp, compId, r);
-      return key === "headWidth" || key === "headHeight" ? reweld(out, compId) : out;
+      // Its chamber walls can hold other parts (the Stegodon's mounts): rebuilt, they weld again.
+      return reweld(buildRocket(bp, compId, r), compId);
     }
   }
   if (c.kind === "engine") {
@@ -1345,7 +1555,13 @@ export function weldPoints(e: Edge): Vec2[] {
 
 /** The bodies of a component that weld to others: an engine welds by its head only. */
 /** What welds to the rest of the ship: an engine by its heads (its nozzle walls hang off them), anything else by every body. */
-const weldingBodies = (c: Component) => (c.kind === "engine" ? (c.heads ?? c.bodies.slice(0, 1)) : c.bodies);
+const weldingBodies = (c: Component) =>
+  c.kind !== "engine"
+    ? c.bodies
+    : // A rocket welds by its head and its chamber's walls (an angled engine lies along the ship by its chamber); other engines by their heads.
+      c.rocket
+      ? c.bodies.filter((id) => id === c.bodies[0] || /-cw-[ab]$/.test(id))
+      : (c.heads ?? c.bodies.slice(0, 1));
 
 /**
  * Remakes a component's welds from where it now touches the others (§3.2): its old welds go, and
@@ -1606,18 +1822,21 @@ export function place(bp: Blueprint, moving: BodyInput[], welding: string[], dx:
             if (Math.abs(d) <= tol) cands.push({ d, e, f });
           }
     cands.sort((p, q) => Math.abs(p.d) - Math.abs(q.d));
-    const first = cands[0];
-    const second = first && cands.find((c) => Math.abs(c.e.out!.x * first.e.out!.y - c.e.out!.y * first.e.out!.x) > 0.2);
-    if (first && second) {
-      // Both sides met: the move t with t·n1 = d1 and t·n2 = d2.
-      const [n1, n2] = [first.e.out!, second.e.out!];
-      const det = n1.x * n2.y - n1.y * n2.x;
-      cx = (first.d * n2.y - second.d * n1.y) / det;
-      cy = (n1.x * second.d - n2.x * first.d) / det;
-      guides.push(first.f, second.f);
-    } else if (first) {
-      cx = first.e.out!.x * first.d;
-      cy = first.e.out!.y * first.d;
+    // The nearest snap that leaves it clear of every other part: a side it could meet may belong
+    // to a part it can't sit beside (a rocket's chamber wall, under its head).
+    const snapFor = (first: Cand | undefined): { cx: number; cy: number; guides: Edge[] } => {
+      const g: Edge[] = [];
+      if (!first) return { cx: 0, cy: 0, guides: g };
+      const second = cands.find((c) => Math.abs(c.e.out!.x * first.e.out!.y - c.e.out!.y * first.e.out!.x) > 0.2);
+      if (second) {
+        // Both sides met: the move t with t·n1 = d1 and t·n2 = d2.
+        const [n1, n2] = [first.e.out!, second.e.out!];
+        const det = n1.x * n2.y - n1.y * n2.x;
+        g.push(first.f, second.f);
+        return { cx: (first.d * n2.y - second.d * n1.y) / det, cy: (n1.x * second.d - n2.x * first.d) / det, guides: g };
+      }
+      let x = first.e.out!.x * first.d;
+      let y = first.e.out!.y * first.d;
       // Lined up along the side it meets: its end or middle with theirs, if near.
       const len = Math.hypot(first.e.b.x - first.e.a.x, first.e.b.y - first.e.a.y);
       const t = { x: (first.e.b.x - first.e.a.x) / len, y: (first.e.b.y - first.e.a.y) / len };
@@ -1627,11 +1846,26 @@ export function place(bp: Blueprint, moving: BodyInput[], welding: string[], dx:
       const options = [f0, f1 - len, (f0 + f1) / 2 - len / 2];
       const pick = options.filter((o) => Math.abs(o) <= tol).sort((p, q) => Math.abs(p) - Math.abs(q))[0];
       if (pick !== undefined) {
-        cx += t.x * pick;
-        cy += t.y * pick;
-        guides.push(first.f);
+        x += t.x * pick;
+        y += t.y * pick;
+        g.push(first.f);
+      }
+      return { cx: x, cy: y, guides: g };
+    };
+    const clear = (cx2: number, cy2: number) => !moving.map((b) => shifted(b, dx + cx2, dy + cy2)).some((m) => otherAll.some((o) => overlaps(worldVertices(m), worldVertices(o))));
+    const tried = cands.slice(0, 16);
+    let chosen = snapFor(tried[0]);
+    for (const c of tried) {
+      const sn = snapFor(c);
+      if (clear(sn.cx, sn.cy)) {
+        chosen = sn;
+        break;
       }
     }
+    const first = tried[0];
+    cx = chosen.cx;
+    cy = chosen.cy;
+    guides.push(...chosen.guides);
     snapped = !!first;
   }
   const fx = dx + cx;
