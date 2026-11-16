@@ -212,23 +212,26 @@ test("BPD-028 after a try-out each weld shows how hard it worked, and the page s
 
 test("BPD-029 a game controller flies Try it: A is forward, the stick turns, through the blueprint's wiring", async ({ page }) => {
   // A standard-mapping pad, held as a test sets it.
+  // As e2e/gamepad.spec.ts plugs one in: assigned, which every engine honours (WebKit ignores a defineProperty here).
   await page.addInitScript(() => {
     const pad = { id: "test pad", index: 0, connected: true, mapping: "standard", timestamp: 0, axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })) };
     (window as unknown as { __pad: typeof pad }).__pad = pad;
-    Object.defineProperty(navigator, "getGamepads", { value: () => [pad] });
+    navigator.getGamepads = () => [pad as unknown as Gamepad];
   });
   await openFresh(page);
   await page.getByTestId("try-it").click();
   await page.evaluate(() => {
     const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
-    p.buttons[0] = { ...p.buttons[0], pressed: true, value: 1 }; // A: forward
+    p.buttons[0].pressed = true; // A: forward
+    p.buttons[0].value = 1;
     p.axes[0] = 1; // stick right
   });
   const controls = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } | null } }).__msb.sandbox()?.world.controls ?? {});
   await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ forward: 1, main: 1, bl: 1, fr: 0.5 });
   await page.evaluate(() => {
     const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
-    p.buttons[0] = { ...p.buttons[0], pressed: false, value: 0 };
+    p.buttons[0].pressed = false;
+    p.buttons[0].value = 0;
     p.axes[0] = 0;
   });
   await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ main: 0 });
@@ -240,14 +243,14 @@ test("BPD-031 Try it's field is 120 × 75 m and wraps; the view follows the ship
   const w = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bounds: { min: { x: number; y: number }; max: { x: number; y: number }; wrap: boolean } } } } }).__msb.sandbox().world.bounds);
   expect([w.max.x - w.min.x, w.max.y - w.min.y, w.wrap]).toEqual([120, 75, true]);
   await page.keyboard.down("ArrowUp");
-  await page.waitForTimeout(1200);
+  // Held until it has flown, however slowly the browser runs the flight.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; position: { y: number } }[] } } } }).__msb.sandbox().world.bodies.find((b) => b.id === "hull")!.position.y), { timeout: 60_000, intervals: [50] }).toBeGreaterThan(1);
   await page.keyboard.up("ArrowUp");
   const cam = await page.evaluate(() => {
     const msb = (window as unknown as { __msb: { camera: () => { x: number; y: number; zoom: number }; sandbox: () => { world: { bodies: { id: string; position: { x: number; y: number } }[] } } } }).__msb;
     return { cam: msb.camera(), at: msb.sandbox().world.bodies.find((b) => b.id === "hull")!.position, vw: innerWidth };
   });
-  expect(cam.at.y).toBeGreaterThan(1); // it flew (the game pace is half real time)
-  expect(Math.abs(cam.cam.y - cam.at.y)).toBeLessThan(2); // and the view went with it
+    expect(Math.abs(cam.cam.y - cam.at.y)).toBeLessThan(2); // and the view went with it
   // It shows 60 m across (or 37.5 m up, whichever fits): about half the field.
   expect(cam.vw / cam.cam.zoom).toBeGreaterThanOrEqual(59.9);
   expect(cam.vw / cam.cam.zoom).toBeLessThan(75);
