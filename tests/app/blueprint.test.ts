@@ -785,3 +785,49 @@ describe("engines with chambers (design rules §5; Chloe, 16 November 2026)", as
     expect(engines(regular).map((e) => e.thrust)).toEqual(engines(bp).map((e) => e.thrust));
   }, 60_000);
 });
+
+describe("the Stegodon (Chloe's sketch, 16 November 2026)", async () => {
+  const { stegodonPreset, mastodonPreset, allOverlaps, pieces, wiringChecks, response, powerStats } = await import("../../src/app/blueprint/model.ts");
+  const { measureNow } = await import("../../src/app/blueprint/measure.ts");
+  const st = stegodonPreset(scn);
+  const moves = [{ id: "forward", name: "Forward" }, { id: "reverse", name: "Reverse" }, { id: "left", name: "Turn left" }, { id: "right", name: "Turn right" }];
+
+  it("BPD-049 a lighter gunship in one piece: the Mastodon's cockpit, main engines angled out along its slope and welded there, guns and bullet magazines, a small double engine across its tail; no power system", () => {
+    expect(pieces(st)).toHaveLength(1);
+    expect(allOverlaps(st)).toEqual([]);
+    expect(stats(st).mass).toBeLessThan(stats(mastodonPreset(scn)).mass);
+    expect(Math.abs(stats(st).com.x)).toBeLessThan(1e-9);
+    // The main engines: rockets at 36.87° (the cockpit's top corners), their chambers welded along the cockpit.
+    for (const [id, s] of [["eng-l", -1], ["eng-r", 1]] as const) {
+      expect(component(st, id).rocket).toBeDefined();
+      expect(body(st, id).angle).toBeCloseTo(s * Math.asin(0.6), 9);
+      expect(welds(st).some((w) => [w.a, w.b].includes(id) && [w.a, w.b].includes("hull"))).toBe(true);
+    }
+    expect(component(st, "tail-l").heads).toEqual(["tail-l", "tail-r"]);
+    expect(st.components.filter((c) => c.part === "gun")).toHaveLength(2);
+    expect(st.components.filter((c) => c.part === "bullet-magazine")).toHaveLength(3);
+    expect(powerStats(st)).toBeNull();
+    expect(wiringChecks(st, moves).every((c) => c.ok)).toBe(true);
+  });
+
+  it("BPD-049 its wiring as drawn: forward fires both main engines; a turn alone, only the tail; forward and a turn, one main engine and the opposite side of the tail", () => {
+    const fired = (controls: Record<string, number>) => Object.entries(response(st, controls).throttles).filter(([, v]) => v > 0).map(([k]) => k).sort();
+    expect(fired({ forward: 1 })).toEqual(["eng-l", "eng-r"]);
+    expect(fired({ left: 1 })).toEqual(["tail-l"]);
+    expect(fired({ right: 1 })).toEqual(["tail-r"]);
+    expect(fired({ forward: 1, left: 1 })).toEqual(["eng-r", "tail-l"]);
+    expect(fired({ forward: 1, right: 1 })).toEqual(["eng-l", "tail-r"]);
+    // And they turn it the way asked.
+    expect(response(st, { left: 1 }).turn).toBeGreaterThan(0);
+    expect(response(st, { forward: 1, left: 1 }).turn).toBeGreaterThan(0);
+  });
+
+  it("BPD-049 measured: about 32 m/s² forward, 6 rad/s² turning on the tail alone, both ways alike", () => {
+    const r = measureNow(st, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
+    expect(r[0].ahead).toBeGreaterThan(28);
+    expect(r[0].ahead).toBeLessThan(36);
+    expect(r[1].turn).toBeGreaterThan(5);
+    expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.5);
+    expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
+  }, 120_000);
+});

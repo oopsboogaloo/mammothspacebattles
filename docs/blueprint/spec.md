@@ -606,6 +606,40 @@ double engine, whose heads are box chambers.
 
 Test: BPD-048.
 
+## 24. The Stegodon (Chloe's sketch, 16 November 2026)
+
+A lighter gunship (`stegodonPreset`), using the Mastodon's cockpit for scale. It is the first angled
+layout.
+
+- **Down the middle:**
+  - the cockpit;
+  - a bullet magazine across the ship (1.2 × 0.3 m, 24 bullets);
+  - a fuel tank (1.2 × 0.95 m, 2.9 kg);
+  - a trapezoid taper to a 0.3 × 0.9 m boom;
+  - a small double engine across the tail. It is the smallest engine yet: 0.3 m heads, 0.4 m
+    nozzles, 0.5 kg/s each. It fires left and right to steer.
+- **Each side:**
+  - **A main engine,** a rocket (0.8 × 0.6 m chamber, 0.25 m throat, 1.0 m nozzle, 3.4 kg/s),
+    angled out 36.87°: the slope of the cockpit's top corners. Its head and chamber wall lie along
+    that slope and weld there. Rockets now weld by their chamber walls as well as their heads, so an
+    angled engine can lie along the ship.
+  - **A triangular side magazine** in the wedge between the engine and the cockpit (20 bullets).
+  - **A gun** outboard of the engine, on a triangular mount that welds its upright side to the
+    engine's angled one.
+- **Wiring, as drawn:**
+  - forward fires both main engines;
+  - a turn alone fires the tail;
+  - forward with a turn fires one main engine and the opposite side of the tail.
+  - There is no reverse. The guns are on Action A. It has no power system.
+- **Measured:** 44.1 kg; 31.8 m/s² forward; 6.0 rad/s² turning on the tail alone.
+  - Forward with a turn is much stronger: 24 rad/s², one main engine being far off the centre of
+    mass.
+  - Held for 1.4 s it spins the ship to 35 rad/s, and the turning main engine's head-to-chamber
+    weld breaks under the twist.
+- A container that can hold nothing has no explosive charge (the taper is a frame).
+
+Test: BPD-049.
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):
