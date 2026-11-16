@@ -2,6 +2,8 @@
 // blueprints drawer.
 import { useState } from "preact/hooks";
 import { NumberControl } from "./NumberControl.tsx";
+import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
+import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
 import { addComponent, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
@@ -175,8 +177,12 @@ export function PerformanceBox() {
   const st = stats(bp);
   const bs = stats(base);
   const r = (b: Blueprint, s: ReturnType<typeof stats>) => RESPONSE_ROWS.map((row) => response(b, row.controls, s));
-  const [f, rv, l] = r(bp, st);
-  const [bf, brv, bl] = r(base, bs);
+  const est = r(bp, st);
+  // Measured figures replace the estimates while the blueprint is as it was measured (not while placing).
+  const m = preview.value ? null : measurementOf(bp);
+  const bm = measurementOf(base);
+  const [f, rv, l] = m ? m.map((x) => ({ ahead: x.ahead, turn: x.turn })) : est;
+  const [bf, brv, bl] = bm ? bm.map((x) => ({ ahead: x.ahead, turn: x.turn })) : r(base, bs);
   const flow = engines(bp)
     .filter((e) => (response(bp, { forward: 1 }, st).throttles[e.id] ?? 0) > 0)
     .reduce((s, e) => {
@@ -184,13 +190,14 @@ export function PerformanceBox() {
       return s + (inj.rate ?? 0) / (inj.economy ?? 1);
     }, 0);
   const burn = flow > 0 ? st.propellant / flow : NaN;
+  const tag = m ? " ✓" : "";
   const rows: [string, string, number, number][] = [
     ["Mass", `${n(st.mass)} kg`, st.mass, bs.mass],
     ["Width × height", `${n(st.width, 2)} × ${n(st.height, 2)} m`, st.width, bs.width],
-    ["Accel. forward", `${n(f.ahead)} m/s²`, f.ahead, bf.ahead],
-    ["Accel. reverse", `${n(-rv.ahead)} m/s²`, -rv.ahead, -brv.ahead],
-    ["Turn", `${n(Math.abs(l.turn), 2)} rad/s²`, Math.abs(l.turn), Math.abs(bl.turn)],
-    ["Thrust ÷ mass", `${n(f.ahead / 9.81, 2)} g`, f.ahead, bf.ahead],
+    ["Accel. forward", `${n(f.ahead)} m/s²${tag}`, f.ahead, bf.ahead],
+    ["Accel. reverse", `${n(-rv.ahead)} m/s²${tag}`, -rv.ahead, -brv.ahead],
+    ["Turn", `${n(Math.abs(l.turn), 2)} rad/s²${tag}`, Math.abs(l.turn), Math.abs(bl.turn)],
+    ["Thrust ÷ mass", `${n(f.ahead / 9.81, 2)} g${tag}`, f.ahead, bf.ahead],
     ["Full-burn time", `${Number.isFinite(burn) ? n(burn, 0) : "—"} s`, burn, burn],
     ["Joins", `${st.welds} welds · ${st.parts} parts`, st.welds, bs.welds],
   ];
@@ -198,7 +205,8 @@ export function PerformanceBox() {
   return (
     <div class="stats" data-testid="performance">
       <div class="sh">
-        PERFORMANCE <small>full tanks · est.</small>
+        PERFORMANCE <small>full tanks · {m ? "✓ measured" : "est."}</small>
+        <MeasureButton bp={bp} measuredNow={!!m} />
       </div>
       <table>
         <tbody>
@@ -221,6 +229,25 @@ export function PerformanceBox() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Runs the real physics on the blueprint for a few seconds and shows what it does (§7). */
+export function MeasureButton({ bp, measuredNow }: { bp: Blueprint; measuredNow: boolean }) {
+  const run = measuring.value;
+  if (!bp.ship.bodies.length) return null;
+  if (run) {
+    const mine = run.key === measureKey(bp);
+    return (
+      <span class="measure busy" data-testid="measuring" role="status">
+        {mine ? `Measuring… ${Math.round(run.progress * 100)}%` : "Measuring…"}
+      </span>
+    );
+  }
+  return (
+    <button class="measure" data-testid="measure" title="Fly it in the real physics for a few seconds, each control held from rest, and show what it really does" onClick={() => startMeasure(current.value)} disabled={!!preview.value}>
+      ⏱ {measuredNow ? "Again" : "Measure"}
+    </button>
   );
 }
 

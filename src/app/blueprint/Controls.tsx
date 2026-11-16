@@ -7,6 +7,8 @@ import { mixerValues, type MixerLine, type MixerRow } from "../../core/index.ts"
 import { addControl, bindKey, controlName, keyLabel, keysFor, playerControls, playerKeys, unbindKey } from "./bindings.ts";
 import { channelsOf, component, componentOfChannel, describeRow, response, setRow, setRules, stats, wiringChecks, type Blueprint } from "./model.ts";
 import { NumberControl } from "./NumberControl.tsx";
+import { measurementOf } from "./measureClient.ts";
+import { MeasureButton } from "./Panels.tsx";
 import { current, edit, endGesture, live, mode, selection } from "./store.ts";
 import { KIND_COLOUR } from "./View.tsx";
 
@@ -384,14 +386,19 @@ export function ResponseBox() {
   const st = stats(bp);
   const controls = playerControls.value.filter((c) => ["forward", "reverse", "left", "right"].includes(c.id));
   const held = Object.keys(testHeld.value);
-  const rows = controls.map((c) => ({ name: c.name, r: response(bp, { [c.id]: 1 }, st), now: false }));
-  if (held.length) rows.push({ name: held.map(controlName).join(" + "), r: response(bp, testHeld.value, st), now: true });
+  const m = measurementOf(bp);
+  const rows = controls.map((c) => {
+    const got = m?.find((x) => Object.keys(x.controls).length === 1 && x.controls[c.id] === 1);
+    return { name: c.name, r: got ? { ahead: got.ahead, side: got.side, turn: got.turn } : response(bp, { [c.id]: 1 }, st), now: false, measured: !!got };
+  });
+  if (held.length) rows.push({ name: held.map(controlName).join(" + "), r: response(bp, testHeld.value, st), now: true, measured: false });
   const checks = wiringChecks(bp, playerControls.value);
   const turn = (t: number) => `${Math.abs(t).toFixed(2)} ${t > 1e-6 ? "↺" : t < -1e-6 ? "↻" : ""}`;
   return (
     <div class="stats resp" data-testid="response">
       <div class="sh">
-        RESPONSE <small>what each control does · est.</small>
+        RESPONSE <small>what each control does · {m ? "✓ measured" : "est."}</small>
+        <MeasureButton bp={bp} measuredNow={!!m} />
       </div>
       <table>
         <thead>
@@ -405,9 +412,12 @@ export function ResponseBox() {
         <tbody>
           {rows.map((x) => (
             <tr key={x.name} class={x.now ? "now" : ""}>
-              <th>{x.name}</th>
-              <td>{x.r.ahead.toFixed(1)}</td>
-              <td>{x.r.side.toFixed(1)}</td>
+              <th>
+                {x.name}
+                {x.measured ? <span class="mtick"> ✓</span> : null}
+              </th>
+              <td>{fix1(x.r.ahead)}</td>
+              <td>{fix1(x.r.side)}</td>
               <td>{turn(x.r.turn)}</td>
             </tr>
           ))}
@@ -423,6 +433,9 @@ export function ResponseBox() {
     </div>
   );
 }
+
+/** One decimal, without a minus on a value that rounds to zero. */
+const fix1 = (x: number) => (Math.abs(x) < 0.05 ? "0.0" : x.toFixed(1));
 
 /** The right panel in Controls mode: the selected part's wiring. */
 export function WiringPanel() {

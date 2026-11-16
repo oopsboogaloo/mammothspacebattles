@@ -374,3 +374,9 @@ html, body, #root { height: 100%; overflow: hidden; }
 .bpapp .tagtxt { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
 .bpapp .fields { overflow-y: auto; }
 .bpapp .lineeditor > .field { padding: 4px 10px; }
+
+.bpapp .stats .sh { display: flex; align-items: center; gap: 6px; }
+.bpapp .stats .sh small { flex: 1; }
+.bpapp .measure { height: 22px; padding: 0 8px; border-radius: 3px; font-size: 11px; letter-spacing: .04em; color: var(--cyan); border: 1px solid rgba(127, 212, 255, .5); background: none; float: none; margin: 0; }
+.bpapp .measure.busy { border-style: dashed; display: inline-flex; align-items: center; }
+.bpapp .mtick { color: var(--go); }
