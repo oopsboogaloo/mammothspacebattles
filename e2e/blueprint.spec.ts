@@ -319,3 +319,30 @@ test("BPD-034 the action buttons are named by what they do in this ship, and the
   await expect(page.getByTestId("thrust-shield")).toHaveText("SHIELD");
   await ctx.close();
 });
+
+test("BPD-018 arrow keys in a value box change it and the box keeps up; leaving the box keeps the change", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("part-main").locator("polygon").nth(1).click();
+  const input = page.getByTestId("param-length").locator("input.num");
+  await input.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(input).toHaveValue("1.15");
+  await page.keyboard.press("ArrowUp");
+  await expect(input).toHaveValue("1.20");
+  await input.blur();
+  await expect(input).toHaveValue("1.20");
+});
+
+test("BPD-034 a blueprint file saved with the old Fire, Tractor and Shield wiring imports wired to Actions A, B and C", async ({ page }) => {
+  await openFresh(page);
+  const bp = await page.evaluate(() => (window as unknown as { __msb: { blueprint: () => unknown } }).__msb.blueprint());
+  const old = JSON.parse(JSON.stringify(bp).replaceAll('"action-a"', '"fire"').replaceAll('"action-b"', '"tractor"').replaceAll('"action-c"', '"shield"'));
+  old.preset = false;
+  await page.getByTestId("open-drawer").click();
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "⤒ Import" }).click();
+  await (await chooser).setFiles({ name: "old.blueprint.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(old)) });
+  await expect(page.getByTestId("drawing-name")).toContainText("THRUST 1");
+  const lines = await page.evaluate(() => (window as unknown as { __msb: { blueprint: () => { mix: { rows: { channel: string; lines: { control: string }[] }[] } } } }).__msb.blueprint().mix.rows.filter((r) => ["fire", "tractor", "shield"].includes(r.channel)).map((r) => r.lines[0].control));
+  expect(lines).toEqual(["action-a", "action-b", "action-c"]);
+});

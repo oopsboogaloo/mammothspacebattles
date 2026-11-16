@@ -204,7 +204,8 @@ export function importBlueprint(text: string): string | null {
   try {
     const bp = JSON.parse(text) as Blueprint;
     if (bp.format !== 1 || !bp.ship || !Array.isArray(bp.components) || !bp.mix) return "That file isn't a blueprint.";
-    const copy = { ...bp, id: newId(), name: uniqueName(bp.name || "IMPORTED"), preset: undefined };
+    // A file saved before the actions were named A, B and C is wired to Fire, Tractor and Shield.
+    const copy = { ...renameActions(bp), id: newId(), name: uniqueName(bp.name || "IMPORTED"), preset: undefined };
     delete copy.preset;
     mine.value = [...mine.value, copy];
     open(copy.id);

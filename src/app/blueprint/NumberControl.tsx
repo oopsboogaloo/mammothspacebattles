@@ -170,7 +170,10 @@ export function NumberControl(p: NumberControlProps) {
                 typing.current = true;
                 (e.currentTarget as HTMLInputElement).select();
               }}
-              onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
+              onInput={(e) => {
+                typing.current = true;
+                setText((e.currentTarget as HTMLInputElement).value);
+              }}
               onBlur={commitText}
               onKeyDown={(e) => {
                 if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
@@ -184,6 +187,9 @@ export function NumberControl(p: NumberControlProps) {
                   const v = snap(p.value + (e.key === "ArrowUp" ? 1 : -1) * p.step * (e.shiftKey ? 10 : 1));
                   p.onLive(v);
                   p.onEnd();
+                  // Let the box follow the value as it now is (the new one, or the old if the edit
+                  // was refused): it is in step again until the player types.
+                  typing.current = false;
                   setText(fmt(p.value, p.decimals));
                 }
               }}
