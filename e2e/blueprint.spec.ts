@@ -228,6 +228,10 @@ test("BPD-029 a game controller flies Try it: A is forward, the stick turns, thr
   });
   await openFresh(page);
   await page.getByTestId("try-it").click();
+  // Pressed only once the flight is running: a button already held as it starts counts for nothing
+  // until let go (gamepad.ts), and a slow browser can take a while to start it.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { time: number } } | null } }).__msb.sandbox()?.world.time ?? 0), { timeout: 30_000 }).toBeGreaterThan(0.05);
+  await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   await page.evaluate(() => {
     const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
     p.buttons[0].pressed = true; // A: forward
