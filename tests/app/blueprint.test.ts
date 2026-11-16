@@ -597,6 +597,10 @@ describe("design rules: tanks and magazines (docs/blueprint/design-rules-proposa
     const tri = [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 0, y: 4 }];
     expect(innerArea(tri, 0.5)).toBeCloseTo(6 * ((1 - 0.5) / 1) ** 2, 9);
     expect(innerArea(tri, 1.01)).toBe(0);
+    // A short side the walls swallow drops out: this square with one corner cut off by 0.1 m, inside
+    // 0.3 m walls, leaves the plain 0.4 m square's inside (0.6 − 0.2 wide each way), its cut corner gone.
+    const cut = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 0.9 }, { x: 0.9, y: 1 }, { x: 0, y: 1 }];
+    expect(innerArea(cut, 0.3)).toBeCloseTo(0.4 * 0.4, 12);
     // Exactly 60 shells in THRUST 1's magazine, though 0.125 m² × 480 is 59.999… in floating point.
     expect(containerSpec("magazine", box(0.7, 0.45), 0.1).holds).toBe(60);
     expect(CONTAINERS.magazine.perArea).toBeCloseTo(480, 9);
@@ -855,19 +859,18 @@ describe("the Stegodon (Chloe's sketch, 16 November 2026)", async () => {
     }
   });
 
-  it("BPD-049 a tank shrunk until it holds nothing has no blast; grown back, it has its blast again", () => {
+  it("BPD-049 a tank whose walls fill it holds nothing and has no blast; with room inside again, it has its blast again", async () => {
+    const { applyContainer } = await import("../../src/app/blueprint/model.ts");
     const m = mastodonPreset(scn);
-    const charge = body(m, "tank-l").explosive?.charge ?? 0;
-    expect(charge).toBeGreaterThan(0);
-    let bp = setParam(m, "tank-l", "fTop", 0.05);
-    bp = setParam(bp, "tank-l", "fHeight", 0.3);
-    bp = setParam(bp, "tank-l", "fBase", 0.3);
-    bp = setParam(bp, "tank-l", "wall", 0.075);
+    expect(body(m, "tank-l").explosive?.charge ?? 0).toBeGreaterThan(0);
+    // Walls thicker than half the tank (more than the designer allows, so set here directly).
+    const bp = structuredClone(m);
+    component(bp, "tank-l").wall = 2;
+    applyContainer(bp, "tank-l");
     expect(body(bp, "tank-l").explosive).toBeUndefined();
-    bp = setParam(bp, "tank-l", "wall", 0.02);
-    expect(body(bp, "tank-l").explosive?.charge ?? 0).toBeGreaterThan(0);
-    for (const [k, v] of Object.entries(component(m, "tank-l").form!)) if (k !== "kind" && k !== "turn") bp = setParam(bp, "tank-l", "f" + k[0].toUpperCase() + k.slice(1), v as number);
-    bp = setParam(bp, "tank-l", "wall", component(m, "tank-l").wall ?? 0.1);
+    expect(body(bp, "tank-l").contents!.every((c) => c.mass === 0)).toBe(true);
+    component(bp, "tank-l").wall = component(m, "tank-l").wall;
+    applyContainer(bp, "tank-l");
     expect(body(bp, "tank-l").explosive).toEqual(body(m, "tank-l").explosive);
   });
 
@@ -946,4 +949,99 @@ describe("the Phiomia (Chloe's sketch, 16 November 2026)", async () => {
     expect((worst * 180) / Math.PI).toBeLessThan(5);
     expect(welds0.filter((id) => !w.joints.some((j) => j.id === id))).toEqual([]);
   }, 120_000);
+});
+
+describe("the Loxodon (Chloe's sketch, 16 November 2026)", async () => {
+  const { loxodonPreset, mastodonPreset, stegodonPreset, phiomiaPreset, allOverlaps, pieces, wiringChecks, response, powerStats, centredShip } = await import("../../src/app/blueprint/model.ts");
+  const { measureNow, measureWorld } = await import("../../src/app/blueprint/measure.ts");
+  const { getProfile, stepInPlace } = await import("../../src/core/index.ts");
+  const lx = loxodonPreset(scn);
+  const moves = [{ id: "forward", name: "Forward" }, { id: "left", name: "Turn left" }, { id: "right", name: "Turn right" }];
+
+  it("BPD-051 a light transport and lander in one piece: the Mastodon's cockpit; each side, a side tank, an engine outboard of it, and a top tank over both up to the cockpit's corner; no weapon, no power system", () => {
+    expect(pieces(lx)).toHaveLength(1);
+    expect(allOverlaps(lx)).toEqual([]);
+    expect(body(lx, "hull").shape).toEqual(body(mastodonPreset(scn), "hull").shape);
+    expect(Math.abs(stats(lx).com.x)).toBeLessThan(1e-9);
+    expect(lx.components.map((c) => c.kind).sort()).toEqual(["cockpit", "engine", "engine", "tank", "tank", "tank", "tank"]);
+    const joined = (a: string, b: string) => welds(lx).some((w) => [w.a, w.b].includes(a) && [w.a, w.b].includes(b));
+    for (const s of ["l", "r"]) {
+      expect([joined("hull", `side-${s}`), joined(`side-${s}`, `eng-${s}`), joined("hull", `top-${s}`), joined(`side-${s}`, `top-${s}`), joined(`eng-${s}`, `top-${s}`)]).toEqual([true, true, true, true, true]);
+      expect(component(lx, `eng-${s}`).rocket).toBeDefined();
+      // Every tank holds fuel: the top tanks are thin wedges, so their walls are 0.05 m.
+      for (const t of [`side-${s}`, `top-${s}`]) expect(body(lx, t).contents!.reduce((a, c) => a + c.mass, 0)).toBeGreaterThan(0.1);
+      expect(component(lx, `top-${s}`).wall).toBe(0.05);
+    }
+    // The nozzles hang below the cockpit: the legs it lands on.
+    const low = (id: string) => Math.min(...component(lx, id).bodies.flatMap((b) => worldVertices(body(lx, b)).map((v) => v.y)));
+    expect(low("eng-l")).toBeLessThan(low("hull") - 0.2);
+    expect(powerStats(lx)).toBeNull();
+    expect(wiringChecks(lx, moves).every((c) => c.ok)).toBe(true);
+  });
+
+  it("BPD-051 its wiring, gentle for landing: forward fires both engines; a turn, the far engine at 40%; forward and a turn, both, the near one at half", () => {
+    const thr = (controls: Record<string, number>) => response(lx, controls).throttles;
+    expect(thr({ forward: 1 })).toEqual({ "eng-l": 1, "eng-r": 1 });
+    expect(thr({ left: 1 })).toEqual({ "eng-l": 0, "eng-r": 0.4 });
+    expect(thr({ right: 1 })).toEqual({ "eng-l": 0.4, "eng-r": 0 });
+    expect(thr({ forward: 1, left: 1 })).toEqual({ "eng-l": 0.5, "eng-r": 1 });
+    expect(response(lx, { left: 1 }).turn).toBeGreaterThan(0);
+  });
+
+  it("BPD-051 measured: about 14 m/s² forward, going straight; 4.6 rad/s² turning, both ways alike", () => {
+    const r = measureNow(lx, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
+    expect(r[0].ahead).toBeGreaterThan(12);
+    expect(r[0].ahead).toBeLessThan(16);
+    expect(Math.abs(r[0].turn)).toBeLessThan(0.3);
+    expect(Math.abs(r[0].side)).toBeLessThan(0.3);
+    expect(r[1].turn).toBeGreaterThan(3.5);
+    expect(r[1].turn).toBeLessThan(6);
+    expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.3);
+    expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
+  }, 120_000);
+
+  it("BPD-051 it holds: in a 20 s flight, forward and turning both ways, no weld breaks and its parts stay within 1° of the cockpit", () => {
+    const w = measureWorld(lx);
+    const profile = getProfile("sandbox");
+    const welds0 = w.joints.map((j) => j.id);
+    const ids = ["side-l", "side-r", "top-l", "top-r", "eng-l", "eng-r"];
+    const angle = (id: string) => w.bodies.find((b) => b.id === id)!.angle;
+    const rel0 = new Map(ids.map((id) => [id, angle(id) - angle("hull")]));
+    const plan: Record<number, Record<string, number>> = { 0: { forward: 1 }, 240: { forward: 1, left: 1 }, 480: { forward: 1, left: 0, right: 1 }, 720: { forward: 0, right: 0, left: 1 }, 960: { left: 0, right: 1 }, 1200: { right: 0 } };
+    let worst = 0;
+    for (let i = 0; i < 4800; i++) {
+      stepInPlace(w, plan[i] ? Object.entries(plan[i]).map(([channel, value]) => ({ type: "control.set" as const, channel, value })) : [], profile);
+      for (const id of ids) {
+        const d = angle(id) - angle("hull") - rel0.get(id)!;
+        worst = Math.max(worst, Math.abs(Math.atan2(Math.sin(d), Math.cos(d))));
+      }
+    }
+    expect((worst * 180) / Math.PI).toBeLessThan(1);
+    expect(welds0.filter((id) => !w.joints.some((j) => j.id === id))).toEqual([]);
+  }, 120_000);
+
+  it("BPD-051 into the physics each polygon part is about its centroid and its welds start where they were drawn: no preset jolts at rest", () => {
+    for (const bp of [lx, mastodonPreset(scn), stegodonPreset(scn), phiomiaPreset(scn), regular]) {
+      // The welds' two anchors meet, as the designer drew them.
+      const ship = centredShip(bp.ship);
+      const at = (id: string, p: { x: number; y: number }) => {
+        const b = ship.bodies.find((x) => x.id === id)!;
+        const a = b.angle ?? 0;
+        return { x: b.position.x + p.x * Math.cos(a) - p.y * Math.sin(a), y: b.position.y + p.x * Math.sin(a) + p.y * Math.cos(a) };
+      };
+      for (const j of ship.joints) {
+        const pa = at(j.a, j.anchorA);
+        const pb = at(j.b, j.anchorB);
+        expect(Math.hypot(pa.x - pb.x, pa.y - pb.y), j.id).toBeLessThan(1e-6);
+      }
+      // And nothing moves in the first steps.
+      const w = measureWorld(bp);
+      const before = w.bodies.map((b) => ({ ...b.position, a: b.angle }));
+      for (let i = 0; i < 12; i++) stepInPlace(w, [], getProfile("sandbox"));
+      w.bodies.forEach((b, i) => {
+        expect(Math.hypot(b.position.x - before[i].x, b.position.y - before[i].y), b.id).toBeLessThan(1e-6);
+        expect(Math.abs(b.angle - before[i].a), b.id).toBeLessThan(1e-6);
+      });
+    }
+  });
 });

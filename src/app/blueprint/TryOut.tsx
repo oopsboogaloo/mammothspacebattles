@@ -6,7 +6,7 @@ import { camera, openScenario, overlays as sandboxOverlays, playing, sandbox, sc
 import { sendControl, Thrust } from "../Lander.tsx";
 import { View } from "../View.tsx";
 import { keyLabel, loadKeys, MOVEMENT, playerControls } from "./bindings.ts";
-import { actionLabel, type Blueprint } from "./model.ts";
+import { actionLabel, centredShip, type Blueprint } from "./model.ts";
 import { current, say, tryOut } from "./store.ts";
 import { loadSummary, useWeldLoads } from "./tryLoads.ts";
 import { shipControls } from "./measure.ts";
@@ -48,7 +48,7 @@ const ROCK = {
 
 /** The scenario Try it runs: the blueprint's ship at the middle, at rest, and the rock. */
 export function tryScenario(bp: Blueprint, withRock = true): Record<string, unknown> {
-  const ship = structuredClone(bp.ship);
+  const ship = centredShip(bp.ship);
   for (const b of ship.bodies) {
     b.velocity = { x: 0, y: 0 };
     b.angularVelocity = 0;
