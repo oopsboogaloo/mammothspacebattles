@@ -4,7 +4,7 @@
 // plus how its bodies group into components and its wiring (a core Mixer). Edits are pure: each
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
-import { bodyMass, inertiaOf, mixerValues, polygonArea, steerMixer } from "../../core/index.ts";
+import { bodyMass, inertiaOf, mixerValues, normalizePolygon, polygonArea, steerMixer } from "../../core/index.ts";
 import { BULLET, CONTAINERS, containerSpec, GUN, gunSpeed, MIXTURE, maxWall, POWER, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
@@ -589,14 +589,52 @@ export function stegodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
 const STEGODON_MAIN_FLOW = 3.4;
 const STEGODON_TAIL_FLOW = 0.5;
 
+// ---------- into the physics ----------
+
+/**
+ * The ship as the physics takes it: each polygon part's outline about its centroid (as the world
+ * puts it) and its welds' anchors moved to match, so every weld starts where the designer put it.
+ * (The world moves a polygon to its centroid but takes weld anchors as given: an outline drawn
+ * about any other point, such as a form's bounding box or the Mastodon's cockpit, started with its
+ * welds out of place, and the first step jolted the parts into line.)
+ */
+export function centredShip(ship: Ship): Ship {
+  const out = structuredClone(ship);
+  const shift = new Map<string, Vec2>();
+  for (const b of out.bodies) {
+    if (b.shape.kind !== "polygon") continue;
+    const { vertices, centroid } = normalizePolygon(b.shape.vertices);
+    if (centroid.x === 0 && centroid.y === 0) continue;
+    shift.set(b.id, centroid);
+    b.shape = { kind: "polygon", vertices };
+    const a = b.angle ?? 0;
+    b.position = { x: b.position.x + centroid.x * Math.cos(a) - centroid.y * Math.sin(a), y: b.position.y + centroid.x * Math.sin(a) + centroid.y * Math.cos(a) };
+  }
+  if (!shift.size) return out;
+  out.joints = out.joints.map((j) => {
+    const sa = shift.get(j.a);
+    const sb = shift.get(j.b);
+    if (!sa && !sb) return j;
+    const al = Math.hypot(j.anchorA.x, j.anchorA.y);
+    return {
+      ...j,
+      // The weld's axis as its anchor gave it: the direction doesn't move with the frame.
+      axis: j.axis ?? (al > 1e-9 ? { x: j.anchorA.x / al, y: j.anchorA.y / al } : { x: 1, y: 0 }),
+      anchorA: sa ? { x: j.anchorA.x - sa.x, y: j.anchorA.y - sa.y } : j.anchorA,
+      anchorB: sb ? { x: j.anchorB.x - sb.x, y: j.anchorB.y - sb.y } : j.anchorB,
+    };
+  });
+  return out;
+}
+
 // ---------- the Phiomia (Chloe's sketch, 16 November 2026) ----------
 
 /**
  * The Phiomia: the simplest ship, from Chloe's drawing, with the Mastodon's cockpit for scale. The
  * cockpit, a fuel tank on its top, and a spine up from the tank to a crossbar; at each end of the
  * crossbar a small rocket hangs, firing down past the cockpit's sides. The spine and crossbar are
- * only structure, so the engines are gentle. Forward fires both; a turn, the engine on the side
- * away from it; forward and a turn, that engine alone.
+ * only structure, so the engines are gentle. Forward fires both; a turn, the engine on its own
+ * side; forward and a turn, that engine alone.
  */
 export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
   const t = thrustShip(scenario).ship;
@@ -643,10 +681,12 @@ export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
   refeed(bp);
   reammo(bp);
   relink(bp);
+  // Chloe, 16 November 2026: a turn fires the engine on its own side. The cockpit hangs below the
+  // engines, so Left swings the cockpit to the left (the engines' end to the right: clockwise).
   const row = (channel: string, lines: MixerRow["lines"]): MixerRow => ({ channel, lines });
   bp.mix.rows = [
-    row("eng-l", [{ control: "forward", weight: 1, ease: { control: "left", amount: 1 } }, { control: "right", weight: 1 }]),
-    row("eng-r", [{ control: "forward", weight: 1, ease: { control: "right", amount: 1 } }, { control: "left", weight: 1 }]),
+    row("eng-l", [{ control: "forward", weight: 1, ease: { control: "right", amount: 1 } }, { control: "left", weight: 1 }]),
+    row("eng-r", [{ control: "forward", weight: 1, ease: { control: "left", amount: 1 } }, { control: "right", weight: 1 }]),
   ];
   return bp;
 }
@@ -655,6 +695,88 @@ export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
 const phiomiaEngine = (): Rocket => ({ chamberWidth: 0.5, chamberLength: 0.35, headHeight: 0.15, throat: 0.25, nozzleLength: 0.5, flare: round(Math.atan((0.5 - 2 * 0.1 - 0.25) / 2 / 0.5) / DEG, 6), wall: 0.1, nozzleMass: 0.3 });
 /** Each engine's flow at full, kg/s: gentle, for a ship held together by its beams. */
 const PHIOMIA_FLOW = 0.3;
+
+// ---------- the Loxodon (Chloe's sketch, 16 November 2026) ----------
+
+/**
+ * The Loxodon: a light transport and lander, from Chloe's drawing, with the Mastodon's cockpit for
+ * scale. Each side of the cockpit: a fuel tank along its side (a trapezoid, its long side on the
+ * cockpit), an engine outboard of it (a boxy chamber with a flared nozzle hanging below the ship,
+ * its legs), and a fuel tank over both from the engine's top to the cockpit's sloping corner.
+ * Forward fires both engines; a turn, the engine on the side away from it; forward and a turn,
+ * that engine alone.
+ */
+export function loxodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
+  const t = thrustShip(scenario).ship;
+  const src = (id: string): BodyInput => structuredClone(t.bodies.find((b) => b.id === id)!);
+  const at = (b: BodyInput, id: string, x: number, y: number): BodyInput => ({ ...b, id, position: { x: round(x), y: round(y) }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
+  const hull = src("hull");
+  delete hull.tractor;
+  const engine = loxodonEngine();
+  const bodies: BodyInput[] = [];
+  const components: Component[] = [];
+  const add = (c: Component, b: BodyInput) => {
+    bodies.push(b);
+    components.push(c);
+  };
+  // The cockpit (the Mastodon's), its bottom at y = 0: 1.2 m across, its corners sloping in from
+  // y = 0.75 to its 0.6 m top at y = 1.15.
+  hull.shape = { kind: "polygon", vertices: [{ x: -0.6, y: -0.375 }, { x: 0.6, y: -0.375 }, { x: 0.6, y: 0.375 }, { x: 0.3, y: 0.775 }, { x: -0.3, y: 0.775 }, { x: -0.6, y: 0.375 }] };
+  add({ id: "hull", kind: "cockpit", label: "Cockpit", part: "cockpit", bodies: ["hull"] }, at(hull, "hull", 0, 0.375));
+  const W = 0.275; // the side tanks' width, cockpit to engine
+  const ex = 0.6 + W + engine.chamberWidth / 2; // the engines' centres
+  for (const [s, l] of [[-1, "L"], [1, "R"]] as const) {
+    const side = l.toLowerCase();
+    // The side tank: a trapezoid, its 0.75 m base along the cockpit's side, its 0.5 m top along the engine's.
+    const form: Form = { kind: "trapezoid", base: 0.75, top: 0.5, height: W, turn: s === -1 ? 90 : 270 };
+    add({ id: `side-${side}`, kind: "tank", label: `Side tank ${l}`, part: "trapezoid-tank", bodies: [`side-${side}`], form }, { ...at(src("tank-l"), `side-${side}`, s * (0.6 + W / 2), 0.375), shape: { kind: "polygon", vertices: formVertices(form) } });
+    // The engine, its head's top level with the side tank's top outer corner.
+    const id = `eng-${side}`;
+    const head = at(src("main"), id, s * ex, 0.625 - engine.headHeight / 2);
+    head.shape = { kind: "box", width: engine.chamberWidth, height: engine.headHeight };
+    head.mass = 0.6;
+    head.explosive = { ...head.explosive!, charge: round(0.5 * 0.008, 9) };
+    head.injector = { ...head.injector!, channel: id };
+    add({ id, kind: "engine", label: `Engine ${l}`, part: "main-thruster", bodies: [id], rocket: engine }, head);
+    // The top tank: over the engine and the side tank, up to the cockpit's sloping corner (three
+    // quarters of the way up it), its roof straight from there to the engine's outer top corner.
+    const outline = [
+      { x: s * (ex + engine.chamberWidth / 2), y: 0.625 },
+      { x: s * (0.6 + W), y: 0.625 },
+      { x: s * 0.6, y: 0.75 },
+      { x: s * 0.375, y: 1.05 },
+    ];
+    const { vertices, centroid } = normalizePolygon(outline.map((v) => ({ x: round(v.x), y: round(v.y) })));
+    // It is a thin wedge, about 0.19 m deep at most: 0.1 m walls would fill it, so its walls are 0.05 m.
+    add({ id: `top-${side}`, kind: "tank", label: `Top tank ${l}`, part: "tank", bodies: [`top-${side}`], wall: 0.05 }, { ...at(src("tank-l"), `top-${side}`, centroid.x, centroid.y), shape: { kind: "polygon", vertices: vertices.map((v) => ({ x: round(v.x), y: round(v.y) })) } });
+  }
+  let bp: Blueprint = { format: 1, id: "preset-loxodon", name: "LOXODON", preset: true, rev: 1, ship: { bodies, joints: [], links: [] }, components, mix: { rules: structuredClone(thrustShip(scenario).mix.rules ?? []), rows: [] } };
+  for (const id of ["eng-l", "eng-r"]) {
+    bp = buildRocket(bp, id, engine);
+    bp = setParam(bp, id, "rate", LOXODON_FLOW);
+  }
+  for (const c of bp.components) applyRules(bp, c.id);
+  for (const c of bp.components) bp = reweld(bp, c.id);
+  refeed(bp);
+  reammo(bp);
+  relink(bp);
+  // Gentle for landing: a turn alone runs the far engine at 40%; forward and a turn eases the near
+  // engine to half, so the ship keeps lifting as it turns.
+  const row = (channel: string, lines: MixerRow["lines"]): MixerRow => ({ channel, lines });
+  bp.mix.rows = [
+    row("eng-l", [{ control: "forward", weight: 1, ease: { control: "left", amount: LOXODON_EASE } }, { control: "right", weight: LOXODON_TURN }]),
+    row("eng-r", [{ control: "forward", weight: 1, ease: { control: "right", amount: LOXODON_EASE } }, { control: "left", weight: LOXODON_TURN }]),
+  ];
+  return bp;
+}
+
+/** The Loxodon's engines: a 0.5 m square housing (head, chamber and throat), and a 0.45 m nozzle flared out to 0.54 m. */
+const loxodonEngine = (): Rocket => ({ chamberWidth: 0.5, chamberLength: 0.3, headHeight: 0.1, throat: 0.25, nozzleLength: 0.45, flare: round(Math.atan((0.54 - 0.25) / 2 / 0.45) / DEG, 6), wall: 0.1, nozzleMass: 0.3 });
+/** Each engine's flow at full, kg/s. */
+const LOXODON_FLOW = 0.4;
+/** A turn alone: the far engine's throttle. Forward and a turn: how far the near engine eases. */
+const LOXODON_TURN = 0.4;
+const LOXODON_EASE = 0.5;
 
 /**
  * Parts with no preset to come from (a triangle), for the components list only: never opened.

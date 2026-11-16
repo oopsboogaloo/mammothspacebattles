@@ -81,37 +81,39 @@ export const BULLET = { shape: { kind: "box" as const, width: 0.22, height: 0.22
 export const MIXTURE = { h2: 1 / 9, o2: 8 / 9 } as const;
 
 /**
- * The area inside a convex outline whose walls are t thick: each side moved in by t, and the
- * corners where the moved sides meet. Zero if the walls fill it.
+ * The area inside a convex outline whose walls are t thick: the outline cut back by each side
+ * moved in by t. A short side the walls swallow drops out (a corner squeezed between two long
+ * sides); nothing is left when the walls fill it.
  */
 export function innerArea(vertices: Vec2[], t: number): number {
   let vs = vertices;
   if (polygonArea(vs) < 0) vs = [...vs].reverse();
   const n = vs.length;
-  // Each side as a line moved inward (to its left, the outline being anticlockwise).
-  const lines = vs.map((a, i) => {
+  let inner: Vec2[] = vs.map((v) => ({ ...v }));
+  for (let i = 0; i < n && inner.length; i++) {
+    const a = vs[i];
     const b = vs[(i + 1) % n];
-    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (!(len > 0)) continue;
+    // Inside is to the side's left (the outline being anticlockwise): keep what is at least t in.
     const nx = -(b.y - a.y) / len;
     const ny = (b.x - a.x) / len;
-    return { p: { x: a.x + nx * t, y: a.y + ny * t }, d: { x: (b.x - a.x) / len, y: (b.y - a.y) / len } };
-  });
-  const inner: Vec2[] = [];
-  for (let i = 0; i < n; i++) {
-    const l1 = lines[(i + n - 1) % n];
-    const l2 = lines[i];
-    const det = l1.d.x * l2.d.y - l1.d.y * l2.d.x;
-    if (Math.abs(det) < 1e-12) return 0;
-    const s = ((l2.p.x - l1.p.x) * l2.d.y - (l2.p.y - l1.p.y) * l2.d.x) / det;
-    inner.push({ x: l1.p.x + l1.d.x * s, y: l1.p.y + l1.d.y * s });
+    const depth = (p: Vec2) => (p.x - a.x) * nx + (p.y - a.y) * ny - t;
+    const kept: Vec2[] = [];
+    for (let k = 0; k < inner.length; k++) {
+      const p = inner[k];
+      const q = inner[(k + 1) % inner.length];
+      const dp = depth(p);
+      const dq = depth(q);
+      if (dp >= 0) kept.push(p);
+      if (dp >= 0 !== dq >= 0) {
+        const f = dp / (dp - dq);
+        kept.push({ x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f });
+      }
+    }
+    inner = kept;
   }
-  // Walls so thick the moved sides cross over: nothing inside.
-  for (let i = 0; i < n; i++) {
-    const a = inner[i];
-    const b = inner[(i + 1) % n];
-    if ((b.x - a.x) * lines[i].d.x + (b.y - a.y) * lines[i].d.y <= 0) return 0;
-  }
-  return Math.max(0, polygonArea(inner));
+  return inner.length >= 3 ? Math.max(0, polygonArea(inner)) : 0;
 }
 
 /** What a container gets from its outline and walls. */

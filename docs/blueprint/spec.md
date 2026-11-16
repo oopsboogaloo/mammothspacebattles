@@ -658,13 +658,15 @@ The simplest ship (`phiomiaPreset`), using the Mastodon's cockpit for scale.
   - Its head is level with the crossbar and welded to its end.
 - **Wiring:**
   - forward fires both engines;
-  - a turn fires the engine on the side away from it;
+  - a turn fires the engine on its own side: Left, the left engine (Chloe, after flying it). The
+    cockpit hangs below the engines, so Left swings the cockpit to the left, the engines' end to
+    the right (clockwise). The other presets turn the other way: their cockpit is at the front.
   - forward with a turn fires that engine alone.
   - There is no reverse, no weapon and no power system.
-- **Measured:** 12.6 kg; 11.6 m/s² forward (THRUST OG: 36); 4.5 rad/s² turning, both ways alike.
+- **Measured:** 12.6 kg; 11.6 m/s² forward (THRUST OG: 36); about 4.9 rad/s² turning, both ways alike.
   - The tank gives about 80 s of full forward, at the game's fuel economy of 66.
   - It holds together: no weld breaks in a 20 s flight, forward and turning, and its parts stay
-    within 3° of each other.
+    within 1.3° of each other.
   - A turn held for many seconds spins it up past 30 rad/s, and an engine then tears off the
     crossbar, as it would from any of the presets.
 - **Why a 0.25 m throat, not the sketch's narrower one:**
@@ -677,6 +679,48 @@ The simplest ship (`phiomiaPreset`), using the Mastodon's cockpit for scale.
   - The narrowest throat a small engine should have is about four parcels (0.25 m).
 
 Test: BPD-050.
+
+## 26. The Loxodon (16 November 2026, Chloe)
+
+A light transport and lander (`loxodonPreset`), using the Mastodon's cockpit for scale.
+
+- **Each side of the cockpit:**
+  - **A side tank:** a trapezoid 0.275 m wide, its 0.75 m base along the cockpit's side and its
+    0.5 m top along the engine's.
+  - **An engine** outboard of it: a 0.5 m square housing (head, 0.3 m chamber, throat pieces) and
+    a 0.45 m nozzle flared out to 0.54 m. The nozzles hang 0.33 m below the cockpit: they are its
+    legs. 0.4 kg/s; throat 0.25 m (§25).
+  - **A top tank** over the engine and the side tank, up to three quarters of the way up the
+    cockpit's sloping corner, its roof straight from there to the engine's outer top corner.
+    - It is a thin wedge, about 0.19 m deep at most, so 0.1 m walls would fill it: its walls are
+      0.05 m.
+- **Wiring, gentle for landing:**
+  - forward fires both engines;
+  - a turn alone runs the far engine at 40%;
+  - forward with a turn runs both, the near one eased to half, so the ship keeps lifting as it
+    turns.
+  - There is no reverse, no weapon and no power system.
+- **Measured:** 12.1 kg; 14 m/s² forward, going straight (the lander levels' gravity is 1.6);
+  4.6 rad/s² turning alone, both ways alike; 5.8 rad/s² forward with a turn.
+  - 0.57 kg of fuel: about 47 s of full forward.
+  - It holds: no weld breaks in a 20 s flight, and its parts stay within 0.01° of the cockpit.
+- **Two rule fixes it needed:**
+  - **A tank's inside** (`innerArea`) is now the outline cut back by each wall. A short side the
+    walls swallow drops out. Before, any such side made the inside zero: the top tank held
+    nothing. Every earlier part's figures are unchanged.
+    - Mastodon's `tank-l` at a 0.3 m base, 0.05 m top, 0.3 m height and 0.075 m walls now holds
+      its true 0.0034 m² inside; before, it read as empty.
+  - **Into the physics** (`centredShip`, used by Try it, the measurements and Play in): each
+    polygon part's outline goes about its centroid, and its welds' anchors move to match.
+    - The world moves a polygon to its centroid but takes weld anchors as given. An outline drawn
+      about any other point (a form's bounding box; the Mastodon's cockpit) started with its welds
+      out of place, and the first step jolted the parts into line.
+    - At rest, the Loxodon's engines jolted 5.1°, the Phiomia's 2.9°, the Stegodon's 1.2°. Now
+      nothing moves.
+    - The games' own ships are untouched. The same flaw is in the core and moves the Mammoth's
+      nose 0.84 m back in its first step: a fix there is for Chloe to decide.
+
+Test: BPD-051.
 
 ## Sources
 
