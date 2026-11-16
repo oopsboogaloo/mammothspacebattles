@@ -35,20 +35,34 @@ export function startMeasure(bp: Blueprint): void {
         if (e.data.progress) measuring.value = { key, progress: e.data.progress.done / e.data.progress.total };
         else finish(e.data.rows ?? null);
       };
-      worker.onerror = () => finish(null);
+      // A worker that fails (its module didn't load, say) is dropped, and this run goes on in slices
+      // on the page, so one failure never leaves Measure stuck.
+      worker.onerror = () => {
+        worker?.terminate();
+        worker = null;
+        runSliced(bp, rows, key, finish);
+      };
       worker.postMessage({ id, bp: JSON.parse(JSON.stringify(bp)), rows });
       return;
     } catch {
       worker = null;
     }
   }
-  // No workers: a slice at a time between frames.
+  runSliced(bp, rows, key, finish);
+}
+
+/** No workers: a slice at a time between frames. */
+function runSliced(bp: Blueprint, rows: Record<string, number>[], key: string, finish: (r: MeasuredRow[] | null) => void): void {
   const g = measure(bp, rows, 12);
   const step = () => {
-    const r = g.next();
-    if (r.done) return finish(r.value);
-    measuring.value = { key, progress: r.value.done / r.value.total };
-    setTimeout(step, 0);
+    try {
+      const r = g.next();
+      if (r.done) return finish(r.value);
+      measuring.value = { key, progress: r.value.done / r.value.total };
+      setTimeout(step, 0);
+    } catch {
+      finish(null);
+    }
   };
   setTimeout(step, 0);
 }
