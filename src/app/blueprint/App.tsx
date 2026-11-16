@@ -5,14 +5,15 @@ import { BlueprintView, view } from "./View.tsx";
 import { removeComponent, removeWeld, KINDS } from "./model.ts";
 import { canRedo, canUndo, current, drawerOpen, edit, mode, overlays, placing, preview, redo, selection, toast, tryOut, undo } from "./store.ts";
 import { TryOut, startTry } from "./TryOut.tsx";
+import { layout, narrow, Rail, setLayout, useNarrow } from "./Layout.tsx";
 import { ControlsPanel, MixerTable, ResponseBox, testHeld, useTestKeys, WiringPanel } from "./Controls.tsx";
 
 type Toggle = keyof typeof overlays.value;
-const TOGGLES: [Toggle, string, string, string][] = [
-  ["com", "◉ CoM", "Centre of mass", "C"],
-  ["thrust", "↑ Thrust", "Thrust arrows", "T"],
-  ["welds", "• Welds", "Weld points", "W"],
-  ["dims", "⟷ Dims", "Dimensions on the selection", "D"],
+const TOGGLES: [Toggle, string, string, string, string][] = [
+  ["com", "◉", "CoM", "Centre of mass", "C"],
+  ["thrust", "↑", "Thrust", "Thrust arrows", "T"],
+  ["welds", "•", "Welds", "Weld points", "W"],
+  ["dims", "⟷", "Dims", "Dimensions on the selection", "D"],
 ];
 
 function toggle(k: Toggle) {
@@ -50,21 +51,30 @@ function TopBar() {
         </button>
       </div>
       <div class="grp tog">
-        {TOGGLES.map(([k, label, title, key]) => (
-          <button key={k} class={`ib${overlays.value[k] ? " on" : ""}`} aria-pressed={overlays.value[k]} title={`${title} (${key})`} onClick={() => toggle(k)}>
-            {label}
+        {TOGGLES.map(([k, icon, label, title, key]) => (
+          <button key={k} class={`ib${overlays.value[k] ? " on" : ""}`} aria-pressed={overlays.value[k]} aria-label={title} title={`${title} (${key})`} onClick={() => toggle(k)}>
+            {icon}
+            <span class="lbl"> {label}</span>
           </button>
         ))}
       </div>
       <div class="spacer" />
-      <button class="ib" title="Show the whole ship (Z)" onClick={() => view.fit()}>
-        ⤢ Fit
+      <button class="ib fitbtn" title="Show the whole ship (Z)" onClick={() => view.fit()}>
+        ⤢<span class="lbl"> Fit</span>
       </button>
       <button class="try" title="Fly it in the sandbox (Enter)" onClick={startTry} data-testid="try-it" disabled={!bp.ship.bodies.length}>
-        ▶ TRY IT
+        ▶<span class="lbl"> TRY IT</span>
       </button>
     </header>
   );
+}
+
+/** What the folded properties rail says: the part selected, if any. */
+function railNote(): string | undefined {
+  const s = selection.value;
+  if (s?.type === "component") return current.value.components.find((c) => c.id === s.id)?.label;
+  if (s?.type === "weld") return "Weld";
+  return undefined;
 }
 
 function hint(): string {
@@ -121,7 +131,10 @@ export function BlueprintApp() {
         const next = cs[(i + (e.shiftKey ? cs.length - 1 : 1) + cs.length) % cs.length];
         selection.value = { type: "component", id: next.id };
       } else if (e.key === "Enter") startTry();
-      else if (k === "k") mode.value = "controls";
+      else if (e.key === "\\") {
+        const any = layout.value.left || layout.value.right;
+        setLayout({ left: !any, right: !any });
+      } else if (k === "k") mode.value = "controls";
       else if (k === "b") mode.value = "build";
       else if (e.key === "[") setKind((x) => (x + KINDS.length - 1) % KINDS.length);
       else if (e.key === "]") setKind((x) => (x + 1) % KINDS.length);
@@ -138,6 +151,7 @@ export function BlueprintApp() {
   }, []);
 
   useTestKeys();
+  useNarrow();
   useEffect(() => {
     if (mode.value === "build") testHeld.value = {};
   }, [mode.value]);
@@ -146,9 +160,9 @@ export function BlueprintApp() {
   const bp = current.value;
   return (
     <div class="bpapp">
-      <div class="grid">
+      <div class={`grid${narrow.value ? " narrow" : ""}${layout.value.left && !narrow.value ? "" : " lrail"}${layout.value.right && !narrow.value ? "" : " rrail"}`}>
         <TopBar />
-        {controls ? <ControlsPanel /> : <ComponentsPanel kindIndex={kind} setKind={setKind} />}
+        {!layout.value.left ? <Rail side="left" label={controls ? "CONTROLS" : "COMPONENTS"} /> : controls ? <ControlsPanel /> : <ComponentsPanel kindIndex={kind} setKind={setKind} />}
         <main class={`canvas${controls ? " ctlmode" : ""}`}>
           <div class="ctltop">
           <BlueprintView onZoom={setZoom} />
@@ -184,7 +198,7 @@ export function BlueprintApp() {
           {controls && <MixerTable />}
           {!bp.ship.bodies.length && <div class="emptyhint">An empty blueprint. Start with a cockpit: drag one in from the left (Cockpits), double-click it, or press its ＋.</div>}
         </main>
-        {controls ? <WiringPanel /> : <PropertiesPanel />}
+        {!layout.value.right ? <Rail side="right" label="PROPERTIES" note={railNote()} /> : controls ? <WiringPanel /> : <PropertiesPanel />}
         <footer class="status">{hint()}</footer>
       </div>
       {drawerOpen.value && <BlueprintsDrawer />}

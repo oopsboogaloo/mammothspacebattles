@@ -380,3 +380,66 @@ html, body, #root { height: 100%; overflow: hidden; }
 .bpapp .measure { height: 22px; padding: 0 8px; border-radius: 3px; font-size: 11px; letter-spacing: .04em; color: var(--cyan); border: 1px solid rgba(127, 212, 255, .5); background: none; float: none; margin: 0; }
 .bpapp .measure.busy { border-style: dashed; display: inline-flex; align-items: center; }
 .bpapp .mtick { color: var(--go); }
+
+/* Folding panels (Layout.tsx): rails, and on narrow screens panels that float over the blueprint. */
+.bpapp { --rail: 34px; }
+@media (pointer: coarse) { .bpapp { --rail: 44px; } }
+.bpapp .grid.lrail { grid-template-columns: var(--rail) minmax(0, 1fr) 300px; }
+.bpapp .grid.rrail { grid-template-columns: 248px minmax(0, 1fr) var(--rail); }
+.bpapp .grid.lrail.rrail { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); }
+.bpapp .grid { position: relative; }
+.bpapp .rail { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 10px 0; background: var(--panel); border: none; color: var(--dim); min-height: 0; overflow: hidden; cursor: pointer; }
+.bpapp .rail.left { grid-area: left; border-right: 1px solid var(--line); }
+.bpapp .rail.right { grid-area: right; border-left: 1px solid var(--line); }
+.bpapp .rail:hover { color: var(--ink); background: var(--panel2); }
+.bpapp .rail .ricon { font-size: 16px; color: var(--cyan); }
+.bpapp .rail .rlabel, .bpapp .rail .rnote { writing-mode: vertical-rl; letter-spacing: .2em; font-size: 12px; white-space: nowrap; }
+.bpapp .rail.left .rlabel, .bpapp .rail.left .rnote { transform: rotate(180deg); }
+.bpapp .rail .rnote { color: var(--sel); letter-spacing: .06em; text-transform: none; font-size: 12.5px; }
+.bpapp .ph .fold { margin-left: auto; font-size: 15px; color: var(--cyan); }
+.bpapp .ph .fold + .fold, .bpapp .ph > .ib.sm:not(.fold) + .fold { margin-left: 4px; }
+.bpapp .ph > .ib.sm:not(.fold) { margin-left: auto; }
+.bpapp .grid.narrow .panel.left, .bpapp .grid.narrow .panel.right {
+  position: absolute; top: 48px; bottom: 26px; width: min(300px, 86vw); z-index: 20; box-shadow: 0 10px 40px rgba(0, 0, 0, .55);
+}
+@media (pointer: coarse) { .bpapp .grid.narrow .panel.left, .bpapp .grid.narrow .panel.right { top: 56px; bottom: 28px; } }
+.bpapp .grid.narrow .panel.left { left: var(--rail); }
+.bpapp .grid.narrow .panel.right { right: var(--rail); }
+.bpapp .stats .sfold { height: 22px; min-width: 22px; padding: 0 4px; color: var(--cyan); }
+
+/* The top bar on narrower screens: icons for words. */
+@media (max-width: 1180px) {
+  .bpapp .top { gap: 5px; padding: 0 6px; }
+  .bpapp .tog .ib .lbl, .bpapp .title .tl { display: none; }
+  .bpapp .title { padding: 0 8px; gap: 6px; }
+  .bpapp .tn { max-width: 170px; font-size: 16px; }
+  .bpapp .modes button { padding: 0 8px; letter-spacing: .08em; }
+}
+@media (max-width: 760px) {
+  .bpapp .bp-menu span, .bpapp .ib .lbl, .bpapp .badge { display: none; }
+  .bpapp .try { padding: 0 12px; }
+  .bpapp .tn { max-width: 110px; }
+  .bpapp .tblock { display: none; }
+}
+@media (max-width: 560px) {
+  .bpapp .top { overflow-x: auto; }
+  .bpapp .tog { display: none; }
+}
+.bpapp .top > * { flex-shrink: 0; }
+.bpapp .top .title { flex-shrink: 1; min-width: 0; }
+.bpapp .modes button { white-space: nowrap; }
+.bpapp .status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; line-height: 26px; }
+@media (max-width: 1180px) { .bpapp .modes button { font-size: 11px; letter-spacing: .04em; padding: 0 7px; } }
+@media (max-width: 760px) {
+  .bpapp .zoom { top: auto; bottom: 56px; }
+  .bpapp .stats { min-width: 0; max-width: calc(100% - 20px); left: 10px; }
+  .bpapp .stats .sh small { display: none; }
+}
+/* A floating panel is placed within its own grid cell (the rail's), so it sits beside the rail. */
+.bpapp .grid.narrow .panel.left, .bpapp .grid.narrow .panel.right { top: 0; bottom: 0; }
+.bpapp .grid.narrow .panel.left { left: 100%; }
+.bpapp .grid.narrow .panel.right { right: 100%; left: auto; }
+@media (pointer: coarse) { .bpapp .grid.narrow .panel.left, .bpapp .grid.narrow .panel.right { top: 0; bottom: 0; } }
+@media (max-width: 560px) {
+  .bpapp .top .grp button[aria-label="Redo"], .bpapp .fitbtn { display: none; }
+}

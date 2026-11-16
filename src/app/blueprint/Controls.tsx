@@ -7,6 +7,7 @@ import { mixerValues, type MixerLine, type MixerRow } from "../../core/index.ts"
 import { addControl, bindKey, controlName, keyLabel, keysFor, playerControls, playerKeys, unbindKey } from "./bindings.ts";
 import { channelsOf, component, componentOfChannel, describeRow, response, setRow, setRules, stats, wiringChecks, type Blueprint } from "./model.ts";
 import { NumberControl } from "./NumberControl.tsx";
+import { FoldButton, layout, StatsFold } from "./Layout.tsx";
 import { measurementOf } from "./measureClient.ts";
 import { MeasureButton } from "./Panels.tsx";
 import { current, edit, endGesture, live, mode, selection } from "./store.ts";
@@ -112,6 +113,7 @@ export function ControlsPanel() {
         <button class="ib sm" title="A new control, for every ship" aria-label="New control" onClick={() => setNaming(true)}>
           ＋
         </button>
+        <FoldButton side="left" />
       </header>
       <div class="ctllist" data-testid="controls-list">
         {playerControls.value.map((c) => (
@@ -399,7 +401,10 @@ export function ResponseBox() {
       <div class="sh">
         RESPONSE <small>what each control does · {m ? "✓ measured" : "est."}</small>
         <MeasureButton bp={bp} measuredNow={!!m} />
+        <StatsFold />
       </div>
+      {layout.value.stats && (
+      <>
       <table>
         <thead>
           <tr>
@@ -430,6 +435,8 @@ export function ResponseBox() {
           </div>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -446,6 +453,7 @@ export function WiringPanel() {
     <section class="panel right" aria-label="Wiring">
       <header class="ph">
         <span class="phl">PROPERTIES</span>
+        <FoldButton side="right" />
       </header>
       {!c ? (
         <p class="hint">Click an engine or a device, on the blueprint or in the mixer, to wire it to your controls. Hold a control's key to test it.</p>

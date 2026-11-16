@@ -345,6 +345,12 @@ Differences from the design above:
   `docs/ship-designs.md` ("Nozzle walls": 36.1 and 9.8; the 28.3 and 4.2 in older notes are out of
   date). The instant estimate now takes 206 m/s exhaust for a walled engine (76 m/s without walls),
   from the same notes, and comes within 1% (35.9, 9.8, 9.24). Test: BPD-025.
+- **Folding panels (asked for 16 November 2026, for a Galaxy Fold):** ⇤ / ⇥ in each side panel's
+  header folds it to a slim rail (34 px; 44 px on touch) that names it, the properties rail also
+  the part selected; tapping the rail opens it, and `\` folds or opens both. Below 1000 px wide the
+  panels start folded and open over the blueprint rather than narrowing it. The top bar drops its
+  words for icons below 1180 px, and more below 760 and 560 px. ▾ folds the performance or response
+  table to its header. Kept in the browser. Test: BPD-026.
 - **Not built yet:** live weld loads after Try it, a game controller in Try it.
 
 ## Sources
