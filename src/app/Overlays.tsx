@@ -99,6 +99,10 @@ export function Picker() {
         <a class="btn primary" href="moon.html" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }} data-testid="open-moon">
           Play Moon Mammoth
         </a>
+        {/* The blueprint designer's own page (blueprint.html; docs/blueprint/spec.md). */}
+        <a class="btn" href="blueprint.html" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }} data-testid="open-blueprint">
+          Blueprint designer
+        </a>
         <button class="btn" onClick={openFile} data-testid="open-file">
           Open scenario file…
         </button>

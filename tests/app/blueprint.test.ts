@@ -139,3 +139,19 @@ describe("blueprint model", () => {
     expect(params(b, "battery").find((p) => p.key === "height")!.value).toBe(0.6);
   });
 });
+
+describe("typed numbers", () => {
+  it("BPD-021 a typed value takes sums and, for metres, cm or mm; anything else is refused", async () => {
+    const { parseTyped } = await import("../../src/app/blueprint/NumberControl.tsx");
+    expect(parseTyped("1.2", "m")).toBe(1.2);
+    expect(parseTyped("120 cm", "m")).toBeCloseTo(1.2, 12);
+    expect(parseTyped("450mm", "m")).toBeCloseTo(0.45, 12);
+    expect(parseTyped("1.2*2", "m")).toBeCloseTo(2.4, 12);
+    expect(parseTyped("(1+2)/4", "kg")).toBe(0.75);
+    expect(parseTyped("-0.5", "°")).toBe(-0.5);
+    expect(parseTyped("12 kg", "kg")).toBe(12);
+    expect(parseTyped("abc", "m")).toBeNull();
+    expect(parseTyped("1+", "m")).toBeNull();
+    expect(parseTyped("alert(1)", "m")).toBeNull();
+  });
+});
