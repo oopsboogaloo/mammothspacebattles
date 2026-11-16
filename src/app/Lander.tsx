@@ -1,6 +1,8 @@
 // Mammoth Lander (docs/games/mammoth-lander.md): the title, the scenario select, play with a HUD
 // and touch thrust buttons, game over with initials, and the high scores. Play runs the sandbox's
 // world and view underneath, at a fixed 1× (LND-003), with none of its panels or tools (LND-002).
+import { backToBlueprint, playtest } from "./playtest.ts";
+import { flownHull, PowerGauge } from "./PowerGauge.tsx";
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { scenarioFile } from "./scenarios.ts";
@@ -284,6 +286,11 @@ function Select() {
         })}
       </div>
       <div class="lander-row">
+        {playtest && (
+            <button class="lander-btn" onClick={backToBlueprint} data-testid="back-to-blueprint">
+              Back to blueprint
+            </button>
+          )}
         <button class="lander-btn" onClick={() => (landerScreen.value = "scores")}>
           High scores
         </button>
@@ -477,6 +484,7 @@ function Play() {
           <span data-testid="lander-lives">
             SHIPS <b>{Math.max(0, lives)}</b>
           </span>
+          {sandbox.value && <PowerGauge world={sandbox.value.world} ship={flownHull(sandbox.value.world)} />}
         </div>
         {game?.state.phase === "flying" && playing.value && <SelfDestruct />}
         <button class="lander-btn small" onClick={() => (playing.value = !playing.value)} data-testid="lander-pause">
@@ -511,6 +519,11 @@ function Play() {
           <button class="lander-btn ghost" onClick={quit}>
             Quit to menu
           </button>
+          {playtest && (
+            <button class="lander-btn" onClick={backToBlueprint} data-testid="back-to-blueprint">
+              Back to blueprint
+            </button>
+          )}
         </div>
       )}
       {over && game && <GameOver score={game.state.score} landings={game.state.landings.length} cleared={game.state.ended === "cleared"} />}

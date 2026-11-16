@@ -265,7 +265,7 @@ So the ship looks much as it does, and its damage model is kept.
 
 1. **Containers** *(built, `docs/blueprint/spec.md` §19)***:** the tank and magazine rules, wall thickness (weight, welds, damage) and the size
    limits; THRUST 1 and the Mastodon rebuilt from them. Measured against today.
-2. **Power:**
+2. **Power** *(built, `docs/blueprint/spec.md` §20)***:**
    - in the physics: battery, generators, and draws for the shield, railgun, beam and tether;
    - in the designer: the rules, readouts and Try it gauges;
    - shield fuel use measured against today's.

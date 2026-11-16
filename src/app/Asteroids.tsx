@@ -2,6 +2,8 @@
 // buttons, the pause menu, game over with initials, and the high scores. Play runs the sandbox's
 // world and view underneath at the fixed game pace (MAS-003), with none of its panels or tools
 // (MAS-002). The game itself is in the world (src/core/arcade.ts); this is only its page.
+import { backToBlueprint, playtest } from "./playtest.ts";
+import { flownHull, PowerGauge } from "./PowerGauge.tsx";
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { scenarioFile } from "./scenarios.ts";
@@ -272,6 +274,11 @@ function Title() {
           <button class="mas-btn" onClick={startAsteroids} data-testid="mas-start">
             Play
           </button>
+          {playtest && (
+            <button class="mas-btn" onClick={backToBlueprint} data-testid="back-to-blueprint">
+              Back to blueprint
+            </button>
+          )}
           <button class="mas-btn" onClick={() => go("howto")} data-testid="mas-open-howto">
             How to play
           </button>
@@ -328,6 +335,7 @@ function Play() {
           <i class={ship.fuel < 0.15 ? "low" : ""} style={{ width: `${(100 * ship.fuel).toFixed(1)}%` }} />
           <em>FUEL</em>
         </span>
+        <PowerGauge world={sandbox.value!.world} ship={flownHull(sandbox.value!.world)} />
         <span class={ship.slugs === 0 ? "bad" : ""} data-testid="mas-slugs">
           SHELLS <b>{ship.slugs}</b>
         </span>
@@ -357,6 +365,11 @@ function Play() {
             Resume
           </button>
           <SwapSides className="mas-btn" />
+          {playtest && (
+            <button class="mas-btn" onClick={backToBlueprint} data-testid="back-to-blueprint">
+              Back to blueprint
+            </button>
+          )}
           <button class="mas-btn" onClick={quit} data-testid="mas-quit">
             Quit to title
           </button>

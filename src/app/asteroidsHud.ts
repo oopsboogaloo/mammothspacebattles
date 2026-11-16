@@ -31,7 +31,9 @@ export function shipStatus(world: World): { fuel: number; slugs: number; damage:
         fuel += c.mass;
         capacity += c.capacity;
       }
+    // The guns' shells and those in magazines that feed them (WPN-015).
     if (b.magazine) slugs += b.magazine.count;
+    if (b.ammo) slugs += b.ammo.count;
     damage = Math.max(damage, 1 - b.integrity);
   }
   for (const j of world.joints) if (own.has(j.a) && own.has(j.b)) damage = Math.max(damage, 1 - j.integrity);

@@ -17,6 +17,7 @@
 // assemblies, so it is stable however stiff. Beam and tether are powered by the ship: the kinetic
 // energy they add or take is recorded under the ledger's `tractor` source, never hidden.
 
+import { takeEnergy } from "./power.ts";
 import { add, cross, dot, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { assemblyProps, assemblyRoots } from "./joints.ts";
 import { localVertices } from "./shapes.ts";
@@ -46,6 +47,9 @@ export interface Tether {
 }
 
 export interface Tractor {
+  /** Power it draws while its beam is on, and while it holds a tether, kW (PWR-004): with too little stored, it stops. */
+  draw?: number;
+  tetherDraw?: number;
   /** Control channel that works it, through a control link (on above 0). */
   channel: string;
   /** Where the beam starts and the tether is held, body-local, m. */
@@ -195,7 +199,12 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
     const drawing = t.siphoning;
     t.siphoning = undefined;
     const linked = world.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === t.channel && l.integrity > 0 && !l.off);
-    const on = linked && b.integrity > 0 && (world.controls[t.channel] ?? 0) > 0 && partWorks(b, t.beamFrom, byId, roots);
+    // Powered (PWR-004): this step's energy for the beam, or for the tether it holds; or it stops.
+    // The beam draws only while its control is on; the tether while it holds something.
+    const wanted = t.mode === "tether" || (linked && (world.controls[t.channel] ?? 0) > 0);
+    const need = wanted ? ((t.mode === "tether" ? t.tetherDraw : t.draw) ?? 0) * dt : 0;
+    const powered = need === 0 || takeEnergy(world, roots, b.id, need);
+    const on = linked && powered && b.integrity > 0 && (world.controls[t.channel] ?? 0) > 0 && partWorks(b, t.beamFrom, byId, roots);
     const pressed = on && !t.held;
     t.held = on;
     if (!on) t.latched = false;
@@ -206,7 +215,7 @@ export function applyTractors(world: World, rbs: RB[], dt: number): void {
       const cargo = t.cargo ? byId.get(t.cargo) : undefined;
       // A fresh press lets go; so does losing the control link (TRC-001), the cargo, the ship's tail,
       // or the tether's generator (TRC-007).
-      if (pressed || !linked || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id) || !tetherWorks(b, byId, roots) || !partWorks(b, t.beamFrom, byId, roots)) {
+      if (pressed || !linked || !powered || !cargo || b.integrity <= 0 || roots.get(cargo.body.id) === roots.get(b.id) || !tetherWorks(b, byId, roots) || !partWorks(b, t.beamFrom, byId, roots)) {
         ev("tether.release", { id: b.id, cargo: t.cargo ?? "" });
         t.mode = "off";
         t.cargo = undefined;

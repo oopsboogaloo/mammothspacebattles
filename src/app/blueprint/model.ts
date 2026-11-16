@@ -5,7 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, polygonArea, steerMixer } from "../../core/index.ts";
-import { CONTAINERS, containerSpec, MIXTURE, maxWall, WALL, weldLimits, type ContainerKind } from "./rules.ts";
+import { CONTAINERS, containerSpec, MIXTURE, maxWall, POWER, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
@@ -286,8 +286,8 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
     gun.magazine.count -= each * mags.length;
   }
   let bp: Blueprint = { format: 1, id: "preset-thrust-1", name: "THRUST 1", preset: true, rev: 1, ship, components: groupComponents(ship, THRUST_PARTS), mix };
-  // Its tanks and magazines from the design rules: at Thrust's sizes, Thrust's figures.
-  for (const c of bp.components) if (containerKind(c)) applyContainer(bp, c.id);
+  // Its tanks, magazines, battery, generators and what draws power, from the design rules: at Thrust's sizes, Thrust's figures.
+  for (const c of bp.components) applyRules(bp, c.id);
   reammo(bp);
   // The railgun stands on the shield emitter, not through it (in the game it overlaps it by 0.12 m).
   const lift = overlapLift(bp, "gun");
@@ -391,7 +391,7 @@ export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
     bp = buildEngine(bp, c, { headWidth: 0.6, headHeight: 0.35, throat: 0.4, wall: 0.1, length: 0.7, flare: 9 });
     bp = setParam(bp, c.id, "rate", MASTODON_FLOW);
   }
-  for (const c of components) if (containerKind(c)) applyContainer(bp, c.id);
+  for (const c of components) applyRules(bp, c.id);
   for (const c of components) bp = reweld(bp, c.id);
   refeed(bp);
   reammo(bp);
@@ -499,10 +499,10 @@ function containerParams(bp: Blueprint, c: Component, kind: ContainerKind): Para
 
 /** Within a container's size limits (or any size, for other parts). */
 function fitsLimits(bp: Blueprint, c: Component): boolean {
-  const kind = containerKind(c);
+  const kind = containerKind(c) ?? powerKind(c);
   if (!kind) return true;
   const box = boundsOf(shapeVertices(body(bp, c.bodies[0]).shape));
-  const r = CONTAINERS[kind];
+  const r = sizeLimits(kind);
   const ok = (d: number) => d >= r.min - 1e-9 && d <= r.max + 1e-9;
   return ok(box.maxX - box.minX) && ok(box.maxY - box.minY);
 }
@@ -510,6 +510,11 @@ function fitsLimits(bp: Blueprint, c: Component): boolean {
 /** After a container's outline changes: back within its limits (or refused), its walls no thicker than it allows, and its rules applied. */
 function afterReshape(before: Blueprint, after: Blueprint, compId: string): Blueprint {
   const c = component(after, compId);
+  if (powerKind(c)) {
+    if (!fitsLimits(after, c)) return before;
+    applyRules(after, compId);
+    return after;
+  }
   if (!containerKind(c)) return after;
   if (!fitsLimits(after, c)) return before;
   const box = boundsOf(shapeVertices(body(after, c.bodies[0]).shape));
@@ -533,6 +538,49 @@ function setWall(bp: Blueprint, compId: string, t: number): void {
     const k = Math.min(c.wall, to) / Math.min(was, to);
     if (j.limits && k !== 1) j.limits = Object.fromEntries(Object.entries(j.limits).map(([key, v]) => [key, round((v as number) * k, 6)])) as typeof j.limits;
   }
+}
+
+// ---------- power: the design rules (§4) ----------
+
+/** Which power rule a part follows: the regular battery and generator. */
+export function powerKind(c: Component): PowerKind | null {
+  return c.part === "battery" ? "battery" : c.part === "generator" ? "generator" : null;
+}
+
+const sizeLimits = (kind: ContainerKind | PowerKind) => (kind === "battery" || kind === "generator" ? POWER[kind] : CONTAINERS[kind]);
+
+/**
+ * Every rule a regular part follows, in place: a container's (§1–3); a battery's or generator's
+ * figures from its area; and what the shield, railgun and beam draw (§4). OG parts are untouched.
+ */
+export function applyRules(bp: Blueprint, compId: string): void {
+  const c = component(bp, compId);
+  if (containerKind(c)) return applyContainer(bp, compId);
+  const b = body(bp, c.bodies[0]);
+  const pk = powerKind(c);
+  if (pk) {
+    const s = powerSpec(pk, Math.abs(polygonArea(shapeVertices(b.shape))));
+    b.mass = s.mass;
+    b.power = pk === "battery" ? { capacity: s.capacity! } : { output: s.output!, perKg: POWER.perKg };
+    if (pk === "battery" && b.explosive) b.explosive = { ...b.explosive, charge: s.charge! };
+    return;
+  }
+  for (const id of c.bodies) {
+    const x = body(bp, id);
+    if (c.part === "shield-emitter" && x.shield) x.shield = { ...x.shield, ...POWER.shield };
+    if (c.part === "railgun" && x.magazine?.railgun) x.magazine = { ...x.magazine, railgun: { ...x.magazine.railgun, shot: POWER.railgunShot } };
+    if (c.part === "cockpit" && x.tractor) x.tractor = { ...x.tractor, draw: POWER.beam, tetherDraw: POWER.tether };
+  }
+}
+
+/** A ship's power as designed: batteries' kJ, generators' kW, and how long the batteries alone hold its shields up. */
+export function powerStats(bp: Blueprint): { stored: number; output: number; shieldDraw: number; shieldSeconds: number } | null {
+  const bodies = bp.ship.bodies;
+  if (!bodies.some((b) => b.power)) return null;
+  const stored = bodies.reduce((s, b) => s + (b.power?.capacity ?? 0), 0);
+  const output = bodies.reduce((s, b) => s + (b.power?.output ?? 0), 0);
+  const shieldDraw = bodies.reduce((s, b) => s + (b.shield?.draw ?? 0), 0);
+  return { stored, output, shieldDraw, shieldSeconds: shieldDraw > output ? stored / (shieldDraw - output) : Infinity };
 }
 
 /** Shell feeds (WPN-015): every store of shells feeds every gun that fires shells like them. */
@@ -863,7 +911,8 @@ function partParams(bp: Blueprint, compId: string): Param[] {
     return ps;
   }
   const ck = containerKind(c);
-  const lim = ck ? CONTAINERS[ck] : { min: 0.05, max: 10 };
+  const pk = powerKind(c);
+  const lim = ck ? CONTAINERS[ck] : pk ? POWER[pk] : { min: 0.05, max: 10 };
   if (b.shape.kind === "box") {
     ps.push(
       { key: "width", label: "Width", unit: "m", value: b.shape.width, min: lim.min, max: lim.max, step: 0.05, decimals: 2, tab: "shape" },
@@ -884,6 +933,11 @@ function partParams(bp: Blueprint, compId: string): Param[] {
     );
   }
   if (ck) ps.push(...containerParams(bp, c, ck));
+  if (pk && b.power) {
+    const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "function", readonly: true, note });
+    if (pk === "battery") ps.push(ro("capacity", "Stores", "kJ", b.power.capacity ?? 0, 0, `${POWER.battery.perArea} kJ per m²; full at the start. About ${round((b.power.capacity ?? 0) / POWER.shield.draw, 1)} s of shield alone`));
+    else ps.push(ro("output", "Makes up to", "kW", b.power.output ?? 0, 0, `${POWER.generator.perArea} kW per m², burning ${round((b.power.output ?? 0) / POWER.perKg, 3)} kg/s of propellant at full; only while the batteries aren't full`));
+  }
   for (const s of ck ? [] : (b.contents ?? [])) {
     ps.push({ key: `cap:${s.resource}`, label: `${s.resource === "h2" ? "H₂" : s.resource === "o2" ? "O₂" : s.resource} capacity`, unit: "kg", value: s.capacity, min: 0, max: 100, step: 0.05, decimals: 3, tab: "fuel" });
   }
@@ -903,7 +957,8 @@ function partParams(bp: Blueprint, compId: string): Param[] {
     );
   }
   if (b.shield) ps.push({ key: "radius", label: "Shield radius", unit: "m", value: b.shield.radius, min: 0.5, max: 20, step: 0.05, decimals: 2, tab: "function" });
-  if (!ck) ps.push(mass());
+  if (!ck && !pk) ps.push(mass());
+  else if (pk) ps.push({ ...mass(), readonly: true, note: "From its size (the design rules)" });
   return ps;
 }
 

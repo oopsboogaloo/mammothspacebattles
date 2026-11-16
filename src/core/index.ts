@@ -38,5 +38,6 @@ export * from "./moon.ts";
 export * from "./rope.ts";
 export * from "./plant.ts";
 export { fieldId, runShields, type Shield } from "./shield.ts";
+export { drainEnergy, powerOf, runPower, takeEnergy, type Power } from "./power.ts";
 export * from "./turret.ts";
 export { wasmSinCos } from "./solverWasm.ts";

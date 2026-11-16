@@ -312,6 +312,15 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       if (c.damping !== undefined) num(v, c.damping, `${cp}.damping`, { min: 0 });
     }
   }
+  if (b.power !== undefined) {
+    const pw = b.power;
+    const pp = `${path}.power`;
+    if (!isObj(pw)) err(v, pp, "must be {capacity?, stored?, output?, perKg?}");
+    else {
+      for (const k of ["capacity", "stored", "output"]) if (pw[k] !== undefined) num(v, pw[k], `${pp}.${k}`, { min: 0 });
+      if (pw.output !== undefined) num(v, pw.perKg, `${pp}.perKg`, { positive: true });
+    }
+  }
   if (b.ammo !== undefined) {
     const a = b.ammo;
     const ap = `${path}.ammo`;

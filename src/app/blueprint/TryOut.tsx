@@ -10,6 +10,7 @@ import { actionLabel, type Blueprint } from "./model.ts";
 import { current, say, tryOut } from "./store.ts";
 import { loadSummary, useWeldLoads } from "./tryLoads.ts";
 import { shipControls } from "./measure.ts";
+import { powerOf } from "../../core/index.ts";
 import { usePad, type PadAnalog, type PadGame, type PadState } from "../gamepad.ts";
 import { wrapShift } from "../thrustHud.ts";
 
@@ -204,11 +205,13 @@ function useFollowCamera(bp: Blueprint): void {
 
 /** What the gauges show, read from the world a few times a second. */
 function useGauges(bp: Blueprint) {
-  const [g, setG] = useState({ fuel: 0, fuelMax: 0, shells: 0, shellsMax: 0, speed: 0, spin: 0, lost: 0 });
+  const [g, setG] = useState({ fuel: 0, fuelMax: 0, shells: 0, shellsMax: 0, speed: 0, spin: 0, lost: 0, power: null as ReturnType<typeof powerOf> });
   useEffect(() => {
     const tanks = bp.ship.bodies.filter((b) => b.contents?.length && !b.injector).map((b) => b.id);
     const fuelMax = bp.ship.bodies.filter((b) => tanks.includes(b.id)).reduce((s, b) => s + b.contents!.reduce((t, c) => t + c.capacity, 0), 0);
-    const gun = bp.ship.bodies.find((b) => b.magazine);
+    // Shells in the guns and in the magazines that feed them (WPN-015).
+    const shellsOf = (bodies: { magazine?: { count: number }; ammo?: { count: number } }[]) => bodies.reduce((s, b) => s + (b.magazine?.count ?? 0) + (b.ammo?.count ?? 0), 0);
+    const shellsMax = shellsOf(bp.ship.bodies);
     const cockpit = bp.components.find((c) => c.kind === "cockpit")?.bodies[0] ?? bp.ship.bodies[0]?.id;
     const ids = new Set(bp.ship.bodies.map((b) => b.id));
     const t = setInterval(() => {
@@ -221,8 +224,9 @@ function useGauges(bp: Blueprint) {
       setG({
         fuel,
         fuelMax,
-        shells: gun ? (byId.get(gun.id)?.magazine?.count ?? 0) : 0,
-        shellsMax: gun?.magazine?.count ?? 0,
+        shells: shellsOf([...ids].map((id) => byId.get(id)).filter((b): b is NonNullable<typeof b> => !!b)),
+        shellsMax,
+        power: cockpit && byId.has(cockpit) ? powerOf(w, cockpit) : null,
         speed: hull ? Math.hypot(hull.velocity.x, hull.velocity.y) : 0,
         spin: hull ? Math.abs(hull.angularVelocity) : 0,
         lost: ids.size - present,
@@ -353,6 +357,28 @@ export function TryOut() {
               {g.shells} / {g.shellsMax}
             </b>
           </div>
+        )}
+        {g.power && (
+          <>
+            <div class="g" data-testid="try-battery">
+              <small>BATTERY</small>
+              <div class="bar">
+                <i style={{ width: bar(g.power.stored, g.power.capacity) }} />
+              </div>
+              <b>
+                {Math.round(g.power.stored)} / {Math.round(g.power.capacity)} kJ
+              </b>
+            </div>
+            <div class="g" data-testid="try-generators">
+              <small>GENERATORS</small>
+              <div class="bar">
+                <i style={{ width: bar(g.power.making, g.power.output) }} />
+              </div>
+              <b>
+                {Math.round(g.power.making)} / {Math.round(g.power.output)} kW
+              </b>
+            </div>
+          </>
         )}
         <div class="g">
           <small>SPEED</small>

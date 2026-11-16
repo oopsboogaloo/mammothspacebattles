@@ -1,4 +1,5 @@
 // Built-in scenarios shown in the picker (UX-001): starters first, then references.
+import { playtest, withBlueprint } from "./playtest.ts";
 const files = import.meta.glob("../../scenarios/*.json", { eager: true, import: "default" }) as Record<string, Record<string, unknown>>;
 
 export interface BuiltIn {
@@ -59,4 +60,8 @@ export const BUILT_INS: BuiltIn[] = ORDER.flatMap(([name, id]) => {
 });
 
 /** A scenario file by name (for games, whose scenarios aren't in the picker). */
-export const scenarioFile = (name: string): Record<string, unknown> | undefined => Object.entries(files).find(([path]) => path.endsWith(`/${name}.json`))?.[1];
+export const scenarioFile = (name: string): Record<string, unknown> | undefined => {
+  const raw = Object.entries(files).find(([path]) => path.endsWith(`/${name}.json`))?.[1];
+  // Opened from the blueprint designer to play a design (playtest.ts): the level carries its ship.
+  return raw && playtest ? withBlueprint(raw, playtest) : raw;
+};

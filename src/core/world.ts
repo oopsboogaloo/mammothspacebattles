@@ -27,6 +27,7 @@ import { stepRopes, type Rope } from "./rope.ts";
 import { takeStrikes } from "./plant.ts";
 import { runTerrain, startTerrain, type Terrain, type TerrainOps, type TerrainSpec } from "./terrain.ts";
 import { runShields, type Shield } from "./shield.ts";
+import { runPower, type Power } from "./power.ts";
 import { normalizeTurret, runTurrets, turnJoints, type Charge, type Generator, type JointTurn, type Turret, type TurretInput } from "./turret.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
@@ -95,6 +96,8 @@ export interface Body {
   magazine?: Magazine;
   /** Shells it only stores, for a gun it is welded to (WPN-015): see `Ammo`. */
   ammo?: Ammo;
+  /** A battery or a generator (PWR-001): see power.ts. */
+  power?: Power;
   /** An explosive charge that detonates on impact (WPN): see explosive.ts. */
   explosive?: Explosive;
   /** A tractor beam and tether (TRC): see tractor.ts. */
@@ -477,6 +480,8 @@ export function normalizeBody(input: BodyInput): Body {
   if (injector) body.injector = { ...INJECTOR_DEFAULTS, ...injector };
   // A full reload time has passed at the start, so the first shell loads at once.
   if (magazine) body.magazine = { timer: magazine.reload, loaded: 0, ...magazine };
+  // A battery starts full (PWR-001).
+  if (body.power?.capacity !== undefined && body.power.stored === undefined) body.power = { ...body.power, stored: body.power.capacity };
   if (body.shape.kind === "polygon") {
     const { vertices, centroid } = normalizePolygon(body.shape.vertices);
     body.shape = { kind: "polygon", vertices };
@@ -1536,6 +1541,14 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
     const burned = runTurrets(world, dt);
     turnJoints(world, dt);
     if (burned > 0) {
+      const after = totals(world);
+      addDelta(sources.boundary, diff(before, after));
+      before = after;
+    }
+  }
+  // Generators (PWR-003): the fuel they burn to fill their ships' batteries leaves the world.
+  if (world.bodies.some((b) => b.power?.output)) {
+    if (runPower(world, dt) > 0) {
       const after = totals(world);
       addDelta(sources.boundary, diff(before, after));
       before = after;

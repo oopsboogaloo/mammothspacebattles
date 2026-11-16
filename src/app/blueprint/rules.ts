@@ -124,3 +124,34 @@ export function maxWall(width: number, height: number): number {
 }
 
 const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
+
+// ---------- power (design rules §4) ----------
+
+/**
+ * Power, calibrated on Thrust's battery (1.2 × 0.5 m, 2 kg) and generators (0.7 × 0.8 m, 2 kg each)
+ * and today's shield (0.4 kg/s of fuel, 0.00125 kg per N·s of each hit, at least 0.025 kg).
+ */
+export const POWER = {
+  /** kJ a generator makes from 1 kg of propellant. */
+  perKg: 1000,
+  battery: { perArea: 2700, massPerArea: 2 / 0.6, chargeFull: 0.05 / (2700 * 0.6), min: 0.2, max: 2 },
+  generator: { perArea: 400, massPerArea: 2 / 0.56, min: 0.3, max: 2 },
+  /** The shield's draw while up (kW), and each hit's (kJ per N·s, and at least). */
+  shield: { draw: 400, hitDraw: 1.25, minHitDraw: 25 },
+  /** A railgun shot, kJ: its kinetic energy (½ × 0.167 kg × 144²) at 50%. Chloe will raise it. */
+  railgunShot: 3.5,
+  /** The tractor's beam and its tether, kW. */
+  beam: 10,
+  tether: 5,
+} as const;
+
+export type PowerKind = "battery" | "generator";
+
+/** A battery's or generator's figures from its outline's area. */
+export function powerSpec(kind: PowerKind, area: number): { mass: number; capacity?: number; output?: number; charge?: number } {
+  if (kind === "battery") {
+    const capacity = round(area * POWER.battery.perArea, 6);
+    return { mass: round(area * POWER.battery.massPerArea, 6), capacity, charge: round(capacity * POWER.battery.chargeFull, 9) };
+  }
+  return { mass: round(area * POWER.generator.massPerArea, 6), output: round(area * POWER.generator.perArea, 6) };
+}

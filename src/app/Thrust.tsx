@@ -2,6 +2,8 @@
 // touch buttons, the pause menu, a level complete and the next one, and game over. Play runs the
 // sandbox's world and view underneath at the fixed game pace, with none of its panels or tools. The
 // game itself is in the world (src/core/thrust.ts); this is only its page.
+import { backToBlueprint, playtest } from "./playtest.ts";
+import { flownHull, PowerGauge } from "./PowerGauge.tsx";
 import { signal } from "@preact/signals";
 import { useEffect, useState } from "preact/hooks";
 import { scenarioFile } from "./scenarios.ts";
@@ -306,6 +308,11 @@ function Title() {
           <button class="mas-btn" onClick={() => startThrust()} data-testid="mth-start">
             Play
           </button>
+          {playtest && (
+            <button class="mas-btn" onClick={backToBlueprint} data-testid="back-to-blueprint">
+              Back to blueprint
+            </button>
+          )}
         </div>
         {/* Start at any level (Chloe, 15 November 2026: kept for players; MTH-087). */}
         <div class="mas-row mth-levels" data-testid="mth-levels">
@@ -412,6 +419,7 @@ function Play() {
           <i class={ship.fuel < 0.15 ? "low" : ""} style={{ width: `${(100 * ship.fuel).toFixed(1)}%` }} />
           <em>FUEL</em>
         </span>
+        <PowerGauge world={sandbox.value!.world} ship={flownHull(sandbox.value!.world)} />
         <span class={ship.slugs === 0 ? "bad" : ""} data-testid="mth-slugs">
           SHELLS <b>{ship.slugs}</b>
         </span>
@@ -462,6 +470,11 @@ function Play() {
           <button class="mas-btn" onClick={quit} data-testid="mth-quit">
             Quit to title
           </button>
+          {playtest && (
+            <button class="mas-btn" onClick={backToBlueprint} data-testid="back-to-blueprint">
+              Back to blueprint
+            </button>
+          )}
         </div>
       )}
       {won && <Won level={level} score={s.score} lives={s.lives} pod={s.bonus?.pod ?? 0} fuel={s.bonus?.fuel ?? 0} plant={s.bonus?.plant} />}

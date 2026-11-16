@@ -632,3 +632,71 @@ const { resizeComponent: resizeOk0, componentSize: componentSizeOf } = await imp
 function resizeOk(b: Parameters<typeof resizeOk0>[0], id: string, w: number, h: number, fixed: { x: number; y: number }) {
   return resizeOk0(b, id, w, h, fixed, { x: 1, y: 1 });
 }
+
+describe("design rules: power (design-rules-proposal.md §4)", async () => {
+  const { powerStats, mastodonPreset } = await import("../../src/app/blueprint/model.ts");
+  const { measureWorld } = await import("../../src/app/blueprint/measure.ts");
+  const { getProfile, powerOf, stepInPlace } = await import("../../src/core/index.ts");
+  const { withBlueprint } = await import("../../src/app/playtest.ts");
+
+  it("BPD-045 THRUST 1's battery stores 1,620 kJ and its generators make 448 kW, from their areas, at Thrust's masses; the shield, railgun and beam draw power; the OG parts and the Mastodon have none", () => {
+    expect(body(regular, "battery").power).toEqual({ capacity: 1620 });
+    expect(["gen-l", "gen-r"].map((id) => body(regular, id).power)).toEqual([{ output: 224, perKg: 1000 }, { output: 224, perKg: 1000 }]);
+    for (const id of ["battery", "gen-l", "gen-r"]) expect(body(regular, id).mass).toBe(body(bp, id).mass);
+    expect(body(regular, "shield").shield).toMatchObject({ draw: 400, hitDraw: 1.25, minHitDraw: 25 });
+    expect(body(regular, "gun").magazine!.railgun!.shot).toBe(3.5);
+    expect(body(regular, "hull").tractor).toMatchObject({ draw: 10, tetherDraw: 5 });
+    expect(powerStats(regular)).toMatchObject({ stored: 1620, output: 448, shieldDraw: 400, shieldSeconds: Infinity });
+    // THRUST OG is the game's ship: no power system.
+    expect(powerStats(bp)).toBeNull();
+    expect(body(bp, "shield").shield!.draw).toBeUndefined();
+    expect(powerStats(mastodonPreset(scn))).toBeNull();
+    // A bigger battery stores more, in proportion to its area.
+    const big = setParam(regular, "battery", "width", 1.8);
+    expect(body(big, "battery").power!.capacity).toBeCloseTo(1620 * 1.5, 6);
+    expect(params(regular, "battery").find((p) => p.key === "width")).toMatchObject({ min: 0.2, max: 2 });
+  });
+
+  it("BPD-045 holding THRUST 1's shield up burns fuel through its generators at today's rate, within 5%; with no generators it drops when the battery is spent (about 4 s)", () => {
+    const run = (b: typeof bp, seconds: number) => {
+      const w = measureWorld(b);
+      const fuel = () => w.bodies.filter((x) => !x.injector).reduce((s, x) => s + (x.contents ?? []).reduce((a, c) => a + c.mass, 0), 0);
+      const f0 = fuel();
+      stepInPlace(w, [{ type: "control.set", channel: "action-c", value: 1 }], getProfile("sandbox"));
+      let upFor = 0;
+      for (let i = 1; i < 240 * seconds; i++) {
+        stepInPlace(w, [], getProfile("sandbox"));
+        if (w.bodies.some((x) => x.shape.kind === "disc")) upFor = i / 240;
+      }
+      return { burned: f0 - fuel(), upFor, power: powerOf(w, "hull") };
+    };
+    const og = run(bp, 4);
+    const t1 = run(regular, 4);
+    expect(t1.burned / og.burned).toBeGreaterThan(0.95);
+    expect(t1.burned / og.burned).toBeLessThan(1.05);
+    // Generators off (still welded in place, holding the wings): the battery alone holds it about 4 s (1,620 kJ ÷ 400 kW).
+    const noGen = structuredClone(regular);
+    for (const id of ["gen-l", "gen-r"]) delete body(noGen, id).power;
+    const r = run(noGen, 6);
+    expect(r.upFor).toBeGreaterThan(3.8);
+    expect(r.upFor).toBeLessThan(4.3);
+  }, 120_000);
+
+  it("BPD-046 a blueprint played in a game: its parts numbered as the game's ships, round its cockpit, its hull and gun named, and its wiring with the actions on the game's controls", () => {
+    const thrust = withBlueprint(scn, regular) as { world: { thrust: { ship: { bodies: { id: string; position: { x: number; y: number }; injector?: { channel: string }; shield?: { from: string[]; blocks: string[] } }[]; links: { from?: string; to: string; channel?: string }[] }; hull: string; gun?: string; tractor: string; mix?: unknown }; mix: { rows: { channel: string; lines: { control: string }[] }[] } } };
+    const g = thrust.world.thrust;
+    expect(g.hull).toBe("p{n}-hull");
+    expect(g.gun).toBe("p{n}-gun");
+    expect(g.tractor).toBe("p{n}-hull");
+    expect(g.mix).toBeUndefined();
+    expect(g.ship.bodies.every((b) => b.id.startsWith("p{n}-"))).toBe(true);
+    expect(g.ship.bodies.find((b) => b.id === "p{n}-hull")!.position).toEqual({ x: 0, y: 0 });
+    // Channels are not ids: they stay as they are; ids in links and the shield's tanks are numbered.
+    expect(g.ship.bodies.find((b) => b.id === "p{n}-main")!.injector!.channel).toBe("main");
+    expect(g.ship.bodies.find((b) => b.id === "p{n}-shield")!.shield!.from).toEqual(["p{n}-tank-l", "p{n}-tank-r"]);
+    expect(g.ship.bodies.find((b) => b.id === "p{n}-shield")!.shield!.blocks).toContain("main");
+    expect(g.ship.links.every((l) => l.to.startsWith("p{n}-") && (l.from === undefined || l.from.startsWith("p{n}-")))).toBe(true);
+    // Its mixer, with Action A on the game's fire control.
+    expect(thrust.world.mix.rows.find((r) => r.channel === "fire")!.lines[0].control).toBe("fire");
+  });
+});
