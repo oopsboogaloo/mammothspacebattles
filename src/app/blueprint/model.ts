@@ -1741,18 +1741,21 @@ export function place(bp: Blueprint, moving: BodyInput[], welding: string[], dx:
             if (Math.abs(d) <= tol) cands.push({ d, e, f });
           }
     cands.sort((p, q) => Math.abs(p.d) - Math.abs(q.d));
-    const first = cands[0];
-    const second = first && cands.find((c) => Math.abs(c.e.out!.x * first.e.out!.y - c.e.out!.y * first.e.out!.x) > 0.2);
-    if (first && second) {
-      // Both sides met: the move t with t·n1 = d1 and t·n2 = d2.
-      const [n1, n2] = [first.e.out!, second.e.out!];
-      const det = n1.x * n2.y - n1.y * n2.x;
-      cx = (first.d * n2.y - second.d * n1.y) / det;
-      cy = (n1.x * second.d - n2.x * first.d) / det;
-      guides.push(first.f, second.f);
-    } else if (first) {
-      cx = first.e.out!.x * first.d;
-      cy = first.e.out!.y * first.d;
+    // The nearest snap that leaves it clear of every other part: a side it could meet may belong
+    // to a part it can't sit beside (a rocket's chamber wall, under its head).
+    const snapFor = (first: Cand | undefined): { cx: number; cy: number; guides: Edge[] } => {
+      const g: Edge[] = [];
+      if (!first) return { cx: 0, cy: 0, guides: g };
+      const second = cands.find((c) => Math.abs(c.e.out!.x * first.e.out!.y - c.e.out!.y * first.e.out!.x) > 0.2);
+      if (second) {
+        // Both sides met: the move t with t·n1 = d1 and t·n2 = d2.
+        const [n1, n2] = [first.e.out!, second.e.out!];
+        const det = n1.x * n2.y - n1.y * n2.x;
+        g.push(first.f, second.f);
+        return { cx: (first.d * n2.y - second.d * n1.y) / det, cy: (n1.x * second.d - n2.x * first.d) / det, guides: g };
+      }
+      let x = first.e.out!.x * first.d;
+      let y = first.e.out!.y * first.d;
       // Lined up along the side it meets: its end or middle with theirs, if near.
       const len = Math.hypot(first.e.b.x - first.e.a.x, first.e.b.y - first.e.a.y);
       const t = { x: (first.e.b.x - first.e.a.x) / len, y: (first.e.b.y - first.e.a.y) / len };
@@ -1762,11 +1765,26 @@ export function place(bp: Blueprint, moving: BodyInput[], welding: string[], dx:
       const options = [f0, f1 - len, (f0 + f1) / 2 - len / 2];
       const pick = options.filter((o) => Math.abs(o) <= tol).sort((p, q) => Math.abs(p) - Math.abs(q))[0];
       if (pick !== undefined) {
-        cx += t.x * pick;
-        cy += t.y * pick;
-        guides.push(first.f);
+        x += t.x * pick;
+        y += t.y * pick;
+        g.push(first.f);
+      }
+      return { cx: x, cy: y, guides: g };
+    };
+    const clear = (cx2: number, cy2: number) => !moving.map((b) => shifted(b, dx + cx2, dy + cy2)).some((m) => otherAll.some((o) => overlaps(worldVertices(m), worldVertices(o))));
+    const tried = cands.slice(0, 16);
+    let chosen = snapFor(tried[0]);
+    for (const c of tried) {
+      const sn = snapFor(c);
+      if (clear(sn.cx, sn.cy)) {
+        chosen = sn;
+        break;
       }
     }
+    const first = tried[0];
+    cx = chosen.cx;
+    cy = chosen.cy;
+    guides.push(...chosen.guides);
     snapped = !!first;
   }
   const fx = dx + cx;
