@@ -1,6 +1,6 @@
 # Proposal: design rules for each component type
 
-Draft for Chloe's approval, 16 November 2026. Nothing here is built yet.
+Approved by Chloe with the decisions in §8, 16 November 2026. Being built in the order of §7.
 
 **The aim:** a part's size and settings decide what it does, with Thrust 1 as the benchmark. At
 Thrust's own sizes every rule gives back Thrust's own figures, so a regular THRUST 1 built under
@@ -67,7 +67,7 @@ by t.
 | Propellant held | **3.89 kg per m² of inner area**, H₂ : O₂ 1 : 8 by mass | inner 1.3 × 0.8 = 1.04 m² → 4.05 kg |
 | Dry mass | **4.35 kg per m² of wall** (tank material) | wall 0.46 m² → 2.0 kg |
 | Damage | tank material, 60 J and 500 J at 0.1 m, in proportion to t | Thrust's |
-| Explosion when destroyed | charge **0.0123 kg per kg of propellant** held at the time | 0.05 kg charge at 4.05 kg |
+| Explosion when destroyed | charge **0.0123 kg per kg of propellant it can hold** | 0.05 kg charge at 4.05 kg |
 | Size limits | **0.3 m to 3.0 m** each way (bounding box); trapezoid and triangle sides at least 0.15 m | |
 
 **Examples, 0.1 m walls unless given:**
@@ -89,10 +89,10 @@ not a design setting, so the tank rules above stay honest.
 
 | Rule | Value | Calibrated from THRUST 1's magazine (0.7 × 0.45 m, 3 kg dry, 60 shells) |
 |---|---|---|
-| Shells held | **480 per m² of inner area**, rounded down | inner 0.5 × 0.25 = 0.125 m² → 60 |
+| Shells held | **480 per m² of inner area** (60 ÷ 0.125), rounded down after a 10⁻⁶ tolerance | inner 0.5 × 0.25 = 0.125 m² → 60 |
 | Dry mass | **15.8 kg per m² of wall** (hull material, armoured) | wall 0.19 m² → 3.0 kg |
 | Damage | hull material, 150 J and 3,000 J at 0.1 m, in proportion to t | Thrust's |
-| Explosion when destroyed | charge **1/60 kg per shell** held (none when empty, as now) | 1 kg at 60 shells |
+| Explosion when destroyed | charge **1/60 kg per shell it can hold** (none once empty, as now) | 1 kg at 60 shells |
 | Size limits | **0.3 m to 2.0 m** each way | |
 
 **Examples, 0.1 m walls unless given:**
@@ -238,11 +238,17 @@ The new geometry gets:
 
 So the ship looks much as it does, and its damage model is kept.
 
-**Pressure-fed tanks** (decided in the document; I suggest **later**, as its own step):
+**Pressure-fed tanks** (decided: engines are pressure-fed; this comes with the rockets):
 
-- A tank's wall thickness (§1) must be at least p_max · L ÷ (2 k_T), where p_max is the highest chamber pressure it feeds.
-- So high pressure costs tank mass and capacity.
-- It ties §2 to §5. It isn't needed for THRUST 1 to fly as today.
+- A tank holds pressure p while its walls (§1) are at least p · L ÷ (2 k_T) thick, L being its longest
+  side.
+- An engine can't run its chamber above what the weakest tank feeding it holds. Its burn rate is
+  capped at ṁ_max = 2 k_T · t · W_t ÷ (L · c\*).
+- The designer shows each tank's margin, and the cap where it bites.
+- So high pressure costs tank mass and capacity: thicker walls weigh more and leave less room
+  inside.
+- THRUST 1's engines run at about 200 N/m, far below what its 0.1 m tanks hold, so the cap doesn't
+  touch it.
 
 ## 6. In the designer
 
@@ -268,21 +274,33 @@ So the ship looks much as it does, and its damage model is kept.
      exit and wall loads;
    - then the rocket part, THRUST 1's new engines, and L\*₀ calibrated;
    - the benchmark table above measured, and the Mastodon re-measured.
-4. Later: pressure-fed tanks, separate H₂/O₂ tanks, pumped engines drawing power.
+4. Later: separate H₂/O₂ tanks; pumped engines drawing power.
 
 Each step ships as its own PR with its measured figures against THRUST 1 today.
 
-## 8. For you to decide
+## 8. Decisions (16 November 2026, Chloe)
 
-1. ~~Container walls fixed or a setting?~~ **Decided: a setting** (0.02–0.3 m, 0.1 m default), driving weight, weld strength and damage capacity (§1).
-2. **The power exchange rate and sizes:**
+1. **Container walls are a setting** (0.02–0.3 m, 0.1 m default), driving weight, weld strength and
+   damage capacity (§1).
+2. **The power figures as proposed, to try and tune:**
    - 1,000 kJ per kg of fuel;
-   - battery about 4 s of shield;
-   - generators 112% of the shield.
+   - the battery about 4 s of shield;
+   - the generators 112% of the shield.
+3. **The railgun starts cheap** (3.5 kJ a shot), so the ship plays like Thrust's. Chloe will raise
+   it so that firing and shielding become real decisions; the cost is one number to change.
+4. **Fuel efficiency is fixed at 66 for regular engines**, not a player setting. Chloe may tune it.
+   Later engines may be more or less efficient, made from rarer or commoner materials.
+5. **Engines are pressure-fed:** no ship has to carry a power source (the Mastodon carries none).
+   - So a tank must hold the pressure of the chambers it feeds.
+   - That rule comes in with the rockets (step 3), as the tank-wall check in §5.3.
+   - The order of work's step 4 keeps only separate H₂/O₂ tanks and pumped engines.
 
-   Or would you rather the battery mattered more (say 10 s of shield) or the generators were barely
-   enough?
-3. **The railgun is cheap in power** (3.5 kJ a shot, physically). Keep it so, or make it a real drain
-   (say 30 kJ a shot, 240 kW sustained, so firing and shielding compete)?
-4. **Fuel efficiency (economy)** fixed at 66 for regular engines, not a player setting?
-5. **Pressure-fed tanks later** (step 4), not now?
+**Notes from review:**
+
+- **Shell counts round down with a small tolerance:** floor(inner area × 60 ÷ 0.125 + 10⁻⁶).
+  Otherwise floating point gives Thrust's magazine 59, not 60. A test checks it gives exactly 60.
+- **A tank's or magazine's explosion is set by what it can hold** (its capacity), not by what it
+  holds at the moment.
+  - Making the charge change during play would change the ledger's chemical energy with no
+    source to record it.
+  - A magazine with no shells left still doesn't go off, as now.
