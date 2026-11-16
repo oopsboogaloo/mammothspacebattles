@@ -5,7 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, polygonArea, steerMixer } from "../../core/index.ts";
-import { CONTAINERS, containerSpec, MIXTURE, maxWall, POWER, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
+import { BULLET, CONTAINERS, containerSpec, GUN, gunSpeed, MIXTURE, maxWall, POWER, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
@@ -36,6 +36,8 @@ export interface Component {
   heads?: string[];
   /** Wall thickness, m: a container's setting (the design rules, §1); every other part is 0.1. */
   wall?: number;
+  /** A regular engine's shape (design rules §5): a chamber, a throat, and a nozzle. See `buildRocket`. */
+  rocket?: Rocket;
   /** A trapezoid or triangle part: its outline as the player sets it (§16). */
   form?: Form;
 }
@@ -292,7 +294,51 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   // The railgun stands on the shield emitter, not through it (in the game it overlaps it by 0.12 m).
   const lift = overlapLift(bp, "gun");
   if (lift > 0) bp = moveComponent(bp, "gun", 0, lift);
+  // Engines with real chambers (Chloe, 16 November 2026; design rules §5). The wing tanks give up
+  // 0.2 m of their height to make room for the light thrusters' chambers; those move in with the
+  // tanks' faces. Each engine keeps its exit and its mass.
+  for (const side of ["l", "r"]) {
+    const tank = body(bp, `tank-${side}`);
+    if (tank.shape.kind !== "box") continue;
+    const cut = (tank.shape.height - THRUST_TANK_HEIGHT) / 2;
+    bp = setParam(bp, `tank-${side}`, "height", THRUST_TANK_HEIGHT);
+    bp = moveComponent(bp, `back-${side}`, 0, cut);
+    bp = moveComponent(bp, `front-${side}`, 0, -cut);
+  }
+  for (const c of bp.components.filter((x) => x.kind === "engine")) bp = toRocket(bp, c.id, c.id === "main" ? { chamberLength: 0.2, throat: 0.8 } : { chamberLength: 0.1, throat: 0.5 });
+  for (const c of bp.components) bp = reweld(bp, c.id);
   return bp;
+}
+
+/** THRUST 1's wing tanks, m tall (THRUST OG's are 1.0): room for the light thrusters' chambers. */
+const THRUST_TANK_HEIGHT = 0.8;
+
+/**
+ * An engine of THRUST OG's kind (a head and two flared walls) rebuilt as a rocket with a chamber of
+ * the given length and a throat of the given width, keeping its head, its nozzle's length and exit,
+ * its walls' thickness and its total mass (the head gives up what the new walls weigh).
+ */
+function toRocket(bp: Blueprint, compId: string, shape: { chamberLength: number; throat: number }): Blueprint {
+  const c = component(bp, compId);
+  const g = engineGeom(bp, c);
+  const total = c.bodies.reduce((s, id) => s + body(bp, id).mass, 0);
+  const exit = g.throat + 2 * g.length * Math.tan(g.flare * DEG);
+  const wall = round(g.wall, 6);
+  const r: Rocket = {
+    chamberWidth: g.headWidth,
+    headHeight: g.headHeight,
+    chamberLength: shape.chamberLength,
+    throat: shape.throat,
+    nozzleLength: round(g.length, 6),
+    flare: round(Math.atan((exit - shape.throat) / (2 * g.length)) / DEG, 6),
+    wall,
+    nozzleMass: body(bp, c.bodies[1]).mass,
+  };
+  const out = buildRocket(bp, compId, r);
+  const oc = component(out, compId);
+  const head = body(out, oc.bodies[0]);
+  head.mass = round(total - oc.bodies.slice(1).reduce((s, id) => s + body(out, id).mass, 0), 6);
+  return out;
 }
 
 // ---------- the Mastodon Gun Ship (Chloe's sketch, 16 November 2026) ----------
@@ -323,8 +369,9 @@ export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
     }
     return b;
   };
+  // Chemically propelled guns and bullet magazines (Chloe, 16 November 2026): it carries no power for railguns.
   const gunBody = src("gun");
-  const shell = structuredClone(gunBody.magazine!.shell);
+  const shell = structuredClone(BULLET);
 
   // The cockpit (Thrust's, without the tractor beam), over the centre tank.
   const hull = src("hull");
@@ -342,13 +389,13 @@ export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
     const side = l.toLowerCase();
     // Magazine: 0.4 × 1.4 m, Thrust's per area; 100 shells each for four guns.
     const m = scaled({ ...structuredClone(mag), shape: { kind: "box", width: 0.4, height: 1.4 } }, (0.4 * 1.4) / (0.7 * 0.45));
-    m.ammo = { count: 100, shell: structuredClone(shell) };
-    part({ id: `mag-${side}`, kind: "storage", label: `Magazine ${l}`, part: "magazine", bodies: [`mag-${side}`] }, place(m, `mag-${side}`, s * 0.8, 0.7));
+    m.ammo = { count: 0, shell: structuredClone(shell) };
+    part({ id: `mag-${side}`, kind: "storage", label: `Bullet magazine ${l}`, part: "bullet-magazine", bodies: [`mag-${side}`] }, place(m, `mag-${side}`, s * 0.8, 0.7));
     // The railguns: on the magazine, and out on the mount. No shells of their own: the magazines feed them.
-    for (const [id, label, x, y] of [[`gun-${side}`, `Railgun ${l}`, s * 0.75, 1.75], [`gun-o${side}`, `Outer railgun ${l}`, s * 3.0, 0.7]] as const) {
+    for (const [id, label, x, y] of [[`gun-${side}`, `Gun ${l}`, s * 0.75, 1.75], [`gun-o${side}`, `Outer gun ${l}`, s * 3.0, 0.7]] as const) {
       const g = structuredClone(gunBody);
-      g.magazine = { ...g.magazine!, count: 0, railgun: { ...g.magazine!.railgun!, channel: id } };
-      part({ id, kind: "weapon", label, part: "railgun", bodies: [id] }, place(g, id, x, y));
+      g.magazine = { ...g.magazine!, count: 0, shell: structuredClone(shell), railgun: { ...g.magazine!.railgun!, channel: id } };
+      part({ id, kind: "weapon", label, part: "gun", bodies: [id] }, place(g, id, x, y));
     }
     // The side tank: a trapezoid, its long side (1.4 m) on the magazine, its short (0.7 m) on the engine.
     const form: Form = { kind: "trapezoid", base: 1.4, top: 0.7, height: 0.75, turn: s < 0 ? 90 : 270 };
@@ -457,6 +504,7 @@ export function relink(bp: Blueprint): void {
 export function containerKind(c: Component): ContainerKind | null {
   if (c.part === "tank" || c.part === "trapezoid-tank") return "tank";
   if (c.part === "magazine") return "magazine";
+  if (c.part === "bullet-magazine") return "bullets";
   return null;
 }
 
@@ -491,7 +539,7 @@ function containerParams(bp: Blueprint, c: Component, kind: ContainerKind): Para
   const ro = (key: string, label: string, unit: string, value: number, decimals: number, note?: string): Param => ({ key, label, unit, value, min: 0, max: 1e6, step: 1, decimals, tab: "build", readonly: true, ...(note ? { note } : {}) });
   return [
     { key: "wall", label: "Wall thickness", unit: "m", value: t, min: WALL.min, max: maxWall(box.maxX - box.minX, box.maxY - box.minY), step: 0.01, decimals: 2, tab: "build", note: "Thicker: stronger welds and walls, heavier, holds less" },
-    kind === "tank" ? ro("holds", "Propellant held", "kg", s.holds, 2, "H₂ and O₂, 1 : 8 by mass") : ro("holds", "Shells held", "", s.holds, 0, `${round(bodyMass((b.ammo?.shell ?? { mass: 0 }) as Parameters<typeof bodyMass>[0]) * s.holds, 2)} kg of shells, fed to the guns welded to it`),
+    kind === "tank" ? ro("holds", "Propellant held", "kg", s.holds, 2, "H₂ and O₂, 1 : 8 by mass") : ro("holds", kind === "bullets" ? "Bullets held" : "Shells held", "", s.holds, 0, `${round(bodyMass((b.ammo?.shell ?? { mass: 0 }) as Parameters<typeof bodyMass>[0]) * s.holds, 2)} kg of shells, fed to the guns welded to it`),
     ro("dry", "Dry mass", "kg", s.dryMass, 2),
     ro("strength", "Strength", "×", k, 2, `Welds and armour against Thrust's (${s.material.threshold} J to dent, ${s.material.toughness} J more to destroy)`),
   ];
@@ -510,7 +558,7 @@ function fitsLimits(bp: Blueprint, c: Component): boolean {
 /** After a container's outline changes: back within its limits (or refused), its walls no thicker than it allows, and its rules applied. */
 function afterReshape(before: Blueprint, after: Blueprint, compId: string): Blueprint {
   const c = component(after, compId);
-  if (powerKind(c)) {
+  if (powerKind(c) || c.part === "gun") {
     if (!fitsLimits(after, c)) return before;
     applyRules(after, compId);
     return after;
@@ -569,6 +617,12 @@ export function applyRules(bp: Blueprint, compId: string): void {
     const x = body(bp, id);
     if (c.part === "shield-emitter" && x.shield) x.shield = { ...x.shield, ...POWER.shield };
     if (c.part === "railgun" && x.magazine?.railgun) x.magazine = { ...x.magazine, railgun: { ...x.magazine.railgun, shot: POWER.railgunShot } };
+    // The gun: its muzzle speed from its barrel's length, its muzzle at the barrel's end; no power.
+    if (c.part === "gun" && x.magazine?.railgun && x.shape.kind === "box") {
+      const { shot: _free, ...launch } = x.magazine.railgun;
+      void _free;
+      x.magazine = { ...x.magazine, at: { x: 0, y: round(x.shape.height / 2 + GUN.muzzle, 6) }, railgun: { ...launch, speed: gunSpeed(x.shape.height) } };
+    }
     if (c.part === "cockpit" && x.tractor) x.tractor = { ...x.tractor, draw: POWER.beam, tetherDraw: POWER.tether };
   }
 }
@@ -618,6 +672,8 @@ export const exhaustSpeed = (c: Component) => (c.bodies.length >= 3 ? EXHAUST_SP
 export function engineUnits(bp: Blueprint, c: Component): { head: string; walls: string[] }[] {
   const heads = c.bodies.filter((id) => body(bp, id).injector);
   const rest = c.bodies.filter((id) => !heads.includes(id));
+  // A rocket's walls (chamber, throat and nozzle) are all welded in a chain from its head.
+  if (c.rocket) return [{ head: heads[0], walls: rest }];
   return heads.map((h) => ({
     head: h,
     walls: rest.filter((w) => bp.ship.joints.some((j) => (j.a === h && j.b === w) || (j.b === h && j.a === w))),
@@ -774,6 +830,109 @@ export interface Param {
   note?: string;
 }
 
+/**
+ * A regular engine (design rules §5; docs/nozzle-design-thoughts.md §5, "the simplified engine"), in
+ * its head's frame, exhaust along −y: the head (the injector plate, chamberWidth × headHeight); two
+ * chamber walls `wall` thick and `chamberLength` long down its sides; two throat pieces closing the
+ * chamber to a gap `throat` wide; and two nozzle walls from the throat, `nozzleLength` long, flared
+ * out by `flare` degrees each side. Every piece is welded to the one before.
+ */
+export interface Rocket {
+  chamberWidth: number;
+  chamberLength: number;
+  headHeight: number;
+  throat: number;
+  nozzleLength: number;
+  flare: number;
+  wall: number;
+  /** Mass of each nozzle wall, kg; the chamber walls and throat pieces weigh 6.8 kg per m² (Thrust's walls'). */
+  nozzleMass: number;
+}
+
+/**
+ * The characteristic velocity of the game's exhaust, m/s: Thrust's engines give 206 m/s of thrust
+ * per kg/s with a throat alone, c* × (1 + 1/γ) with γ 1.33 (docs/nozzle-design-thoughts.md §1).
+ */
+const C_STAR = 206 / (1 + 1 / 1.33);
+
+/** A rocket's chamber length, and what its shape gives: chamber pressure, area ratio, L*, and its walls' margin. */
+function rocketParams(r: Rocket, rate: number): Param[] {
+  const exit = r.throat + 2 * r.nozzleLength * Math.tan(r.flare * DEG);
+  const pressure = (rate * C_STAR) / r.throat;
+  // A chamber wall spanning its length under the pressure: p·L/2 at each end, against its welds' tension (k_T·t).
+  const margin = (weldLimits(r.wall).tension / ((pressure * r.chamberLength) / 2));
+  const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "shape", readonly: true, note });
+  return [
+    { key: "chamberLength", label: "Chamber length", unit: "m", value: r.chamberLength, min: 0.05, max: 2, step: 0.05, decimals: 2, tab: "shape", note: "Room to burn: L* (below) is the chamber's area over the throat" },
+    ro("pressure", "Chamber pressure", "N/m", pressure, 0, "Burn rate × c* ÷ throat: a narrower throat, a higher pressure"),
+    ro("areaRatio", "Area ratio", "×", exit / r.throat, 2, "Nozzle exit over throat: what a nozzle buys comes with the nozzle physics, next"),
+    ro("lstar", "L*", "m", (r.chamberWidth * r.chamberLength) / r.throat, 2, "Chamber area ÷ throat width"),
+    ro("wallMargin", "Chamber wall margin", "×", margin, 0, "Its welds' strength over the pressure's pull on them"),
+  ];
+}
+
+/** A wall's mass per m² of it, kg (Thrust's nozzle walls: 0.75 kg for 1.1 × 0.1 m). */
+const WALL_DENSITY = 0.75 / 0.11;
+
+/**
+ * Builds (or rebuilds) a regular engine's walls from its head and its shape, the head's back face
+ * staying where it is. Its walls are new bodies, welded in a chain: head, chamber walls, throat
+ * pieces, nozzle walls; their welds Standard for their thickness.
+ */
+export function buildRocket(bp: Blueprint, compId: string, r: Rocket): Blueprint {
+  const out = clone(bp);
+  const c = component(out, compId);
+  const h = body(out, c.bodies[0]);
+  // The head: its back face (where it is welded to the ship) stays put.
+  const was = h.shape.kind === "box" ? h.shape.height : r.headHeight;
+  h.position = rounded(worldPoint(h, { x: 0, y: was / 2 - r.headHeight / 2 }));
+  h.shape = { kind: "box", width: r.chamberWidth, height: r.headHeight };
+  const old = new Set(c.bodies.slice(1));
+  out.ship.bodies = out.ship.bodies.filter((b) => !old.has(b.id));
+  out.ship.joints = out.ship.joints.filter((j) => !old.has(j.a) && !old.has(j.b));
+  const t = r.wall;
+  const top = -r.headHeight / 2;
+  const chamberBottom = top - r.chamberLength;
+  const throatBottom = chamberBottom - t;
+  const dx = r.nozzleLength * Math.tan(r.flare * DEG);
+  const piece = (id: string, centre: Vec2, shape: Shape, mass: number): BodyInput => ({ id, shape, mass: round(mass, 6), position: rounded(worldPoint(h, centre)), velocity: { x: 0, y: 0 }, angle: h.angle ?? 0, angularVelocity: 0, restitution: h.restitution ?? 0, friction: h.friction ?? 0.3, ...(h.material ? { material: { ...h.material } } : {}) });
+  const made: BodyInput[] = [];
+  const joints: JointInput[] = [];
+  const limits = weldLimits(t);
+  const join = (id: string, a: BodyInput, b: BodyInput, at: Vec2) => joints.push({ id, a: a.id, b: b.id, anchorA: rounded(localPoint(a, worldPoint(h, at))), anchorB: rounded(localPoint(b, worldPoint(h, at))), limits: { ...limits }, yield: WELD_PRESETS[1].yield } as JointInput);
+  for (const [s, k] of [[-1, "a"], [1, "b"]] as const) {
+    // Chamber wall: down the head's side, inside its width.
+    const cw = piece(`${h.id}-cw-${k}`, { x: s * (r.chamberWidth / 2 - t / 2), y: top - r.chamberLength / 2 }, { kind: "box", width: t, height: r.chamberLength }, t * r.chamberLength * WALL_DENSITY);
+    // Throat piece: across the chamber's end, from its wall in to the throat.
+    const span = (r.chamberWidth - r.throat) / 2;
+    const th = piece(`${h.id}-th-${k}`, { x: s * (r.throat / 2 + span / 2), y: chamberBottom - t / 2 }, { kind: "box", width: span, height: t }, span * t * WALL_DENSITY);
+    // Nozzle wall: from the throat's edge, flared out.
+    const tv = { x: (s * dx) / 2, y: -r.nozzleLength / 2 };
+    const centre = { x: s * (r.throat / 2 + t / 2) + tv.x, y: throatBottom - r.nozzleLength / 2 };
+    const verts = [
+      { x: -tv.x - t / 2, y: -tv.y },
+      { x: tv.x - t / 2, y: tv.y },
+      { x: tv.x + t / 2, y: tv.y },
+      { x: -tv.x + t / 2, y: -tv.y },
+    ].map((v) => ({ x: round(v.x), y: round(v.y) }));
+    const nz = piece(`${h.id}-nz-${k}`, centre, { kind: "polygon", vertices: polygonArea(verts) < 0 ? [...verts].reverse() : verts }, r.nozzleMass);
+    made.push(cw, th, nz);
+    join(`${h.id}-w-cw-${k}`, h, cw, { x: s * (r.chamberWidth / 2 - t / 2), y: top });
+    join(`${h.id}-w-th-${k}`, cw, th, { x: s * (r.chamberWidth / 2 - t / 2), y: chamberBottom });
+    join(`${h.id}-w-nz-${k}`, th, nz, { x: s * (r.throat / 2 + t / 2), y: throatBottom });
+  }
+  out.ship.bodies.push(...made);
+  out.ship.joints.push(...joints);
+  c.bodies = [h.id, ...made.map((b) => b.id)];
+  c.rocket = { ...r };
+  // Its gas: the injector a little into the chamber, and the interior it may hold, chamber to nozzle exit.
+  const inj = h.injector!;
+  inj.outlet = { x: 0, y: round(top - Math.min(0.05, r.chamberLength / 2)) };
+  inj.chamber = { width: r.chamberWidth, length: round(r.chamberLength + t + r.nozzleLength + 0.25) };
+  inj.width = Math.min(inj.width ?? r.throat * 0.75, r.chamberWidth - 2 * t - 0.02);
+  return out;
+}
+
 interface EngineGeom {
   headWidth: number;
   headHeight: number;
@@ -787,6 +946,10 @@ const DEG = Math.PI / 180;
 
 /** An engine's shape, read from its head and its two walls (in the head's frame, exhaust along −y). */
 export function engineGeom(bp: Blueprint, c: Component): EngineGeom {
+  if (c.rocket) {
+    const r = c.rocket;
+    return { headWidth: r.chamberWidth, headHeight: r.headHeight, throat: r.throat, wall: r.wall, length: r.nozzleLength, flare: r.flare };
+  }
   // A double engine's two units are alike: the first stands for both.
   const u = engineUnits(bp, c)[0];
   const h = body(bp, u.head);
@@ -901,6 +1064,7 @@ function partParams(bp: Blueprint, compId: string): Param[] {
       { key: "wall", label: "Wall thickness", unit: "m", value: g.wall, min: 0.02, max: 0.5, step: 0.01, decimals: 2, tab: "shape" },
       { key: "length", label: "Nozzle wall length", unit: "m", value: g.length, min: 0.1, max: 4, step: 0.05, decimals: 2, tab: "shape" },
       { key: "flare", label: "Nozzle flare", unit: "°", value: g.flare, min: -10, max: 45, step: 0.5, decimals: 1, tab: "shape" },
+      ...(c.rocket ? rocketParams(c.rocket, inj.rate ?? 0) : []),
       { key: "rate", label: `Flow (burn rate)${each}`, unit: "kg/s", value: inj.rate ?? 0, min: 0.05, max: 20, step: 0.05, decimals: 3, tab: "fuel" },
       { key: "economy", label: "Fuel efficiency", unit: "×", value: inj.economy ?? 1, min: 1, max: 200, step: 1, decimals: 0, tab: "fuel" },
       { key: "injWidth", label: "Injector width", unit: "m", value: inj.width ?? 0, min: 0.05, max: 4, step: 0.05, decimals: 2, tab: "fuel" },
@@ -947,7 +1111,8 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   }
   if (b.magazine) {
     ps.push({ key: "count", label: "Shells in the gun", unit: "", value: b.magazine.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", ...(bp.ship.links.some((l) => l.kind === "ammo" && l.to === b.id) ? { note: "Magazines welded to it pass it more, one at a time" } : {}) });
-    if (b.magazine.railgun) ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function" });
+    if (b.magazine.railgun && c.part === "gun") ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function", readonly: true, note: `From the barrel's length (its height): ${GUN.speed} m/s at ${GUN.length} m, as its square root. Chemical: no power` });
+    else if (b.magazine.railgun) ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function" });
     ps.push({ key: "reload", label: "Reload", unit: "s", value: b.magazine.reload, min: 0.01, max: 10, step: 0.005, decimals: 3, tab: "function" });
   }
   if (b.tractor) {
@@ -974,6 +1139,16 @@ export function setParam(bp: Blueprint, compId: string, key: string, value: numb
     setWall(out, compId, Math.max(WALL.min, Math.min(maxWall(box.maxX - box.minX, box.maxY - box.minY), value)));
     applyContainer(out, compId);
     return out;
+  }
+  if (c.kind === "engine" && c.rocket) {
+    const map: Record<string, keyof Rocket> = { headWidth: "chamberWidth", headHeight: "headHeight", throat: "throat", wall: "wall", length: "nozzleLength", flare: "flare", chamberLength: "chamberLength" };
+    if (map[key]) {
+      const r = { ...c.rocket, [map[key]]: value };
+      // The throat narrower than the chamber, inside its walls.
+      r.throat = Math.min(r.throat, r.chamberWidth - 2 * r.wall);
+      const out = buildRocket(bp, compId, r);
+      return key === "headWidth" || key === "headHeight" ? reweld(out, compId) : out;
+    }
   }
   if (c.kind === "engine") {
     if (["headWidth", "headHeight", "throat", "wall", "length", "flare"].includes(key)) {

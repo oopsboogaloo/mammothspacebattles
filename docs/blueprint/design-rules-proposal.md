@@ -107,6 +107,13 @@ not a design setting, so the tank rules above stay honest.
 
 **The shell itself** stays the railgun's: 0.167 kg. Its mass belongs to the magazine, as now.
 
+**Bullet magazines and guns** (Chloe, 16 November 2026: added for ships without power):
+
+- A bullet magazine holds 240 bullets per m², half a magazine's: a chemically propelled cartridge
+  takes twice the room.
+- The gun needs no power. Its muzzle speed is 100 m/s at a 0.7 m barrel, going as the square root
+  of the length. See `spec.md` §22.
+
 ## 4. Power: batteries, generators, and what uses power
 
 ### 4.1 Units and the exchange rate
@@ -269,7 +276,7 @@ So the ship looks much as it does, and its damage model is kept.
    - in the physics: battery, generators, and draws for the shield, railgun, beam and tether;
    - in the designer: the rules, readouts and Try it gauges;
    - shield fuel use measured against today's.
-3. **Rockets:**
+3. **Rockets** *(the chambered geometry built, `spec.md` §23; the nozzle physics still to do)***:**
    - in the physics: `nozzleFlow` (pure, tested against textbook values), then opt-in exhaust at the
      exit and wall loads;
    - then the rocket part, THRUST 1's new engines, and L\*₀ calibrated;

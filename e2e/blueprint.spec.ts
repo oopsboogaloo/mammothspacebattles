@@ -18,7 +18,7 @@ test("BPD-017 the sandbox's start screen links to the designer, which opens on T
   await openFresh(page);
   const scrolls = await page.evaluate(() => [document.documentElement.scrollHeight > innerHeight, document.documentElement.scrollWidth > innerWidth]);
   expect(scrolls).toEqual([false, false]);
-  await expect(page.getByTestId("performance")).toContainText("61.2 kg");
+  await expect(page.getByTestId("performance")).toContainText("58.8 kg"); // THRUST 1: smaller wing tanks for its engines' chambers
 });
 
 test("BPD-018 select an engine and type a new nozzle length: a preset is copied, the walls change, and undo puts them back", async ({ page }) => {
@@ -141,7 +141,7 @@ test("BPD-025 Measure runs the real physics in the background and shows the meas
   await openFresh(page);
   await page.getByTestId("measure").click();
   await expect(page.getByTestId("performance")).toContainText("✓ measured", { timeout: 30_000 });
-  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward3[56]\.\d m\/s² ✓/);
+  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward3[5-8]\.\d m\/s² ✓/);
   // A change makes it an estimate again; undo brings the measurement back.
   await page.getByTestId("part-main").locator("polygon").nth(1).click();
   const rate = page.getByTestId("param-rate");

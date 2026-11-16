@@ -477,6 +477,9 @@ test("MTH-091 level 5, the asteroid, opens from the title's test row", async ({ 
 });
 
 test("MTH-106 level 7, the station, opens from the title's test row, turns, and draws without errors", async ({ page }) => {
+  // A second of the station's game time, however busy the machine: its wait (below) needs room
+  // inside the test's own limit (on a shared WebKit runner it took 30 s, the whole default limit).
+  test.setTimeout(90_000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.goto("./thrust.html");
@@ -484,7 +487,7 @@ test("MTH-106 level 7, the station, opens from the title's test row, turns, and 
   await expect(page.getByTestId("mth-level")).toHaveText("LEVEL 7");
   expect(await hook(page, (m) => m.sandbox().world.bodies.filter((b) => b.turret).length)).toBe(12);
   expect(await hook(page, (m) => (m.sandbox().world as unknown as { frame?: { omega: number } }).frame?.omega)).toBeLessThan(0);
-  await expect.poll(() => hook(page, (m) => m.sandbox().world.time), { timeout: 30_000 }).toBeGreaterThan(1);
+  await expect.poll(() => hook(page, (m) => m.sandbox().world.time), { timeout: 75_000 }).toBeGreaterThan(1);
   expect(errors).toEqual([]);
 });
 

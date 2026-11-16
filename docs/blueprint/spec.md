@@ -543,6 +543,69 @@ Tests: BPD-045, and `tests/core/power.test.ts`.
 
 Test: BPD-046.
 
+## 22. The gun and the bullet magazine (16 November 2026, Chloe)
+
+The Mastodon carries no power system, so its railguns had no energy to fire. It now carries
+chemically propelled guns.
+
+- **Gun** (Weapons):
+  - It fires bullets launched by their own propellant, so it needs no power.
+  - Its muzzle speed comes from its barrel's length, its height: 100 m/s at 0.7 m, going as the
+    square root of the length. The propellant's push over the barrel gives v² ∝ length.
+  - So it is slower than a railgun of the same length (144 m/s at 0.7 m).
+  - Its muzzle moves with the barrel's end.
+- **Bullet magazine** (Storage):
+  - It follows the magazine's rules (§19), but a bullet's cartridge takes twice the room: 240
+    bullets per m² of inner area, against 480 shells.
+  - It feeds the guns welded to it. Bullets and railgun shells don't mix.
+- **The Mastodon:** four guns and two bullet magazines, 57 bullets each.
+
+Test: BPD-047.
+
+## 23. Engines with chambers (16 November 2026, Chloe)
+
+Every regular engine now has a real chamber (design rules §5, the geometry half). THRUST OG's
+engines, a head and two flared walls whose chamber is a 9 cm slab, are kept as they are. So is the
+double engine, whose heads are box chambers.
+
+- **A rocket** (`buildRocket`, the component's `rocket`): a head, two chamber walls, two throat
+  pieces closing the chamber to a throat narrower than it, and two nozzle walls. Each is welded to
+  the one before, Standard for its 0.1 m walls.
+  - Its shape is set in Shape: chamber width and length, head depth, throat, nozzle length and
+    flare, and wall thickness.
+  - What follows is shown:
+    - chamber pressure, ṁ · c* ÷ throat;
+    - the area ratio;
+    - L*, the chamber's area over the throat;
+    - the chamber walls' margin against their welds.
+- **In flight:**
+  - The physics finds the enclosed chamber and holds its gas as one volume, at the pressure the
+    throat sets; its walls carry that pressure into their welds.
+  - The jet is the throat's, so at the same burn rate an engine pushes as THRUST OG's does.
+  - The nozzle's gain and the L* penalty come with the nozzle physics (§5, still to do).
+- **THRUST 1:**
+
+  | Engine | Chamber | Throat | Nozzle | Area ratio | Pressure |
+  |---|---|---|---|---|---|
+  | Main | 1.2 × 0.2 m | 0.8 m | 1.1 m to the same 1.5 m exit | 1.87 | 1,143 N/m |
+  | Light thrusters | 0.8 × 0.1 m | 0.5 m | 0.7 m to the same 0.84 m exit | | |
+
+  - Each engine keeps its mass: the head gives up what the new walls weigh.
+  - The wing tanks are 0.8 m tall, not 1.0, to make room for the light thrusters' chambers.
+- **Measured against THRUST OG:**
+
+  | | THRUST OG | THRUST 1 |
+  |---|---|---|
+  | Weight | 61.2 kg | 58.8 kg |
+  | Fuel | 8.10 kg | 6.08 kg |
+  | Forward | 36.1 m/s² | 37.4 m/s² |
+  | Reverse | 9.8 m/s² | 10.2 m/s² |
+  | Turn | 9.3 rad/s² | 11.3 rad/s² |
+
+  The ship is lighter, and lightest at its wings.
+
+Test: BPD-048.
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):

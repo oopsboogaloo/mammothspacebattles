@@ -18,7 +18,7 @@ export function weldLimits(thinner: number, quality = 1): { tension: number; com
   return { tension: r(WELD_K.tension), compression: r(WELD_K.compression), shear: r(WELD_K.shear), torque: r(WELD_K.torque) };
 }
 
-export type ContainerKind = "tank" | "magazine";
+export type ContainerKind = "tank" | "magazine" | "bullets";
 
 interface ContainerRule {
   /** What 1 m² of inner area holds: kg of propellant (a tank) or shells (a magazine). */
@@ -55,7 +55,27 @@ export const CONTAINERS: Record<ContainerKind, ContainerRule> = {
     min: 0.3,
     max: 2,
   },
+  // Chloe, 16 November 2026: chemically propelled bullets take twice the room of railgun shells.
+  bullets: {
+    perArea: 60 / boxInner(0.7, 0.45, WALL.default) / 2,
+    dryPerWall: 3 / (0.7 * 0.45 - boxInner(0.7, 0.45, WALL.default)),
+    material: { name: "hull", threshold: 150, toughness: 3000 },
+    chargePerUnit: 1 / 60,
+    min: 0.3,
+    max: 2,
+  },
 };
+
+/**
+ * The gun (Chloe, 16 November 2026): bullets fired by their own propellant, so it needs no power,
+ * but slower than a railgun of the same length: 100 m/s from a 0.7 m barrel (the railgun's 144),
+ * going as the square root of the length (the propellant's push over the barrel: v² ∝ length).
+ */
+export const GUN = { speed: 100, length: 0.7, muzzle: 0.16 } as const;
+export const gunSpeed = (length: number) => round(GUN.speed * Math.sqrt(length / GUN.length), 3);
+
+/** A bullet: the railgun's shell's mass, in a cartridge that takes twice the room. */
+export const BULLET = { shape: { kind: "box" as const, width: 0.22, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05 };
 
 /** The propellant's mixture by mass: H₂ : O₂ is 1 : 8 (the game's). */
 export const MIXTURE = { h2: 1 / 9, o2: 8 / 9 } as const;
@@ -108,7 +128,7 @@ export function containerSpec(kind: ContainerKind, vertices: Vec2[], t: number):
   const outer = Math.abs(polygonArea(vertices));
   const inner = innerArea(vertices, t);
   // Shells are whole: rounded down, after a little for floating point (Thrust's 0.125 m² × 480 is 59.999…).
-  const holds = kind === "magazine" ? Math.floor(inner * r.perArea + 1e-6) : round(inner * r.perArea, 9);
+  const holds = kind === "tank" ? round(inner * r.perArea, 9) : Math.floor(inner * r.perArea + 1e-6);
   const k = t / WALL.default;
   return {
     holds,
