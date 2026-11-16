@@ -10,7 +10,7 @@ import { applyCollectors, collectCaptured, normalizeCollector, type Collector, t
 import { applyTractors, normalizeTractor, type Tractor, type TractorInput } from "./tractor.ts";
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
 import { bodiesById, bodyMass, type Store } from "./bodies.ts";
-import { assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
+import { assemblyOf, assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
 import { add, cross, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { applyDrags, applyField, applyImpactFix, applyImpulseAt, correctPositions, integratePositions, prepareBodies, solveContacts, type RB } from "./physics.ts";
 import { createRng, nextFloat, type RngState } from "./prng.ts";
@@ -93,6 +93,8 @@ export interface Body {
   vents?: { from?: string; rate: number; holes: Breach[]; parcel?: number; radius?: number };
   /** Shells it carries and loads into place one at a time (WPN, first look). */
   magazine?: Magazine;
+  /** Shells it only stores, for a gun it is welded to (WPN-015): see `Ammo`. */
+  ammo?: Ammo;
   /** An explosive charge that detonates on impact (WPN): see explosive.ts. */
   explosive?: Explosive;
   /** A tractor beam and tether (TRC): see tractor.ts. */
@@ -162,6 +164,16 @@ export interface Magazine {
   /** State: seconds since the last load (a railgun: since the last shot); shells loaded or fired so far (names the next). */
   timer: number;
   loaded: number;
+}
+
+/**
+ * Shells stored for a gun elsewhere on the ship (WPN-015): counted in this body's mass, and passed
+ * to the gun one at a time through an ammo link when the gun has none, while the two are welded
+ * together. A gun loads only shells like its own.
+ */
+export interface Ammo {
+  count: number;
+  shell: Magazine["shell"];
 }
 
 /**
@@ -304,6 +316,8 @@ export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> &
 export type Link = (
   | { id: string; kind: "feed"; from: string; to: string; resource: string; rate: number /* kg/s */ }
   | { id: string; kind: "control"; channel: string; to: string }
+  /** A shell feed (WPN-015): `from` stores shells (`ammo`), `to` is a gun (`magazine`). */
+  | { id: string; kind: "ammo"; from: string; to: string }
 ) & {
   /** 1 whole, 0 broken (DMG-001). It falls with damage to either end. Absent in a scenario: 1. */
   integrity: number;
@@ -571,6 +585,11 @@ function addLink(world: World, input: LinkInput): void {
       if (!b.contents?.some((s) => s.resource === link.resource)) throw new Error(`Feed links need a "${link.resource}" store at both ends; ${b.id} has none`);
     }
   }
+  if (link.kind === "ammo") {
+    const from = findBody(world, link.from);
+    if (!from.ammo) throw new Error(`An ammo link needs shells stored at ${from.id}`);
+    if (!to.magazine) throw new Error(`An ammo link needs a gun at ${to.id}`);
+  }
   world.links = [...world.links, structuredClone(link)].sort((p, q) => compareIds(p.id, q.id));
 }
 
@@ -595,6 +614,35 @@ function runFeeds(world: World, dt: number): { touchedFixed: boolean; spinShift:
   let spinShift = 0;
   // Bodies by id (ids are unique: adding a duplicate throws), shared and kept between steps.
   let byId: ReadonlyMap<string, Body> | undefined;
+  // Shell feeds (WPN-015): a gun with no shell left takes one from the fullest store still welded to it.
+  for (const l of world.links) {
+    if (l.kind !== "ammo") continue;
+    byId ??= bodiesById(world);
+    const gun = byId.get(l.to);
+    const mag = gun?.magazine;
+    if (!gun || !mag || mag.count >= 1 || gun.integrity <= 0) continue;
+    const joined = new Set(assemblyOf(world, gun.id));
+    const same = JSON.stringify(mag.shell);
+    let from: Body | undefined;
+    for (const k of world.links) {
+      const s = k.kind === "ammo" && k.to === gun.id && k.integrity > 0 ? byId.get(k.from) : undefined;
+      if (s?.ammo && s.ammo.count >= 1 && joined.has(s.id) && JSON.stringify(s.ammo.shell) === same && (!from || s.ammo.count > from.ammo!.count)) from = s;
+    }
+    if (!from) continue;
+    if (from.fixed || gun.fixed) touchedFixed = true;
+    const spin = (x: Body) => 0.5 * massProps(x.shape, bodyMass(x)).inertia * x.angularVelocity * x.angularVelocity;
+    const spin0 = spin(from) + spin(gun);
+    const dm = bodyMass(mag.shell as Body);
+    const mGun = bodyMass(gun);
+    const keBefore = 0.5 * dm * (from.velocity.x ** 2 + from.velocity.y ** 2) + 0.5 * mGun * (gun.velocity.x ** 2 + gun.velocity.y ** 2);
+    if (!gun.fixed) gun.velocity = { x: (mGun * gun.velocity.x + dm * from.velocity.x) / (mGun + dm), y: (mGun * gun.velocity.y + dm * from.velocity.y) / (mGun + dm) };
+    from.ammo!.count -= 1;
+    mag.count += 1;
+    const keAfter = 0.5 * bodyMass(gun) * (gun.velocity.x ** 2 + gun.velocity.y ** 2);
+    world.ledger.thermal += Math.max(0, keBefore - keAfter);
+    spinShift += spin(from) + spin(gun) - spin0;
+    world.events.push({ tick: world.tick, type: "ammo.fed", data: { from: from.id, to: gun.id, left: from.ammo!.count } });
+  }
   for (const l of world.links) {
     if (l.kind !== "feed") continue;
     byId ??= bodiesById(world);

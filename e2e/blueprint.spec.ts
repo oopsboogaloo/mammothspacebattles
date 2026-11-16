@@ -96,7 +96,7 @@ test("BPD-022 drag a tank in from the list: it snaps flush, shows green weld poi
 test("BPD-022 ＋ adds a part where it welds, and moving a part off the ship warns that the ship is in pieces", async ({ page }) => {
   await openFresh(page);
   await page.getByRole("tab", { name: "GE" }).click();
-  await page.getByRole("button", { name: "Add Generator" }).click();
+  await page.getByRole("button", { name: "Add Generator", exact: true }).click();
   await expect(page.getByTestId("selected-name")).toHaveText("Generator");
   await expect(page.getByTestId("performance")).toContainText("18 parts");
   const bat = (await page.getByTestId("part-battery").locator("polygon").first().boundingBox())!;
@@ -110,7 +110,7 @@ test("BPD-022 ＋ adds a part where it welds, and moving a part off the ship war
 test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothing is wired until the player does it, and nothing off the cockpit answers", async ({ page }) => {
   await openFresh(page);
   await page.getByRole("tab", { name: "EN" }).click();
-  await page.getByRole("button", { name: "Add Light thruster" }).click();
+  await page.getByRole("button", { name: "Add Light thruster", exact: true }).click();
   await page.getByTestId("mode-controls").click();
   await expect(page.getByTestId("mixer")).toContainText("not wired");
   await expect(page.getByTestId("response")).toContainText("Not wired: Light thruster");
@@ -348,4 +348,24 @@ test("BPD-034 a blueprint file saved with the old Fire, Tractor and Shield wirin
   await expect(page.getByTestId("drawing-name")).toContainText("THRUST 1");
   const lines = await page.evaluate(() => (window as unknown as { __msb: { blueprint: () => { mix: { rows: { channel: string; lines: { control: string }[] }[] } } } }).__msb.blueprint().mix.rows.filter((r) => ["fire", "tractor", "shield"].includes(r.channel)).map((r) => r.lines[0].control));
   expect(lines).toEqual(["action-a", "action-b", "action-c"]);
+});
+
+test("BPD-036 the OG parts are listed after the regular ones; in Try it, THRUST 1's railgun fires the shells its magazines hold", async ({ page }) => {
+  await openFresh(page);
+  // Storage: the regular magazine, then the OG one under its heading.
+  await page.getByRole("tab", { name: "ST" }).click();
+  await expect(page.getByTestId("kind-name")).toHaveText("STORAGE");
+  await expect(page.getByTestId("card-mag-l")).toContainText("13.00 kg"); // 3 kg and 60 shells
+  await expect(page.getByTestId("card-mag-l-og")).toContainText("3.00 kg");
+  await expect(page.getByText("OG · AS THRUST HAS THEM")).toBeVisible();
+  await page.getByTestId("try-it").click();
+  const shells = () =>
+    page.evaluate(() => {
+      const w = (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; ammo?: { count: number } }[] } } | null } }).__msb.sandbox()?.world;
+      return (w?.bodies ?? []).filter((b) => b.ammo).reduce((s, b) => s + b.ammo!.count, 0);
+    });
+  await expect.poll(shells, { timeout: 15_000 }).toBeLessThanOrEqual(119); // one already in the gun
+  await page.keyboard.down("Space");
+  await expect.poll(shells, { timeout: 60_000 }).toBeLessThan(115);
+  await page.keyboard.up("Space");
 });

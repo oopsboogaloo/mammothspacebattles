@@ -25,6 +25,11 @@ export interface Component {
   label: string;
   /** Its bodies' ids; the first is its main body (an engine's head, which carries the injector). */
   bodies: string[];
+  /**
+   * Which catalogue part it was made from, e.g. "railgun", or "railgun_og": the original Thrust
+   * ship's parts are kept as they are (THRUST OG) while the regular parts are improved.
+   */
+  part?: string;
 }
 
 export interface Ship {
@@ -163,24 +168,24 @@ export function jointPoint(bp: Blueprint, j: JointInput): Vec2 {
 
 // ---------- the Thrust 1 preset ----------
 
-const THRUST_PARTS: Record<string, [Kind, string]> = {
-  hull: ["cockpit", "Cockpit"],
-  "tank-l": ["tank", "Tank L"],
-  "tank-r": ["tank", "Tank R"],
-  "gen-l": ["generator", "Generator L"],
-  "gen-r": ["generator", "Generator R"],
-  battery: ["battery", "Battery"],
-  "mag-l": ["storage", "Magazine L"],
-  "mag-r": ["storage", "Magazine R"],
-  gun: ["weapon", "Railgun"],
-  main: ["engine", "Main thruster"],
-  "back-l": ["engine", "Thruster BL"],
-  "back-r": ["engine", "Thruster BR"],
-  "front-l": ["engine", "Thruster FL"],
-  "front-r": ["engine", "Thruster FR"],
-  tractor: ["utility", "Tractor projector"],
-  tether: ["utility", "Tether winch"],
-  shield: ["utility", "Shield emitter"],
+const THRUST_PARTS: Record<string, [Kind, string, string]> = {
+  hull: ["cockpit", "Cockpit", "cockpit"],
+  "tank-l": ["tank", "Tank L", "tank"],
+  "tank-r": ["tank", "Tank R", "tank"],
+  "gen-l": ["generator", "Generator L", "generator"],
+  "gen-r": ["generator", "Generator R", "generator"],
+  battery: ["battery", "Battery", "battery"],
+  "mag-l": ["storage", "Magazine L", "magazine"],
+  "mag-r": ["storage", "Magazine R", "magazine"],
+  gun: ["weapon", "Railgun", "railgun"],
+  main: ["engine", "Main thruster", "main-thruster"],
+  "back-l": ["engine", "Thruster BL", "light-thruster"],
+  "back-r": ["engine", "Thruster BR", "light-thruster"],
+  "front-l": ["engine", "Thruster FL", "light-thruster"],
+  "front-r": ["engine", "Thruster FR", "light-thruster"],
+  tractor: ["utility", "Tractor projector", "tractor-projector"],
+  tether: ["utility", "Tether winch", "tether-winch"],
+  shield: ["utility", "Shield emitter", "shield-emitter"],
 };
 
 const strip = <T>(x: T): T => JSON.parse(JSON.stringify(x).replaceAll("p{n}-", "")) as T;
@@ -196,7 +201,7 @@ export function thrustShip(scenario: { world: { thrust: { ship: { bodies: BodyIn
 }
 
 /** Groups a ship's bodies into components: an engine is its head and the walls welded only to it. */
-export function groupComponents(ship: Ship, names: Record<string, [Kind, string]> = {}): Component[] {
+export function groupComponents(ship: Ship, names: Record<string, [Kind, string, string?]> = {}): Component[] {
   const jointsOf = (id: string) => ship.joints.filter((j) => j.a === id || j.b === id);
   const taken = new Set<string>();
   const out: Component[] = [];
@@ -205,15 +210,15 @@ export function groupComponents(ship: Ship, names: Record<string, [Kind, string]
     const walls = jointsOf(b.id)
       .map((j) => (j.a === b.id ? j.b : j.a))
       .filter((w) => jointsOf(w).every((j) => j.a === b.id || j.b === b.id));
-    const [kind, label] = names[b.id] ?? ["engine", b.id];
-    out.push({ id: b.id, kind, label, bodies: [b.id, ...walls] });
+    const [kind, label, part] = names[b.id] ?? ["engine", b.id];
+    out.push({ id: b.id, kind, label, bodies: [b.id, ...walls], ...(part ? { part } : {}) });
     taken.add(b.id);
     for (const w of walls) taken.add(w);
   }
   for (const b of ship.bodies) {
     if (taken.has(b.id)) continue;
-    const [kind, label] = names[b.id] ?? [guessKind(b), b.id];
-    out.push({ id: b.id, kind, label, bodies: [b.id] });
+    const [kind, label, part] = names[b.id] ?? [guessKind(b), b.id];
+    out.push({ id: b.id, kind, label, bodies: [b.id], ...(part ? { part } : {}) });
   }
   // In the ship's own order, by each component's main body.
   const order = new Map(ship.bodies.map((b, i) => [b.id, i]));
@@ -223,13 +228,53 @@ export function groupComponents(ship: Ship, names: Record<string, [Kind, string]
 function guessKind(b: BodyInput): Kind {
   if (b.tractor) return "cockpit";
   if (b.magazine) return "weapon";
+  if (b.ammo) return "storage";
   if (b.contents?.length) return "tank";
   return "utility";
 }
 
+/**
+ * THRUST OG: the Thrust game's ship exactly as it is, every part an "_og" part (railgun_og,
+ * cockpit_og, …). Kept untouched as the regular parts are improved; not for the final game's list.
+ */
+export function thrustOgPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
+  const { ship, mix } = thrustShip(scenario);
+  const names = Object.fromEntries(Object.entries(THRUST_PARTS).map(([id, [kind, label, part]]) => [id, [kind, `${label} OG`, `${part}_og`] as [Kind, string, string]]));
+  return { format: 1, id: "preset-thrust-og", name: "THRUST OG", preset: true, rev: 1, ship, components: groupComponents(ship, names), mix };
+}
+
+/**
+ * THRUST 1: the same ship built from the regular parts, which differ from the OG ones where they
+ * have been improved. So far: the magazines hold the shells (60 each) and pass them to the railgun
+ * through ammo links (WPN-015); the railgun holds none of its own.
+ */
 export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
   const { ship, mix } = thrustShip(scenario);
-  return { format: 1, id: "preset-thrust-1", name: "THRUST 1", preset: true, rev: 1, ship, components: groupComponents(ship, THRUST_PARTS), mix };
+  const gun = ship.bodies.find((b) => b.id === "gun");
+  const mags = ship.bodies.filter((b) => b.id === "mag-l" || b.id === "mag-r");
+  if (gun?.magazine && mags.length) {
+    const each = Math.floor(gun.magazine.count / mags.length);
+    for (const m of mags) m.ammo = { count: each, shell: structuredClone(gun.magazine.shell) };
+    gun.magazine.count -= each * mags.length;
+  }
+  const bp: Blueprint = { format: 1, id: "preset-thrust-1", name: "THRUST 1", preset: true, rev: 1, ship, components: groupComponents(ship, THRUST_PARTS), mix };
+  reammo(bp);
+  return bp;
+}
+
+/** Shell feeds (WPN-015): every store of shells feeds every gun that fires shells like them. */
+export function reammo(bp: Blueprint): void {
+  const ids = new Set(bp.ship.bodies.map((b) => b.id));
+  bp.ship.links = bp.ship.links.filter((l) => l.kind !== "ammo" || (ids.has(l.from) && ids.has(l.to)));
+  for (const s of bp.ship.bodies) {
+    if (!s.ammo) continue;
+    const shell = JSON.stringify(s.ammo.shell);
+    for (const g of bp.ship.bodies) {
+      if (!g.magazine || JSON.stringify(g.magazine.shell) !== shell) continue;
+      if (bp.ship.links.some((l) => l.kind === "ammo" && l.from === s.id && l.to === g.id)) continue;
+      bp.ship.links.push({ id: `ammo-${s.id}-${g.id}`, kind: "ammo", from: s.id, to: g.id });
+    }
+  }
 }
 
 // ---------- stats ----------
@@ -514,8 +559,12 @@ export function params(bp: Blueprint, compId: string): Param[] {
   for (const s of b.contents ?? []) {
     ps.push({ key: `cap:${s.resource}`, label: `${s.resource === "h2" ? "H₂" : s.resource === "o2" ? "O₂" : s.resource} capacity`, unit: "kg", value: s.capacity, min: 0, max: 100, step: 0.05, decimals: 3, tab: "fuel" });
   }
+  if (b.ammo) {
+    const kg = bodyMass(b.ammo.shell as Parameters<typeof bodyMass>[0]);
+    ps.push({ key: "ammo", label: "Shells stored", unit: "", value: b.ammo.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", note: `${round(kg, 3)} kg each, fed to the guns welded to it` });
+  }
   if (b.magazine) {
-    ps.push({ key: "count", label: "Shells", unit: "", value: b.magazine.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function" });
+    ps.push({ key: "count", label: "Shells in the gun", unit: "", value: b.magazine.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", ...(bp.ship.links.some((l) => l.kind === "ammo" && l.to === b.id) ? { note: "Magazines welded to it pass it more, one at a time" } : {}) });
     if (b.magazine.railgun) ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function" });
     ps.push({ key: "reload", label: "Reload", unit: "s", value: b.magazine.reload, min: 0.01, max: 10, step: 0.005, decimals: 3, tab: "function" });
   }
@@ -583,6 +632,7 @@ export function setParam(bp: Blueprint, compId: string, key: string, value: numb
     }
   } else if (key === "mass") b.mass = value;
   else if (key === "count" && b.magazine) b.magazine.count = Math.round(value);
+  else if (key === "ammo" && b.ammo) b.ammo.count = Math.round(value);
   else if (key === "speed" && b.magazine?.railgun) b.magazine.railgun.speed = value;
   else if (key === "reload" && b.magazine) b.magazine.reload = value;
   else if (key === "range" && b.tractor) b.tractor.range = value;
@@ -891,7 +941,7 @@ export function instantiate(bp: Blueprint, tpl: Blueprint, compId: string, label
     return b;
   });
   const joints = tpl.ship.joints.filter((j) => c.bodies.includes(j.a) && c.bodies.includes(j.b)).map((j) => ({ ...structuredClone(j), id: `${id}-${j.id}`, a: rename(j.a), b: rename(j.b) }));
-  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, label ?? c.label.replace(/ (L|R|BL|BR|FL|FR)$/, "")), bodies: bodies.map((b) => b.id) }, bodies, joints };
+  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, label ?? c.label.replace(/ (L|R|BL|BR|FL|FR)( OG)?$/, "$2")), bodies: bodies.map((b) => b.id), ...(c.part ? { part: c.part } : {}) }, bodies, joints };
 }
 
 function uniqueLabel(bp: Blueprint, base: string): string {
@@ -938,6 +988,7 @@ export function addComponent(bp: Blueprint, made: { comp: Component; bodies: Bod
     s.blocks = out.ship.bodies.map((x) => x.injector?.channel ?? x.magazine?.railgun?.channel).filter((x): x is string => !!x);
   }
   refeed(out);
+  reammo(out);
   return reweld(out, made.comp.id);
 }
 
@@ -1072,10 +1123,11 @@ export function wiringChecks(bp: Blueprint, controls: { id: string; name: string
 
 /** The other side's name: "Thruster BL" ↔ "Thruster BR", "Tank L" ↔ "Tank R". */
 function mirrorLabel(label: string): string {
-  const m = /^(.*?)(\s)(L|R|BL|BR|FL|FR)$/.exec(label);
+  // "Thruster BL" ↔ "Thruster BR", and the same with an OG part's " OG" after it.
+  const m = /^(.*?)(\s)(L|R|BL|BR|FL|FR)( OG)?$/.exec(label);
   if (!m) return `${label} (mirror)`;
   const swap: Record<string, string> = { L: "R", R: "L", BL: "BR", BR: "BL", FL: "FR", FR: "FL" };
-  return `${m[1]}${m[2]}${swap[m[3]]}`;
+  return `${m[1]}${m[2]}${swap[m[3]]}${m[4] ?? ""}`;
 }
 
 /**

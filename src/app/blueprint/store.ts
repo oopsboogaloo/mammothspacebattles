@@ -2,7 +2,7 @@
 // and the view. Kept in the browser (localStorage) on every change.
 import { computed, signal } from "@preact/signals";
 import { scenarioFile } from "../scenarios.ts";
-import { thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
+import { thrustOgPreset, thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
 import type { BodyInput, JointInput } from "../../core/index.ts";
 
 const KEY = "msb.blueprints.v1";
@@ -11,7 +11,8 @@ export type Selection = { type: "component"; id: string } | { type: "weld"; id: 
 
 export const presets: Blueprint[] = (() => {
   const t1 = scenarioFile("thrust-1");
-  return t1 ? [thrustPreset(t1 as Parameters<typeof thrustPreset>[0])] : [];
+  // THRUST 1 from the regular parts; THRUST OG, the game's ship as it is, from the OG parts.
+  return t1 ? [thrustPreset(t1 as Parameters<typeof thrustPreset>[0]), thrustOgPreset(t1 as Parameters<typeof thrustPreset>[0])] : [];
 })();
 
 interface Saved {

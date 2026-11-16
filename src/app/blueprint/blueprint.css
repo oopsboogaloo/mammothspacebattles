@@ -450,3 +450,6 @@ html, body, #root { height: 100%; overflow: hidden; }
 .bpapp .sname input { flex: 1; min-width: 0; height: 24px; background: rgba(0, 0, 0, .25); border: 1px solid var(--faint); border-radius: 3px; color: var(--ink); font: 12px "IBM Plex Mono", monospace; padding: 0 6px; text-transform: uppercase; }
 .bpapp .sname input::placeholder { color: var(--cyan); opacity: .8; }
 @media (pointer: coarse) { .bpapp .sname input { height: 36px; } }
+
+/* The OG parts (THRUST OG's, as the game has them): a quiet heading above them in each list. */
+.og-head { font-size: 10px; letter-spacing: 0.12em; opacity: 0.6; padding: 8px 4px 2px; border-top: 1px dashed currentColor; margin-top: 4px; }

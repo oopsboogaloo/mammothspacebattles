@@ -111,6 +111,8 @@ export function computeTotals(world: World, thermal = world.ledger.thermal, chem
     if (b.explosive) chemical += explosiveEnergy(b.explosive, world.gas.scale ?? 1);
     const magShell = b.magazine?.shell as { explosive?: Explosive } | undefined;
     if (magShell?.explosive && b.magazine) chemical += b.magazine.count * explosiveEnergy(magShell.explosive, world.gas.scale ?? 1);
+    const ammoShell = b.ammo?.shell as { explosive?: Explosive } | undefined;
+    if (ammoShell?.explosive && b.ammo) chemical += b.ammo.count * explosiveEnergy(ammoShell.explosive, world.gas.scale ?? 1);
     // So does gas held in an engine's chamber.
     const vessel = b.injector?.vessel;
     if (vessel) {

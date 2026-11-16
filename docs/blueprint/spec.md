@@ -393,6 +393,23 @@ Differences from the design above:
   original (turn left and turn right swapped). Refused, with the reason, if that side is taken or
   the part sits on the middle line. Test: BPD-027.
 
+## 16. OG parts and regular parts (16 November 2026, Chloe)
+
+The Thrust game's ship stays as it is: the preset **THRUST OG**, every part an OG part
+(`cockpit_og`, `railgun_og`, `magazine_og`, …, the component's `part`), listed under each type
+after the regular parts, headed "OG · as Thrust has them". OG parts are never changed; the final
+game won't offer them. The **regular parts** start as copies of them and are improved as problems
+are found; **THRUST 1** is the same ship built from them.
+
+Improvements so far:
+
+1. **Magazines hold the shells.** In the game the railgun carries its 120 shells (20 kg, on the
+   nose) and the magazines hold nothing. A regular magazine stores shells (60 each in THRUST 1;
+   "Shells stored" under Function) and passes them to the railguns welded to it, one at a time, by
+   an ammo link (WPN-015); the regular railgun holds none of its own. A magazine knocked off the
+   ship feeds nothing. Same mass; the centre of mass 0.33 m further back and the turn 9.9 rad/s²
+   instead of 9.3 (Measure; forward and reverse unchanged).
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):

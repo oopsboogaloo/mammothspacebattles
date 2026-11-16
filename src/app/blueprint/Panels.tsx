@@ -1,6 +1,8 @@
 // The designer's panels (docs/blueprint/spec.md §2): components, properties, performance, and the
 // blueprints drawer.
+import { Fragment } from "preact";
 import { useState } from "preact/hooks";
+import { bodyMass } from "../../core/bodies.ts";
 import { NumberControl } from "./NumberControl.tsx";
 import { loadsFor } from "./tryLoads.ts";
 import { layout, StatsFold } from "./Layout.tsx";
@@ -17,6 +19,8 @@ interface CatalogueItem {
   kind: Kind;
   name: string;
   from: string; // the preset part it is made from
+  /** Made from THRUST OG's part, kept as the game has it (not for the final game's list). */
+  og?: boolean;
 }
 
 /** What can be added, made from the Thrust 1 preset's parts. */
@@ -33,6 +37,9 @@ export const CATALOGUE: CatalogueItem[] = [
   { kind: "utility", name: "Tether winch", from: "tether" },
   { kind: "utility", name: "Shield emitter", from: "shield" },
 ];
+/** The OG parts: the same list, from THRUST OG. */
+const OG_ITEMS: CatalogueItem[] = CATALOGUE.map((it) => ({ ...it, name: `${it.name} OG`, og: true }));
+const templateOf = (it: CatalogueItem) => presets.find((p) => p.id === (it.og ? "preset-thrust-og" : "preset-thrust-1")) ?? presets[0];
 
 /** Adds a part at the nearest free place that welds it to the ship (＋, double-click, Duplicate). */
 export function addAtFreeSpot(tpl: Blueprint, from: string, label?: string): void {
@@ -105,9 +112,8 @@ function Thumb({ bp, ids }: { bp: Blueprint; ids: string[] }) {
 }
 
 export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; setKind: (i: number) => void }) {
-  const preset = presets[0];
   const kind = KINDS[kindIndex];
-  const items = CATALOGUE.filter((c) => c.kind === kind.kind);
+  const items = [...CATALOGUE, ...OG_ITEMS].filter((c) => c.kind === kind.kind);
   return (
     <section class="panel left" aria-label="Components">
       <header class="ph">
@@ -135,16 +141,20 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
         ))}
       </div>
       <div class="list" data-testid="catalogue">
-        {items.map((it) => {
+        {items.map((it, i) => {
+          const preset = templateOf(it);
           const c = preset && component(preset, it.from);
           const b = preset && body(preset, it.from);
-          const mass = c ? c.bodies.reduce((s, id) => s + body(preset, id).mass, 0) : 0;
+          // As it weighs on a ship: with what it holds (shells, propellant).
+          const mass = c ? c.bodies.reduce((s, id) => s + bodyMass(body(preset, id) as Parameters<typeof bodyMass>[0]), 0) : 0;
+          const firstOg = it.og && !items[i - 1]?.og;
           const size = b?.shape.kind === "box" ? `${b.shape.width} × ${b.shape.height} m` : "";
           return (
+            <Fragment key={it.name}>
+            {firstOg && <div class="og-head" title="The Thrust game's parts as they are, kept for comparison while the regular parts are improved">OG · AS THRUST HAS THEM</div>}
             <div
               class={`card${placing.value && !placing.value.moving && placing.value.made.comp.label.startsWith(it.name.split(" ")[0]) ? " picked" : ""}`}
-              key={it.name}
-              data-testid={`card-${it.from}`}
+              data-testid={`card-${it.from}${it.og ? "-og" : ""}`}
               title="Drag onto the blueprint, double-click, or ＋"
               onPointerDown={(e) => !(e.target as HTMLElement).closest("button") && dragFromList(e, preset, it.from, it.name)}
               onDblClick={() => addAtFreeSpot(preset, it.from, it.name)}
@@ -159,6 +169,7 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
                 ＋
               </button>
             </div>
+            </Fragment>
           );
         })}
         {!items.length && <div class="empty">None of these yet.</div>}
