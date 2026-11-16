@@ -1,0 +1,401 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Blueprint · blueprints menu</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>/* Blueprint designer mockup styles. Thin light lines on deep blue. */
+:root {
+  --bg: #0b1430; --panel: #0d1838; --panel2: #10204a; --line: rgba(222, 234, 255, .78);
+  --faint: rgba(190, 210, 255, .22); --ink: #e8f0ff; --dim: #93a3c8; --sel: #ffe08a;
+  --go: #7dffb0; --warn: #ffb35a; --bad: #ff7b7b; --cyan: #7fd4ff;
+  --tgt: 32px; --row: 30px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: var(--W); height: var(--H); overflow: hidden; background: var(--bg); color: var(--ink);
+  font-family: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif; font-size: 13px; }
+button { font: inherit; color: inherit; background: none; border: 1px solid var(--faint); cursor: pointer; }
+kbd { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; border: 1px solid var(--faint); border-radius: 3px; padding: 0 4px; margin: 0 1px; color: var(--ink); }
+.app { position: relative; width: var(--W); height: var(--H); }
+.grid { display: grid; width: 100%; height: 100%; grid-template-columns: 248px 1fr 300px; grid-template-rows: 48px 1fr 26px;
+  grid-template-areas: "top top top" "left canvas right" "status status status"; }
+.grid.touch { grid-template-columns: 236px 1fr 300px; grid-template-rows: 56px 1fr 28px; --tgt: 44px; --row: 44px; }
+
+/* top bar */
+.top { grid-area: top; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.ib { height: var(--tgt); min-width: var(--tgt); padding: 0 10px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: .04em; font-size: 12.5px; }
+.ib.sm { height: 26px; min-width: 26px; padding: 0 6px; border-color: transparent; }
+.grid.touch .ib.sm { height: 40px; min-width: 40px; }
+.ib.on { border-color: var(--cyan); color: var(--cyan); background: rgba(127, 212, 255, .08); }
+.menu span { font-weight: 600; letter-spacing: .12em; }
+.title { display: flex; align-items: baseline; gap: 10px; padding: 0 14px; border-left: 1px solid var(--faint); border-right: 1px solid var(--faint); height: 100%; align-items: center; }
+.tl { font-size: 10px; letter-spacing: .2em; color: var(--dim); }
+.tn { font-family: "IBM Plex Mono", monospace; font-size: 20px; font-weight: 500; letter-spacing: .08em; }
+.tn i { color: var(--warn); font-style: normal; font-size: 12px; margin-left: 6px; vertical-align: super; }
+.badge { font-size: 10px; letter-spacing: .14em; border: 1px solid var(--dim); color: var(--dim); padding: 1px 6px; border-radius: 2px; }
+.badge.edit { border-color: var(--go); color: var(--go); }
+.grp { display: flex; gap: 4px; }
+.tog .ib { font-size: 12px; }
+.spacer { flex: 1; }
+.try { height: var(--tgt); padding: 0 20px; border: 1.5px solid var(--go); color: #062012; background: var(--go); font-weight: 600; letter-spacing: .16em; border-radius: 3px; font-size: 14px; }
+
+/* panels */
+.panel { background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+.left { grid-area: left; border-right: 1px solid var(--line); }
+.right { grid-area: right; border-left: 1px solid var(--line); }
+.ph { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.phl { font-size: 18px; letter-spacing: .14em; font-weight: 500; }
+.pf { margin-top: auto; padding: 6px 10px; border-top: 1px solid var(--faint); font-size: 11px; color: var(--dim); }
+
+.typesel { display: grid; grid-template-columns: var(--tgt) 1fr var(--tgt); align-items: center; gap: 4px; padding: 8px 8px 4px; }
+.arrow { height: var(--tgt); border-radius: 3px; font-size: 12px; }
+.tname { position: relative; text-align: center; border: 1px solid var(--faint); border-radius: 3px; padding: 2px 0 3px; cursor: pointer; }
+.tname small { display: block; font-size: 9.5px; letter-spacing: .2em; color: var(--dim); }
+.tname b { font-size: 17px; letter-spacing: .12em; font-weight: 500; }
+.tname .caret { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); color: var(--dim); font-size: 10px; }
+.dots { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; padding: 2px 8px 8px; border-bottom: 1px solid var(--faint); }
+.dot { height: 22px; font-size: 9.5px; letter-spacing: .06em; border-radius: 2px; color: var(--dim); }
+.grid.touch .dot { height: 32px; }
+.dot.on { border-color: var(--cyan); color: var(--cyan); background: rgba(127, 212, 255, .1); }
+.listwrap { flex: 1; display: grid; grid-template-columns: 1fr 18px; min-height: 0; }
+.grid.touch .listwrap { grid-template-columns: 1fr 24px; }
+.list { overflow: hidden; padding: 6px 4px 6px 8px; display: flex; flex-direction: column; gap: 6px; }
+.card { display: grid; grid-template-columns: 64px 1fr 30px; gap: 8px; align-items: center; border: 1px solid var(--faint); border-radius: 3px; padding: 6px; min-height: 76px; }
+.grid.touch .card { grid-template-columns: 64px 1fr 44px; }
+.card:hover { border-color: var(--line); }
+.card.picked { border: 1px dashed var(--go); background: rgba(125, 255, 176, .05); }
+.thumb { height: 58px; display: flex; align-items: center; justify-content: center; }
+.ico { width: 64px; height: 56px; fill: none; stroke: var(--ink); stroke-width: 1.4; }
+.cname { font-size: 14px; letter-spacing: .03em; }
+.cstat { white-space: nowrap; font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--dim); }
+.add { height: 30px; border-radius: 3px; font-size: 16px; color: var(--cyan); border-color: rgba(127, 212, 255, .4); }
+.grid.touch .add { height: 44px; }
+.sbar { display: grid; grid-template-rows: 18px 1fr 18px; border-left: 1px solid var(--faint); }
+.grid.touch .sbar { grid-template-rows: 32px 1fr 32px; }
+.sbtn { border: none; font-size: 8px; color: var(--dim); }
+.strack { position: relative; margin: 2px 4px; }
+.sthumb { position: absolute; left: 0; right: 0; border: 1px solid var(--line); border-radius: 2px;
+  background: repeating-linear-gradient(135deg, transparent 0 3px, rgba(222, 234, 255, .35) 3px 4px); }
+
+/* canvas */
+.canvas { grid-area: canvas; position: relative; overflow: hidden; background: #0a1330; }
+.bp { position: absolute; inset: 0; }
+.scale text, .ghostlbl, .snaplbl, .warnlbl, .rocklbl, .co1, .co2 { font-family: "IBM Plex Mono", monospace; font-size: 11px; fill: var(--ink); }
+.snaplbl { fill: var(--go); } .warnlbl { fill: var(--warn); } .ghostlbl { fill: #9fc0ff; font-size: 13px; letter-spacing: .2em; }
+.co1 { fill: var(--sel); font-size: 11.5px; } .co2 { fill: var(--dim); }
+.rocklbl { fill: #8d95b8; letter-spacing: .1em; }
+.stats { position: absolute; top: 10px; right: 10px; background: rgba(11, 20, 48, .92); border: 1px solid var(--line); min-width: 268px; }
+.sh { padding: 5px 10px; border-bottom: 1px solid var(--faint); font-size: 12px; letter-spacing: .18em; }
+.sh small { letter-spacing: .04em; color: var(--dim); margin-left: 6px; font-size: 10.5px; }
+.stats table { border-collapse: collapse; width: 100%; }
+.stats th { text-align: left; font-weight: 400; color: var(--dim); padding: 2px 10px; font-size: 12px; white-space: nowrap; }
+.stats td { font-family: "IBM Plex Mono", monospace; font-size: 12px; padding: 2px 6px; text-align: right; white-space: nowrap; }
+.stats td.d { width: 46px; font-size: 11px; padding-right: 10px; }
+.d.up { color: var(--go); } .d.down { color: var(--bad); }
+.tblock { position: absolute; right: 10px; bottom: 10px; display: grid; grid-template-columns: auto auto; border: 1px solid var(--line); background: rgba(11, 20, 48, .9); }
+.tblock div { padding: 3px 10px; border: .5px solid var(--faint); }
+.tblock small { display: block; font-size: 9px; letter-spacing: .2em; color: var(--dim); }
+.tblock b { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 12px; }
+.zoom { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; border: 1px solid var(--line); background: rgba(11, 20, 48, .9); }
+.zoom button { width: var(--tgt); height: var(--tgt); border: none; font-size: 16px; }
+.zl { font-family: "IBM Plex Mono", monospace; font-size: 10px; text-align: center; padding: 2px 0; border-top: 1px solid var(--faint); border-bottom: 1px solid var(--faint); }
+
+/* properties */
+.selhead { display: flex; gap: 10px; padding: 8px 10px; align-items: center; border-bottom: 1px solid var(--faint); }
+.selhead b { font-size: 16px; font-weight: 500; letter-spacing: .03em; display: block; }
+.selhead small { color: var(--dim); font-size: 11.5px; }
+.swatch { width: 14px; height: 30px; border-radius: 2px; opacity: .8; flex: none; }
+.swatch.weld { background: radial-gradient(circle, var(--sel) 30%, transparent 32%), transparent; border: 1px solid var(--sel); border-radius: 50%; width: 22px; height: 22px; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--faint); }
+.tabs button { height: var(--tgt); border: none; border-right: 1px solid var(--faint); font-size: 11.5px; letter-spacing: .14em; color: var(--dim); }
+.tabs button.on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--cyan); }
+.fields { flex: 1; overflow: hidden; padding: 2px 0; }
+.field { padding: 5px 10px 6px; border-bottom: 1px solid rgba(190, 210, 255, .08); }
+.fl { display: flex; align-items: center; gap: 6px; }
+.fl label { font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); cursor: ew-resize; }
+.field.changed .fl label::before { content: "● "; color: var(--warn); font-size: 9px; vertical-align: 2px; }
+.reset { border: none; color: var(--dim); font-size: 13px; height: 20px; padding: 0 2px; }
+.val { margin-left: auto; display: flex; align-items: baseline; gap: 4px; border: 1px solid var(--faint); border-radius: 2px; padding: 1px 6px; min-width: 86px; justify-content: flex-end; background: rgba(0, 0, 0, .18); }
+.grid.touch .val { min-height: 32px; align-items: center; min-width: 96px; }
+.num { font-family: "IBM Plex Mono", monospace; font-size: 15px; }
+.unit { font-size: 11px; color: var(--dim); min-width: 14px; }
+.sl { display: grid; grid-template-columns: var(--row) 1fr var(--row); align-items: center; gap: 6px; margin-top: 4px; }
+.step { height: var(--row); border-radius: 3px; font-size: 10px; color: var(--ink); }
+.track { position: relative; height: var(--row); }
+.track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--line); }
+.track::after { content: ""; position: absolute; left: 0; right: 0; top: calc(50% - 4px); height: 8px;
+  background: repeating-linear-gradient(90deg, var(--faint) 0 1px, transparent 1px 10%); }
+.fill { position: absolute; left: 0; top: calc(50% - 1px); height: 3px; background: var(--cyan); opacity: .8; }
+.knob { position: absolute; top: 50%; width: 14px; height: 20px; transform: translate(-50%, -50%); border: 1.5px solid var(--ink); background: var(--panel); border-radius: 2px; z-index: 1; }
+.grid.touch .knob { width: 22px; height: 30px; }
+.note { font-size: 11px; color: var(--dim); margin-top: 3px; }
+.derived { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--faint); }
+.derived div { padding: 6px 10px; border-right: 1px solid var(--faint); }
+.derived small { display: block; font-size: 9.5px; letter-spacing: .16em; color: var(--dim); }
+.derived b { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 13px; }
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px; border-top: 1px solid var(--faint); }
+.actions button { height: var(--tgt); border-radius: 3px; font-size: 12.5px; }
+.danger { color: var(--bad); border-color: rgba(255, 123, 123, .45) !important; }
+.joins { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.chip { border-color: var(--c); color: var(--c); border-radius: 12px; padding: 3px 10px; font-size: 12px; }
+.seg { display: grid; grid-template-columns: auto repeat(4, 1fr); gap: 3px; padding: 4px 10px 8px; align-items: center; border-bottom: 1px solid var(--faint); }
+.seg span { font-size: 11px; letter-spacing: .1em; color: var(--dim); margin-right: 4px; text-transform: uppercase; }
+.seg button { height: 28px; border-radius: 2px; font-size: 11.5px; }
+.seg button.on { border-color: var(--cyan); color: var(--cyan); }
+.placing { padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.pl-row { font-size: 13px; color: var(--dim); display: flex; gap: 8px; }
+.pl-row span { width: 14px; text-align: center; }
+.pl-row.ok span, .pl-row.ok b { color: var(--go); } .pl-row.warn { color: var(--warn); }
+
+.status { grid-area: status; display: flex; align-items: center; padding: 0 12px; border-top: 1px solid var(--line); background: var(--panel); font-size: 12px; color: var(--dim); gap: 4px; }
+.status b { color: var(--ink); font-weight: 500; }
+
+/* blueprints drawer */
+.scrim { position: absolute; inset: 0; background: rgba(3, 6, 18, .62); }
+.drawer { position: absolute; left: 0; top: 0; bottom: 0; width: 560px; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+.dtools { display: flex; gap: 6px; padding: 10px; flex-wrap: wrap; border-bottom: 1px solid var(--faint); }
+.dtools button { height: 32px; padding: 0 10px; border-radius: 3px; }
+.dtools .primary { border-color: var(--go); color: var(--go); }
+.dfilter { display: flex; gap: 4px; padding: 8px 10px; align-items: center; }
+.dfilter button { height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12px; color: var(--dim); }
+.dfilter button.on { border-color: var(--cyan); color: var(--cyan); }
+.dfilter input { margin-left: auto; height: 28px; background: rgba(0, 0, 0, .2); border: 1px solid var(--faint); color: var(--ink); padding: 0 8px; font: inherit; width: 160px; }
+.dlist { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 6px 10px; overflow: hidden; }
+.dcard { display: grid; grid-template-columns: 124px 1fr; gap: 6px; border: 1px solid var(--faint); border-radius: 3px; padding: 6px; align-items: center; }
+.dcard.cur { border-color: var(--cyan); }
+.dcard svg { border: 1px solid var(--faint); background: #0a1330; }
+.nothumb { width: 120px; height: 70px; border: 1px dashed var(--faint); color: var(--dim); font-size: 10px; display: flex; align-items: center; justify-content: center; }
+.dt b { display: block; font-family: "IBM Plex Mono", monospace; font-weight: 500; letter-spacing: .06em; font-size: 13px; }
+.dt small { display: block; color: var(--dim); font-size: 11px; }
+
+/* try it */
+.try-view { position: absolute; inset: 0; }
+.tbar { position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; gap: 10px; align-items: center; padding: 0 10px; background: linear-gradient(rgba(3, 5, 12, .9), rgba(3, 5, 12, 0)); }
+.back { height: 40px; padding: 0 16px; border: 1.5px solid var(--cyan); color: var(--cyan); border-radius: 3px; letter-spacing: .12em; font-weight: 600; background: rgba(127, 212, 255, .08); }
+.tbar .ib { height: 36px; }
+.tt small { display: block; font-size: 9.5px; letter-spacing: .24em; color: var(--dim); }
+.tt b { font-family: "IBM Plex Mono", monospace; font-size: 16px; letter-spacing: .08em; margin-right: 10px; }
+.tt span { color: var(--dim); font-size: 12px; }
+.gauges { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 0; border: 1px solid var(--faint); background: rgba(3, 5, 12, .7); }
+.g { padding: 6px 12px; border-right: 1px solid var(--faint); min-width: 110px; }
+.g small { display: block; font-size: 9.5px; letter-spacing: .2em; color: var(--dim); }
+.g b { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 12px; }
+.g b.big { font-size: 15px; }
+.bar { width: 120px; height: 6px; border: 1px solid var(--faint); margin: 3px 0; }
+.bar i { display: block; height: 100%; background: var(--cyan); }
+.keys { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 10px; align-items: center; color: var(--dim); font-size: 12px; border: 1px solid var(--faint); padding: 8px 12px; background: rgba(3, 5, 12, .7); }
+.keys b { letter-spacing: .2em; font-size: 10px; font-weight: 500; }
+
+/* touch: tighter field rows so six fit without scrolling */
+.grid.touch .card { grid-template-columns: 48px 1fr 44px; gap: 6px; padding: 4px; }
+.grid.touch .ico { width: 48px; }
+.grid.touch .cname { font-size: 13.5px; }
+.grid.touch .field { padding: 3px 10px 4px; }
+.grid.touch .fl { height: 24px; }
+.grid.touch .val { min-height: 26px; }
+.grid.touch .sl { margin-top: 2px; }
+.grid.touch .derived div { padding: 4px 10px; }
+.grid.touch .actions { padding: 6px 10px; }
+
+:root{--W:1280px;--H:800px} </style></head><body><div class="app"><div class="grid">
+<header class="top">
+  <button class="ib menu" title="Blueprints: new, open, duplicate, import, export (Ctrl+O)">☰ <span>BLUEPRINTS</span></button>
+  <div class="title"><span class="tl">DRAWING</span><span class="tn">THRUST 1</span><span class="badge">PRESET</span></div>
+  <div class="grp"><button class="ib" title="Undo (Ctrl+Z)">↶</button><button class="ib" title="Redo (Ctrl+Shift+Z)">↷</button></div>
+  <div class="grp tog"><button class="ib on" title="Centre of mass (C)">◉ CoM</button><button class="ib on" title="Thrust arrows (T)">↑ Thrust</button><button class="ib on" title="Welds (W)">• Welds</button><button class="ib" title="Dimensions (D)">⟷ Dims</button><button class="ib on" title="Snap (S, hold Shift to override)">⌗ Snap</button></div>
+  <div class="spacer"></div>
+  <button class="ib" title="Fit (Z)">⤢ Fit</button>
+  <button class="try" title="Try it in the sandbox (Enter)">▶ TRY IT</button>
+</header>
+<section class="panel left">
+  <header class="ph"><span class="phl">COMPONENTS</span><button class="ib sm" title="Search components (/)">⌕</button></header>
+  <div class="typesel">
+    <button class="arrow" title="Previous type ([)">◀</button>
+    <div class="tname"><small>TYPE · 2/8</small><b>ENGINES</b><span class="caret">▾</span></div>
+    <button class="arrow" title="Next type (])">▶</button>
+  </div>
+  <div class="dots"><button class="dot" title="Cockpits">CO</button><button class="dot on" title="Engines">EN</button><button class="dot" title="Tanks">TA</button><button class="dot" title="Storage">ST</button><button class="dot" title="Weapons">WE</button><button class="dot" title="Generators">GE</button><button class="dot" title="Batteries">BA</button><button class="dot" title="Utilities">UT</button></div>
+  <div class="listwrap">
+    <div class="list"><div class="card"><div class="thumb"><svg viewBox="-30 -6 60 52" class="ico"><rect x="-13.0" y="0" width="26" height="7" /><polygon points="-11.0,7 -7.0,7 -12.0,29 -16.0,29"/><polygon points="11.0,7 7.0,7 12.0,29 16.0,29"/></svg></div><div class="ctext"><div class="cname">Light thruster</div><div class="cstat">0.8 m · 1.2 kg</div><div class="cstat">1.45 kg/s</div></div><button class="add" title="Add to blueprint (or double-click / drag)">＋</button></div><div class="card"><div class="thumb"><svg viewBox="-30 -6 60 52" class="ico"><rect x="-18.0" y="0" width="36" height="7" /><polygon points="-16.0,7 -12.0,7 -20.0,41 -24.0,41"/><polygon points="16.0,7 12.0,7 20.0,41 24.0,41"/></svg></div><div class="ctext"><div class="cname">Main thruster</div><div class="cstat">1.2 m · 3.0 kg</div><div class="cstat">7.78 kg/s</div></div><button class="add" title="Add to blueprint (or double-click / drag)">＋</button></div><div class="card"><div class="thumb"><svg viewBox="-30 -6 60 52" class="ico"><rect x="-16.0" y="0" width="32" height="7" /><polygon points="-14.0,7 -10.0,7 -14.0,33 -18.0,33"/><polygon points="14.0,7 10.0,7 14.0,33 18.0,33"/></svg></div><div class="ctext"><div class="cname">Lander engine</div><div class="cstat">1.0 m · 81 N</div><div class="cstat">0.5 kg/s</div></div><button class="add" title="Add to blueprint (or double-click / drag)">＋</button></div><div class="card"><div class="thumb"><svg viewBox="-30 -6 60 52" class="ico"><rect x="-18.0" y="0" width="36" height="7" /><polygon points="-16.0,7 -12.0,7 -14.0,37 -18.0,37"/><polygon points="16.0,7 12.0,7 14.0,37 18.0,37"/><rect x="-12" y="-5" width="24" height="5"/></svg></div><div class="ctext"><div class="cname">Heavy engine</div><div class="cstat">1.2 m · 580 N</div><div class="cstat">6 kg/s · lean</div></div><button class="add" title="Add to blueprint (or double-click / drag)">＋</button></div><div class="card"><div class="thumb"><svg viewBox="-30 -6 60 52" class="ico"><rect x="-7.0" y="0" width="14" height="7" /><polygon points="-5.0,7 -1.0,7 -4.0,19 -8.0,19"/><polygon points="5.0,7 1.0,7 4.0,19 8.0,19"/></svg></div><div class="ctext"><div class="cname">Steering jet</div><div class="cstat">0.3 m · new</div><div class="cstat">small turns</div></div><button class="add" title="Add to blueprint (or double-click / drag)">＋</button></div></div>
+    <div class="sbar"><button class="sbtn">▲</button><div class="strack"><div class="sthumb" style="top:6%;height:58%"></div></div><button class="sbtn">▼</button></div>
+  </div>
+  <footer class="pf">Drag onto the blueprint · double-click · or ＋</footer>
+</section>
+<main class="canvas">
+ <svg class="bp" width="100%" height="100%">
+<defs>
+ <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7fd4ff"/></marker>
+ <marker id="tick" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2,9 L8,1" stroke="#ffe08a" stroke-width="1.4"/></marker>
+ <pattern id="gridMinor" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#9fb8ff" stroke-opacity="0.07" stroke-width="1"/></pattern>
+ <pattern id="gridMajor" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#gridMinor)"/><path d="M100 0H0V100" fill="none" stroke="#9fb8ff" stroke-opacity="0.17" stroke-width="1"/></pattern>
+</defs><rect width="100%" height="100%" fill="url(#gridMajor)"/><g transform="translate(366.0,373.0) scale(100,-100)"><polygon points="-0.600,-0.550 0.600,-0.550 0.600,0.150 0.300,0.650 -0.300,0.650 -0.600,0.150" fill="#a9b4ff" fill-opacity="0.16" stroke="#a9b4ff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.800,-1.050 -1.300,-1.050 -1.300,-0.050 -2.800,-0.050" fill="#5d8cff" fill-opacity="0.16" stroke="#5d8cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<clipPath id="clip-tank-l"><rect x="-2.8" y="-1.049612" width="1.5" height="1"/></clipPath>
+<g clip-path="url(#clip-tank-l)" stroke="#5d8cff" stroke-width="0.008" opacity="0.55"><line x1="-3.4" y1="-1.049612" x2="-2.4" y2="-0.04961199999999999"/><line x1="-3.28" y1="-1.049612" x2="-2.28" y2="-0.04961199999999999"/><line x1="-3.1599999999999997" y1="-1.049612" x2="-2.1599999999999997" y2="-0.04961199999999999"/><line x1="-3.04" y1="-1.049612" x2="-2.04" y2="-0.04961199999999999"/><line x1="-2.92" y1="-1.049612" x2="-1.92" y2="-0.04961199999999999"/><line x1="-2.8" y1="-1.049612" x2="-1.7999999999999998" y2="-0.04961199999999999"/><line x1="-2.68" y1="-1.049612" x2="-1.6800000000000002" y2="-0.04961199999999999"/><line x1="-2.56" y1="-1.049612" x2="-1.56" y2="-0.04961199999999999"/><line x1="-2.44" y1="-1.049612" x2="-1.44" y2="-0.04961199999999999"/><line x1="-2.32" y1="-1.049612" x2="-1.3199999999999998" y2="-0.04961199999999999"/><line x1="-2.1999999999999997" y1="-1.049612" x2="-1.1999999999999997" y2="-0.04961199999999999"/><line x1="-2.08" y1="-1.049612" x2="-1.08" y2="-0.04961199999999999"/><line x1="-1.96" y1="-1.049612" x2="-0.9599999999999999" y2="-0.04961199999999999"/><line x1="-1.8399999999999999" y1="-1.049612" x2="-0.8399999999999997" y2="-0.04961199999999999"/><line x1="-1.7199999999999998" y1="-1.049612" x2="-0.7199999999999999" y2="-0.04961199999999999"/><line x1="-1.6" y1="-1.049612" x2="-0.6" y2="-0.04961199999999999"/><line x1="-1.48" y1="-1.049612" x2="-0.47999999999999987" y2="-0.04961199999999999"/><line x1="-1.3599999999999999" y1="-1.049612" x2="-0.35999999999999976" y2="-0.04961199999999999"/><line x1="-1.2399999999999998" y1="-1.049612" x2="-0.23999999999999966" y2="-0.04961199999999999"/><line x1="-1.12" y1="-1.049612" x2="-0.12" y2="-0.04961199999999999"/><line x1="-0.9999999999999999" y1="-1.049612" x2="1.1102230246251565e-16" y2="-0.04961199999999999"/><line x1="-0.8799999999999998" y1="-1.049612" x2="0.12000000000000022" y2="-0.04961199999999999"/></g>
+<polygon points="1.300,-1.050 2.800,-1.050 2.800,-0.050 1.300,-0.050" fill="#5d8cff" fill-opacity="0.16" stroke="#5d8cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<clipPath id="clip-tank-r"><rect x="1.2999999999999998" y="-1.049612" width="1.5" height="1"/></clipPath>
+<g clip-path="url(#clip-tank-r)" stroke="#5d8cff" stroke-width="0.008" opacity="0.55"><line x1="0.6999999999999998" y1="-1.049612" x2="1.6999999999999997" y2="-0.04961199999999999"/><line x1="0.82" y1="-1.049612" x2="1.8199999999999998" y2="-0.04961199999999999"/><line x1="0.9399999999999998" y1="-1.049612" x2="1.94" y2="-0.04961199999999999"/><line x1="1.0599999999999996" y1="-1.049612" x2="2.0599999999999996" y2="-0.04961199999999999"/><line x1="1.1799999999999997" y1="-1.049612" x2="2.1799999999999997" y2="-0.04961199999999999"/><line x1="1.2999999999999998" y1="-1.049612" x2="2.3" y2="-0.04961199999999999"/><line x1="1.4199999999999995" y1="-1.049612" x2="2.4199999999999995" y2="-0.04961199999999999"/><line x1="1.5399999999999996" y1="-1.049612" x2="2.5399999999999996" y2="-0.04961199999999999"/><line x1="1.6599999999999997" y1="-1.049612" x2="2.6599999999999997" y2="-0.04961199999999999"/><line x1="1.7799999999999998" y1="-1.049612" x2="2.78" y2="-0.04961199999999999"/><line x1="1.9" y1="-1.049612" x2="2.9" y2="-0.04961199999999999"/><line x1="2.0199999999999996" y1="-1.049612" x2="3.0199999999999996" y2="-0.04961199999999999"/><line x1="2.1399999999999997" y1="-1.049612" x2="3.1399999999999997" y2="-0.04961199999999999"/><line x1="2.26" y1="-1.049612" x2="3.26" y2="-0.04961199999999999"/><line x1="2.3799999999999994" y1="-1.049612" x2="3.3799999999999994" y2="-0.04961199999999999"/><line x1="2.4999999999999996" y1="-1.049612" x2="3.4999999999999996" y2="-0.04961199999999999"/><line x1="2.6199999999999997" y1="-1.049612" x2="3.6199999999999997" y2="-0.04961199999999999"/><line x1="2.7399999999999998" y1="-1.049612" x2="3.7399999999999998" y2="-0.04961199999999999"/><line x1="2.86" y1="-1.049612" x2="3.86" y2="-0.04961199999999999"/><line x1="2.9799999999999995" y1="-1.049612" x2="3.9799999999999995" y2="-0.04961199999999999"/><line x1="3.0999999999999996" y1="-1.049612" x2="4.1" y2="-0.04961199999999999"/><line x1="3.2199999999999998" y1="-1.049612" x2="4.22" y2="-0.04961199999999999"/></g>
+<polygon points="-1.300,-1.050 -0.600,-1.050 -0.600,-0.250 -1.300,-0.250" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.600,-1.050 1.300,-1.050 1.300,-0.250 0.600,-0.250" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.600,-1.050 0.600,-1.050 0.600,-0.550 -0.600,-0.550" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.300,-0.250 -0.600,-0.250 -0.600,0.200 -1.300,0.200" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.600,-0.250 1.300,-0.250 1.300,0.200 0.600,0.200" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.150,0.650 0.150,0.650 0.150,1.350 -0.150,1.350" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.600,-1.200 0.600,-1.200 0.600,-1.050 -0.600,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.500,-1.200 -0.600,-1.200 -0.850,-2.300 -0.750,-2.300" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.750,-2.300 0.850,-2.300 0.600,-1.200 0.500,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.450,-1.200 -1.650,-1.200 -1.650,-1.050 -2.450,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.350,-1.200 -2.450,-1.200 -2.570,-1.900 -2.470,-1.900" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.630,-1.900 -1.530,-1.900 -1.650,-1.200 -1.750,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.650,-1.200 2.450,-1.200 2.450,-1.050 1.650,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.750,-1.200 1.650,-1.200 1.530,-1.900 1.630,-1.900" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.470,-1.900 2.570,-1.900 2.450,-1.200 2.350,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.650,0.100 -2.450,0.100 -2.450,-0.050 -1.650,-0.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.630,0.800 -1.530,0.800 -1.650,0.100 -1.750,0.100" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.350,0.100 -2.450,0.100 -2.570,0.800 -2.470,0.800" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.450,0.100 1.650,0.100 1.650,-0.050 2.450,-0.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.470,0.800 2.570,0.800 2.450,0.100 2.350,0.100" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.750,0.100 1.650,0.100 1.530,0.800 1.630,0.800" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.300,-1.450 -0.750,-1.450 -0.750,-1.050 -1.300,-1.050" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.750,-1.450 1.300,-1.450 1.300,-1.050 0.750,-1.050" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.450,0.650 0.450,0.650 0.450,0.770 -0.450,0.770" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<circle cx="-1.2999999999999998" cy="-0.949612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-1.2999999999999998" cy="-0.349612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-0.6" cy="-0.799612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-0.95" cy="-0.24961199999999995" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-0.6" cy="-0.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-0.6" cy="-0.39961199999999997" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-0.1" cy="0.650388" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="1.2999999999999998" cy="-0.949612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="1.2999999999999998" cy="-0.349612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.6" cy="-0.799612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.95" cy="-0.24961199999999995" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.6" cy="-0.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.6" cy="-0.39961199999999997" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.1" cy="0.650388" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.0" cy="-0.549612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.0" cy="-1.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-2.05" cy="-1.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-2.05" cy="-0.04961199999999999" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="2.05" cy="-1.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="2.05" cy="-0.04961199999999999" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-1.25" cy="-1.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="1.25" cy="-1.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-0.7999999999999999" cy="-1.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.7999999999999999" cy="-1.049612" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="-0.25" cy="0.650388" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/>
+<circle cx="0.25" cy="0.650388" r="0.04" fill="#0b1430" stroke="#e8f0ff" stroke-width="0.014" opacity="0.9"/><line x1="0.0" y1="-0.9746119999999999" x2="0.0" y2="-0.152532" stroke="#7fd4ff" stroke-width="0.02" marker-end="url(#arr)" opacity="1"/>
+<line x1="-2.05" y1="-0.9746119999999999" x2="-2.05" y2="-0.658612" stroke="#7fd4ff" stroke-width="0.02" marker-end="url(#arr)" opacity="1"/>
+<line x1="2.05" y1="-0.9746119999999999" x2="2.05" y2="-0.658612" stroke="#7fd4ff" stroke-width="0.02" marker-end="url(#arr)" opacity="1"/>
+<line x1="-2.0499999480384687" y1="-0.12461199999999101" x2="-2.0499998385728437" y2="-0.440611999999972" stroke="#7fd4ff" stroke-width="0.02" marker-end="url(#arr)" opacity="1"/>
+<line x1="2.050000051961531" y1="-0.12461199999999101" x2="2.050000161427156" y2="-0.440611999999972" stroke="#7fd4ff" stroke-width="0.02" marker-end="url(#arr)" opacity="1"/></g><g transform="translate(366.0,371.7)"><circle r="11" fill="#0b1430" stroke="#fff" stroke-width="1.5"/><path d="M0,-11 A11,11 0 0 1 11,0 L0,0 Z M0,11 A11,11 0 0 1 -11,0 L0,0 Z" fill="#fff"/><line x1="-19" y1="0" x2="-13" y2="0" stroke="#fff"/><line x1="13" y1="0" x2="19" y2="0" stroke="#fff"/><line y1="-19" y2="-13" x1="0" x2="0" stroke="#fff"/><line y1="13" y2="19" x1="0" x2="0" stroke="#fff"/></g></svg>
+ <div class="stats"><div class="sh">PERFORMANCE <small>full tanks · full magazine</small></div><table><tr><th>Mass</th><td>61.2 kg</td><td class="d "></td></tr><tr><th>Width × height</th><td>5.2 × 3.6 m</td><td class="d "></td></tr><tr><th>Accel. forward</th><td>28.3 m/s²</td><td class="d "></td></tr><tr><th>Accel. reverse</th><td>4.2 m/s²</td><td class="d "></td></tr><tr><th>Turn</th><td>≈ 7 rad/s²</td><td class="d "></td></tr><tr><th>Thrust ÷ mass</th><td>Fwd 2.9 g</td><td class="d "></td></tr><tr><th>Full-burn time</th><td>— s</td><td class="d "></td></tr><tr><th>Joins</th><td>20 welds · 17 parts</td><td class="d "></td></tr></table></div><div class="tblock"><div><small>DRAWING</small><b>THRUST 1</b></div><div><small>SCALE</small><b>1 m = 100 px</b></div>
+ <div><small>REV</small><b>7</b></div><div><small>DESIGNER</small><b>MAMMOTH YARD</b></div></div><div class="zoom"><button>＋</button><div class="zl">100%</div><button>−</button></div>
+</main>
+<section class="panel right">
+  <header class="ph"><span class="phl">PROPERTIES</span><button class="ib sm" title="Collapse panel">⇥</button></header>
+  <div class="selhead"><div class="swatch" style="background:#ffd36a"></div><div><b>Main thruster</b><small>Engine · chemical H₂/O₂ · 3 parts, 2 welds</small></div></div>
+  <div class="tabs"><button class="on">SHAPE</button><button>FUEL</button><button>BUILD</button><button>LINKS</button></div>
+  <div class="fields"><div class="field">
+  <div class="fl"><label title="Drag the name left/right to scrub">Chamber width</label>
+   <div class="val"><span class="num">1.20</span><span class="unit">m</span></div></div>
+  <div class="sl"><button class="step" title="Smaller (−)">◀</button>
+      <div class="track"><div class="fill" style="width:46%"></div><div class="knob" style="left:46%"></div></div>
+      <button class="step" title="Larger (+)">▶</button></div>
+</div><div class="field">
+  <div class="fl"><label title="Drag the name left/right to scrub">Chamber length</label>
+   <div class="val"><span class="num">1.35</span><span class="unit">m</span></div></div>
+  <div class="sl"><button class="step" title="Smaller (−)">◀</button>
+      <div class="track"><div class="fill" style="width:50%"></div><div class="knob" style="left:50%"></div></div>
+      <button class="step" title="Larger (+)">▶</button></div>
+</div><div class="field changed">
+  <div class="fl"><label title="Drag the name left/right to scrub">Throat width</label><button class="reset" title="Back to default">↺</button>
+   <div class="val"><span class="num">1.00</span><span class="unit">m</span></div></div>
+  <div class="sl"><button class="step" title="Smaller (−)">◀</button>
+      <div class="track"><div class="fill" style="width:44%"></div><div class="knob" style="left:44%"></div></div>
+      <button class="step" title="Larger (+)">▶</button></div>
+</div><div class="field">
+  <div class="fl"><label title="Drag the name left/right to scrub">Wall thickness</label>
+   <div class="val"><span class="num">0.10</span><span class="unit">m</span></div></div>
+  <div class="sl"><button class="step" title="Smaller (−)">◀</button>
+      <div class="track"><div class="fill" style="width:20%"></div><div class="knob" style="left:20%"></div></div>
+      <button class="step" title="Larger (+)">▶</button></div>
+</div><div class="field">
+  <div class="fl"><label title="Drag the name left/right to scrub">Nozzle wall length</label>
+   <div class="val"><span class="num">1.10</span><span class="unit">m</span></div></div>
+  <div class="sl"><button class="step" title="Smaller (−)">◀</button>
+      <div class="track"><div class="fill" style="width:40%"></div><div class="knob" style="left:40%"></div></div>
+      <button class="step" title="Larger (+)">▶</button></div>
+</div><div class="field">
+  <div class="fl"><label title="Drag the name left/right to scrub">Nozzle flare</label>
+   <div class="val"><span class="num">12.8</span><span class="unit">°</span></div></div>
+  <div class="sl"><button class="step" title="Smaller (−)">◀</button>
+      <div class="track"><div class="fill" style="width:43%"></div><div class="knob" style="left:43%"></div></div>
+      <button class="step" title="Larger (+)">▶</button></div>
+</div></div>
+  <div class="derived"><div><small>THRUST (est.)</small><b>1.40 kN</b></div><div><small>MASS</small><b>3.00 kg</b></div><div><small>EXHAUST</small><b>≈ 190 m/s</b></div></div>
+  <div class="actions"><button>⧉ Duplicate</button><button>⇋ Mirror</button><button class="danger">🗑 Remove</button></div>
+</section><footer class="status">Blueprints</footer></div><div class="scrim"></div>
+<div class="drawer">
+ <header class="ph"><span class="phl">BLUEPRINTS</span><button class="ib sm" title="Close (Esc)">✕</button></header>
+ <div class="dtools"><button class="primary">＋ New blank</button><button>⧉ Duplicate</button><button>✎ Rename</button><button>⤓ Export</button><button>⤒ Import</button><button class="danger">🗑</button></div>
+ <div class="dfilter"><button class="on">All 6</button><button>Mine 1</button><button>Presets 5</button><input placeholder="Search…"></div>
+ <div class="dlist"><div class="dcard cur"><svg width="120" height="70"><g transform="translate(60.0,39.0) scale(11,-11)"><polygon points="-0.600,-0.550 0.600,-0.550 0.600,0.150 0.300,0.650 -0.300,0.650 -0.600,0.150" fill="#a9b4ff" fill-opacity="0.16" stroke="#a9b4ff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.800,-1.050 -1.300,-1.050 -1.300,-0.050 -2.800,-0.050" fill="#5d8cff" fill-opacity="0.16" stroke="#5d8cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<clipPath id="clip-tank-l"><rect x="-2.8" y="-1.049612" width="1.5" height="1"/></clipPath>
+<g clip-path="url(#clip-tank-l)" stroke="#5d8cff" stroke-width="0.008" opacity="0.55"><line x1="-3.4" y1="-1.049612" x2="-2.4" y2="-0.04961199999999999"/><line x1="-3.28" y1="-1.049612" x2="-2.28" y2="-0.04961199999999999"/><line x1="-3.1599999999999997" y1="-1.049612" x2="-2.1599999999999997" y2="-0.04961199999999999"/><line x1="-3.04" y1="-1.049612" x2="-2.04" y2="-0.04961199999999999"/><line x1="-2.92" y1="-1.049612" x2="-1.92" y2="-0.04961199999999999"/><line x1="-2.8" y1="-1.049612" x2="-1.7999999999999998" y2="-0.04961199999999999"/><line x1="-2.68" y1="-1.049612" x2="-1.6800000000000002" y2="-0.04961199999999999"/><line x1="-2.56" y1="-1.049612" x2="-1.56" y2="-0.04961199999999999"/><line x1="-2.44" y1="-1.049612" x2="-1.44" y2="-0.04961199999999999"/><line x1="-2.32" y1="-1.049612" x2="-1.3199999999999998" y2="-0.04961199999999999"/><line x1="-2.1999999999999997" y1="-1.049612" x2="-1.1999999999999997" y2="-0.04961199999999999"/><line x1="-2.08" y1="-1.049612" x2="-1.08" y2="-0.04961199999999999"/><line x1="-1.96" y1="-1.049612" x2="-0.9599999999999999" y2="-0.04961199999999999"/><line x1="-1.8399999999999999" y1="-1.049612" x2="-0.8399999999999997" y2="-0.04961199999999999"/><line x1="-1.7199999999999998" y1="-1.049612" x2="-0.7199999999999999" y2="-0.04961199999999999"/><line x1="-1.6" y1="-1.049612" x2="-0.6" y2="-0.04961199999999999"/><line x1="-1.48" y1="-1.049612" x2="-0.47999999999999987" y2="-0.04961199999999999"/><line x1="-1.3599999999999999" y1="-1.049612" x2="-0.35999999999999976" y2="-0.04961199999999999"/><line x1="-1.2399999999999998" y1="-1.049612" x2="-0.23999999999999966" y2="-0.04961199999999999"/><line x1="-1.12" y1="-1.049612" x2="-0.12" y2="-0.04961199999999999"/><line x1="-0.9999999999999999" y1="-1.049612" x2="1.1102230246251565e-16" y2="-0.04961199999999999"/><line x1="-0.8799999999999998" y1="-1.049612" x2="0.12000000000000022" y2="-0.04961199999999999"/></g>
+<polygon points="1.300,-1.050 2.800,-1.050 2.800,-0.050 1.300,-0.050" fill="#5d8cff" fill-opacity="0.16" stroke="#5d8cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<clipPath id="clip-tank-r"><rect x="1.2999999999999998" y="-1.049612" width="1.5" height="1"/></clipPath>
+<g clip-path="url(#clip-tank-r)" stroke="#5d8cff" stroke-width="0.008" opacity="0.55"><line x1="0.6999999999999998" y1="-1.049612" x2="1.6999999999999997" y2="-0.04961199999999999"/><line x1="0.82" y1="-1.049612" x2="1.8199999999999998" y2="-0.04961199999999999"/><line x1="0.9399999999999998" y1="-1.049612" x2="1.94" y2="-0.04961199999999999"/><line x1="1.0599999999999996" y1="-1.049612" x2="2.0599999999999996" y2="-0.04961199999999999"/><line x1="1.1799999999999997" y1="-1.049612" x2="2.1799999999999997" y2="-0.04961199999999999"/><line x1="1.2999999999999998" y1="-1.049612" x2="2.3" y2="-0.04961199999999999"/><line x1="1.4199999999999995" y1="-1.049612" x2="2.4199999999999995" y2="-0.04961199999999999"/><line x1="1.5399999999999996" y1="-1.049612" x2="2.5399999999999996" y2="-0.04961199999999999"/><line x1="1.6599999999999997" y1="-1.049612" x2="2.6599999999999997" y2="-0.04961199999999999"/><line x1="1.7799999999999998" y1="-1.049612" x2="2.78" y2="-0.04961199999999999"/><line x1="1.9" y1="-1.049612" x2="2.9" y2="-0.04961199999999999"/><line x1="2.0199999999999996" y1="-1.049612" x2="3.0199999999999996" y2="-0.04961199999999999"/><line x1="2.1399999999999997" y1="-1.049612" x2="3.1399999999999997" y2="-0.04961199999999999"/><line x1="2.26" y1="-1.049612" x2="3.26" y2="-0.04961199999999999"/><line x1="2.3799999999999994" y1="-1.049612" x2="3.3799999999999994" y2="-0.04961199999999999"/><line x1="2.4999999999999996" y1="-1.049612" x2="3.4999999999999996" y2="-0.04961199999999999"/><line x1="2.6199999999999997" y1="-1.049612" x2="3.6199999999999997" y2="-0.04961199999999999"/><line x1="2.7399999999999998" y1="-1.049612" x2="3.7399999999999998" y2="-0.04961199999999999"/><line x1="2.86" y1="-1.049612" x2="3.86" y2="-0.04961199999999999"/><line x1="2.9799999999999995" y1="-1.049612" x2="3.9799999999999995" y2="-0.04961199999999999"/><line x1="3.0999999999999996" y1="-1.049612" x2="4.1" y2="-0.04961199999999999"/><line x1="3.2199999999999998" y1="-1.049612" x2="4.22" y2="-0.04961199999999999"/></g>
+<polygon points="-1.300,-1.050 -0.600,-1.050 -0.600,-0.250 -1.300,-0.250" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.600,-1.050 1.300,-1.050 1.300,-0.250 0.600,-0.250" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.600,-1.050 0.600,-1.050 0.600,-0.550 -0.600,-0.550" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.300,-0.250 -0.600,-0.250 -0.600,0.200 -1.300,0.200" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.600,-0.250 1.300,-0.250 1.300,0.200 0.600,0.200" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.150,0.650 0.150,0.650 0.150,1.350 -0.150,1.350" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.600,-1.200 0.600,-1.200 0.600,-1.050 -0.600,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.500,-1.200 -0.600,-1.200 -0.850,-2.300 -0.750,-2.300" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.750,-2.300 0.850,-2.300 0.600,-1.200 0.500,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.450,-1.200 -1.650,-1.200 -1.650,-1.050 -2.450,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.350,-1.200 -2.450,-1.200 -2.570,-1.900 -2.470,-1.900" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.630,-1.900 -1.530,-1.900 -1.650,-1.200 -1.750,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.650,-1.200 2.450,-1.200 2.450,-1.050 1.650,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.750,-1.200 1.650,-1.200 1.530,-1.900 1.630,-1.900" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.470,-1.900 2.570,-1.900 2.450,-1.200 2.350,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.650,0.100 -2.450,0.100 -2.450,-0.050 -1.650,-0.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.630,0.800 -1.530,0.800 -1.650,0.100 -1.750,0.100" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.350,0.100 -2.450,0.100 -2.570,0.800 -2.470,0.800" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.450,0.100 1.650,0.100 1.650,-0.050 2.450,-0.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.470,0.800 2.570,0.800 2.450,0.100 2.350,0.100" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.750,0.100 1.650,0.100 1.530,0.800 1.630,0.800" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.300,-1.450 -0.750,-1.450 -0.750,-1.050 -1.300,-1.050" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.750,-1.450 1.300,-1.450 1.300,-1.050 0.750,-1.050" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.450,0.650 0.450,0.650 0.450,0.770 -0.450,0.770" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/></g></svg><div class="dt"><b>THRUST 1</b><small>🔒 Preset</small><small>61.2 kg · 28.3 m/s² · 5 engines</small></div></div><div class="dcard"><svg width="120" height="70"><g transform="translate(60.0,39.0) scale(11,-11)"><polygon points="-0.600,-0.550 0.600,-0.550 0.600,0.150 0.300,0.650 -0.300,0.650 -0.600,0.150" fill="#a9b4ff" fill-opacity="0.16" stroke="#a9b4ff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.800,-1.050 -1.300,-1.050 -1.300,-0.050 -2.800,-0.050" fill="#5d8cff" fill-opacity="0.16" stroke="#5d8cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<clipPath id="clip-tank-l"><rect x="-2.8" y="-1.049612" width="1.5" height="1"/></clipPath>
+<g clip-path="url(#clip-tank-l)" stroke="#5d8cff" stroke-width="0.008" opacity="0.55"><line x1="-3.4" y1="-1.049612" x2="-2.4" y2="-0.04961199999999999"/><line x1="-3.28" y1="-1.049612" x2="-2.28" y2="-0.04961199999999999"/><line x1="-3.1599999999999997" y1="-1.049612" x2="-2.1599999999999997" y2="-0.04961199999999999"/><line x1="-3.04" y1="-1.049612" x2="-2.04" y2="-0.04961199999999999"/><line x1="-2.92" y1="-1.049612" x2="-1.92" y2="-0.04961199999999999"/><line x1="-2.8" y1="-1.049612" x2="-1.7999999999999998" y2="-0.04961199999999999"/><line x1="-2.68" y1="-1.049612" x2="-1.6800000000000002" y2="-0.04961199999999999"/><line x1="-2.56" y1="-1.049612" x2="-1.56" y2="-0.04961199999999999"/><line x1="-2.44" y1="-1.049612" x2="-1.44" y2="-0.04961199999999999"/><line x1="-2.32" y1="-1.049612" x2="-1.3199999999999998" y2="-0.04961199999999999"/><line x1="-2.1999999999999997" y1="-1.049612" x2="-1.1999999999999997" y2="-0.04961199999999999"/><line x1="-2.08" y1="-1.049612" x2="-1.08" y2="-0.04961199999999999"/><line x1="-1.96" y1="-1.049612" x2="-0.9599999999999999" y2="-0.04961199999999999"/><line x1="-1.8399999999999999" y1="-1.049612" x2="-0.8399999999999997" y2="-0.04961199999999999"/><line x1="-1.7199999999999998" y1="-1.049612" x2="-0.7199999999999999" y2="-0.04961199999999999"/><line x1="-1.6" y1="-1.049612" x2="-0.6" y2="-0.04961199999999999"/><line x1="-1.48" y1="-1.049612" x2="-0.47999999999999987" y2="-0.04961199999999999"/><line x1="-1.3599999999999999" y1="-1.049612" x2="-0.35999999999999976" y2="-0.04961199999999999"/><line x1="-1.2399999999999998" y1="-1.049612" x2="-0.23999999999999966" y2="-0.04961199999999999"/><line x1="-1.12" y1="-1.049612" x2="-0.12" y2="-0.04961199999999999"/><line x1="-0.9999999999999999" y1="-1.049612" x2="1.1102230246251565e-16" y2="-0.04961199999999999"/><line x1="-0.8799999999999998" y1="-1.049612" x2="0.12000000000000022" y2="-0.04961199999999999"/></g>
+<polygon points="1.300,-1.050 2.800,-1.050 2.800,-0.050 1.300,-0.050" fill="#5d8cff" fill-opacity="0.16" stroke="#5d8cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<clipPath id="clip-tank-r"><rect x="1.2999999999999998" y="-1.049612" width="1.5" height="1"/></clipPath>
+<g clip-path="url(#clip-tank-r)" stroke="#5d8cff" stroke-width="0.008" opacity="0.55"><line x1="0.6999999999999998" y1="-1.049612" x2="1.6999999999999997" y2="-0.04961199999999999"/><line x1="0.82" y1="-1.049612" x2="1.8199999999999998" y2="-0.04961199999999999"/><line x1="0.9399999999999998" y1="-1.049612" x2="1.94" y2="-0.04961199999999999"/><line x1="1.0599999999999996" y1="-1.049612" x2="2.0599999999999996" y2="-0.04961199999999999"/><line x1="1.1799999999999997" y1="-1.049612" x2="2.1799999999999997" y2="-0.04961199999999999"/><line x1="1.2999999999999998" y1="-1.049612" x2="2.3" y2="-0.04961199999999999"/><line x1="1.4199999999999995" y1="-1.049612" x2="2.4199999999999995" y2="-0.04961199999999999"/><line x1="1.5399999999999996" y1="-1.049612" x2="2.5399999999999996" y2="-0.04961199999999999"/><line x1="1.6599999999999997" y1="-1.049612" x2="2.6599999999999997" y2="-0.04961199999999999"/><line x1="1.7799999999999998" y1="-1.049612" x2="2.78" y2="-0.04961199999999999"/><line x1="1.9" y1="-1.049612" x2="2.9" y2="-0.04961199999999999"/><line x1="2.0199999999999996" y1="-1.049612" x2="3.0199999999999996" y2="-0.04961199999999999"/><line x1="2.1399999999999997" y1="-1.049612" x2="3.1399999999999997" y2="-0.04961199999999999"/><line x1="2.26" y1="-1.049612" x2="3.26" y2="-0.04961199999999999"/><line x1="2.3799999999999994" y1="-1.049612" x2="3.3799999999999994" y2="-0.04961199999999999"/><line x1="2.4999999999999996" y1="-1.049612" x2="3.4999999999999996" y2="-0.04961199999999999"/><line x1="2.6199999999999997" y1="-1.049612" x2="3.6199999999999997" y2="-0.04961199999999999"/><line x1="2.7399999999999998" y1="-1.049612" x2="3.7399999999999998" y2="-0.04961199999999999"/><line x1="2.86" y1="-1.049612" x2="3.86" y2="-0.04961199999999999"/><line x1="2.9799999999999995" y1="-1.049612" x2="3.9799999999999995" y2="-0.04961199999999999"/><line x1="3.0999999999999996" y1="-1.049612" x2="4.1" y2="-0.04961199999999999"/><line x1="3.2199999999999998" y1="-1.049612" x2="4.22" y2="-0.04961199999999999"/></g>
+<polygon points="-1.300,-1.050 -0.600,-1.050 -0.600,-0.250 -1.300,-0.250" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.600,-1.050 1.300,-1.050 1.300,-0.250 0.600,-0.250" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.600,-1.050 0.600,-1.050 0.600,-0.550 -0.600,-0.550" fill="#3fd0c0" fill-opacity="0.16" stroke="#3fd0c0" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.300,-0.250 -0.600,-0.250 -0.600,0.200 -1.300,0.200" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.600,-0.250 1.300,-0.250 1.300,0.200 0.600,0.200" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.150,0.650 0.150,0.650 0.150,1.350 -0.150,1.350" fill="#d58cff" fill-opacity="0.16" stroke="#d58cff" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.600,-1.200 0.600,-1.200 0.600,-1.050 -0.600,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.500,-1.200 -0.600,-1.200 -0.850,-2.300 -0.750,-2.300" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.750,-2.300 0.850,-2.300 0.600,-1.200 0.500,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.450,-1.200 -1.650,-1.200 -1.650,-1.050 -2.450,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.350,-1.200 -2.450,-1.200 -2.570,-1.900 -2.470,-1.900" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.630,-1.900 -1.530,-1.900 -1.650,-1.200 -1.750,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.650,-1.200 2.450,-1.200 2.450,-1.050 1.650,-1.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.750,-1.200 1.650,-1.200 1.530,-1.900 1.630,-1.900" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.470,-1.900 2.570,-1.900 2.450,-1.200 2.350,-1.200" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.650,0.100 -2.450,0.100 -2.450,-0.050 -1.650,-0.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.630,0.800 -1.530,0.800 -1.650,0.100 -1.750,0.100" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-2.350,0.100 -2.450,0.100 -2.570,0.800 -2.470,0.800" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.450,0.100 1.650,0.100 1.650,-0.050 2.450,-0.050" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="2.470,0.800 2.570,0.800 2.450,0.100 2.350,0.100" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="1.750,0.100 1.650,0.100 1.530,0.800 1.630,0.800" fill="#ffd36a" fill-opacity="0.16" stroke="#ffd36a" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-1.300,-1.450 -0.750,-1.450 -0.750,-1.050 -1.300,-1.050" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="0.750,-1.450 1.300,-1.450 1.300,-1.050 0.750,-1.050" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/>
+<polygon points="-0.450,0.650 0.450,0.650 0.450,0.770 -0.450,0.770" fill="#ff9f6b" fill-opacity="0.16" stroke="#ff9f6b" stroke-width="0.014" opacity="1" stroke-linejoin="round"/></g></svg><div class="dt"><b>THRUST 1 COPY</b><small>Edited 2 min ago</small><small>67.3 kg · 25.7 m/s² · 5 engines</small></div></div><div class="dcard"><div class=nothumb>preview</div><div class="dt"><b>ASTEROIDS SHIP</b><small>🔒 Preset</small><small>≈ 59 kg · 3 engines fwd</small></div></div><div class="dcard"><div class=nothumb>preview</div><div class="dt"><b>LANDER</b><small>🔒 Preset</small><small>25.8 kg · 6.3 m/s² · 2 engines</small></div></div><div class="dcard"><div class=nothumb>preview</div><div class="dt"><b>GUNSHIP 3</b><small>🔒 Preset</small><small>90.8 kg · 12.8 m/s² · 2 engines</small></div></div><div class="dcard"><div class=nothumb>preview</div><div class="dt"><b>MAMMOTH</b><small>🔒 Preset</small><small>279 kg · 6.4 m/s² · 4 engines</small></div></div></div>
+ <footer class="pf">Presets can't be changed: editing one makes a copy · Saved in this browser · Export for a file</footer>
+</div></div></body></html>
