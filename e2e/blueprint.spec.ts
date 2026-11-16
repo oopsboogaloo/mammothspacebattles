@@ -402,3 +402,66 @@ test("BPD-037 click the blueprint's name to rename it; a preset is renamed as yo
   await page.reload();
   await expect(page.getByTestId("drawing-name")).toHaveText("HORNET");
 });
+
+test("BPD-038 the Mastodon Gun Ship flies in Try it on its double engines, and Action A fires its four railguns from the magazines", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("open-drawer").click();
+  await page.getByTestId("design-MASTODON GUN SHIP").click();
+  await expect(page.getByTestId("drawing-name")).toHaveText("MASTODON GUN SHIP");
+  await page.getByRole("tab", { name: "FR" }).click();
+  await expect(page.getByTestId("card-triangle")).toBeVisible();
+  await page.getByTestId("try-it").click();
+  const world = () =>
+    page.evaluate(() => {
+      const w = (window as unknown as { __msb: { sandbox: () => { world: { time: number; bodies: { id: string; position: { y: number }; ammo?: { count: number } }[] } } | null } }).__msb.sandbox()?.world;
+      return { t: w?.time ?? 0, y: w?.bodies.find((b) => b.id === "hull")?.position.y ?? 0, shells: (w?.bodies ?? []).filter((b) => b.ammo).reduce((s, b) => s + b.ammo!.count, 0) };
+    });
+  await expect.poll(async () => (await world()).t, { timeout: 30_000 }).toBeGreaterThan(0.05);
+  const y0 = (await world()).y;
+  await page.keyboard.down("ArrowUp");
+  await expect.poll(async () => (await world()).y - y0, { timeout: 60_000, intervals: [50] }).toBeGreaterThan(1);
+  await page.keyboard.up("ArrowUp");
+  const before = (await world()).shells;
+  await page.keyboard.down("Space");
+  await expect.poll(async () => before - (await world()).shells, { timeout: 60_000 }).toBeGreaterThanOrEqual(8);
+  await page.keyboard.up("Space");
+});
+
+test("BPD-041 BPD-042 drag the round handle to turn a part in 15° steps, and a corner to resize it", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("open-drawer").click();
+  await page.getByRole("button", { name: "＋ New blank" }).click();
+  await page.getByRole("tab", { name: "TA" }).click();
+  await page.getByRole("button", { name: "Add Propellant tank", exact: true }).click();
+  const part = () => page.evaluate(() => (window as unknown as { __msb: { blueprint: () => { ship: { bodies: { id: string; angle: number; position: { x: number; y: number }; shape: { width?: number; height?: number } }[] } } } }).__msb.blueprint().ship.bodies[0]);
+  const centre = async (id: string) => {
+    const b = await page.getByTestId(id).boundingBox();
+    return { x: b!.x + b!.width / 2, y: b!.y + b!.height / 2 };
+  };
+  // Turn: the knob is straight above the part; drag it round to the left, a quarter turn.
+  const knob = await centre("rotate-handle");
+  const mid = await centre("part-tank");
+  const r = mid.y - knob.y;
+  await page.mouse.move(knob.x, knob.y);
+  await page.mouse.down();
+  for (const a of [20, 45, 70, 89]) await page.mouse.move(mid.x - r * Math.sin((a * Math.PI) / 180), mid.y - r * Math.cos((a * Math.PI) / 180), { steps: 3 });
+  await page.mouse.up();
+  await expect.poll(async () => Math.round(((await part()).angle * 180) / Math.PI)).toBe(90);
+  // One undo step for the whole turn.
+  await page.keyboard.press("Control+z");
+  await expect.poll(async () => (await part()).angle).toBe(0);
+  // Resize: drag the top-right corner out 0.5 m each way; the bottom-left corner stays.
+  const before = await part();
+  const corner = await centre("resize-1-1");
+  const zoom = await page.evaluate(() => Number(document.querySelector(".zl")?.textContent?.match(/\d+/)?.[0] ?? 0));
+  const px = zoom || 80;
+  await page.mouse.move(corner.x, corner.y);
+  await page.mouse.down();
+  await page.mouse.move(corner.x + 0.5 * px, corner.y - 0.5 * px, { steps: 6 });
+  await page.mouse.up();
+  const after = await part();
+  expect(after.shape.width).toBeGreaterThan(before.shape.width!);
+  expect(after.shape.height).toBeGreaterThan(before.shape.height!);
+  expect(after.position.x - after.shape.width! / 2).toBeCloseTo(before.position.x - before.shape.width! / 2, 5);
+  expect(after.position.y - after.shape.height! / 2).toBeCloseTo(before.position.y - before.shape.height! / 2, 5);
+});
