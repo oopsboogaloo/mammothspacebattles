@@ -1,0 +1,573 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1844.5582" viewBox="0 0 1600 1844.5582" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e0662b"/></marker>
+<style>
+.title{font-size:28px;font-weight:700;text-anchor:middle;fill:#111}
+.subtitle{font-size:15px;text-anchor:middle;fill:#222}
+.note{font-size:12.5px;text-anchor:middle;fill:#555}
+.note.l{text-anchor:start}
+.h2{font-size:18px;font-weight:700;fill:#111}
+.grid{stroke:#eef1f4;stroke-width:1}
+.grid1{stroke:#dde2e8;stroke-width:1}
+.axis0{stroke:#c0c7d0;stroke-width:1;stroke-dasharray:4 3}
+.axis{font-size:11px;fill:#8a94a0;text-anchor:middle}
+.lead{fill:none;stroke:#8a94a0;stroke-width:0.9}
+.badge{font-size:11px;font-weight:700;text-anchor:middle;fill:#111}
+.lbl{font-size:13.5px;font-weight:600;fill:#111}
+.sub{font-size:12.5px;fill:#333}
+.weld{fill:#111;stroke:#fff;stroke-width:1}
+.weld2{fill:#c0392b;stroke:#fff;stroke-width:1}
+.exh{stroke:#e0662b;stroke-width:2.2}
+.bore{stroke:#e0662b;stroke-width:2.2;stroke-dasharray:4 2}
+.beam{fill:#c58be0;fill-opacity:0.18;stroke:#9b59b6;stroke-dasharray:5 3}
+.th{font-size:12.5px;font-weight:700;fill:#111}
+.td{font-size:12.5px;fill:#222}
+.td.num{text-anchor:end}
+.b{font-weight:700}
+.id{fill:#888;font-size:11px}
+</style>
+</defs>
+<rect width="100%" height="100%" fill="#fff"/>
+<text class="title" x="800" y="46">Mammoth Thrust — the player's ship, to scale</text>
+<text class="subtitle" x="800" y="74">27 parts · 36 welds · 33.1 kg dry · 61.2 kg at launch (8.1 kg propellant, 20.0 kg slugs) · overall 5.60 m × 3.65 m</text>
+<text class="note" x="800" y="98">Geometry and masses read from the ship template in scenarios/thrust-1.json (identical in all Thrust levels), built by scripts/asteroidShip.ts with Thrust's tuning in scripts/thrust.ts.</text>
+<text class="note" x="800" y="116">Origin = cockpit centroid; +y = forward (nose up). Sizes are each part's bounding box, width × height.</text>
+<line class="grid" x1="275" y1="892.5582" x2="275" y2="142.55820000000006"/>
+<line class="grid1" x1="350" y1="892.5582" x2="350" y2="142.55820000000006"/>
+<line class="grid" x1="425" y1="892.5582" x2="425" y2="142.55820000000006"/>
+<line class="grid1" x1="500" y1="892.5582" x2="500" y2="142.55820000000006"/>
+<line class="grid" x1="575" y1="892.5582" x2="575" y2="142.55820000000006"/>
+<line class="grid1" x1="650" y1="892.5582" x2="650" y2="142.55820000000006"/>
+<line class="grid" x1="725" y1="892.5582" x2="725" y2="142.55820000000006"/>
+<line class="grid1" x1="800" y1="892.5582" x2="800" y2="142.55820000000006"/>
+<line class="grid" x1="875" y1="892.5582" x2="875" y2="142.55820000000006"/>
+<line class="grid1" x1="950" y1="892.5582" x2="950" y2="142.55820000000006"/>
+<line class="grid" x1="1025" y1="892.5582" x2="1025" y2="142.55820000000006"/>
+<line class="grid1" x1="1100" y1="892.5582" x2="1100" y2="142.55820000000006"/>
+<line class="grid" x1="1175" y1="892.5582" x2="1175" y2="142.55820000000006"/>
+<line class="grid1" x1="1250" y1="892.5582" x2="1250" y2="142.55820000000006"/>
+<line class="grid" x1="1325" y1="892.5582" x2="1325" y2="142.55820000000006"/>
+<line class="grid1" x1="275" y1="892.5582" x2="1325" y2="892.5582"/>
+<line class="grid" x1="275" y1="817.5582" x2="1325" y2="817.5582"/>
+<line class="grid1" x1="275" y1="742.5582" x2="1325" y2="742.5582"/>
+<line class="grid" x1="275" y1="667.5582" x2="1325" y2="667.5582"/>
+<line class="grid1" x1="275" y1="592.5582" x2="1325" y2="592.5582"/>
+<line class="grid" x1="275" y1="517.5582" x2="1325" y2="517.5582"/>
+<line class="grid1" x1="275" y1="442.55820000000006" x2="1325" y2="442.55820000000006"/>
+<line class="grid" x1="275" y1="367.55820000000006" x2="1325" y2="367.55820000000006"/>
+<line class="grid1" x1="275" y1="292.55820000000006" x2="1325" y2="292.55820000000006"/>
+<line class="grid" x1="275" y1="217.55820000000006" x2="1325" y2="217.55820000000006"/>
+<line class="grid1" x1="275" y1="142.55820000000006" x2="1325" y2="142.55820000000006"/>
+<text class="axis" x="350" y="906.5582">-3 m</text>
+<text class="axis" x="500" y="906.5582">-2 m</text>
+<text class="axis" x="650" y="906.5582">-1 m</text>
+<text class="axis" x="800" y="906.5582">0 m</text>
+<text class="axis" x="950" y="906.5582">1 m</text>
+<text class="axis" x="1100" y="906.5582">2 m</text>
+<text class="axis" x="1250" y="906.5582">3 m</text>
+<text class="axis" x="269" y="896.5582" text-anchor="end">-3</text>
+<text class="axis" x="269" y="746.5582" text-anchor="end">-2</text>
+<text class="axis" x="269" y="596.5582" text-anchor="end">-1</text>
+<text class="axis" x="269" y="446.55820000000006" text-anchor="end">0</text>
+<text class="axis" x="269" y="296.55820000000006" text-anchor="end">1</text>
+<text class="axis" x="269" y="146.55820000000006" text-anchor="end">2</text>
+<line class="axis0" x1="275" y1="442.55820000000006" x2="1325" y2="442.55820000000006"/><line class="axis0" x1="800" y1="892.5582" x2="800" y2="142.55820000000006"/>
+<path class="beam" d="M800.0,667.6 L763.8,802.6 L836.2,802.6 Z"/>
+<polygon points="380.0,600.0 605.0,600.0 605.0,450.0 380.0,450.0" fill="#ffd27a" stroke="#a6741a" stroke-width="1.4"><title>Fuel tank, left wing (p{n}-tank-l): 1.50 × 1.00 m, 6.05 kg</title></polygon>
+<polygon points="995.0,600.0 1220.0,600.0 1220.0,450.0 995.0,450.0" fill="#ffd27a" stroke="#a6741a" stroke-width="1.4"><title>Fuel tank, right wing (p{n}-tank-r): 1.50 × 1.00 m, 6.05 kg</title></polygon>
+<polygon points="605.0,600.0 710.0,600.0 710.0,480.0 605.0,480.0" fill="#a9e3b5" stroke="#2f7d43" stroke-width="1.4"><title>Generator, left (p{n}-gen-l): 0.70 × 0.80 m, 2 kg</title></polygon>
+<polygon points="890.0,600.0 995.0,600.0 995.0,480.0 890.0,480.0" fill="#a9e3b5" stroke="#2f7d43" stroke-width="1.4"><title>Generator, right (p{n}-gen-r): 0.70 × 0.80 m, 2 kg</title></polygon>
+<polygon points="605.0,480.0 710.0,480.0 710.0,412.5 605.0,412.5" fill="#f4a7a0" stroke="#a33a2f" stroke-width="1.4"><title>Magazine, left (1 kg charge) (p{n}-mag-l): 0.70 × 0.45 m, 3 kg</title></polygon>
+<polygon points="890.0,480.0 995.0,480.0 995.0,412.5 890.0,412.5" fill="#f4a7a0" stroke="#a33a2f" stroke-width="1.4"><title>Magazine, right (1 kg charge) (p{n}-mag-r): 0.70 × 0.45 m, 3 kg</title></polygon>
+<polygon points="710.0,600.0 890.0,600.0 890.0,525.0 710.0,525.0" fill="#a9e3b5" stroke="#2f7d43" stroke-width="1.4"><title>Battery (p{n}-battery): 1.20 × 0.50 m, 2 kg</title></polygon>
+<polygon points="710.0,525.0 890.0,525.0 890.0,420.0 845.0,345.0 755.0,345.0 710.0,420.0" fill="#cfd8e3" stroke="#4a5a6e" stroke-width="1.4"><title>Cockpit (hull) (p{n}-hull): 1.20 × 1.20 m, 6 kg</title></polygon>
+<polygon points="777.5,345.0 822.5,345.0 822.5,240.0 777.5,240.0" fill="#f4a7a0" stroke="#a33a2f" stroke-width="1.4"><title>Railgun + 120 slugs (p{n}-gun): 0.30 × 0.70 m, 21 kg</title></polygon>
+<polygon points="710.0,622.5 890.0,622.5 890.0,600.0 710.0,600.0" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Main thruster head (p{n}-main): 1.20 × 0.15 m, 1.5 kg</title></polygon>
+<polygon points="725.0,622.5 710.0,622.5 672.5,787.5 687.5,787.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Main nozzle wall, left (p{n}-main-wall-a): 0.35 × 1.10 m, 0.75 kg</title></polygon>
+<polygon points="912.5,787.5 927.5,787.5 890.0,622.5 875.0,622.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Main nozzle wall, right (p{n}-main-wall-b): 0.35 × 1.10 m, 0.75 kg</title></polygon>
+<polygon points="432.5,622.5 552.5,622.5 552.5,600.0 432.5,600.0" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Back thruster head, left (p{n}-back-l): 0.80 × 0.15 m, 0.6 kg</title></polygon>
+<polygon points="447.5,622.5 432.5,622.5 414.5,727.5 429.5,727.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Back left nozzle wall, outer (p{n}-back-l-wall-a): 0.22 × 0.70 m, 0.3 kg</title></polygon>
+<polygon points="555.5,727.5 570.5,727.5 552.5,622.5 537.5,622.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Back left nozzle wall, inner (p{n}-back-l-wall-b): 0.22 × 0.70 m, 0.3 kg</title></polygon>
+<polygon points="552.5,427.5 432.5,427.5 432.5,450.0 552.5,450.0" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Front thruster head, left (p{n}-front-l): 0.80 × 0.15 m, 0.6 kg</title></polygon>
+<polygon points="555.5,322.5 570.5,322.5 552.5,427.5 537.5,427.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Front left nozzle wall, inner (p{n}-front-l-wall-a): 0.22 × 0.70 m, 0.3 kg</title></polygon>
+<polygon points="447.5,427.5 432.5,427.5 414.5,322.5 429.5,322.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Front left nozzle wall, outer (p{n}-front-l-wall-b): 0.22 × 0.70 m, 0.3 kg</title></polygon>
+<polygon points="1047.5,622.5 1167.5,622.5 1167.5,600.0 1047.5,600.0" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Back thruster head, right (p{n}-back-r): 0.80 × 0.15 m, 0.6 kg</title></polygon>
+<polygon points="1062.5,622.5 1047.5,622.5 1029.5,727.5 1044.5,727.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Back right nozzle wall, inner (p{n}-back-r-wall-a): 0.22 × 0.70 m, 0.3 kg</title></polygon>
+<polygon points="1170.5,727.5 1185.5,727.5 1167.5,622.5 1152.5,622.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Back right nozzle wall, outer (p{n}-back-r-wall-b): 0.22 × 0.70 m, 0.3 kg</title></polygon>
+<polygon points="1167.5,427.5 1047.5,427.5 1047.5,450.0 1167.5,450.0" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Front thruster head, right (p{n}-front-r): 0.80 × 0.15 m, 0.6 kg</title></polygon>
+<polygon points="1170.5,322.5 1185.5,322.5 1167.5,427.5 1152.5,427.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Front right nozzle wall, outer (p{n}-front-r-wall-a): 0.22 × 0.70 m, 0.3 kg</title></polygon>
+<polygon points="1062.5,427.5 1047.5,427.5 1029.5,322.5 1044.5,322.5" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.4"><title>Front right nozzle wall, inner (p{n}-front-r-wall-b): 0.22 × 0.70 m, 0.3 kg</title></polygon>
+<polygon points="605.0,660.0 687.5,660.0 687.5,600.0 605.0,600.0" fill="#e2b8f2" stroke="#7b3a99" stroke-width="1.4"><title>Tractor unit (p{n}-tractor): 0.55 × 0.40 m, 1 kg</title></polygon>
+<polygon points="912.5,660.0 995.0,660.0 995.0,600.0 912.5,600.0" fill="#e2b8f2" stroke="#7b3a99" stroke-width="1.4"><title>Tether unit (p{n}-tether): 0.55 × 0.40 m, 1 kg</title></polygon>
+<polygon points="732.5,345.0 867.5,345.0 867.5,327.0 732.5,327.0" fill="#e2b8f2" stroke="#7b3a99" stroke-width="1.4"><title>Shield generator collar (p{n}-shield): 0.90 × 0.12 m, 0.3 kg</title></polygon>
+<line class="exh" x1="800" y1="633.75" x2="800" y2="746.25" marker-end="url(#arr)"/>
+<line class="exh" x1="492.5" y1="633.75" x2="492.5" y2="701.25" marker-end="url(#arr)"/>
+<line class="exh" x1="492.49999220577035" y1="416.2500000000014" x2="492.4999688230815" y2="348.75000000000546" marker-end="url(#arr)"/>
+<line class="exh" x1="1107.5" y1="633.75" x2="1107.5" y2="701.25" marker-end="url(#arr)"/>
+<line class="exh" x1="1107.4999922057702" y1="416.2500000000014" x2="1107.4999688230814" y2="348.75000000000546" marker-end="url(#arr)"/>
+<line class="bore" x1="800" y1="240.00000000000003" x2="800" y2="187.50000000000003" marker-end="url(#arr)"/>
+<circle class="weld" cx="605.0" cy="585.0" r="3"><title>w-tank-gen-l-a</title></circle>
+<circle class="weld" cx="605.0" cy="495.0" r="3"><title>w-tank-gen-l-b</title></circle>
+<circle class="weld" cx="710.0" cy="562.5" r="3"><title>w-gen-battery-l</title></circle>
+<circle class="weld" cx="657.5" cy="480.0" r="3"><title>w-gen-mag-l</title></circle>
+<circle class="weld" cx="710.0" cy="450.0" r="3"><title>w-mag-hull-l</title></circle>
+<circle class="weld" cx="710.0" cy="502.5" r="3"><title>w-gen-hull-l</title></circle>
+<circle class="weld2" cx="785.0" cy="345.0" r="3.6"><title>w-gun-l</title></circle>
+<circle class="weld" cx="995.0" cy="585.0" r="3"><title>w-tank-gen-r-a</title></circle>
+<circle class="weld" cx="995.0" cy="495.0" r="3"><title>w-tank-gen-r-b</title></circle>
+<circle class="weld" cx="890.0" cy="562.5" r="3"><title>w-gen-battery-r</title></circle>
+<circle class="weld" cx="942.5" cy="480.0" r="3"><title>w-gen-mag-r</title></circle>
+<circle class="weld" cx="890.0" cy="450.0" r="3"><title>w-mag-hull-r</title></circle>
+<circle class="weld" cx="890.0" cy="502.5" r="3"><title>w-gen-hull-r</title></circle>
+<circle class="weld2" cx="815.0" cy="345.0" r="3.6"><title>w-gun-r</title></circle>
+<circle class="weld" cx="800.0" cy="525.0" r="3"><title>w-battery-hull</title></circle>
+<circle class="weld" cx="717.5" cy="622.5" r="3"><title>w-main-wall-a</title></circle>
+<circle class="weld" cx="882.5" cy="622.5" r="3"><title>w-main-wall-b</title></circle>
+<circle class="weld" cx="800.0" cy="600.0" r="3"><title>w-battery-main</title></circle>
+<circle class="weld" cx="440.0" cy="622.5" r="3"><title>w-back-l-wall-a</title></circle>
+<circle class="weld" cx="545.0" cy="622.5" r="3"><title>w-back-l-wall-b</title></circle>
+<circle class="weld" cx="492.5" cy="600.0" r="3"><title>w-tank-l-back-l</title></circle>
+<circle class="weld" cx="545.0" cy="427.5" r="3"><title>w-front-l-wall-a</title></circle>
+<circle class="weld" cx="440.0" cy="427.5" r="3"><title>w-front-l-wall-b</title></circle>
+<circle class="weld" cx="492.5" cy="450.0" r="3"><title>w-tank-l-front-l</title></circle>
+<circle class="weld" cx="1055.0" cy="622.5" r="3"><title>w-back-r-wall-a</title></circle>
+<circle class="weld" cx="1160.0" cy="622.5" r="3"><title>w-back-r-wall-b</title></circle>
+<circle class="weld" cx="1107.5" cy="600.0" r="3"><title>w-tank-r-back-r</title></circle>
+<circle class="weld" cx="1160.0" cy="427.5" r="3"><title>w-front-r-wall-a</title></circle>
+<circle class="weld" cx="1055.0" cy="427.5" r="3"><title>w-front-r-wall-b</title></circle>
+<circle class="weld" cx="1107.5" cy="450.0" r="3"><title>w-tank-r-front-r</title></circle>
+<circle class="weld" cx="612.5" cy="600.0" r="3"><title>w-tractor-gen-a</title></circle>
+<circle class="weld" cx="987.5" cy="600.0" r="3"><title>w-tether-gen-a</title></circle>
+<circle class="weld" cx="680.0" cy="600.0" r="3"><title>w-tractor-gen-b</title></circle>
+<circle class="weld" cx="920.0" cy="600.0" r="3"><title>w-tether-gen-b</title></circle>
+<circle class="weld" cx="762.5" cy="345.0" r="3"><title>w-shield-a</title></circle>
+<circle class="weld" cx="837.5" cy="345.0" r="3"><title>w-shield-b</title></circle>
+<g transform="translate(800.0,440.7)"><circle r="9" fill="#fff" stroke="#111" stroke-width="1.5"/><path d="M0,-9 A9,9 0 0 1 9,0 L0,0 Z M0,9 A9,9 0 0 1 -9,0 L0,0 Z" fill="#111"/></g>
+<path d="M794,442.55820000000006 h12 M800,436.55820000000006 v12" stroke="#d00" stroke-width="2"/>
+<polyline class="lead" points="800.0,270.0 330,221.7 300,221.7"/>
+<circle cx="800.0" cy="270.0" r="2.6" fill="#a33a2f"/>
+<circle cx="41" cy="215.7" r="11" fill="#f4a7a0" stroke="#a33a2f" stroke-width="1.5"/><text class="badge" x="41" y="219.7">1</text>
+<text class="lbl" x="60" y="213.7" text-anchor="start">Railgun + 120 slugs</text>
+<text class="sub" x="60" y="229.7" text-anchor="start">0.30 × 0.70 m · 21 kg (1 dry)</text>
+<polyline class="lead" points="431.0,375.0 330,267.7 300,267.7"/>
+<circle cx="431.0" cy="375.0" r="2.6" fill="#3b46a8"/>
+<circle cx="41" cy="261.7" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="41" y="265.7">3</text>
+<text class="lbl" x="60" y="259.7" text-anchor="start">Front left nozzle wall, outer</text>
+<text class="sub" x="60" y="275.7" text-anchor="start">0.22 × 0.70 m · 0.3 kg</text>
+<polyline class="lead" points="554.0,375.0 330,313.7 300,313.7"/>
+<circle cx="554.0" cy="375.0" r="2.6" fill="#3b46a8"/>
+<circle cx="41" cy="307.7" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="41" y="311.7">4</text>
+<text class="lbl" x="60" y="305.7" text-anchor="start">Front left nozzle wall, inner</text>
+<text class="sub" x="60" y="321.7" text-anchor="start">0.22 × 0.70 m · 0.3 kg</text>
+<polyline class="lead" points="492.5,438.8 330,359.7 300,359.7"/>
+<circle cx="492.5" cy="438.8" r="2.6" fill="#3b46a8"/>
+<circle cx="41" cy="353.7" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="41" y="357.7">7</text>
+<text class="lbl" x="60" y="351.7" text-anchor="start">Front thruster head, left</text>
+<text class="sub" x="60" y="367.7" text-anchor="start">0.80 × 0.15 m · 0.6 kg</text>
+<polyline class="lead" points="762.5,412.6 330,405.7 300,405.7"/>
+<circle cx="762.5" cy="412.6" r="2.6" fill="#4a5a6e"/>
+<circle cx="41" cy="399.7" r="11" fill="#cfd8e3" stroke="#4a5a6e" stroke-width="1.5"/><text class="badge" x="41" y="403.7">9</text>
+<text class="lbl" x="60" y="397.7" text-anchor="start">Cockpit (hull)</text>
+<text class="sub" x="60" y="413.7" text-anchor="start">1.20 × 1.20 m · 6 kg</text>
+<polyline class="lead" points="657.5,446.3 330,451.7 300,451.7"/>
+<circle cx="657.5" cy="446.3" r="2.6" fill="#a33a2f"/>
+<circle cx="41" cy="445.7" r="11" fill="#f4a7a0" stroke="#a33a2f" stroke-width="1.5"/><text class="badge" x="41" y="449.7">10</text>
+<text class="lbl" x="60" y="443.7" text-anchor="start">Magazine, left (1 kg charge)</text>
+<text class="sub" x="60" y="459.7" text-anchor="start">0.70 × 0.45 m · 3 kg</text>
+<polyline class="lead" points="492.5,525.0 330,497.7 300,497.7"/>
+<circle cx="492.5" cy="525.0" r="2.6" fill="#a6741a"/>
+<circle cx="41" cy="491.7" r="11" fill="#ffd27a" stroke="#a6741a" stroke-width="1.5"/><text class="badge" x="41" y="495.7">12</text>
+<text class="lbl" x="60" y="489.7" text-anchor="start">Fuel tank, left wing</text>
+<text class="sub" x="60" y="505.7" text-anchor="start">1.50 × 1.00 m · 6.05 kg (2 dry)</text>
+<polyline class="lead" points="657.5,540.0 330,543.7 300,543.7"/>
+<circle cx="657.5" cy="540.0" r="2.6" fill="#2f7d43"/>
+<circle cx="41" cy="537.7" r="11" fill="#a9e3b5" stroke="#2f7d43" stroke-width="1.5"/><text class="badge" x="41" y="541.7">14</text>
+<text class="lbl" x="60" y="535.7" text-anchor="start">Generator, left</text>
+<text class="sub" x="60" y="551.7" text-anchor="start">0.70 × 0.80 m · 2 kg</text>
+<polyline class="lead" points="492.5,611.3 330,589.7 300,589.7"/>
+<circle cx="492.5" cy="611.3" r="2.6" fill="#3b46a8"/>
+<circle cx="41" cy="583.7" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="41" y="587.7">17</text>
+<text class="lbl" x="60" y="581.7" text-anchor="start">Back thruster head, left</text>
+<text class="sub" x="60" y="597.7" text-anchor="start">0.80 × 0.15 m · 0.6 kg</text>
+<polyline class="lead" points="747.5,611.3 330,635.7 300,635.7"/>
+<circle cx="747.5" cy="611.3" r="2.6" fill="#3b46a8"/>
+<circle cx="41" cy="629.7" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="41" y="633.7">18</text>
+<text class="lbl" x="60" y="627.7" text-anchor="start">Main thruster head</text>
+<text class="sub" x="60" y="643.7" text-anchor="start">1.20 × 0.15 m · 1.5 kg</text>
+<polyline class="lead" points="646.3,630.0 330,681.7 300,681.7"/>
+<circle cx="646.3" cy="630.0" r="2.6" fill="#7b3a99"/>
+<circle cx="41" cy="675.7" r="11" fill="#e2b8f2" stroke="#7b3a99" stroke-width="1.5"/><text class="badge" x="41" y="679.7">20</text>
+<text class="lbl" x="60" y="673.7" text-anchor="start">Tractor unit</text>
+<text class="sub" x="60" y="689.7" text-anchor="start">0.55 × 0.40 m · 1 kg</text>
+<polyline class="lead" points="431.0,675.0 330,727.7 300,727.7"/>
+<circle cx="431.0" cy="675.0" r="2.6" fill="#3b46a8"/>
+<circle cx="41" cy="721.7" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="41" y="725.7">22</text>
+<text class="lbl" x="60" y="719.7" text-anchor="start">Back left nozzle wall, outer</text>
+<text class="sub" x="60" y="735.7" text-anchor="start">0.22 × 0.70 m · 0.3 kg</text>
+<polyline class="lead" points="554.0,675.0 330,773.7 300,773.7"/>
+<circle cx="554.0" cy="675.0" r="2.6" fill="#3b46a8"/>
+<circle cx="41" cy="767.7" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="41" y="771.7">23</text>
+<text class="lbl" x="60" y="765.7" text-anchor="start">Back left nozzle wall, inner</text>
+<text class="sub" x="60" y="781.7" text-anchor="start">0.22 × 0.70 m · 0.3 kg</text>
+<polyline class="lead" points="698.8,705.0 330,819.7 300,819.7"/>
+<circle cx="698.8" cy="705.0" r="2.6" fill="#3b46a8"/>
+<circle cx="41" cy="813.7" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="41" y="817.7">26</text>
+<text class="lbl" x="60" y="811.7" text-anchor="start">Main nozzle wall, left</text>
+<text class="sub" x="60" y="827.7" text-anchor="start">0.35 × 1.10 m · 0.75 kg</text>
+<polyline class="lead" points="845.0,336.0 1270,254.4 1300,254.4"/>
+<circle cx="845.0" cy="336.0" r="2.6" fill="#7b3a99"/>
+<circle cx="1559" cy="248.4" r="11" fill="#e2b8f2" stroke="#7b3a99" stroke-width="1.5"/><text class="badge" x="1559" y="252.4">2</text>
+<text class="lbl" x="1540" y="246.4" text-anchor="end">Shield generator collar</text>
+<text class="sub" x="1540" y="262.4" text-anchor="end">0.90 × 0.12 m · 0.3 kg</text>
+<polyline class="lead" points="1046.0,375.0 1270,300.4 1300,300.4"/>
+<circle cx="1046.0" cy="375.0" r="2.6" fill="#3b46a8"/>
+<circle cx="1559" cy="294.4" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="1559" y="298.4">5</text>
+<text class="lbl" x="1540" y="292.4" text-anchor="end">Front right nozzle wall, inner</text>
+<text class="sub" x="1540" y="308.4" text-anchor="end">0.22 × 0.70 m · 0.3 kg</text>
+<polyline class="lead" points="1169.0,375.0 1270,346.4 1300,346.4"/>
+<circle cx="1169.0" cy="375.0" r="2.6" fill="#3b46a8"/>
+<circle cx="1559" cy="340.4" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="1559" y="344.4">6</text>
+<text class="lbl" x="1540" y="338.4" text-anchor="end">Front right nozzle wall, outer</text>
+<text class="sub" x="1540" y="354.4" text-anchor="end">0.22 × 0.70 m · 0.3 kg</text>
+<polyline class="lead" points="1107.5,438.8 1270,392.4 1300,392.4"/>
+<circle cx="1107.5" cy="438.8" r="2.6" fill="#3b46a8"/>
+<circle cx="1559" cy="386.4" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="1559" y="390.4">8</text>
+<text class="lbl" x="1540" y="384.4" text-anchor="end">Front thruster head, right</text>
+<text class="sub" x="1540" y="400.4" text-anchor="end">0.80 × 0.15 m · 0.6 kg</text>
+<polyline class="lead" points="942.5,446.3 1270,438.4 1300,438.4"/>
+<circle cx="942.5" cy="446.3" r="2.6" fill="#a33a2f"/>
+<circle cx="1559" cy="432.4" r="11" fill="#f4a7a0" stroke="#a33a2f" stroke-width="1.5"/><text class="badge" x="1559" y="436.4">11</text>
+<text class="lbl" x="1540" y="430.4" text-anchor="end">Magazine, right (1 kg charge)</text>
+<text class="sub" x="1540" y="446.4" text-anchor="end">0.70 × 0.45 m · 3 kg</text>
+<polyline class="lead" points="1107.5,525.0 1270,484.4 1300,484.4"/>
+<circle cx="1107.5" cy="525.0" r="2.6" fill="#a6741a"/>
+<circle cx="1559" cy="478.4" r="11" fill="#ffd27a" stroke="#a6741a" stroke-width="1.5"/><text class="badge" x="1559" y="482.4">13</text>
+<text class="lbl" x="1540" y="476.4" text-anchor="end">Fuel tank, right wing</text>
+<text class="sub" x="1540" y="492.4" text-anchor="end">1.50 × 1.00 m · 6.05 kg (2 dry)</text>
+<polyline class="lead" points="942.5,540.0 1270,530.4 1300,530.4"/>
+<circle cx="942.5" cy="540.0" r="2.6" fill="#2f7d43"/>
+<circle cx="1559" cy="524.4" r="11" fill="#a9e3b5" stroke="#2f7d43" stroke-width="1.5"/><text class="badge" x="1559" y="528.4">15</text>
+<text class="lbl" x="1540" y="522.4" text-anchor="end">Generator, right</text>
+<text class="sub" x="1540" y="538.4" text-anchor="end">0.70 × 0.80 m · 2 kg</text>
+<polyline class="lead" points="852.5,562.5 1270,576.4 1300,576.4"/>
+<circle cx="852.5" cy="562.5" r="2.6" fill="#2f7d43"/>
+<circle cx="1559" cy="570.4" r="11" fill="#a9e3b5" stroke="#2f7d43" stroke-width="1.5"/><text class="badge" x="1559" y="574.4">16</text>
+<text class="lbl" x="1540" y="568.4" text-anchor="end">Battery</text>
+<text class="sub" x="1540" y="584.4" text-anchor="end">1.20 × 0.50 m · 2 kg</text>
+<polyline class="lead" points="1107.5,611.3 1270,622.4 1300,622.4"/>
+<circle cx="1107.5" cy="611.3" r="2.6" fill="#3b46a8"/>
+<circle cx="1559" cy="616.4" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="1559" y="620.4">19</text>
+<text class="lbl" x="1540" y="614.4" text-anchor="end">Back thruster head, right</text>
+<text class="sub" x="1540" y="630.4" text-anchor="end">0.80 × 0.15 m · 0.6 kg</text>
+<polyline class="lead" points="953.8,630.0 1270,668.4 1300,668.4"/>
+<circle cx="953.8" cy="630.0" r="2.6" fill="#7b3a99"/>
+<circle cx="1559" cy="662.4" r="11" fill="#e2b8f2" stroke="#7b3a99" stroke-width="1.5"/><text class="badge" x="1559" y="666.4">21</text>
+<text class="lbl" x="1540" y="660.4" text-anchor="end">Tether unit</text>
+<text class="sub" x="1540" y="676.4" text-anchor="end">0.55 × 0.40 m · 1 kg</text>
+<polyline class="lead" points="1046.0,675.0 1270,714.4 1300,714.4"/>
+<circle cx="1046.0" cy="675.0" r="2.6" fill="#3b46a8"/>
+<circle cx="1559" cy="708.4" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="1559" y="712.4">24</text>
+<text class="lbl" x="1540" y="706.4" text-anchor="end">Back right nozzle wall, inner</text>
+<text class="sub" x="1540" y="722.4" text-anchor="end">0.22 × 0.70 m · 0.3 kg</text>
+<polyline class="lead" points="1169.0,675.0 1270,760.4 1300,760.4"/>
+<circle cx="1169.0" cy="675.0" r="2.6" fill="#3b46a8"/>
+<circle cx="1559" cy="754.4" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="1559" y="758.4">25</text>
+<text class="lbl" x="1540" y="752.4" text-anchor="end">Back right nozzle wall, outer</text>
+<text class="sub" x="1540" y="768.4" text-anchor="end">0.22 × 0.70 m · 0.3 kg</text>
+<polyline class="lead" points="901.3,705.0 1270,806.4 1300,806.4"/>
+<circle cx="901.3" cy="705.0" r="2.6" fill="#3b46a8"/>
+<circle cx="1559" cy="800.4" r="11" fill="#b9c2ff" stroke="#3b46a8" stroke-width="1.5"/><text class="badge" x="1559" y="804.4">27</text>
+<text class="lbl" x="1540" y="798.4" text-anchor="end">Main nozzle wall, right</text>
+<text class="sub" x="1540" y="814.4" text-anchor="end">0.35 × 1.10 m · 0.75 kg</text>
+<rect x="190" y="941.5582" width="16" height="14" fill="#cfd8e3" stroke="#4a5a6e"/><text class="sub" x="212" y="952.5582">Cockpit</text>
+<rect x="295.8" y="941.5582" width="16" height="14" fill="#b9c2ff" stroke="#3b46a8"/><text class="sub" x="317.8" y="952.5582">Engines</text>
+<rect x="401.6" y="941.5582" width="16" height="14" fill="#ffd27a" stroke="#a6741a"/><text class="sub" x="423.6" y="952.5582">Fuel</text>
+<rect x="485.20000000000005" y="941.5582" width="16" height="14" fill="#a9e3b5" stroke="#2f7d43"/><text class="sub" x="507.20000000000005" y="952.5582">Power</text>
+<rect x="576.2" y="941.5582" width="16" height="14" fill="#f4a7a0" stroke="#a33a2f"/><text class="sub" x="598.2" y="952.5582">Weapons</text>
+<rect x="682" y="941.5582" width="16" height="14" fill="#e2b8f2" stroke="#7b3a99"/><text class="sub" x="704" y="952.5582">Tractor / tether / shield</text>
+<circle class="weld" cx="927" cy="948.5582" r="3"/><text class="sub" x="937" y="952.5582">weld</text>
+<circle class="weld2" cx="989" cy="948.5582" r="3.6"/><text class="sub" x="999" y="952.5582">gun weld (2× strength)</text>
+<g transform="translate(199,974.5582)"><circle r="7" fill="#fff" stroke="#111" stroke-width="1.3"/><path d="M0,-7 A7,7 0 0 1 7,0 L0,0 Z M0,7 A7,7 0 0 1 -7,0 L0,0 Z" fill="#111"/></g><text class="sub" x="212" y="978.5582">centre of mass at launch (0.00, 0.01) m</text>
+<path d="M520,974.5582 h12 M526,968.5582 v12" stroke="#d00" stroke-width="2"/><text class="sub" x="538" y="978.5582">origin (cockpit centroid)</text>
+<line class="exh" x1="740" y1="974.5582" x2="766" y2="974.5582" marker-end="url(#arr)"/><text class="sub" x="774" y="978.5582">exhaust direction</text>
+<rect x="910" y="967.5582" width="18" height="14" class="beam"/><text class="sub" x="934" y="978.5582">tractor beam, 30° wedge (40 m range; drawn short)</text>
+<line x1="190" y1="1012.5582" x2="340" y2="1012.5582" stroke="#111" stroke-width="2"/><line x1="190" y1="1007.5582" x2="190" y2="1017.5582" stroke="#111" stroke-width="2"/><line x1="340" y1="1007.5582" x2="340" y2="1017.5582" stroke="#111" stroke-width="2"/><text class="sub" x="350" y="1016.5582">1 m (scale 150 px/m; grid 0.5 m)</text>
+<text class="h2" x="40" y="1062.5582">Component schedule</text>
+<rect x="34" y="1072.5582" width="1532" height="24" fill="#e9edf2"/>
+<text class="th" x="40" y="1088.5582">#</text>
+<text class="th" x="80" y="1088.5582">Component (template id)</text>
+<text class="th" x="420" y="1088.5582">Shape</text>
+<text class="th" x="585" y="1088.5582">Size w × h (m)</text>
+<text class="th" x="720" y="1088.5582">Centre x, y (m)</text>
+<text class="th" x="860" y="1088.5582">Dry (kg)</text>
+<text class="th" x="960" y="1088.5582">Load (kg)</text>
+<text class="th" x="1060" y="1088.5582">Total (kg)</text>
+<text class="th" x="1560" y="1088.5582"></text>
+<text class="th" x="1160" y="1088.5582">Load carried</text>
+<rect x="40" y="1101.5582" width="12" height="12" fill="#f4a7a0" stroke="#a33a2f"/><text class="td" x="58" y="1112.5582">1</text>
+<text class="td" x="80" y="1112.5582">Railgun + 120 slugs <tspan class="id">(p{n}-gun)</tspan></text>
+<text class="td" x="420" y="1112.5582">box</text>
+<text class="td" x="585" y="1112.5582">0.30 × 0.70</text>
+<text class="td" x="720" y="1112.5582">0.00, 1.00</text>
+<text class="td num" x="910" y="1112.5582">1.00</text>
+<text class="td num" x="1010" y="1112.5582">20.00</text>
+<text class="td num b" x="1110" y="1112.5582">21.00</text>
+<text class="td" x="1160" y="1112.5582">120 slugs × 0.167 kg</text>
+<rect x="34" y="1119.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1123.5582" width="12" height="12" fill="#e2b8f2" stroke="#7b3a99"/><text class="td" x="58" y="1134.5582">2</text>
+<text class="td" x="80" y="1134.5582">Shield generator collar <tspan class="id">(p{n}-shield)</tspan></text>
+<text class="td" x="420" y="1134.5582">box</text>
+<text class="td" x="585" y="1134.5582">0.90 × 0.12</text>
+<text class="td" x="720" y="1134.5582">0.00, 0.71</text>
+<text class="td num" x="910" y="1134.5582">0.30</text>
+<text class="td num" x="1010" y="1134.5582">–</text>
+<text class="td num b" x="1110" y="1134.5582">0.30</text>
+<text class="td" x="1160" y="1134.5582"></text>
+<rect x="40" y="1145.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1156.5582">3</text>
+<text class="td" x="80" y="1156.5582">Front left nozzle wall, outer <tspan class="id">(p{n}-front-l-wall-b)</tspan></text>
+<text class="td" x="420" y="1156.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1156.5582">0.22 × 0.70</text>
+<text class="td" x="720" y="1156.5582">-2.46, 0.45</text>
+<text class="td num" x="910" y="1156.5582">0.30</text>
+<text class="td num" x="1010" y="1156.5582">–</text>
+<text class="td num b" x="1110" y="1156.5582">0.30</text>
+<text class="td" x="1160" y="1156.5582"></text>
+<rect x="34" y="1163.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1167.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1178.5582">4</text>
+<text class="td" x="80" y="1178.5582">Front left nozzle wall, inner <tspan class="id">(p{n}-front-l-wall-a)</tspan></text>
+<text class="td" x="420" y="1178.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1178.5582">0.22 × 0.70</text>
+<text class="td" x="720" y="1178.5582">-1.64, 0.45</text>
+<text class="td num" x="910" y="1178.5582">0.30</text>
+<text class="td num" x="1010" y="1178.5582">–</text>
+<text class="td num b" x="1110" y="1178.5582">0.30</text>
+<text class="td" x="1160" y="1178.5582"></text>
+<rect x="40" y="1189.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1200.5582">5</text>
+<text class="td" x="80" y="1200.5582">Front right nozzle wall, inner <tspan class="id">(p{n}-front-r-wall-b)</tspan></text>
+<text class="td" x="420" y="1200.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1200.5582">0.22 × 0.70</text>
+<text class="td" x="720" y="1200.5582">1.64, 0.45</text>
+<text class="td num" x="910" y="1200.5582">0.30</text>
+<text class="td num" x="1010" y="1200.5582">–</text>
+<text class="td num b" x="1110" y="1200.5582">0.30</text>
+<text class="td" x="1160" y="1200.5582"></text>
+<rect x="34" y="1207.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1211.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1222.5582">6</text>
+<text class="td" x="80" y="1222.5582">Front right nozzle wall, outer <tspan class="id">(p{n}-front-r-wall-a)</tspan></text>
+<text class="td" x="420" y="1222.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1222.5582">0.22 × 0.70</text>
+<text class="td" x="720" y="1222.5582">2.46, 0.45</text>
+<text class="td num" x="910" y="1222.5582">0.30</text>
+<text class="td num" x="1010" y="1222.5582">–</text>
+<text class="td num b" x="1110" y="1222.5582">0.30</text>
+<text class="td" x="1160" y="1222.5582"></text>
+<rect x="40" y="1233.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1244.5582">7</text>
+<text class="td" x="80" y="1244.5582">Front thruster head, left <tspan class="id">(p{n}-front-l)</tspan></text>
+<text class="td" x="420" y="1244.5582">box</text>
+<text class="td" x="585" y="1244.5582">0.80 × 0.15</text>
+<text class="td" x="720" y="1244.5582">-2.05, 0.03</text>
+<text class="td num" x="910" y="1244.5582">0.60</text>
+<text class="td num" x="1010" y="1244.5582">–</text>
+<text class="td num b" x="1110" y="1244.5582">0.60</text>
+<text class="td" x="1160" y="1244.5582"></text>
+<rect x="34" y="1251.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1255.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1266.5582">8</text>
+<text class="td" x="80" y="1266.5582">Front thruster head, right <tspan class="id">(p{n}-front-r)</tspan></text>
+<text class="td" x="420" y="1266.5582">box</text>
+<text class="td" x="585" y="1266.5582">0.80 × 0.15</text>
+<text class="td" x="720" y="1266.5582">2.05, 0.03</text>
+<text class="td num" x="910" y="1266.5582">0.60</text>
+<text class="td num" x="1010" y="1266.5582">–</text>
+<text class="td num b" x="1110" y="1266.5582">0.60</text>
+<text class="td" x="1160" y="1266.5582"></text>
+<rect x="40" y="1277.5582" width="12" height="12" fill="#cfd8e3" stroke="#4a5a6e"/><text class="td" x="58" y="1288.5582">9</text>
+<text class="td" x="80" y="1288.5582">Cockpit (hull) <tspan class="id">(p{n}-hull)</tspan></text>
+<text class="td" x="420" y="1288.5582">hexagon</text>
+<text class="td" x="585" y="1288.5582">1.20 × 1.20</text>
+<text class="td" x="720" y="1288.5582">0.00, 0.00</text>
+<text class="td num" x="910" y="1288.5582">6.00</text>
+<text class="td num" x="1010" y="1288.5582">–</text>
+<text class="td num b" x="1110" y="1288.5582">6.00</text>
+<text class="td" x="1160" y="1288.5582"></text>
+<rect x="34" y="1295.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1299.5582" width="12" height="12" fill="#f4a7a0" stroke="#a33a2f"/><text class="td" x="58" y="1310.5582">10</text>
+<text class="td" x="80" y="1310.5582">Magazine, left (1 kg charge) <tspan class="id">(p{n}-mag-l)</tspan></text>
+<text class="td" x="420" y="1310.5582">box</text>
+<text class="td" x="585" y="1310.5582">0.70 × 0.45</text>
+<text class="td" x="720" y="1310.5582">-0.95, -0.02</text>
+<text class="td num" x="910" y="1310.5582">3.00</text>
+<text class="td num" x="1010" y="1310.5582">–</text>
+<text class="td num b" x="1110" y="1310.5582">3.00</text>
+<text class="td" x="1160" y="1310.5582"></text>
+<rect x="40" y="1321.5582" width="12" height="12" fill="#f4a7a0" stroke="#a33a2f"/><text class="td" x="58" y="1332.5582">11</text>
+<text class="td" x="80" y="1332.5582">Magazine, right (1 kg charge) <tspan class="id">(p{n}-mag-r)</tspan></text>
+<text class="td" x="420" y="1332.5582">box</text>
+<text class="td" x="585" y="1332.5582">0.70 × 0.45</text>
+<text class="td" x="720" y="1332.5582">0.95, -0.02</text>
+<text class="td num" x="910" y="1332.5582">3.00</text>
+<text class="td num" x="1010" y="1332.5582">–</text>
+<text class="td num b" x="1110" y="1332.5582">3.00</text>
+<text class="td" x="1160" y="1332.5582"></text>
+<rect x="34" y="1339.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1343.5582" width="12" height="12" fill="#ffd27a" stroke="#a6741a"/><text class="td" x="58" y="1354.5582">12</text>
+<text class="td" x="80" y="1354.5582">Fuel tank, left wing <tspan class="id">(p{n}-tank-l)</tspan></text>
+<text class="td" x="420" y="1354.5582">box</text>
+<text class="td" x="585" y="1354.5582">1.50 × 1.00</text>
+<text class="td" x="720" y="1354.5582">-2.05, -0.55</text>
+<text class="td num" x="910" y="1354.5582">2.00</text>
+<text class="td num" x="1010" y="1354.5582">4.05</text>
+<text class="td num b" x="1110" y="1354.5582">6.05</text>
+<text class="td" x="1160" y="1354.5582">0.45 kg H₂ + 3.6 kg O₂</text>
+<rect x="40" y="1365.5582" width="12" height="12" fill="#ffd27a" stroke="#a6741a"/><text class="td" x="58" y="1376.5582">13</text>
+<text class="td" x="80" y="1376.5582">Fuel tank, right wing <tspan class="id">(p{n}-tank-r)</tspan></text>
+<text class="td" x="420" y="1376.5582">box</text>
+<text class="td" x="585" y="1376.5582">1.50 × 1.00</text>
+<text class="td" x="720" y="1376.5582">2.05, -0.55</text>
+<text class="td num" x="910" y="1376.5582">2.00</text>
+<text class="td num" x="1010" y="1376.5582">4.05</text>
+<text class="td num b" x="1110" y="1376.5582">6.05</text>
+<text class="td" x="1160" y="1376.5582">0.45 kg H₂ + 3.6 kg O₂</text>
+<rect x="34" y="1383.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1387.5582" width="12" height="12" fill="#a9e3b5" stroke="#2f7d43"/><text class="td" x="58" y="1398.5582">14</text>
+<text class="td" x="80" y="1398.5582">Generator, left <tspan class="id">(p{n}-gen-l)</tspan></text>
+<text class="td" x="420" y="1398.5582">box</text>
+<text class="td" x="585" y="1398.5582">0.70 × 0.80</text>
+<text class="td" x="720" y="1398.5582">-0.95, -0.65</text>
+<text class="td num" x="910" y="1398.5582">2.00</text>
+<text class="td num" x="1010" y="1398.5582">–</text>
+<text class="td num b" x="1110" y="1398.5582">2.00</text>
+<text class="td" x="1160" y="1398.5582"></text>
+<rect x="40" y="1409.5582" width="12" height="12" fill="#a9e3b5" stroke="#2f7d43"/><text class="td" x="58" y="1420.5582">15</text>
+<text class="td" x="80" y="1420.5582">Generator, right <tspan class="id">(p{n}-gen-r)</tspan></text>
+<text class="td" x="420" y="1420.5582">box</text>
+<text class="td" x="585" y="1420.5582">0.70 × 0.80</text>
+<text class="td" x="720" y="1420.5582">0.95, -0.65</text>
+<text class="td num" x="910" y="1420.5582">2.00</text>
+<text class="td num" x="1010" y="1420.5582">–</text>
+<text class="td num b" x="1110" y="1420.5582">2.00</text>
+<text class="td" x="1160" y="1420.5582"></text>
+<rect x="34" y="1427.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1431.5582" width="12" height="12" fill="#a9e3b5" stroke="#2f7d43"/><text class="td" x="58" y="1442.5582">16</text>
+<text class="td" x="80" y="1442.5582">Battery <tspan class="id">(p{n}-battery)</tspan></text>
+<text class="td" x="420" y="1442.5582">box</text>
+<text class="td" x="585" y="1442.5582">1.20 × 0.50</text>
+<text class="td" x="720" y="1442.5582">0.00, -0.80</text>
+<text class="td num" x="910" y="1442.5582">2.00</text>
+<text class="td num" x="1010" y="1442.5582">–</text>
+<text class="td num b" x="1110" y="1442.5582">2.00</text>
+<text class="td" x="1160" y="1442.5582"></text>
+<rect x="40" y="1453.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1464.5582">17</text>
+<text class="td" x="80" y="1464.5582">Back thruster head, left <tspan class="id">(p{n}-back-l)</tspan></text>
+<text class="td" x="420" y="1464.5582">box</text>
+<text class="td" x="585" y="1464.5582">0.80 × 0.15</text>
+<text class="td" x="720" y="1464.5582">-2.05, -1.12</text>
+<text class="td num" x="910" y="1464.5582">0.60</text>
+<text class="td num" x="1010" y="1464.5582">–</text>
+<text class="td num b" x="1110" y="1464.5582">0.60</text>
+<text class="td" x="1160" y="1464.5582"></text>
+<rect x="34" y="1471.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1475.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1486.5582">18</text>
+<text class="td" x="80" y="1486.5582">Main thruster head <tspan class="id">(p{n}-main)</tspan></text>
+<text class="td" x="420" y="1486.5582">box</text>
+<text class="td" x="585" y="1486.5582">1.20 × 0.15</text>
+<text class="td" x="720" y="1486.5582">0.00, -1.12</text>
+<text class="td num" x="910" y="1486.5582">1.50</text>
+<text class="td num" x="1010" y="1486.5582">–</text>
+<text class="td num b" x="1110" y="1486.5582">1.50</text>
+<text class="td" x="1160" y="1486.5582"></text>
+<rect x="40" y="1497.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1508.5582">19</text>
+<text class="td" x="80" y="1508.5582">Back thruster head, right <tspan class="id">(p{n}-back-r)</tspan></text>
+<text class="td" x="420" y="1508.5582">box</text>
+<text class="td" x="585" y="1508.5582">0.80 × 0.15</text>
+<text class="td" x="720" y="1508.5582">2.05, -1.12</text>
+<text class="td num" x="910" y="1508.5582">0.60</text>
+<text class="td num" x="1010" y="1508.5582">–</text>
+<text class="td num b" x="1110" y="1508.5582">0.60</text>
+<text class="td" x="1160" y="1508.5582"></text>
+<rect x="34" y="1515.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1519.5582" width="12" height="12" fill="#e2b8f2" stroke="#7b3a99"/><text class="td" x="58" y="1530.5582">20</text>
+<text class="td" x="80" y="1530.5582">Tractor unit <tspan class="id">(p{n}-tractor)</tspan></text>
+<text class="td" x="420" y="1530.5582">box</text>
+<text class="td" x="585" y="1530.5582">0.55 × 0.40</text>
+<text class="td" x="720" y="1530.5582">-1.02, -1.25</text>
+<text class="td num" x="910" y="1530.5582">1.00</text>
+<text class="td num" x="1010" y="1530.5582">–</text>
+<text class="td num b" x="1110" y="1530.5582">1.00</text>
+<text class="td" x="1160" y="1530.5582"></text>
+<rect x="40" y="1541.5582" width="12" height="12" fill="#e2b8f2" stroke="#7b3a99"/><text class="td" x="58" y="1552.5582">21</text>
+<text class="td" x="80" y="1552.5582">Tether unit <tspan class="id">(p{n}-tether)</tspan></text>
+<text class="td" x="420" y="1552.5582">box</text>
+<text class="td" x="585" y="1552.5582">0.55 × 0.40</text>
+<text class="td" x="720" y="1552.5582">1.02, -1.25</text>
+<text class="td num" x="910" y="1552.5582">1.00</text>
+<text class="td num" x="1010" y="1552.5582">–</text>
+<text class="td num b" x="1110" y="1552.5582">1.00</text>
+<text class="td" x="1160" y="1552.5582"></text>
+<rect x="34" y="1559.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1563.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1574.5582">22</text>
+<text class="td" x="80" y="1574.5582">Back left nozzle wall, outer <tspan class="id">(p{n}-back-l-wall-a)</tspan></text>
+<text class="td" x="420" y="1574.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1574.5582">0.22 × 0.70</text>
+<text class="td" x="720" y="1574.5582">-2.46, -1.55</text>
+<text class="td num" x="910" y="1574.5582">0.30</text>
+<text class="td num" x="1010" y="1574.5582">–</text>
+<text class="td num b" x="1110" y="1574.5582">0.30</text>
+<text class="td" x="1160" y="1574.5582"></text>
+<rect x="40" y="1585.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1596.5582">23</text>
+<text class="td" x="80" y="1596.5582">Back left nozzle wall, inner <tspan class="id">(p{n}-back-l-wall-b)</tspan></text>
+<text class="td" x="420" y="1596.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1596.5582">0.22 × 0.70</text>
+<text class="td" x="720" y="1596.5582">-1.64, -1.55</text>
+<text class="td num" x="910" y="1596.5582">0.30</text>
+<text class="td num" x="1010" y="1596.5582">–</text>
+<text class="td num b" x="1110" y="1596.5582">0.30</text>
+<text class="td" x="1160" y="1596.5582"></text>
+<rect x="34" y="1603.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1607.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1618.5582">24</text>
+<text class="td" x="80" y="1618.5582">Back right nozzle wall, inner <tspan class="id">(p{n}-back-r-wall-a)</tspan></text>
+<text class="td" x="420" y="1618.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1618.5582">0.22 × 0.70</text>
+<text class="td" x="720" y="1618.5582">1.64, -1.55</text>
+<text class="td num" x="910" y="1618.5582">0.30</text>
+<text class="td num" x="1010" y="1618.5582">–</text>
+<text class="td num b" x="1110" y="1618.5582">0.30</text>
+<text class="td" x="1160" y="1618.5582"></text>
+<rect x="40" y="1629.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1640.5582">25</text>
+<text class="td" x="80" y="1640.5582">Back right nozzle wall, outer <tspan class="id">(p{n}-back-r-wall-b)</tspan></text>
+<text class="td" x="420" y="1640.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1640.5582">0.22 × 0.70</text>
+<text class="td" x="720" y="1640.5582">2.46, -1.55</text>
+<text class="td num" x="910" y="1640.5582">0.30</text>
+<text class="td num" x="1010" y="1640.5582">–</text>
+<text class="td num b" x="1110" y="1640.5582">0.30</text>
+<text class="td" x="1160" y="1640.5582"></text>
+<rect x="34" y="1647.5582" width="1532" height="22" fill="#f6f8fa"/>
+<rect x="40" y="1651.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1662.5582">26</text>
+<text class="td" x="80" y="1662.5582">Main nozzle wall, left <tspan class="id">(p{n}-main-wall-a)</tspan></text>
+<text class="td" x="420" y="1662.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1662.5582">0.35 × 1.10</text>
+<text class="td" x="720" y="1662.5582">-0.68, -1.75</text>
+<text class="td num" x="910" y="1662.5582">0.75</text>
+<text class="td num" x="1010" y="1662.5582">–</text>
+<text class="td num b" x="1110" y="1662.5582">0.75</text>
+<text class="td" x="1160" y="1662.5582"></text>
+<rect x="40" y="1673.5582" width="12" height="12" fill="#b9c2ff" stroke="#3b46a8"/><text class="td" x="58" y="1684.5582">27</text>
+<text class="td" x="80" y="1684.5582">Main nozzle wall, right <tspan class="id">(p{n}-main-wall-b)</tspan></text>
+<text class="td" x="420" y="1684.5582">trapezoid, 0.10 m thick</text>
+<text class="td" x="585" y="1684.5582">0.35 × 1.10</text>
+<text class="td" x="720" y="1684.5582">0.68, -1.75</text>
+<text class="td num" x="910" y="1684.5582">0.75</text>
+<text class="td num" x="1010" y="1684.5582">–</text>
+<text class="td num b" x="1110" y="1684.5582">0.75</text>
+<text class="td" x="1160" y="1684.5582"></text>
+<line x1="34" y1="1692.5582" x2="1566" y2="1692.5582" stroke="#333"/>
+<text class="td b" x="80" y="1710.5582">Whole ship at launch</text>
+<text class="td" x="585" y="1710.5582">5.60 × 3.65</text>
+<text class="td num b" x="910" y="1710.5582">33.10</text><text class="td num b" x="1010" y="1710.5582">28.10</text><text class="td num b" x="1110" y="1710.5582">61.20</text>
+<text class="td" x="1160" y="1710.5582">8.10 kg propellant (0.90 H₂ + 7.20 O₂) + 20.00 kg slugs</text>
+<text class="note l" x="40" y="1744.5582">• Not drawn: the shield's field, a 2 kg body that exists only while the shield is up — radius 4.45 m round the dry centre of mass; it adds 2 kg then.</text>
+<text class="note l" x="40" y="1764.5582">• Engines hold no propellant at rest (their 20 ms chamber store fills when firing). Each tank feeds its own wing's two small thrusters, and both tanks feed the main thruster.</text>
+<text class="note l" x="40" y="1784.5582">• Thrust: main 7.776 kg/s propellant flow; small thrusters 1.45 kg/s each. Railgun: 144 m/s, one slug every 0.125 s. Tether 12 m. Pod 34 kg (not part of the ship).</text>
+<text class="note l" x="40" y="1804.5582">• Mass rule: a body's mass = its dry mass + its stores + shells in its magazine (src/core/bodies.ts, bodyMass). The design doc's 69 kg predates halving the fuel load (thrust.ts: fuel 0.5).</text>
+</svg>

@@ -1,0 +1,2288 @@
+{
+  "schema": 1,
+  "name": "eng-validation",
+  "title": "Engine validation: the chamber model against the gas",
+  "description": "ENG-V. Three engines, each twice: as the chamber model (left of each pair) and with every bit of gas simulated (right). Left to right: throat only, RS-08's nozzle (area ratio 2.8) and a long nozzle (ratio 5). Each is welded to a 100 kg base in empty space and fires for 2 s; the faster one makes more thrust. The numbers are in docs/perf/engine-validation.md (node scripts/engine-validation.ts --sweep).",
+  "profile": "sandbox",
+  "seed": 1,
+  "world": {
+    "gravity": {
+      "x": 0,
+      "y": 0
+    },
+    "bounds": {
+      "min": {
+        "x": -1000,
+        "y": -1000
+      },
+      "max": {
+        "x": 1000,
+        "y": 1000
+      },
+      "farField": 20
+    },
+    "bodies": [
+      {
+        "id": "throat-model-head",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -15,
+          "y": -0.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.133333,
+            "capacity": 0.133333
+          },
+          {
+            "resource": "o2",
+            "mass": 1.066667,
+            "capacity": 1.066667
+          }
+        ],
+        "injector": {
+          "channel": "main",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.0005,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 0.95
+          }
+        }
+      },
+      {
+        "id": "throat-model-base",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 100,
+        "position": {
+          "x": -15,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-model-wall-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -15.45,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-model-wall-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -14.55,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-model-throat-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -15.325,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-model-throat-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -14.675,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-gas-head",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -9,
+          "y": -0.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.133333,
+            "capacity": 0.133333
+          },
+          {
+            "resource": "o2",
+            "mass": 1.066667,
+            "capacity": 1.066667
+          }
+        ],
+        "injector": {
+          "channel": "main",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.0005,
+          "radius": 0.035,
+          "igniter": true
+        }
+      },
+      {
+        "id": "throat-gas-base",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 100,
+        "position": {
+          "x": -9,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-gas-wall-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -9.45,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-gas-wall-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -8.55,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-gas-throat-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -9.325,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "throat-gas-throat-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -8.675,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-model-head",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": -3,
+          "y": -0.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.133333,
+            "capacity": 0.133333
+          },
+          {
+            "resource": "o2",
+            "mass": 1.066667,
+            "capacity": 1.066667
+          }
+        ],
+        "injector": {
+          "channel": "main",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.0005,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 1.55
+          }
+        }
+      },
+      {
+        "id": "rs08-model-base",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 100,
+        "position": {
+          "x": -3,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-model-wall-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -3.45,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-model-wall-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -2.55,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-model-throat-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -3.325,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-model-throat-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -2.675,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-model-nozzle-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.185,
+              "y": 0.3
+            },
+            {
+              "x": 0.085,
+              "y": 0.3
+            },
+            {
+              "x": -0.185,
+              "y": -0.3
+            },
+            {
+              "x": -0.085,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -3.335,
+          "y": -1.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-model-nozzle-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.085,
+              "y": -0.3
+            },
+            {
+              "x": 0.185,
+              "y": -0.3
+            },
+            {
+              "x": -0.085,
+              "y": 0.3
+            },
+            {
+              "x": -0.185,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": -2.665,
+          "y": -1.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-gas-head",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": 3,
+          "y": -0.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.133333,
+            "capacity": 0.133333
+          },
+          {
+            "resource": "o2",
+            "mass": 1.066667,
+            "capacity": 1.066667
+          }
+        ],
+        "injector": {
+          "channel": "main",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.0005,
+          "radius": 0.035,
+          "igniter": true
+        }
+      },
+      {
+        "id": "rs08-gas-base",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 100,
+        "position": {
+          "x": 3,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-gas-wall-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 2.55,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-gas-wall-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 3.45,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-gas-throat-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 2.675,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-gas-throat-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 3.325,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-gas-nozzle-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.185,
+              "y": 0.3
+            },
+            {
+              "x": 0.085,
+              "y": 0.3
+            },
+            {
+              "x": -0.185,
+              "y": -0.3
+            },
+            {
+              "x": -0.085,
+              "y": -0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 2.665,
+          "y": -1.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "rs08-gas-nozzle-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.085,
+              "y": -0.3
+            },
+            {
+              "x": 0.185,
+              "y": -0.3
+            },
+            {
+              "x": -0.085,
+              "y": 0.3
+            },
+            {
+              "x": -0.185,
+              "y": 0.3
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 3.335,
+          "y": -1.2
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-model-head",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": 9,
+          "y": -0.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.133333,
+            "capacity": 0.133333
+          },
+          {
+            "resource": "o2",
+            "mass": 1.066667,
+            "capacity": 1.066667
+          }
+        ],
+        "injector": {
+          "channel": "main",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.0005,
+          "radius": 0.035,
+          "igniter": true,
+          "chamber": {
+            "width": 1,
+            "length": 2.15
+          }
+        }
+      },
+      {
+        "id": "r5-model-base",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 100,
+        "position": {
+          "x": 9,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-model-wall-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 8.55,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-model-wall-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 9.45,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-model-throat-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 8.675,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-model-throat-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 9.325,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-model-nozzle-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.35,
+              "y": 0.6
+            },
+            {
+              "x": 0.25,
+              "y": 0.6
+            },
+            {
+              "x": -0.35,
+              "y": -0.6
+            },
+            {
+              "x": -0.25,
+              "y": -0.6
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 8.5,
+          "y": -1.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-model-nozzle-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.25,
+              "y": -0.6
+            },
+            {
+              "x": 0.35,
+              "y": -0.6
+            },
+            {
+              "x": -0.25,
+              "y": 0.6
+            },
+            {
+              "x": -0.35,
+              "y": 0.6
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 9.5,
+          "y": -1.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-gas-head",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.2
+        },
+        "mass": 1,
+        "position": {
+          "x": 15,
+          "y": -0.1
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3,
+        "contents": [
+          {
+            "resource": "h2",
+            "mass": 0.133333,
+            "capacity": 0.133333
+          },
+          {
+            "resource": "o2",
+            "mass": 1.066667,
+            "capacity": 1.066667
+          }
+        ],
+        "injector": {
+          "channel": "main",
+          "rate": 0.5,
+          "mixture": {
+            "h2": 0.1111111111111111,
+            "o2": 0.8888888888888888
+          },
+          "outlet": {
+            "x": 0,
+            "y": -0.15
+          },
+          "direction": {
+            "x": 0,
+            "y": -1
+          },
+          "width": 0.6,
+          "speed": 10,
+          "parcelMass": 0.0005,
+          "radius": 0.035,
+          "igniter": true
+        }
+      },
+      {
+        "id": "r5-gas-base",
+        "shape": {
+          "kind": "box",
+          "width": 1,
+          "height": 0.5
+        },
+        "mass": 100,
+        "position": {
+          "x": 15,
+          "y": 0.25
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-gas-wall-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 14.55,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-gas-wall-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.1,
+          "height": 0.6
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 15.45,
+          "y": -0.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-gas-throat-l",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 14.675,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-gas-throat-r",
+        "shape": {
+          "kind": "box",
+          "width": 0.35,
+          "height": 0.1
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 15.325,
+          "y": -0.85
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-gas-nozzle-l",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.35,
+              "y": 0.6
+            },
+            {
+              "x": 0.25,
+              "y": 0.6
+            },
+            {
+              "x": -0.35,
+              "y": -0.6
+            },
+            {
+              "x": -0.25,
+              "y": -0.6
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 14.5,
+          "y": -1.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      },
+      {
+        "id": "r5-gas-nozzle-r",
+        "shape": {
+          "kind": "polygon",
+          "vertices": [
+            {
+              "x": 0.25,
+              "y": -0.6
+            },
+            {
+              "x": 0.35,
+              "y": -0.6
+            },
+            {
+              "x": -0.25,
+              "y": 0.6
+            },
+            {
+              "x": -0.35,
+              "y": 0.6
+            }
+          ]
+        },
+        "mass": 0.3,
+        "position": {
+          "x": 15.5,
+          "y": -1.5
+        },
+        "velocity": {
+          "x": 0,
+          "y": 0
+        },
+        "angle": 0,
+        "angularVelocity": 0,
+        "restitution": 0,
+        "friction": 0.3
+      }
+    ],
+    "joints": [
+      {
+        "id": "throat-model-w-base-head-0",
+        "a": "throat-model-base",
+        "b": "throat-model-head",
+        "anchorA": {
+          "x": -0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": -0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-model-w-base-head-1",
+        "a": "throat-model-base",
+        "b": "throat-model-head",
+        "anchorA": {
+          "x": 0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": 0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-model-w-head-wall-l-2",
+        "a": "throat-model-head",
+        "b": "throat-model-wall-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-model-w-wall-l-throat-l-3",
+        "a": "throat-model-wall-l",
+        "b": "throat-model-throat-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-model-w-head-wall-r-4",
+        "a": "throat-model-head",
+        "b": "throat-model-wall-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-model-w-wall-r-throat-r-5",
+        "a": "throat-model-wall-r",
+        "b": "throat-model-throat-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-gas-w-base-head-0",
+        "a": "throat-gas-base",
+        "b": "throat-gas-head",
+        "anchorA": {
+          "x": -0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": -0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-gas-w-base-head-1",
+        "a": "throat-gas-base",
+        "b": "throat-gas-head",
+        "anchorA": {
+          "x": 0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": 0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-gas-w-head-wall-l-2",
+        "a": "throat-gas-head",
+        "b": "throat-gas-wall-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-gas-w-wall-l-throat-l-3",
+        "a": "throat-gas-wall-l",
+        "b": "throat-gas-throat-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-gas-w-head-wall-r-4",
+        "a": "throat-gas-head",
+        "b": "throat-gas-wall-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "throat-gas-w-wall-r-throat-r-5",
+        "a": "throat-gas-wall-r",
+        "b": "throat-gas-throat-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-model-w-base-head-0",
+        "a": "rs08-model-base",
+        "b": "rs08-model-head",
+        "anchorA": {
+          "x": -0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": -0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-model-w-base-head-1",
+        "a": "rs08-model-base",
+        "b": "rs08-model-head",
+        "anchorA": {
+          "x": 0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": 0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-model-w-head-wall-l-2",
+        "a": "rs08-model-head",
+        "b": "rs08-model-wall-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-model-w-wall-l-throat-l-3",
+        "a": "rs08-model-wall-l",
+        "b": "rs08-model-throat-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-model-w-throat-l-nozzle-l-4",
+        "a": "rs08-model-throat-l",
+        "b": "rs08-model-nozzle-l",
+        "anchorA": {
+          "x": 0.125,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-model-w-head-wall-r-5",
+        "a": "rs08-model-head",
+        "b": "rs08-model-wall-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-model-w-wall-r-throat-r-6",
+        "a": "rs08-model-wall-r",
+        "b": "rs08-model-throat-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-model-w-throat-r-nozzle-r-7",
+        "a": "rs08-model-throat-r",
+        "b": "rs08-model-nozzle-r",
+        "anchorA": {
+          "x": -0.125,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-gas-w-base-head-0",
+        "a": "rs08-gas-base",
+        "b": "rs08-gas-head",
+        "anchorA": {
+          "x": -0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": -0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-gas-w-base-head-1",
+        "a": "rs08-gas-base",
+        "b": "rs08-gas-head",
+        "anchorA": {
+          "x": 0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": 0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-gas-w-head-wall-l-2",
+        "a": "rs08-gas-head",
+        "b": "rs08-gas-wall-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-gas-w-wall-l-throat-l-3",
+        "a": "rs08-gas-wall-l",
+        "b": "rs08-gas-throat-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-gas-w-throat-l-nozzle-l-4",
+        "a": "rs08-gas-throat-l",
+        "b": "rs08-gas-nozzle-l",
+        "anchorA": {
+          "x": 0.125,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-gas-w-head-wall-r-5",
+        "a": "rs08-gas-head",
+        "b": "rs08-gas-wall-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-gas-w-wall-r-throat-r-6",
+        "a": "rs08-gas-wall-r",
+        "b": "rs08-gas-throat-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "rs08-gas-w-throat-r-nozzle-r-7",
+        "a": "rs08-gas-throat-r",
+        "b": "rs08-gas-nozzle-r",
+        "anchorA": {
+          "x": -0.125,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.135,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-model-w-base-head-0",
+        "a": "r5-model-base",
+        "b": "r5-model-head",
+        "anchorA": {
+          "x": -0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": -0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-model-w-base-head-1",
+        "a": "r5-model-base",
+        "b": "r5-model-head",
+        "anchorA": {
+          "x": 0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": 0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-model-w-head-wall-l-2",
+        "a": "r5-model-head",
+        "b": "r5-model-wall-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-model-w-wall-l-throat-l-3",
+        "a": "r5-model-wall-l",
+        "b": "r5-model-throat-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-model-w-throat-l-nozzle-l-4",
+        "a": "r5-model-throat-l",
+        "b": "r5-model-nozzle-l",
+        "anchorA": {
+          "x": 0.125,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.3,
+          "y": 0.6
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-model-w-head-wall-r-5",
+        "a": "r5-model-head",
+        "b": "r5-model-wall-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-model-w-wall-r-throat-r-6",
+        "a": "r5-model-wall-r",
+        "b": "r5-model-throat-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-model-w-throat-r-nozzle-r-7",
+        "a": "r5-model-throat-r",
+        "b": "r5-model-nozzle-r",
+        "anchorA": {
+          "x": -0.125,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.3,
+          "y": 0.6
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-gas-w-base-head-0",
+        "a": "r5-gas-base",
+        "b": "r5-gas-head",
+        "anchorA": {
+          "x": -0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": -0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-gas-w-base-head-1",
+        "a": "r5-gas-base",
+        "b": "r5-gas-head",
+        "anchorA": {
+          "x": 0.25,
+          "y": -0.25
+        },
+        "anchorB": {
+          "x": 0.25,
+          "y": 0.1
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-gas-w-head-wall-l-2",
+        "a": "r5-gas-head",
+        "b": "r5-gas-wall-l",
+        "anchorA": {
+          "x": -0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-gas-w-wall-l-throat-l-3",
+        "a": "r5-gas-wall-l",
+        "b": "r5-gas-throat-l",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": -0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-gas-w-throat-l-nozzle-l-4",
+        "a": "r5-gas-throat-l",
+        "b": "r5-gas-nozzle-l",
+        "anchorA": {
+          "x": 0.125,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": 0.3,
+          "y": 0.6
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-gas-w-head-wall-r-5",
+        "a": "r5-gas-head",
+        "b": "r5-gas-wall-r",
+        "anchorA": {
+          "x": 0.45,
+          "y": -0.1
+        },
+        "anchorB": {
+          "x": 0,
+          "y": 0.3
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-gas-w-wall-r-throat-r-6",
+        "a": "r5-gas-wall-r",
+        "b": "r5-gas-throat-r",
+        "anchorA": {
+          "x": 0,
+          "y": -0.3
+        },
+        "anchorB": {
+          "x": 0.125,
+          "y": 0.05
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      },
+      {
+        "id": "r5-gas-w-throat-r-nozzle-r-7",
+        "a": "r5-gas-throat-r",
+        "b": "r5-gas-nozzle-r",
+        "anchorA": {
+          "x": -0.125,
+          "y": -0.05
+        },
+        "anchorB": {
+          "x": -0.3,
+          "y": 0.6
+        },
+        "limits": {
+          "tension": 1000000000,
+          "compression": 1000000000,
+          "shear": 1000000000,
+          "torque": 1000000000
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "throat-model-ctl",
+        "kind": "control",
+        "channel": "main",
+        "to": "throat-model-head"
+      },
+      {
+        "id": "throat-gas-ctl",
+        "kind": "control",
+        "channel": "main",
+        "to": "throat-gas-head"
+      },
+      {
+        "id": "rs08-model-ctl",
+        "kind": "control",
+        "channel": "main",
+        "to": "rs08-model-head"
+      },
+      {
+        "id": "rs08-gas-ctl",
+        "kind": "control",
+        "channel": "main",
+        "to": "rs08-gas-head"
+      },
+      {
+        "id": "r5-model-ctl",
+        "kind": "control",
+        "channel": "main",
+        "to": "r5-model-head"
+      },
+      {
+        "id": "r5-gas-ctl",
+        "kind": "control",
+        "channel": "main",
+        "to": "r5-gas-head"
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "step": 0,
+      "commands": [
+        {
+          "type": "control.set",
+          "channel": "main",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "end": {
+    "steps": 480
+  },
+  "probes": [
+    {
+      "id": "throat_model",
+      "path": "assembly[id=throat-model-head].velocity.y"
+    },
+    {
+      "id": "throat_gas",
+      "path": "assembly[id=throat-gas-head].velocity.y"
+    },
+    {
+      "id": "rs08_model",
+      "path": "assembly[id=rs08-model-head].velocity.y"
+    },
+    {
+      "id": "rs08_gas",
+      "path": "assembly[id=rs08-gas-head].velocity.y"
+    },
+    {
+      "id": "r5_model",
+      "path": "assembly[id=r5-model-head].velocity.y"
+    },
+    {
+      "id": "r5_gas",
+      "path": "assembly[id=r5-gas-head].velocity.y"
+    },
+    {
+      "id": "parcels",
+      "path": "gas.count"
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "rangeOver",
+      "probe": "throat_model",
+      "from": "end",
+      "to": "end",
+      "min": 1.8
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "throat_gas",
+      "from": "end",
+      "to": "end",
+      "min": 1
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "rs08_model",
+      "from": "end",
+      "to": "end",
+      "min": 1.8
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "rs08_gas",
+      "from": "end",
+      "to": "end",
+      "min": 1
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "r5_model",
+      "from": "end",
+      "to": "end",
+      "min": 1.8
+    },
+    {
+      "kind": "rangeOver",
+      "probe": "r5_gas",
+      "from": "end",
+      "to": "end",
+      "min": 1
+    },
+    {
+      "kind": "event",
+      "type": "ignition",
+      "occurred": true
+    },
+    {
+      "kind": "event",
+      "type": "joint.break",
+      "occurred": false
+    },
+    {
+      "kind": "event",
+      "type": "violation",
+      "occurred": false
+    }
+  ],
+  "ui": {
+    "lookFor": "Each pair is one engine: the chamber model on the left, all gas on the right. The higher one makes more thrust; the gap is what the model gets wrong.",
+    "overlays": [
+      "velocity"
+    ],
+    "graphs": [
+      "throat_model",
+      "throat_gas",
+      "rs08_model",
+      "rs08_gas",
+      "r5_model",
+      "r5_gas"
+    ],
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "zoom": 25
+    }
+  }
+}
