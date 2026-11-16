@@ -658,7 +658,9 @@ The simplest ship (`phiomiaPreset`), using the Mastodon's cockpit for scale.
   - Its head is level with the crossbar and welded to its end.
 - **Wiring:**
   - forward fires both engines;
-  - a turn fires the engine on the side away from it;
+  - a turn fires the engine on its own side: Left, the left engine (Chloe, after flying it). The
+    cockpit hangs below the engines, so Left swings the cockpit to the left, the engines' end to
+    the right (clockwise). The other presets turn the other way: their cockpit is at the front.
   - forward with a turn fires that engine alone.
   - There is no reverse, no weapon and no power system.
 - **Measured:** 12.6 kg; 11.6 m/s² forward (THRUST OG: 36); about 4.9 rad/s² turning, both ways alike.

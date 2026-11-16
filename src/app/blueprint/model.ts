@@ -633,8 +633,8 @@ export function centredShip(ship: Ship): Ship {
  * The Phiomia: the simplest ship, from Chloe's drawing, with the Mastodon's cockpit for scale. The
  * cockpit, a fuel tank on its top, and a spine up from the tank to a crossbar; at each end of the
  * crossbar a small rocket hangs, firing down past the cockpit's sides. The spine and crossbar are
- * only structure, so the engines are gentle. Forward fires both; a turn, the engine on the side
- * away from it; forward and a turn, that engine alone.
+ * only structure, so the engines are gentle. Forward fires both; a turn, the engine on its own
+ * side; forward and a turn, that engine alone.
  */
 export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
   const t = thrustShip(scenario).ship;
@@ -681,10 +681,12 @@ export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
   refeed(bp);
   reammo(bp);
   relink(bp);
+  // Chloe, 16 November 2026: a turn fires the engine on its own side. The cockpit hangs below the
+  // engines, so Left swings the cockpit to the left (the engines' end to the right: clockwise).
   const row = (channel: string, lines: MixerRow["lines"]): MixerRow => ({ channel, lines });
   bp.mix.rows = [
-    row("eng-l", [{ control: "forward", weight: 1, ease: { control: "left", amount: 1 } }, { control: "right", weight: 1 }]),
-    row("eng-r", [{ control: "forward", weight: 1, ease: { control: "right", amount: 1 } }, { control: "left", weight: 1 }]),
+    row("eng-l", [{ control: "forward", weight: 1, ease: { control: "right", amount: 1 } }, { control: "left", weight: 1 }]),
+    row("eng-r", [{ control: "forward", weight: 1, ease: { control: "left", amount: 1 } }, { control: "right", weight: 1 }]),
   ];
   return bp;
 }

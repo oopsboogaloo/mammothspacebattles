@@ -906,17 +906,20 @@ describe("the Phiomia (Chloe's sketch, 16 November 2026)", async () => {
       expect(Math.abs(body(ph, id).position.x)).toBeGreaterThan(0.6 + 0.25);
     }
     expect(powerStats(ph)).toBeNull();
-    expect(wiringChecks(ph, moves).every((c) => c.ok)).toBe(true);
+    // Its turns are the other way from the other presets' (its cockpit hangs at the back), which the
+    // designer's check reads as Left turning it right: those two warnings, and nothing else.
+    expect(wiringChecks(ph, moves).filter((c) => !c.ok).map((c) => c.text)).toEqual(["Turn left turns the ship right", "Turn right turns the ship left"]);
   });
 
-  it("BPD-050 its wiring: forward fires both engines; a turn, the engine away from it; forward and a turn, that engine alone", () => {
+  it("BPD-050 its wiring: forward fires both engines; a turn, the engine on its own side, swinging the hanging cockpit that way; forward and a turn, that engine alone", () => {
     const fired = (controls: Record<string, number>) => Object.entries(response(ph, controls).throttles).filter(([, v]) => v > 0).map(([k]) => k).sort();
     expect(fired({ forward: 1 })).toEqual(["eng-l", "eng-r"]);
-    expect(fired({ left: 1 })).toEqual(["eng-r"]);
-    expect(fired({ right: 1 })).toEqual(["eng-l"]);
-    expect(fired({ forward: 1, left: 1 })).toEqual(["eng-r"]);
-    expect(fired({ forward: 1, right: 1 })).toEqual(["eng-l"]);
-    expect(response(ph, { left: 1 }).turn).toBeGreaterThan(0);
+    expect(fired({ left: 1 })).toEqual(["eng-l"]);
+    expect(fired({ right: 1 })).toEqual(["eng-r"]);
+    expect(fired({ forward: 1, left: 1 })).toEqual(["eng-l"]);
+    expect(fired({ forward: 1, right: 1 })).toEqual(["eng-r"]);
+    // Clockwise: the engines' end goes right, the cockpit below swings left.
+    expect(response(ph, { left: 1 }).turn).toBeLessThan(0);
   });
 
   it("BPD-050 measured: gentle, about 11.6 m/s² forward and 4.5 rad/s² turning, both ways alike; forward alone goes straight", () => {
@@ -925,7 +928,7 @@ describe("the Phiomia (Chloe's sketch, 16 November 2026)", async () => {
     expect(r[0].ahead).toBeLessThan(14);
     expect(Math.abs(r[0].turn)).toBeLessThan(0.5);
     expect(Math.abs(r[0].side)).toBeLessThan(0.5);
-    expect(r[1].turn).toBeGreaterThan(3.5);
+    expect(r[1].turn).toBeLessThan(-3.5);
     expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.5);
     expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
   }, 120_000);
