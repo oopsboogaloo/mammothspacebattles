@@ -5,6 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, polygonArea, steerMixer } from "../../core/index.ts";
+import { CONTAINERS, containerSpec, MIXTURE, maxWall, WALL, weldLimits, type ContainerKind } from "./rules.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
@@ -33,6 +34,8 @@ export interface Component {
   part?: string;
   /** A double engine's heads (an engine has one, its first body, when this is absent). */
   heads?: string[];
+  /** Wall thickness, m: a container's setting (the design rules, §1); every other part is 0.1. */
+  wall?: number;
   /** A trapezoid or triangle part: its outline as the player sets it (§16). */
   form?: Form;
 }
@@ -283,6 +286,8 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
     gun.magazine.count -= each * mags.length;
   }
   let bp: Blueprint = { format: 1, id: "preset-thrust-1", name: "THRUST 1", preset: true, rev: 1, ship, components: groupComponents(ship, THRUST_PARTS), mix };
+  // Its tanks and magazines from the design rules: at Thrust's sizes, Thrust's figures.
+  for (const c of bp.components) if (containerKind(c)) applyContainer(bp, c.id);
   reammo(bp);
   // The railgun stands on the shield emitter, not through it (in the game it overlaps it by 0.12 m).
   const lift = overlapLift(bp, "gun");
@@ -386,6 +391,7 @@ export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
     bp = buildEngine(bp, c, { headWidth: 0.6, headHeight: 0.35, throat: 0.4, wall: 0.1, length: 0.7, flare: 9 });
     bp = setParam(bp, c.id, "rate", MASTODON_FLOW);
   }
+  for (const c of components) if (containerKind(c)) applyContainer(bp, c.id);
   for (const c of components) bp = reweld(bp, c.id);
   refeed(bp);
   reammo(bp);
@@ -442,6 +448,90 @@ export function relink(bp: Blueprint): void {
       if (!ch || bp.ship.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === ch)) continue;
       bp.ship.links.push({ id: `ctl-${b.id}-${ch}`, kind: "control", channel: ch, to: b.id });
     }
+  }
+}
+
+// ---------- containers: the design rules (docs/blueprint/design-rules-proposal.md §1–3) ----------
+
+/** Which rule a part follows: the regular tanks and magazines (the OG ones keep their figures). */
+export function containerKind(c: Component): ContainerKind | null {
+  if (c.part === "tank" || c.part === "trapezoid-tank") return "tank";
+  if (c.part === "magazine") return "magazine";
+  return null;
+}
+
+/** A part's wall thickness, m: a container's setting; 0.1 for everything else for now. */
+export const wallOf = (c: Component): number => c.wall ?? WALL.default;
+
+/** Sets a container's mass, what it holds (full), its material and its charge from its outline and walls. In place. */
+export function applyContainer(bp: Blueprint, compId: string): void {
+  const c = component(bp, compId);
+  const kind = containerKind(c);
+  if (!kind) return;
+  const b = body(bp, c.bodies[0]);
+  const s = containerSpec(kind, shapeVertices(b.shape), wallOf(c));
+  b.mass = s.dryMass;
+  b.material = { ...s.material };
+  if (b.explosive) b.explosive = { ...b.explosive, charge: s.charge };
+  if (kind === "tank") {
+    b.contents = (Object.entries(MIXTURE) as [string, number][]).map(([resource, f]) => {
+      const kg = round(s.holds * f, 9);
+      return { resource, mass: kg, capacity: kg };
+    });
+  } else if (b.ammo) b.ammo = { ...b.ammo, count: s.holds };
+}
+
+/** A container's settings and what follows from them, for the properties panel. */
+function containerParams(bp: Blueprint, c: Component, kind: ContainerKind): Param[] {
+  const b = body(bp, c.bodies[0]);
+  const box = boundsOf(shapeVertices(b.shape));
+  const t = wallOf(c);
+  const s = containerSpec(kind, shapeVertices(b.shape), t);
+  const k = t / WALL.default;
+  const ro = (key: string, label: string, unit: string, value: number, decimals: number, note?: string): Param => ({ key, label, unit, value, min: 0, max: 1e6, step: 1, decimals, tab: "build", readonly: true, ...(note ? { note } : {}) });
+  return [
+    { key: "wall", label: "Wall thickness", unit: "m", value: t, min: WALL.min, max: maxWall(box.maxX - box.minX, box.maxY - box.minY), step: 0.01, decimals: 2, tab: "build", note: "Thicker: stronger welds and walls, heavier, holds less" },
+    kind === "tank" ? ro("holds", "Propellant held", "kg", s.holds, 2, "H₂ and O₂, 1 : 8 by mass") : ro("holds", "Shells held", "", s.holds, 0, `${round(bodyMass((b.ammo?.shell ?? { mass: 0 }) as Parameters<typeof bodyMass>[0]) * s.holds, 2)} kg of shells, fed to the guns welded to it`),
+    ro("dry", "Dry mass", "kg", s.dryMass, 2),
+    ro("strength", "Strength", "×", k, 2, `Welds and armour against Thrust's (${s.material.threshold} J to dent, ${s.material.toughness} J more to destroy)`),
+  ];
+}
+
+/** Within a container's size limits (or any size, for other parts). */
+function fitsLimits(bp: Blueprint, c: Component): boolean {
+  const kind = containerKind(c);
+  if (!kind) return true;
+  const box = boundsOf(shapeVertices(body(bp, c.bodies[0]).shape));
+  const r = CONTAINERS[kind];
+  const ok = (d: number) => d >= r.min - 1e-9 && d <= r.max + 1e-9;
+  return ok(box.maxX - box.minX) && ok(box.maxY - box.minY);
+}
+
+/** After a container's outline changes: back within its limits (or refused), its walls no thicker than it allows, and its rules applied. */
+function afterReshape(before: Blueprint, after: Blueprint, compId: string): Blueprint {
+  const c = component(after, compId);
+  if (!containerKind(c)) return after;
+  if (!fitsLimits(after, c)) return before;
+  const box = boundsOf(shapeVertices(body(after, c.bodies[0]).shape));
+  const most = maxWall(box.maxX - box.minX, box.maxY - box.minY);
+  if (wallOf(c) > most) setWall(after, compId, most);
+  applyContainer(after, compId);
+  return after;
+}
+
+/** A container's wall thickness, in place: its welds' strength goes with the thinner wall at each. */
+function setWall(bp: Blueprint, compId: string, t: number): void {
+  const c = component(bp, compId);
+  const was = wallOf(c);
+  c.wall = round(t, 6);
+  const mine = new Set(c.bodies);
+  for (const j of bp.ship.joints) {
+    const aMine = mine.has(j.a);
+    if (aMine === mine.has(j.b)) continue;
+    const other = componentOfBody(bp, aMine ? j.b : j.a);
+    const to = other ? wallOf(other) : WALL.default;
+    const k = Math.min(c.wall, to) / Math.min(was, to);
+    if (j.limits && k !== 1) j.limits = Object.fromEntries(Object.entries(j.limits).map(([key, v]) => [key, round((v as number) * k, 6)])) as typeof j.limits;
   }
 }
 
@@ -772,10 +862,12 @@ function partParams(bp: Blueprint, compId: string): Param[] {
     );
     return ps;
   }
+  const ck = containerKind(c);
+  const lim = ck ? CONTAINERS[ck] : { min: 0.05, max: 10 };
   if (b.shape.kind === "box") {
     ps.push(
-      { key: "width", label: "Width", unit: "m", value: b.shape.width, min: 0.05, max: 10, step: 0.05, decimals: 2, tab: "shape" },
-      { key: "height", label: "Height", unit: "m", value: b.shape.height, min: 0.05, max: 10, step: 0.05, decimals: 2, tab: "shape" },
+      { key: "width", label: "Width", unit: "m", value: b.shape.width, min: lim.min, max: lim.max, step: 0.05, decimals: 2, tab: "shape" },
+      { key: "height", label: "Height", unit: "m", value: b.shape.height, min: lim.min, max: lim.max, step: 0.05, decimals: 2, tab: "shape" },
     );
   } else if (c.form) {
     const f = c.form;
@@ -791,10 +883,11 @@ function partParams(bp: Blueprint, compId: string): Param[] {
       { key: "ph", label: "Height", unit: "m", value: box.maxY - box.minY, min: 0.2, max: 10, step: 0.05, decimals: 2, tab: "shape", readonly: true },
     );
   }
-  for (const s of b.contents ?? []) {
+  if (ck) ps.push(...containerParams(bp, c, ck));
+  for (const s of ck ? [] : (b.contents ?? [])) {
     ps.push({ key: `cap:${s.resource}`, label: `${s.resource === "h2" ? "H₂" : s.resource === "o2" ? "O₂" : s.resource} capacity`, unit: "kg", value: s.capacity, min: 0, max: 100, step: 0.05, decimals: 3, tab: "fuel" });
   }
-  if (b.ammo) {
+  if (b.ammo && !ck) {
     const kg = bodyMass(b.ammo.shell as Parameters<typeof bodyMass>[0]);
     ps.push({ key: "ammo", label: "Shells stored", unit: "", value: b.ammo.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", note: `${round(kg, 3)} kg each, fed to the guns welded to it` });
   }
@@ -810,7 +903,7 @@ function partParams(bp: Blueprint, compId: string): Param[] {
     );
   }
   if (b.shield) ps.push({ key: "radius", label: "Shield radius", unit: "m", value: b.shield.radius, min: 0.5, max: 20, step: 0.05, decimals: 2, tab: "function" });
-  ps.push(mass());
+  if (!ck) ps.push(mass());
   return ps;
 }
 
@@ -820,6 +913,13 @@ const clone = (bp: Blueprint): Blueprint => structuredClone(bp);
 export function setParam(bp: Blueprint, compId: string, key: string, value: number): Blueprint {
   const c = component(bp, compId);
   if (key === "angle") return rotateComponent(bp, compId, value);
+  if (key === "wall" && containerKind(c)) {
+    const out = clone(bp);
+    const box = boundsOf(shapeVertices(body(out, c.bodies[0]).shape));
+    setWall(out, compId, Math.max(WALL.min, Math.min(maxWall(box.maxX - box.minX, box.maxY - box.minY), value)));
+    applyContainer(out, compId);
+    return out;
+  }
   if (c.kind === "engine") {
     if (["headWidth", "headHeight", "throat", "wall", "length", "flare"].includes(key)) {
       const g = { ...engineGeom(bp, c), [key]: value };
@@ -844,7 +944,8 @@ function setForm(bp: Blueprint, compId: string, key: string, value: number): Blu
   else if (key === "fHeight") f.height = value;
   else if (key === "fApex") f.apex = Math.max(-f.base / 2, Math.min(f.base / 2, value));
   else if (key === "fTurn") f.turn = ((Math.round(value / 90) * 90) % 360 + 360) % 360;
-  return reweld(withForm(bp, compId, f), compId);
+  const ruled = afterReshape(bp, withForm(bp, compId, f), compId);
+  return ruled === bp ? bp : reweld(ruled, compId);
 }
 
 /** A part with a new outline; its mass and contents scaled by its area. */
@@ -895,14 +996,15 @@ function setOther(bp: Blueprint, c: Component, key: string, value: number): Blue
   if ((key === "width" || key === "height") && b.shape.kind === "box") {
     const old = b.shape.width * b.shape.height;
     b.shape = { ...b.shape, [key]: value };
-    // The same stuff, bigger or smaller: mass and what it holds go with its area.
+    // The same stuff, bigger or smaller: mass and what it holds go with its area (a container: its rules).
     const k = (b.shape.width * b.shape.height) / old;
     b.mass = round(b.mass * k);
     for (const s of b.contents ?? []) {
       s.capacity = round(s.capacity * k, 9);
       s.mass = round(s.mass * k, 9);
     }
-    return reweld(out, compId);
+    const ruled = afterReshape(bp, out, compId);
+    return ruled === bp ? bp : reweld(ruled, compId);
   }
   if (key.startsWith("cap:")) {
     const s = b.contents?.find((x) => x.resource === key.slice(4));
@@ -923,11 +1025,22 @@ function setOther(bp: Blueprint, c: Component, key: string, value: number): Blue
 
 // ---------- welding ----------
 
-export const WELD_PRESETS: { name: string; limits: JointInput["limits"] & object; yield: number }[] = [
-  { name: "Light", limits: { tension: 11475, compression: 22950, shear: 8025, torque: 2760 }, yield: 0.3 },
-  { name: "Standard", limits: { tension: 22950, compression: 45900, shear: 16050, torque: 5520 }, yield: 0.3 },
-  { name: "Heavy", limits: { tension: 45900, compression: 91800, shear: 32100, torque: 11040 }, yield: 0.3 },
+/**
+ * A weld's quality, on top of the thickness rule (design rules §1): its limits are
+ * quality × k × the thinner wall it joins. These are the limits at 0.1 m walls (Thrust's).
+ */
+export const WELD_PRESETS: { name: string; quality: number; limits: JointInput["limits"] & object; yield: number }[] = [
+  { name: "Light", quality: 0.5, limits: weldLimits(WALL.default, 0.5), yield: 0.3 },
+  { name: "Standard", quality: 1, limits: weldLimits(WALL.default, 1), yield: 0.3 },
+  { name: "Heavy", quality: 2, limits: weldLimits(WALL.default, 2), yield: 0.3 },
 ];
+
+/** The weld presets for one weld: their limits for the walls it joins. */
+export function weldPresetsFor(bp: Blueprint, weldId: string): typeof WELD_PRESETS {
+  const w = welds(bp).find((x) => x.id === weldId);
+  const t = w ? Math.min(wallOf(component(bp, w.a)), wallOf(component(bp, w.b))) : WALL.default;
+  return WELD_PRESETS.map((p) => ({ ...p, limits: weldLimits(t, p.quality) }));
+}
 
 interface Edge {
   a: Vec2;
@@ -1016,9 +1129,10 @@ export function reweld(bp: Blueprint, compId: string): Blueprint {
   const strength = new Map(old.map((w) => [w.a === compId ? w.b : w.a, { limits: w.joints[0].limits, yield: w.joints[0].yield }]));
   const oldIds = new Set(old.flatMap((w) => w.joints.map((j) => j.id)));
   out.ship.joints = out.ship.joints.filter((j) => !oldIds.has(j.id));
-  const std = WELD_PRESETS[1];
   for (const other of out.components) {
     if (other.id === compId) continue;
+    // A new weld: Standard for the thinner of the two walls (design rules §1).
+    const std = { limits: weldLimits(Math.min(wallOf(c), wallOf(other))), yield: WELD_PRESETS[1].yield };
     let k = 0;
     for (const pid of weldingBodies(c)) {
       for (const qid of weldingBodies(other)) {
@@ -1140,6 +1254,13 @@ export function componentSize(bp: Blueprint, compId: string): { w: number; h: nu
  */
 export function resizeComponent(bp: Blueprint, compId: string, w: number, h: number, fixed: Vec2, side: { x: number; y: number }): Blueprint {
   const c = component(bp, compId);
+  // A container stays within its size limits (§2, §3).
+  const kind = containerKind(c);
+  if (kind) {
+    const r = CONTAINERS[kind];
+    w = Math.max(r.min, Math.min(r.max, w));
+    h = Math.max(r.min, Math.min(r.max, h));
+  }
   const now = componentSize(bp, compId);
   let out: Blueprint;
   if (c.form) {
@@ -1152,11 +1273,12 @@ export function resizeComponent(bp: Blueprint, compId: string, w: number, h: num
     if (f.kind === "trapezoid") f.top = round(f.top * kx);
     else f.apex = round(f.apex * kx);
     f.height = round(f.height * ky);
-    out = withForm(bp, compId, f);
+    out = afterReshape(bp, withForm(bp, compId, f), compId);
   } else {
     out = setOther(bp, c, "width", round(w));
     out = setOther(out, component(out, compId), "height", round(h));
   }
+  if (out === bp) return bp;
   const b = body(out, c.bodies[0]);
   const a = b.angle ?? 0;
   const off = rot({ x: (side.x * w) / 2, y: (side.y * h) / 2 }, a);

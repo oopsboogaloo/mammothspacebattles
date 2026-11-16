@@ -263,7 +263,7 @@ So the ship looks much as it does, and its damage model is kept.
 
 ## 7. Order of work
 
-1. **Containers:** the tank and magazine rules, wall thickness (weight, welds, damage) and the size
+1. **Containers** *(built, `docs/blueprint/spec.md` §19)***:** the tank and magazine rules, wall thickness (weight, welds, damage) and the size
    limits; THRUST 1 and the Mastodon rebuilt from them. Measured against today.
 2. **Power:**
    - in the physics: battery, generators, and draws for the shield, railgun, beam and tether;

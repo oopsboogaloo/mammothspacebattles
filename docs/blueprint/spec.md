@@ -475,6 +475,35 @@ sides weld and snap exactly as before.
 
 Tests: BPD-041 (turning, welding and snapping at an angle), BPD-042 (resizing).
 
+## 19. Design rules, step 1: tanks and magazines (16 November 2026)
+
+The rules of `design-rules-proposal.md` §1–3, as approved, are built in `src/app/blueprint/rules.ts`.
+They apply to the regular tanks (box and trapezoid) and magazines; the OG parts keep their
+figures.
+
+- **What it holds goes with its inner area:** the outline moved in by the wall on every side.
+  - A tank holds 3.89 kg of propellant per m² (H₂ : O₂ 1 : 8).
+  - A magazine holds 480 shells per m², rounded down after a 10⁻⁶ tolerance.
+- **Its dry mass goes with its wall area:** 4.35 kg per m² for a tank, 15.8 kg per m² for a magazine.
+- **Wall thickness is a setting** (Build tab): 0.02–0.3 m, at most a quarter of the smaller side,
+  0.1 m by default. In proportion to it go:
+  - the container's material (threshold and toughness);
+  - its welds: each weld is quality × k × the thinner wall it joins, with Light, Standard and Heavy
+    at ×0.5, ×1 and ×2;
+  - its weight.
+  - Thicker walls leave less room inside.
+- **Size limits:** a tank 0.3–3 m each way, a magazine 0.3–2 m. A typed size past them is refused;
+  a dragged one stops at them.
+- **Its explosion goes with what it can hold.** A magazine with no shells left still doesn't go off.
+- **Readouts:** what it holds, dry mass, and strength against Thrust's.
+
+**At the defaults THRUST 1 is unchanged:** 61.2 kg, 36.1 m/s² forward, 9.85 rad/s² turning, every
+weld Standard. The Mastodon, its parts now sized by the rules, is 78.5 kg with 5.3 kg of propellant
+and 115 shells in each magazine: 28.6 m/s² forward and back, 8.6 rad/s² turning.
+
+Tests: BPD-043 (Thrust's figures at Thrust's sizes; inner areas; exactly 60 shells), BPD-044 (wall
+thickness, welds, size limits).
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):
