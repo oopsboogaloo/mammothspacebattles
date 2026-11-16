@@ -297,10 +297,14 @@ test("MMN-103 Q and E swing the aim; F fires and G casts the hook; the touch sti
   await page.keyboard.down("KeyF");
   await expect.poll(() => tools(page, (m) => m.moon()!.shots ?? 0)).toBeGreaterThan(0);
   await page.keyboard.up("KeyF");
+  // The hook's button reaches the world (the cast itself: tests/core/moonTools.test.ts, MMN-120,
+  // MMN-121; and the mouse's, above). Not the rope: cast at nothing it is out and back in 0.2 game s,
+  // which a slow browser can step in one run of the worker and never show; and where the aim has
+  // swung to, it may catch on the rock and stay.
   await page.keyboard.down("KeyG");
-  await expect.poll(() => tools(page, (m) => !!m.rope())).toBe(true);
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.hook)).toBe(1);
   await page.keyboard.up("KeyG");
-  await expect.poll(() => tools(page, (m) => m.rope())).toBeNull();
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.hook)).toBe(0);
   // The stick: pressed at its top, the aim is straight up; at its left, to the left.
   const stick = (await page.getByTestId("mmn-aim").boundingBox())!;
   const press = (dx: number, dy: number) =>
@@ -314,8 +318,9 @@ test("MMN-103 Q and E swing the aim; F fires and G casts the hook; the touch sti
   await expect.poll(() => tools(page, (m) => m.moon()!.shots ?? 0)).toBeGreaterThan(shotsBefore);
   await hold(page, "mmn-fire", false);
   await hold(page, "mmn-hook", true);
-  await expect.poll(() => tools(page, (m) => !!m.rope())).toBe(true);
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.hook)).toBe(1);
   await hold(page, "mmn-hook", false);
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.hook)).toBe(0);
 });
 
 test("MMN-103 a controller: the right stick aims, the right trigger fires, the left trigger casts the hook", async ({ page }) => {
@@ -346,6 +351,7 @@ test("MMN-103 a controller: the right stick aims, the right trigger fires, the l
   await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.fire)).toBe(0);
   expect(Math.abs((await tools(page, (m) => m.aim()!.angle)))).toBeCloseTo(Math.PI, 1);
   await button(6, true);
-  await expect.poll(() => tools(page, (m) => !!m.rope())).toBe(true);
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.hook)).toBe(1);
   await button(6, false);
+  await expect.poll(() => tools(page, (m) => m.sandbox().world.controls.hook)).toBe(0);
 });
