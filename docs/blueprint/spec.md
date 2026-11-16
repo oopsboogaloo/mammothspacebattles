@@ -268,8 +268,7 @@ each blueprint's `mix` (its rules, and per driven channel its lines and how they
 
 ## 11. Later (designed for, not built now)
 
-- Rotating components (handle + 15° snap) and triangular/wedge components to join at angles.
-- Resizing by dragging handles on the blueprint (for now: by the SHAPE fields).
+- (Built: turning by a handle and resizing by dragging, §18; trapezoids and triangles, §17.)
 - Damage and repair: the blueprint of a damaged ship shows lost parts as dashed outlines to rebuild.
 - Cost and build limits for the game proper.
 
@@ -450,6 +449,31 @@ points, as the rule says.
 
 Tests: BPD-038 (the Mastodon, the double engine, Try it), BPD-039 (trapezoids and triangles),
 BPD-040 (control links on added parts).
+
+## 18. Turning and resizing on the blueprint (16 November 2026, Chloe)
+
+The selected part shows handles (Build mode):
+
+- **A round handle above it turns it**, about its centre, in 15° steps (Shift: 1°). The **Angle**
+  property (every part, Shape tab) does the same with a typed value, slider or steppers.
+  - A trapezoid's or triangle's **Turn** (quarter turns) is a separate property: it turns the
+    outline in place.
+- **Squares on its corners and sides resize it**: a box part, or a trapezoid or triangle (along its
+  own axes), when it is one body.
+  - The corner or side opposite the one dragged stays where it is, at any angle.
+  - Sizes snap to 5 cm (Shift: 1 cm).
+  - What it weighs and holds goes with its area.
+  - Engines and the cockpit keep their own Shape fields.
+- One undo step per drag.
+- A part never turns or grows into another: it stops at the last place it fitted, and the page
+  says what was in the way.
+
+Welds and snapping now work at any angle. Two sides that face each other, lie on the same line
+(within 1 mm) and share more than 2 cm weld, by the same points as before. A dragged part snaps
+flush to a side at any angle, and to two sides at once when they face different ways. Square
+sides weld and snap exactly as before.
+
+Tests: BPD-041 (turning, welding and snapping at an angle), BPD-042 (resizing).
 
 ## Sources
 

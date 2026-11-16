@@ -459,3 +459,7 @@ html, body, #root { height: 100%; overflow: hidden; }
 .bpapp .tn-btn::after { content: "✎"; font-size: 12px; opacity: 0; margin-left: 6px; }
 .bpapp .tn-btn:hover::after, .bpapp .tn-btn:focus-visible::after { opacity: 0.7; }
 .bpapp input.tn { background: transparent; color: inherit; border: 1px solid var(--line, currentColor); padding: 2px 6px; width: 260px; text-transform: uppercase; }
+
+/* The selected part's handles (§3.6): turn by the round one, resize by the squares. */
+.bpapp .handles .hdl { cursor: grab; }
+.bpapp .handles .hdl:hover rect:last-of-type, .bpapp .handles .hdl:hover circle:last-of-type { fill: #ffe08a; }

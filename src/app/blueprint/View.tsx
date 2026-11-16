@@ -2,8 +2,8 @@
 // mass and thrust; select by clicking; pan by dragging the empty grid; zoom with the wheel, a pinch
 // or the buttons.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { addComponent, allOverlaps, body, component, componentBounds, engineGeom, engines, jointPoint, moveComponent, place, SNAP, stats, weldingOf, welds, worldVertices, type Blueprint, type Kind } from "./model.ts";
-import { current, edit, mode, overlays, placing, preview, say, selection, type Placing } from "./store.ts";
+import { addComponent, allOverlaps, body, component, componentAngle, componentBounds, componentSize, engineGeom, engines, GRID, jointPoint, moveComponent, place, resizable, resizeComponent, rotateComponent, SNAP, stats, TURN_STEP, weldingOf, welds, withoutNewOverlaps, worldPoint, worldVertices, type Blueprint, type Kind } from "./model.ts";
+import { current, edit, endGesture, live, mode, overlays, placing, preview, say, selection, type Placing } from "./store.ts";
 import { testHeld } from "./Controls.tsx";
 import { loadsFor } from "./tryLoads.ts";
 import { response } from "./model.ts";
@@ -80,7 +80,7 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
   const [v, setV] = useState<ViewState>({ x: 0, y: 0, zoom: 100 });
   const fitted = useRef<string | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pan = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean; hit: string | null; grab?: { x: number; y: number } } | null>(null);
+  const pan = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean; hit: string | null; grab?: { x: number; y: number }; shape?: ShapeDrag } | null>(null);
   const pinch = useRef<{ d: number; zoom: number } | null>(null);
 
   useEffect(() => {
@@ -147,7 +147,7 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
       const hit = ((e.target as Element).closest("[data-hit]") as HTMLElement | null)?.getAttribute("data-hit") ?? null;
       // Grabbing a part: where on it, so it moves with the pointer.
       const grab = hit?.startsWith("comp:") ? toWorld(p.x, p.y) : undefined;
-      pan.current = { x: p.x, y: p.y, vx: v.x, vy: v.y, moved: false, hit, grab };
+      pan.current = { x: p.x, y: p.y, vx: v.x, vy: v.y, moved: false, hit, grab, shape: shapeDrag(current.value, hit, toWorld(p.x, p.y)) };
     }
   };
   const onMove = (e: PointerEvent) => {
@@ -164,6 +164,11 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
     const pn = pan.current;
     if (!pn) return;
     if (Math.hypot(p.x - pn.x, p.y - pn.y) > 4) pn.moved = true;
+    if (pn.shape) {
+      // Turning or resizing by a handle (§3.6): one undo step for the whole drag.
+      if (pn.moved) pn.shape.blocked = dragShape(pn.shape, toWorld(p.x, p.y), e.shiftKey);
+      return;
+    }
     if (pn.moved && pn.grab && pn.hit) {
       // Dragging a part: it follows the pointer and snaps (§3.2).
       const id = pn.hit.slice(5);
@@ -186,6 +191,11 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
     if (pointers.current.size < 2) pinch.current = null;
     const pn = pan.current;
     pan.current = null;
+    if (pn?.shape) {
+      endGesture();
+      if (pn.shape.blocked) say(`${component(current.value, pn.shape.id).label} would overlap ${pn.shape.blocked}: it stopped short.`);
+      return;
+    }
     if (placing.value?.moving) return drop(placing.value);
     if (pn && !pn.moved) {
       // A click: what is under it, else nothing.
@@ -242,6 +252,7 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
         );
       })}
       {sel?.type === "component" && bp.components.some((c) => c.id === sel.id) && <Selected bp={bp} id={sel.id} sx={sx} sy={sy} dims={ov.dims} zoom={v.zoom} />}
+      {sel?.type === "component" && mode.value === "build" && !placing.value && bp.components.some((c) => c.id === sel.id) && <Handles bp={bp} id={sel.id} sx={sx} sy={sy} />}
       {ov.thrust &&
         engines(bp).map((e) => {
           const L = (0.35 + e.thrust / 2000) * v.zoom;
@@ -291,6 +302,123 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
   );
 }
 
+// ---------- turning and resizing by handles (§3.6) ----------
+
+interface ShapeDrag {
+  id: string;
+  kind: "rotate" | "resize";
+  /** Turning: about this point, from this pointer angle and part angle (degrees). */
+  pivot: { x: number; y: number };
+  from: number;
+  deg: number;
+  /** Resizing: the point that stays put, which way the dragged handle is from it, the part's angle, and its size. */
+  fixed: { x: number; y: number };
+  side: { x: number; y: number };
+  angle: number;
+  size: { w: number; h: number };
+  /** The last change that fitted, and what the latest one would have overlapped. */
+  last?: (b: Blueprint) => Blueprint;
+  blocked?: string;
+}
+
+function shapeDrag(bp: Blueprint, hit: string | null, at: { x: number; y: number }): ShapeDrag | undefined {
+  const m = hit && /^(rotate|resize):([^:]+)(?::(-?\d):(-?\d))?$/.exec(hit);
+  if (!m || !bp.components.some((c) => c.id === m[2])) return undefined;
+  const id = m[2];
+  const main = body(bp, component(bp, id).bodies[0]);
+  const size = componentSize(bp, id);
+  const side = { x: Number(m[3] ?? 0), y: Number(m[4] ?? 0) };
+  return {
+    id,
+    kind: m[1] as ShapeDrag["kind"],
+    pivot: { ...main.position },
+    from: Math.atan2(at.y - main.position.y, at.x - main.position.x),
+    deg: componentAngle(bp, id),
+    fixed: worldPoint(main, { x: (-side.x * size.w) / 2, y: (-side.y * size.h) / 2 }),
+    side,
+    angle: main.angle ?? 0,
+    size,
+  };
+}
+
+/** Applies a handle drag; returns what it would have overlapped, if it stopped short. */
+function dragShape(d: ShapeDrag, at: { x: number; y: number }, fine: boolean): string | undefined {
+  let change: (b: Blueprint) => Blueprint;
+  if (d.kind === "rotate") {
+    const turned = ((Math.atan2(at.y - d.pivot.y, at.x - d.pivot.x) - d.from) * 180) / Math.PI;
+    const step = fine ? 1 : TURN_STEP;
+    let deg = Math.round((d.deg + turned) / step) * step;
+    deg = ((((deg + 180) % 360) + 360) % 360) - 180;
+    change = (b) => rotateComponent(b, d.id, deg === -180 ? 180 : deg);
+  } else {
+    const rel = { x: at.x - d.fixed.x, y: at.y - d.fixed.y };
+    const c = Math.cos(-d.angle);
+    const s = Math.sin(-d.angle);
+    const local = { x: rel.x * c - rel.y * s, y: rel.x * s + rel.y * c };
+    const step = fine ? 0.01 : GRID;
+    const size = (k: "x" | "y", was: number) => (d.side[k] ? Math.max(0.1, Math.round((d.side[k] * local[k]) / step) * step) : was);
+    const w = size("x", d.size.w);
+    const h = size("y", d.size.h);
+    change = (b) => resizeComponent(b, d.id, w, h, d.fixed, d.side);
+  }
+  // Never into another part: it stays at the last place it fitted.
+  let blocked: string | undefined;
+  const fits = (b: Blueprint) => {
+    const out = change(b);
+    const r = withoutNewOverlaps(b, out, d.id);
+    if (r.blocked.length) {
+      blocked = r.blocked.join(" and ");
+      return d.last ? d.last(b) : b;
+    }
+    return out;
+  };
+  live(fits);
+  if (!blocked) d.last = change;
+  return blocked;
+}
+
+/** The selected part's handles: a round one to turn it, and, if it can be resized, squares on its corners and sides. */
+function Handles({ bp, id, sx, sy }: { bp: Blueprint; id: string; sx: (x: number) => number; sy: (y: number) => number }) {
+  const c = component(bp, id);
+  const main = body(bp, c.bodies[0]);
+  const box = componentBounds(bp, c);
+  const top = { x: sx((box.minX + box.maxX) / 2), y: sy(box.maxY) - 10 };
+  const knob = { x: top.x, y: top.y - 26 };
+  const sized = resizable(bp, id);
+  const { w, h } = componentSize(bp, id);
+  const at = (i: number, j: number) => {
+    const p = worldPoint(main, { x: (i * w) / 2, y: (j * h) / 2 });
+    return { x: sx(p.x), y: sy(p.y) };
+  };
+  const ring = [at(-1, -1), at(1, -1), at(1, 1), at(-1, 1)];
+  return (
+    <g class="handles" data-testid="handles">
+      {sized && <polygon points={ring.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#ffe08a" stroke-width={1} stroke-dasharray="3 3" pointer-events="none" />}
+      <line x1={top.x} y1={top.y} x2={knob.x} y2={knob.y} stroke="#ffe08a" stroke-width={1.2} pointer-events="none" />
+      <g data-hit={`rotate:${id}`} data-testid="rotate-handle" class="hdl">
+        <circle cx={knob.x} cy={knob.y} r={14} fill="transparent" />
+        <circle cx={knob.x} cy={knob.y} r={7} fill="#0b1430" stroke="#ffe08a" stroke-width={1.5} />
+        <title>Drag to turn ({TURN_STEP}° steps; Shift: 1°)</title>
+      </g>
+      {sized &&
+        [-1, 0, 1].flatMap((i) =>
+          [-1, 0, 1]
+            .filter((j) => i || j)
+            .map((j) => {
+              const p = at(i, j);
+              return (
+                <g key={`${i}${j}`} data-hit={`resize:${id}:${i}:${j}`} data-testid={`resize-${i}-${j}`} class="hdl">
+                  <rect x={p.x - 12} y={p.y - 12} width={24} height={24} fill="transparent" />
+                  <rect x={p.x - 5} y={p.y - 5} width={10} height={10} fill="#0b1430" stroke="#ffe08a" stroke-width={1.5} />
+                  <title>Drag to resize (Shift: in 1 cm steps)</title>
+                </g>
+              );
+            }),
+        )}
+    </g>
+  );
+}
+
 function gridLines(w: number, h: number, v: ViewState, sx: (x: number) => number, sy: (y: number) => number, toWorld: (x: number, y: number) => { x: number; y: number }) {
   const a = toWorld(0, h);
   const b = toWorld(w, 0);
@@ -315,12 +443,6 @@ function Selected({ bp, id, sx, sy, dims, zoom }: { bp: Blueprint; id: string; s
   const x1 = sx(box.maxX) + pad;
   const y0 = sy(box.maxY) - pad;
   const y1 = sy(box.minY) + pad;
-  const handles = [
-    [x0, y0],
-    [x1, y0],
-    [x0, y1],
-    [x1, y1],
-  ];
   const label = (x: number, y: number, t: string) => (
     <text x={x} y={y} class="dimlbl">
       {t}
@@ -351,9 +473,6 @@ function Selected({ bp, id, sx, sy, dims, zoom }: { bp: Blueprint; id: string; s
   return (
     <g pointer-events="none">
       <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill="none" stroke="#ffe08a" stroke-width={1.5} stroke-dasharray="6 4" />
-      {handles.map(([x, y], i) => (
-        <rect key={i} x={x - 4} y={y - 4} width={8} height={8} fill="#0b1430" stroke="#ffe08a" stroke-width={1.5} />
-      ))}
       {dimEls}
     </g>
   );

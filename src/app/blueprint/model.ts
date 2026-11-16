@@ -740,6 +740,12 @@ function buildUnit(bp: Blueprint, headId: string, wallIds: string[], g: EngineGe
 const round = (x: number, d = 6) => Math.round(x * 10 ** d) / 10 ** d;
 
 export function params(bp: Blueprint, compId: string): Param[] {
+  // Every part can be turned: by the handle on the blueprint, or here.
+  const angle: Param = { key: "angle", label: "Angle", unit: "°", value: componentAngle(bp, compId), min: -180, max: 180, step: TURN_STEP, decimals: 0, tab: "shape", note: "Or drag the round handle above it (Shift: by 1°)" };
+  return [...partParams(bp, compId), angle];
+}
+
+function partParams(bp: Blueprint, compId: string): Param[] {
   const c = component(bp, compId);
   const b = body(bp, c.bodies[0]);
   const ps: Param[] = [];
@@ -812,6 +818,7 @@ const clone = (bp: Blueprint): Blueprint => structuredClone(bp);
 /** Changes one property. A change to a part's outline rewelds it to whatever it then touches. */
 export function setParam(bp: Blueprint, compId: string, key: string, value: number): Blueprint {
   const c = component(bp, compId);
+  if (key === "angle") return rotateComponent(bp, compId, value);
   if (c.kind === "engine") {
     if (["headWidth", "headHeight", "throat", "wall", "length", "flare"].includes(key)) {
       const g = { ...engineGeom(bp, c), [key]: value };
@@ -830,14 +837,20 @@ export function setParam(bp: Blueprint, compId: string, key: string, value: numb
 
 /** A trapezoid's or triangle's outline: the same stuff, so its mass and what it holds go with its area. */
 function setForm(bp: Blueprint, compId: string, key: string, value: number): Blueprint {
-  const out = clone(bp);
-  const c = component(out, compId);
-  const f = { ...c.form! } as Form & { top?: number; apex?: number };
+  const f = { ...component(bp, compId).form! } as Form & { top?: number; apex?: number };
   if (key === "fBase") f.base = value;
   else if (key === "fTop") f.top = value;
   else if (key === "fHeight") f.height = value;
   else if (key === "fApex") f.apex = Math.max(-f.base / 2, Math.min(f.base / 2, value));
   else if (key === "fTurn") f.turn = ((Math.round(value / 90) * 90) % 360 + 360) % 360;
+  return reweld(withForm(bp, compId, f), compId);
+}
+
+/** A part with a new outline; its mass and contents scaled by its area. */
+function withForm(bp: Blueprint, compId: string, form: Form): Blueprint {
+  const out = clone(bp);
+  const c = component(out, compId);
+  const f = { ...form };
   if (f.kind === "triangle") f.apex = Math.max(-f.base / 2, Math.min(f.base / 2, f.apex));
   const b = body(out, c.bodies[0]);
   const before = Math.abs(polygonArea(shapeVertices(b.shape)));
@@ -849,7 +862,7 @@ function setForm(bp: Blueprint, compId: string, key: string, value: number): Blu
     s.mass = round(s.mass * k, 9);
   }
   c.form = f;
-  return reweld(out, compId);
+  return out;
 }
 
 /** An engine head's fuel and build properties. */
@@ -918,11 +931,11 @@ export const WELD_PRESETS: { name: string; limits: JointInput["limits"] & object
 interface Edge {
   a: Vec2;
   b: Vec2;
-  /** The way the side faces, out of its body (a unit vector along x or y). */
+  /** The way the side faces, out of its body (a unit vector). */
   out?: Vec2;
 }
 
-/** A body's sides that run along x or y, in the ship's frame. */
+/** A body's straight sides, at any angle, in the ship's frame: each with the way it faces. */
 function straightEdges(b: BodyInput): Edge[] {
   let vs = worldVertices(b);
   if (polygonArea(vs) < 0) vs = [...vs].reverse(); // anticlockwise, so each side's outside is on its right
@@ -930,16 +943,33 @@ function straightEdges(b: BodyInput): Edge[] {
   for (let i = 0; i < vs.length; i++) {
     const a = vs[i];
     const c = vs[(i + 1) % vs.length];
-    if (Math.abs(a.x - c.x) < 1e-6 || Math.abs(a.y - c.y) < 1e-6) {
-      const len = Math.hypot(c.x - a.x, c.y - a.y) || 1;
-      out.push({ a, b: c, out: { x: Math.round((c.y - a.y) / len), y: Math.round(-(c.x - a.x) / len) } });
-    }
+    const len = Math.hypot(c.x - a.x, c.y - a.y);
+    if (len < 1e-6) continue;
+    // Snapped to the axis when it runs along one, so square sides stay exactly square.
+    const n = { x: (c.y - a.y) / len, y: -(c.x - a.x) / len };
+    const sq = (v: number) => (Math.abs(v) < 1e-9 ? 0 : Math.abs(Math.abs(v) - 1) < 1e-9 ? Math.sign(v) : v);
+    out.push({ a, b: c, out: { x: sq(n.x), y: sq(n.y) } });
   }
   return out;
 }
 
 /** Two sides that face each other (so the parts would meet there, not overlap). */
-const facing = (e: Edge, f: Edge) => !!e.out && !!f.out && e.out.x === -f.out.x && e.out.y === -f.out.y;
+const facing = (e: Edge, f: Edge) => !!e.out && !!f.out && e.out.x * f.out.x + e.out.y * f.out.y < -1 + 1e-6;
+
+/** Along a side: how far each end of another side is from this one's start. */
+const along = (e: Edge, p: Vec2) => {
+  const len = Math.hypot(e.b.x - e.a.x, e.b.y - e.a.y);
+  return ((p.x - e.a.x) * (e.b.x - e.a.x) + (p.y - e.a.y) * (e.b.y - e.a.y)) / len;
+};
+/** How far side f lies out from side e, along e's outward direction. */
+const apart = (e: Edge, f: Edge) => (f.a.x - e.a.x) * e.out!.x + (f.a.y - e.a.y) * e.out!.y;
+/** The length two facing sides share, as [from, to] along e (to < from if none). */
+function shared(e: Edge, f: Edge): [number, number] {
+  const len = Math.hypot(e.b.x - e.a.x, e.b.y - e.a.y);
+  const fa = along(e, f.a);
+  const fb = along(e, f.b);
+  return [Math.max(0, Math.min(fa, fb)), Math.min(len, Math.max(fa, fb))];
+}
 
 const TOUCH = 1e-3;
 
@@ -948,25 +978,17 @@ export function touching(p: BodyInput, q: BodyInput): Edge[] {
   const out: Edge[] = [];
   for (const e of straightEdges(p)) {
     for (const f of straightEdges(q)) {
-      const vertical = Math.abs(e.a.x - e.b.x) < 1e-6;
-      if (vertical !== Math.abs(f.a.x - f.b.x) < 1e-6 || !facing(e, f)) continue;
-      if (vertical) {
-        if (Math.abs(e.a.x - f.a.x) > TOUCH) continue;
-        const lo = Math.max(Math.min(e.a.y, e.b.y), Math.min(f.a.y, f.b.y));
-        const hi = Math.min(Math.max(e.a.y, e.b.y), Math.max(f.a.y, f.b.y));
-        if (hi - lo > 0.02) out.push({ a: { x: e.a.x, y: lo }, b: { x: e.a.x, y: hi } });
-      } else {
-        if (Math.abs(e.a.y - f.a.y) > TOUCH) continue;
-        const lo = Math.max(Math.min(e.a.x, e.b.x), Math.min(f.a.x, f.b.x));
-        const hi = Math.min(Math.max(e.a.x, e.b.x), Math.max(f.a.x, f.b.x));
-        if (hi - lo > 0.02) out.push({ a: { x: lo, y: e.a.y }, b: { x: hi, y: e.a.y } });
-      }
+      if (!facing(e, f) || Math.abs(apart(e, f)) > TOUCH) continue;
+      const [lo, hi] = shared(e, f);
+      if (hi - lo <= 0.02) continue;
+      const len = Math.hypot(e.b.x - e.a.x, e.b.y - e.a.y);
+      const t = { x: (e.b.x - e.a.x) / len, y: (e.b.y - e.a.y) / len };
+      out.push({ a: { x: e.a.x + t.x * lo, y: e.a.y + t.y * lo }, b: { x: e.a.x + t.x * hi, y: e.a.y + t.y * hi } });
     }
   }
   return out;
 }
 
-/** Weld points along a shared stretch: one in the middle if it is under 0.3 m, else two, 0.1 m in from its ends. */
 export function weldPoints(e: Edge): Vec2[] {
   const len = Math.hypot(e.b.x - e.a.x, e.b.y - e.a.y);
   if (len < 0.3 - 1e-6) return [{ x: (e.a.x + e.b.x) / 2, y: (e.a.y + e.b.y) / 2 }];
@@ -1053,6 +1075,94 @@ export function removeComponent(bp: Blueprint, compId: string): Blueprint {
   return out;
 }
 
+// ---------- turning and resizing on the blueprint (§3.6) ----------
+
+/** The step a part turns by, degrees, unless the player holds Shift. */
+export const TURN_STEP = 15;
+
+/** A part's angle, degrees (−180 to 180]: its main body's. */
+export function componentAngle(bp: Blueprint, compId: string): number {
+  const a = ((body(bp, component(bp, compId).bodies[0]).angle ?? 0) * 180) / Math.PI;
+  const n = ((((a + 180) % 360) + 360) % 360) - 180;
+  return round(n === -180 ? 180 : n, 6);
+}
+
+/**
+ * Turns a part so its angle is `deg`, about its main body's centre (which stays put): its welds
+ * break and re-form wherever its sides then meet others'.
+ */
+export function rotateComponent(bp: Blueprint, compId: string, deg: number): Blueprint {
+  const out = clone(bp);
+  const c = component(out, compId);
+  const main = body(out, c.bodies[0]);
+  const delta = ((deg - componentAngle(bp, compId)) * Math.PI) / 180;
+  if (Math.abs(delta) < 1e-12) return out;
+  const pivot = { ...main.position };
+  const target = (deg * Math.PI) / 180;
+  for (const id of c.bodies) {
+    const b = body(out, id);
+    const r = rot({ x: b.position.x - pivot.x, y: b.position.y - pivot.y }, delta);
+    b.position = { x: round(pivot.x + r.x), y: round(pivot.y + r.y) };
+    // Tidied, so whole degrees stay whole and quarter turns exact (sides square to the grid weld).
+    b.angle = exactAngle(id === main.id ? target : (b.angle ?? 0) + delta);
+  }
+  return reweld(out, compId);
+}
+
+/** An angle tidied: a whole number of degrees to 1e-9, and a quarter turn exactly. */
+function exactAngle(a: number): number {
+  const deg = (a * 180) / Math.PI;
+  const whole = Math.round(deg);
+  const d = Math.abs(deg - whole) < 1e-7 ? whole : deg;
+  const n = ((((d + 180) % 360) + 360) % 360) - 180;
+  return n === 0 ? 0 : n === 90 ? Math.PI / 2 : n === -90 ? -Math.PI / 2 : n === -180 || n === 180 ? Math.PI : (n * Math.PI) / 180;
+}
+
+/** Whether a part can be resized by dragging: one body, a box or a trapezoid or triangle. */
+export function resizable(bp: Blueprint, compId: string): boolean {
+  const c = component(bp, compId);
+  if (c.kind === "engine" || c.bodies.length !== 1) return false;
+  return !!c.form || body(bp, c.bodies[0]).shape.kind === "box";
+}
+
+/** A part's size in its own frame (width along its x, height along its y), m. */
+export function componentSize(bp: Blueprint, compId: string): { w: number; h: number } {
+  const b = body(bp, component(bp, compId).bodies[0]);
+  const box = boundsOf(shapeVertices(b.shape));
+  return { w: round(box.maxX - box.minX), h: round(box.maxY - box.minY) };
+}
+
+/**
+ * Resizes a part to w × h in its own frame, keeping `fixed` (a point in the ship's frame: the
+ * corner or side opposite the one dragged) where it is; `side` is which way the dragged handle is
+ * from it (−1, 0 or 1 along the part's x and y). What it holds and weighs goes with its area.
+ */
+export function resizeComponent(bp: Blueprint, compId: string, w: number, h: number, fixed: Vec2, side: { x: number; y: number }): Blueprint {
+  const c = component(bp, compId);
+  const now = componentSize(bp, compId);
+  let out: Blueprint;
+  if (c.form) {
+    const f = { ...c.form } as Form & { top?: number; apex?: number };
+    // The form's own axes: base along x at turns 0 and 180, along y at 90 and 270.
+    const sideways = f.turn === 90 || f.turn === 270;
+    const kx = (sideways ? h / now.h : w / now.w) || 1;
+    const ky = (sideways ? w / now.w : h / now.h) || 1;
+    f.base = round(f.base * kx);
+    if (f.kind === "trapezoid") f.top = round(f.top * kx);
+    else f.apex = round(f.apex * kx);
+    f.height = round(f.height * ky);
+    out = withForm(bp, compId, f);
+  } else {
+    out = setOther(bp, c, "width", round(w));
+    out = setOther(out, component(out, compId), "height", round(h));
+  }
+  const b = body(out, c.bodies[0]);
+  const a = b.angle ?? 0;
+  const off = rot({ x: (side.x * w) / 2, y: (side.y * h) / 2 }, a);
+  b.position = { x: round(fixed.x + off.x), y: round(fixed.y + off.y) };
+  return reweld(out, compId);
+}
+
 /** Moves a component by (dx, dy): its welds break and re-form wherever it lands. */
 export function moveComponent(bp: Blueprint, compId: string, dx: number, dy: number): Blueprint {
   const out = clone(bp);
@@ -1128,42 +1238,48 @@ export function place(bp: Blueprint, moving: BodyInput[], welding: string[], dx:
     cy = Math.round((ref.y + dy) / GRID) * GRID - (ref.y + dy);
   } else {
     const mov = moving.filter((b) => welding.includes(b.id)).map((b) => shifted(b, dx, dy));
-    // Flush against a side: the smallest move that makes a side of ours meet a side of theirs.
-    let bestX: { d: number; f: Edge; e: Edge } | null = null;
-    let bestY: { d: number; f: Edge; e: Edge } | null = null;
+    // Flush against a side: the smallest move that makes a side of ours meet a side of theirs,
+    // at any angle; then, if another side of ours (facing another way) is near one of theirs, both.
+    type Cand = { d: number; e: Edge; f: Edge };
+    const cands: Cand[] = [];
     for (const m of mov)
       for (const e of straightEdges(m))
         for (const o of otherWeld)
           for (const f of straightEdges(o)) {
-            const vert = Math.abs(e.a.x - e.b.x) < 1e-6;
-            if (vert !== Math.abs(f.a.x - f.b.x) < 1e-6 || !facing(e, f)) continue;
-            const [ea, eb, fa, fb] = vert ? [e.a.y, e.b.y, f.a.y, f.b.y] : [e.a.x, e.b.x, f.a.x, f.b.x];
-            const gap = Math.max(Math.min(ea, eb), Math.min(fa, fb)) - Math.min(Math.max(ea, eb), Math.max(fa, fb));
-            if (gap > -0.02) continue; // not alongside each other: they must share some length, not just a corner
-            const d = vert ? f.a.x - e.a.x : f.a.y - e.a.y;
-            if (Math.abs(d) > tol) continue;
-            if (vert ? !bestX || Math.abs(d) < Math.abs(bestX.d) : !bestY || Math.abs(d) < Math.abs(bestY.d)) {
-              if (vert) bestX = { d, e, f };
-              else bestY = { d, e, f };
-            }
+            if (!facing(e, f)) continue;
+            const [lo, hi] = shared(e, f);
+            if (hi - lo < 0.02) continue; // not alongside each other: they must share some length, not just a corner
+            const d = apart(e, f);
+            if (Math.abs(d) <= tol) cands.push({ d, e, f });
           }
-    if (bestX) cx = bestX.d;
-    if (bestY) cy = bestY.d;
-    snapped = !!(bestX || bestY);
-    // Lined up along the side it meets: its end or middle with theirs, if near.
-    const align = (best: { e: Edge; f: Edge } | null, vert: boolean) => {
-      if (!best) return 0;
-      const along = (q: Edge) => (vert ? [Math.min(q.a.y, q.b.y), Math.max(q.a.y, q.b.y)] : [Math.min(q.a.x, q.b.x), Math.max(q.a.x, q.b.x)]);
-      const [e0, e1] = along(best.e);
-      const [f0, f1] = along(best.f);
-      const options = [f0 - e0, f1 - e1, (f0 + f1) / 2 - (e0 + e1) / 2];
+    cands.sort((p, q) => Math.abs(p.d) - Math.abs(q.d));
+    const first = cands[0];
+    const second = first && cands.find((c) => Math.abs(c.e.out!.x * first.e.out!.y - c.e.out!.y * first.e.out!.x) > 0.2);
+    if (first && second) {
+      // Both sides met: the move t with t·n1 = d1 and t·n2 = d2.
+      const [n1, n2] = [first.e.out!, second.e.out!];
+      const det = n1.x * n2.y - n1.y * n2.x;
+      cx = (first.d * n2.y - second.d * n1.y) / det;
+      cy = (n1.x * second.d - n2.x * first.d) / det;
+      guides.push(first.f, second.f);
+    } else if (first) {
+      cx = first.e.out!.x * first.d;
+      cy = first.e.out!.y * first.d;
+      // Lined up along the side it meets: its end or middle with theirs, if near.
+      const len = Math.hypot(first.e.b.x - first.e.a.x, first.e.b.y - first.e.a.y);
+      const t = { x: (first.e.b.x - first.e.a.x) / len, y: (first.e.b.y - first.e.a.y) / len };
+      const fa = along(first.e, first.f.a);
+      const fb = along(first.e, first.f.b);
+      const [f0, f1] = [Math.min(fa, fb), Math.max(fa, fb)];
+      const options = [f0, f1 - len, (f0 + f1) / 2 - len / 2];
       const pick = options.filter((o) => Math.abs(o) <= tol).sort((p, q) => Math.abs(p) - Math.abs(q))[0];
-      if (pick !== undefined) guides.push(best.f);
-      return pick ?? 0;
-    };
-    if (bestX && !bestY) cy = align(bestX, true);
-    else if (bestY && !bestX) cx = align(bestY, false);
-    else if (bestX && bestY) guides.push(bestX.f, bestY.f);
+      if (pick !== undefined) {
+        cx += t.x * pick;
+        cy += t.y * pick;
+        guides.push(first.f);
+      }
+    }
+    snapped = !!first;
   }
   const fx = dx + cx;
   const fy = dy + cy;

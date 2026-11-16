@@ -481,3 +481,72 @@ describe("Mastodon Gun Ship, double engines, trapezoids and triangles", async ()
     expect(new Set(made.bodies.filter((b) => b.injector).map((b) => b.injector!.channel)).size).toBe(2);
   });
 });
+
+describe("turning and resizing parts (§3.6)", async () => {
+  const { rotateComponent, resizeComponent, componentAngle, componentSize, place: placeAt2, mastodonPreset } = await import("../../src/app/blueprint/model.ts");
+  type BP = typeof bp;
+  const box = (id: string, w: number, h: number, x: number, y: number, deg = 0) => ({ id, shape: { kind: "box" as const, width: w, height: h }, mass: 1, position: { x, y }, velocity: { x: 0, y: 0 }, angle: (deg * Math.PI) / 180, angularVelocity: 0 });
+  const two = (deg: number, gap = 0): BP => {
+    const r = (v: { x: number; y: number }) => ({ x: v.x * Math.cos((deg * Math.PI) / 180) - v.y * Math.sin((deg * Math.PI) / 180), y: v.x * Math.sin((deg * Math.PI) / 180) + v.y * Math.cos((deg * Math.PI) / 180) });
+    const p = r({ x: 0, y: 0.75 + gap });
+    return { format: 1, id: "t", name: "T", rev: 1, ship: { bodies: [box("a", 1, 1, 0, 0, deg), box("b", 1, 0.5, p.x, p.y, deg)], joints: [], links: [] }, components: [{ id: "a", kind: "frame", label: "A", bodies: ["a"] }, { id: "b", kind: "frame", label: "B", bodies: ["b"] }], mix: { rules: [], rows: [] } };
+  };
+
+  it("BPD-041 parts turned to any angle weld where their sides meet, and snap flush to each other's sides", () => {
+    for (const deg of [0, 15, 30, 45, 90]) {
+      const w = welds(reweld(two(deg), "b"));
+      expect(w.map((x) => x.joints.length)).toEqual([2]);
+    }
+    // 0.1 m apart, at 30°: dragged near, it snaps flush (along the sides' normal) and would weld.
+    const apart = two(30, 0.1);
+    const b = body(apart, "b");
+    const pl = placeAt2(apart, [b], ["b"], 0, 0, { exclude: "b" });
+    expect(pl.snapped).toBe(true);
+    expect(pl.touches).toEqual(["a"]);
+    expect(Math.hypot(pl.dx, pl.dy)).toBeCloseTo(0.1, 5);
+  });
+
+  it("BPD-041 turning a part: about its centre, in whole degrees, back where it was after a full turn; its welds re-form", () => {
+    let t = regular;
+    for (const deg of [90, 180, -90, 0]) {
+      t = rotateComponent(t, "battery", deg);
+      expect(componentAngle(t, "battery")).toBe(deg);
+    }
+    expect(body(t, "battery").position).toEqual(body(regular, "battery").position);
+    sameOutline(worldVertices(body(t, "battery")), worldVertices(body(regular, "battery")));
+    expect(welds(t).filter((w) => w.a === "battery" || w.b === "battery").length).toBe(welds(regular).filter((w) => w.a === "battery" || w.b === "battery").length);
+    // The Angle property turns it too; at 15° it no longer meets the main thruster squarely.
+    const tilted = setParam(regular, "battery", "angle", 15);
+    expect(componentAngle(tilted, "battery")).toBe(15);
+    expect(params(tilted, "battery").find((p) => p.key === "angle")?.value).toBe(15);
+  });
+
+  it("BPD-042 resizing from a corner keeps the opposite corner where it is, at any angle; what the part holds goes with its area", () => {
+    const t = body(regular, "tank-l");
+    // Drag the top-right corner: the bottom-left stays.
+    const fixed = { x: t.position.x - 0.75, y: t.position.y - 0.5 };
+    const big = resizeComponent(regular, "tank-l", 1.8, 1.2, fixed, { x: 1, y: 1 });
+    expect(componentSize(big, "tank-l")).toEqual({ w: 1.8, h: 1.2 });
+    expect(body(big, "tank-l").position).toEqual({ x: fixed.x + 0.9, y: fixed.y + 0.6 });
+    expect(body(big, "tank-l").contents![1].capacity).toBeCloseTo(t.contents![1].capacity * ((1.8 * 1.2) / 1.5), 9);
+    // Turned 30°: the corner opposite the one dragged stays put in the ship's frame.
+    const turned = rotateComponent(two(0), "b", 30);
+    const bb = body(turned, "b");
+    const corner = (src: BP, b: typeof bb, i: number, j: number) => {
+      const s = componentSize(src, "b");
+      const a = b.angle ?? 0;
+      const v = { x: (i * s.w) / 2, y: (j * s.h) / 2 };
+      return { x: b.position.x + v.x * Math.cos(a) - v.y * Math.sin(a), y: b.position.y + v.x * Math.sin(a) + v.y * Math.cos(a) };
+    };
+    const keep = corner(turned, bb, -1, -1);
+    const grown = resizeComponent(turned, "b", 1.5, 0.8, keep, { x: 1, y: 1 });
+    const now = corner(grown, body(grown, "b"), -1, -1);
+    expect(Math.hypot(now.x - keep.x, now.y - keep.y)).toBeLessThan(1e-5);
+    // A trapezoid resized along its own axes: the Mastodon's side tank, made deeper (its height runs along x).
+    const m = mastodonPreset(scn);
+    const s0 = componentSize(m, "tank-l");
+    const r0 = body(m, "tank-l");
+    const deeper = resizeComponent(m, "tank-l", s0.w + 0.25, s0.h, { x: r0.position.x + s0.w / 2, y: r0.position.y }, { x: -1, y: 0 });
+    expect(component(deeper, "tank-l").form).toMatchObject({ base: 1.4, top: 0.7, height: 1 });
+  });
+});
