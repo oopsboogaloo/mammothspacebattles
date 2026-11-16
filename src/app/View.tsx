@@ -186,6 +186,11 @@ export function View() {
     return () => ro.disconnect();
   }, []);
 
+  // Pausing drops the worker's run in flight at once, not at the next frame: on a slow machine its
+  // result could otherwise arrive in between and move the world on behind the pause (the frame loop
+  // below does the rest of pausing).
+  useEffect(() => playing.subscribe((on) => void (on || sim.cancel())), []);
+
   // Render loop and fixed-step clock (ARC-006, SBX-002, SBX-005).
   useEffect(() => {
     const stepper = createStepper();
