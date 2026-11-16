@@ -206,3 +206,64 @@ CSS = """
 .ease .src { border-color: var(--warn); color: var(--warn); }
 .addline { height: 32px; border-style: dashed; border-radius: 3px; color: var(--cyan); }
 """
+
+
+def right_cockpit():
+    rows = "".join(
+        f'<div class="cc{" warn" if w else ""}"><span class="cic">{ic}</span><b>{n}</b><span class="ck">{"".join(f"<kbd>{k}</kbd>" for k in keys[:2])}</span><span class="drv">{d}</span></div>'
+        for (ic, n, kind, keys, held), d, w in zip(CONTROLS, ["Main · BL · BR", "FL · FR", "BR · FL", "BL · FR", "Railgun", "Tractor", "Shield"], [0] * 7))
+    return f"""
+<section class="panel right">
+  <header class="ph"><span class="phl">PROPERTIES</span><button class="ib sm">⇥</button></header>
+  <div class="selhead"><div class="swatch" style="background:{M.COL['cockpit']}"></div><div><b>Cockpit</b><small>Cockpit · the ship's controls start here · 7 controls, 8 parts wired</small></div></div>
+  <div class="tabs"><button>SHAPE</button><button class="on">CONTROLS</button><button>BUILD</button><button>TRACTOR</button></div>
+  <div class="cclist"><div class="cch"><span>CONTROL</span><span>KEYS</span><span>DRIVES</span></div>{rows}
+   <div class="rule"><b>⇄ Turn left + Turn right</b><span>held together: cancel, count as <b>Forward</b></span></div>
+   <div class="okline">✓ Every engine is wired · Forward and Reverse don't turn the ship</div>
+  </div>
+  <div class="actions two"><button class="primary">⤢ Open mixer <kbd>K</kbd></button><button>＋ New control</button></div>
+</section>"""
+
+
+def wires(cx, cy, s):
+    """Control wires from the cockpit to every part it drives (blueprint wiring diagram)."""
+    out = []
+    hub = (cx, cy - 0.35 * s)
+    for cid in ["main", "back-l", "back-r", "front-l", "front-r", "gun", "tractor", "shield"]:
+        b = M.BODIES[cid]
+        x, y = cx + b["position"]["x"] * s, cy - b["position"]["y"] * s
+        mx = hub[0] if abs(x - hub[0]) < 4 else x
+        # orthogonal route: down/up from hub to the part's height, then across
+        path = f"M {hub[0]} {hub[1]} L {hub[0]} {y} L {x} {y}" if cid not in ("gun", "shield") else f"M {hub[0]} {hub[1]} L {x} {y}"
+        out.append(f'<path d="{path}" fill="none" stroke="#7fd4ff" stroke-width="1.6" stroke-dasharray="6 4" opacity=".85"/>')
+        out.append(f'<circle cx="{x}" cy="{y}" r="4.5" fill="#0b1430" stroke="#7fd4ff" stroke-width="1.6"/>')
+    out.append(f'<rect x="{hub[0]-7}" y="{hub[1]-7}" width="14" height="14" fill="#7fd4ff"/>')
+    return "\n".join(out)
+
+
+def build_cockpit():
+    W, H = 1280, 800
+    cw, ch = W - 248 - 300, H - 48 - 26
+    s = 100
+    cx, cy = cw / 2, ch / 2 + 10
+    inner = M.ship_svg(sel="hull", show_welds=False)
+    layer = M.ship_block(s, cx, cy, inner) + wires(cx, cy, s) + M.com_marker(cx, cy - 0.013 * s)
+    layer += f'<text x="{cx-2.6*s}" y="{cy-1.75*s}" class="wirelbl">- - -  CONTROL WIRING · cockpit to 8 parts</text>'
+    layer += M.scalebar(24, ch - 30, s)
+    body = M.editor(W, H, right_cockpit(), layer, M.STD_STATS,
+                    "<b>Cockpit</b> selected · its wires show what each control drives · <kbd>K</kbd> open the mixer · a part knocked off the cockpit's ship no longer answers its controls")
+    M.write("08-cockpit-controls.html", M.page("Blueprint · cockpit controls", body, W, H, CSS + CSS2))
+
+
+CSS2 = """
+.cclist { flex: 1; overflow: hidden; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+.cch { display: grid; grid-template-columns: 1fr 78px 92px; font-size: 9.5px; letter-spacing: .16em; color: var(--dim); padding: 0 4px 2px 30px; }
+.cc { display: grid; grid-template-columns: 22px 1fr 78px 92px; gap: 4px; align-items: center; border: 1px solid var(--faint); border-radius: 3px; padding: 5px 4px; min-height: 36px; }
+.cc b { font-weight: 400; font-size: 13.5px; }
+.cc .ck { display: flex; gap: 2px; }
+.cc .drv { font-family: "IBM Plex Mono"; font-size: 10.5px; color: var(--cyan); }
+.okline { font-size: 11.5px; color: var(--go); padding: 4px 2px; }
+.actions.two { grid-template-columns: 1.3fr 1fr; }
+.actions .primary { border-color: var(--cyan); color: var(--cyan); }
+.wirelbl { font-family: "IBM Plex Mono"; font-size: 11px; fill: var(--cyan); letter-spacing: .1em; }
+"""

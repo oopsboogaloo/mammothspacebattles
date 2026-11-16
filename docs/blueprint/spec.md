@@ -108,8 +108,8 @@ editor treats as one. Every property maps to a field already in the scenario for
 
 | Component | Bodies | SHAPE | FUEL / FUNCTION | BUILD | LINKS |
 |---|---|---|---|---|---|
-| Cockpit | 1 polygon | width, height, nose width, nose length | tractor (if fitted here): range, arc, force | material, mass | channels it drives |
-| Engine | head + 2 nozzle walls | chamber width, chamber length, throat width, wall thickness, nozzle wall length, nozzle flare | flow (kg/s, the sketch's "burn rate"), mixture, igniter, fuel efficiency | material, mass (derived) | feeds (which tanks); its controls are set in Controls mode (§10) |
+| Cockpit | 1 polygon | width, height, nose width, nose length | CONTROLS: the ship's controls, bindings, rules and wiring (§10); tractor if fitted here | material, mass | — |
+| Engine | head + 2 nozzle walls | chamber width, chamber length, throat width, wall thickness, nozzle wall length, nozzle flare | flow (kg/s, the sketch's "burn rate"), mixture, igniter, fuel efficiency | material, mass (derived) | feeds (which tanks); CONTROLS: its mixer lines (§10) |
 | Tank | 1 box | width, height | H₂ and O₂ capacity (derived from volume, editable), fill at start | material, mass, explodes when destroyed (charge) | feeds out |
 | Magazine | 1 box | width, height | shell count, shell mass | material, mass, explosive charge | which gun it feeds |
 | Railgun | 1 box | width, length | speed, reload | material, mass | fire channel |
@@ -194,7 +194,25 @@ mass, acceleration and engine count.
 - nothing in the try-out changes the blueprint. Back returns to the blueprint exactly as left
   (selection, zoom, tab).
 
-## 10. Controls mode (mockup 07)
+## 10. Controls: owned by the cockpit (mockups 07, 08)
+
+**The controls belong to the cockpit** (Chloe's idea, 16 November 2026). It is where the pilot
+sits, and the game already works this way: the hull is the cockpit, and a part knocked off it no
+longer answers the controls (MAS-038, `src/core/arcade.ts`). So:
+
+- **Select the cockpit** (mockup 08): its Properties get a CONTROLS tab listing each control, its
+  first keys and what it drives, the rules, and the checks; **⤢ Open mixer (K)** opens the full
+  view below. Its wiring shows on the blueprint as dashed lines from the cockpit to each part it
+  drives, like a wiring diagram.
+- **Select an engine or device:** its CONTROLS tab (which replaces LINKS) shows its own lines, with
+  the same line editor as the mixer, so it can be wired from either end.
+- **The mixer view** (mockup 07) is the cockpit's controls laid out wide, because a matrix of
+  every driven part against every control doesn't fit a side panel. The top bar's
+  BUILD / CONTROLS switch opens it too.
+- Later, a ship with two cockpits (a pilot and a gunner) would have two sets of controls, each
+  wired to its own parts; losing one cockpit loses only its controls.
+
+### The mixer view
 
 The player decides how their controls drive their engines and devices: nothing is guessed, because
 players will build ships nobody can predict. **BUILD / CONTROLS** in the top bar switches mode
@@ -275,8 +293,8 @@ its lines and how they combine). It generalises today's `SteerMix` and `MixRow` 
 
 1. Controls mode: are *eased by* lines and *opposites* rules enough for the mixes you have in mind?
    EdgeTX also has curves (gentle near centre) and delays; they can be added as line options.
-2. Should a blueprint's controls be its own, or should the player have one set of controls shared
-   by all their ships, with only the mixer per ship? The mockup assumes per ship.
+2. Should each cockpit's key bindings be its own, or should the player have one set of bindings shared
+   by all their ships, with only the wiring per ship? The mockups assume per cockpit.
 
 ## 14. Decisions (16 November 2026, Chloe)
 
@@ -287,6 +305,7 @@ its lines and how they combine). It generalises today's `SteerMix` and `MixRow` 
   as the Thrust ship's mix shows (§10).
 - Fuel efficiency is part of the game world, not a cheat: an ordinary property.
 - Thrust 1 is the only preset for now: the model ship.
+- The controls belong to the cockpit (§10).
 
 ## Sources
 

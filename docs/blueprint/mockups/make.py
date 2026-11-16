@@ -484,4 +484,5 @@ if __name__ == "__main__":
     build()
     import controls
     controls.build()
+    controls.build_cockpit()
     print("written")
