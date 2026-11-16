@@ -201,7 +201,7 @@ sits, and the game already works this way: the hull is the cockpit, and a part k
 longer answers the controls (MAS-038, `src/core/arcade.ts`). So:
 
 - **Select the cockpit** (mockup 08): its Properties get a CONTROLS tab listing each control, its
-  first keys and what it drives, the rules, and the checks; **⤢ Open mixer (K)** opens the full
+  keys (the player's, shared by every ship) and what it drives in this ship, the rules, and the checks; **⤢ Open mixer (K)** opens the full
   view below. Its wiring shows on the blueprint as dashed lines from the cockpit to each part it
   drives, like a wiring diagram.
 - **Select an engine or device:** its CONTROLS tab (which replaces LINKS) shows its own lines, with
@@ -218,9 +218,13 @@ The player decides how their controls drive their engines and devices: nothing i
 players will build ships nobody can predict. **BUILD / CONTROLS** in the top bar switches mode
 (B / K). The blueprint stays in the middle; the panels change:
 
-- **Left: Controls.** The ship's controls: name, kind (*analog*, 0–100%, from a stick or trigger;
-  or *hold*, on/off), and their bindings as chips (keys, game-controller buttons, sticks, triggers).
-  ＋ on a control binds one more: press it. ＋ New control adds one (Strafe, Boost, Brake …).
+- **Left: Controls.** The player's controls: name, kind (*analog*, 0–100%, from a stick or
+  trigger; or *hold*, on/off), and their bindings as chips (keys, game-controller buttons, sticks,
+  triggers). **The controls and their bindings are the player's, one set for every ship**, kept
+  with the player's settings, not in a blueprint; ＋ on a control binds one more (press it), and
+  the change applies to all ships. ＋ New control adds one (Strafe, Boost, Brake …) for all ships;
+  a ship that doesn't wire it ignores it. What a blueprint stores is only its **wiring**: the
+  mixer's rows and lines, and the rules it uses.
   **Rules** sit under the list: the Thrust ship's is *Turn left + Turn right are opposites: held
   together they cancel and count as Forward*.
 - **Bottom of the centre: the Mixer**, a matrix: a row for everything that can be driven (each
@@ -258,8 +262,8 @@ trigger, stick up; Reverse S, ↓, B, left trigger; Turn left Q, ←, left Shift
 Turn right E, →, right Shift, right Ctrl, stick; Fire Space, W, X, right bumper; Tractor Z, /, Y;
 Shield X, ., left bumper (`src/app/Thrust.tsx`). Self-destruct stays a game button, not a control.
 
-The data: a blueprint's `controls` (names, kinds, bindings, rules) and `mix` (per driven channel,
-its lines and how they combine). It generalises today's `SteerMix` and `MixRow` (both in
+The data: the player's `controls` (names, kinds, bindings), stored once in their settings; and
+each blueprint's `mix` (its rules, and per driven channel its lines and how they combine). It generalises today's `SteerMix` and `MixRow` (both in
 `arcade.ts`); the games could later take a blueprint's mix instead of their fixed one.
 
 ## 11. Later (designed for, not built now)
@@ -293,8 +297,7 @@ its lines and how they combine). It generalises today's `SteerMix` and `MixRow` 
 
 1. Controls mode: are *eased by* lines and *opposites* rules enough for the mixes you have in mind?
    EdgeTX also has curves (gentle near centre) and delays; they can be added as line options.
-2. Should each cockpit's key bindings be its own, or should the player have one set of bindings shared
-   by all their ships, with only the wiring per ship? The mockups assume per cockpit.
+2. (Decided: see §14.) Key bindings are the player's, one set for every ship.
 
 ## 14. Decisions (16 November 2026, Chloe)
 
@@ -306,6 +309,9 @@ its lines and how they combine). It generalises today's `SteerMix` and `MixRow` 
 - Fuel efficiency is part of the game world, not a cheat: an ordinary property.
 - Thrust 1 is the only preset for now: the model ship.
 - The controls belong to the cockpit (§10).
+- *Eased by* lines and *opposites* rules are enough to start; see how they go.
+- **Key bindings are the player's: one set, shared by every ship.** A ship stores only its wiring
+  (the mixer). Binding a key in the designer changes it for all ships.
 
 ## Sources
 
