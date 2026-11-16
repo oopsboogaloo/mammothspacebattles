@@ -107,6 +107,13 @@ not a design setting, so the tank rules above stay honest.
 
 **The shell itself** stays the railgun's: 0.167 kg. Its mass belongs to the magazine, as now.
 
+**Bullet magazines and guns** (Chloe, 16 November 2026: added for ships without power):
+
+- A bullet magazine holds 240 bullets per m², half a magazine's: a chemically propelled cartridge
+  takes twice the room.
+- The gun needs no power. Its muzzle speed is 100 m/s at a 0.7 m barrel, going as the square root
+  of the length. See `spec.md` §22.
+
 ## 4. Power: batteries, generators, and what uses power
 
 ### 4.1 Units and the exchange rate

@@ -5,7 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, polygonArea, steerMixer } from "../../core/index.ts";
-import { CONTAINERS, containerSpec, MIXTURE, maxWall, POWER, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
+import { BULLET, CONTAINERS, containerSpec, GUN, gunSpeed, MIXTURE, maxWall, POWER, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
@@ -323,8 +323,9 @@ export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
     }
     return b;
   };
+  // Chemically propelled guns and bullet magazines (Chloe, 16 November 2026): it carries no power for railguns.
   const gunBody = src("gun");
-  const shell = structuredClone(gunBody.magazine!.shell);
+  const shell = structuredClone(BULLET);
 
   // The cockpit (Thrust's, without the tractor beam), over the centre tank.
   const hull = src("hull");
@@ -342,13 +343,13 @@ export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
     const side = l.toLowerCase();
     // Magazine: 0.4 × 1.4 m, Thrust's per area; 100 shells each for four guns.
     const m = scaled({ ...structuredClone(mag), shape: { kind: "box", width: 0.4, height: 1.4 } }, (0.4 * 1.4) / (0.7 * 0.45));
-    m.ammo = { count: 100, shell: structuredClone(shell) };
-    part({ id: `mag-${side}`, kind: "storage", label: `Magazine ${l}`, part: "magazine", bodies: [`mag-${side}`] }, place(m, `mag-${side}`, s * 0.8, 0.7));
+    m.ammo = { count: 0, shell: structuredClone(shell) };
+    part({ id: `mag-${side}`, kind: "storage", label: `Bullet magazine ${l}`, part: "bullet-magazine", bodies: [`mag-${side}`] }, place(m, `mag-${side}`, s * 0.8, 0.7));
     // The railguns: on the magazine, and out on the mount. No shells of their own: the magazines feed them.
-    for (const [id, label, x, y] of [[`gun-${side}`, `Railgun ${l}`, s * 0.75, 1.75], [`gun-o${side}`, `Outer railgun ${l}`, s * 3.0, 0.7]] as const) {
+    for (const [id, label, x, y] of [[`gun-${side}`, `Gun ${l}`, s * 0.75, 1.75], [`gun-o${side}`, `Outer gun ${l}`, s * 3.0, 0.7]] as const) {
       const g = structuredClone(gunBody);
-      g.magazine = { ...g.magazine!, count: 0, railgun: { ...g.magazine!.railgun!, channel: id } };
-      part({ id, kind: "weapon", label, part: "railgun", bodies: [id] }, place(g, id, x, y));
+      g.magazine = { ...g.magazine!, count: 0, shell: structuredClone(shell), railgun: { ...g.magazine!.railgun!, channel: id } };
+      part({ id, kind: "weapon", label, part: "gun", bodies: [id] }, place(g, id, x, y));
     }
     // The side tank: a trapezoid, its long side (1.4 m) on the magazine, its short (0.7 m) on the engine.
     const form: Form = { kind: "trapezoid", base: 1.4, top: 0.7, height: 0.75, turn: s < 0 ? 90 : 270 };
@@ -457,6 +458,7 @@ export function relink(bp: Blueprint): void {
 export function containerKind(c: Component): ContainerKind | null {
   if (c.part === "tank" || c.part === "trapezoid-tank") return "tank";
   if (c.part === "magazine") return "magazine";
+  if (c.part === "bullet-magazine") return "bullets";
   return null;
 }
 
@@ -491,7 +493,7 @@ function containerParams(bp: Blueprint, c: Component, kind: ContainerKind): Para
   const ro = (key: string, label: string, unit: string, value: number, decimals: number, note?: string): Param => ({ key, label, unit, value, min: 0, max: 1e6, step: 1, decimals, tab: "build", readonly: true, ...(note ? { note } : {}) });
   return [
     { key: "wall", label: "Wall thickness", unit: "m", value: t, min: WALL.min, max: maxWall(box.maxX - box.minX, box.maxY - box.minY), step: 0.01, decimals: 2, tab: "build", note: "Thicker: stronger welds and walls, heavier, holds less" },
-    kind === "tank" ? ro("holds", "Propellant held", "kg", s.holds, 2, "H₂ and O₂, 1 : 8 by mass") : ro("holds", "Shells held", "", s.holds, 0, `${round(bodyMass((b.ammo?.shell ?? { mass: 0 }) as Parameters<typeof bodyMass>[0]) * s.holds, 2)} kg of shells, fed to the guns welded to it`),
+    kind === "tank" ? ro("holds", "Propellant held", "kg", s.holds, 2, "H₂ and O₂, 1 : 8 by mass") : ro("holds", kind === "bullets" ? "Bullets held" : "Shells held", "", s.holds, 0, `${round(bodyMass((b.ammo?.shell ?? { mass: 0 }) as Parameters<typeof bodyMass>[0]) * s.holds, 2)} kg of shells, fed to the guns welded to it`),
     ro("dry", "Dry mass", "kg", s.dryMass, 2),
     ro("strength", "Strength", "×", k, 2, `Welds and armour against Thrust's (${s.material.threshold} J to dent, ${s.material.toughness} J more to destroy)`),
   ];
@@ -510,7 +512,7 @@ function fitsLimits(bp: Blueprint, c: Component): boolean {
 /** After a container's outline changes: back within its limits (or refused), its walls no thicker than it allows, and its rules applied. */
 function afterReshape(before: Blueprint, after: Blueprint, compId: string): Blueprint {
   const c = component(after, compId);
-  if (powerKind(c)) {
+  if (powerKind(c) || c.part === "gun") {
     if (!fitsLimits(after, c)) return before;
     applyRules(after, compId);
     return after;
@@ -569,6 +571,12 @@ export function applyRules(bp: Blueprint, compId: string): void {
     const x = body(bp, id);
     if (c.part === "shield-emitter" && x.shield) x.shield = { ...x.shield, ...POWER.shield };
     if (c.part === "railgun" && x.magazine?.railgun) x.magazine = { ...x.magazine, railgun: { ...x.magazine.railgun, shot: POWER.railgunShot } };
+    // The gun: its muzzle speed from its barrel's length, its muzzle at the barrel's end; no power.
+    if (c.part === "gun" && x.magazine?.railgun && x.shape.kind === "box") {
+      const { shot: _free, ...launch } = x.magazine.railgun;
+      void _free;
+      x.magazine = { ...x.magazine, at: { x: 0, y: round(x.shape.height / 2 + GUN.muzzle, 6) }, railgun: { ...launch, speed: gunSpeed(x.shape.height) } };
+    }
     if (c.part === "cockpit" && x.tractor) x.tractor = { ...x.tractor, draw: POWER.beam, tetherDraw: POWER.tether };
   }
 }
@@ -947,7 +955,8 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   }
   if (b.magazine) {
     ps.push({ key: "count", label: "Shells in the gun", unit: "", value: b.magazine.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", ...(bp.ship.links.some((l) => l.kind === "ammo" && l.to === b.id) ? { note: "Magazines welded to it pass it more, one at a time" } : {}) });
-    if (b.magazine.railgun) ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function" });
+    if (b.magazine.railgun && c.part === "gun") ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function", readonly: true, note: `From the barrel's length (its height): ${GUN.speed} m/s at ${GUN.length} m, as its square root. Chemical: no power` });
+    else if (b.magazine.railgun) ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function" });
     ps.push({ key: "reload", label: "Reload", unit: "s", value: b.magazine.reload, min: 0.01, max: 10, step: 0.005, decimals: 3, tab: "function" });
   }
   if (b.tractor) {

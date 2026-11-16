@@ -543,6 +543,25 @@ Tests: BPD-045, and `tests/core/power.test.ts`.
 
 Test: BPD-046.
 
+## 22. The gun and the bullet magazine (16 November 2026, Chloe)
+
+The Mastodon carries no power system, so its railguns had no energy to fire. It now carries
+chemically propelled guns.
+
+- **Gun** (Weapons):
+  - It fires bullets launched by their own propellant, so it needs no power.
+  - Its muzzle speed comes from its barrel's length, its height: 100 m/s at 0.7 m, going as the
+    square root of the length. The propellant's push over the barrel gives v² ∝ length.
+  - So it is slower than a railgun of the same length (144 m/s at 0.7 m).
+  - Its muzzle moves with the barrel's end.
+- **Bullet magazine** (Storage):
+  - It follows the magazine's rules (§19), but a bullet's cartridge takes twice the room: 240
+    bullets per m² of inner area, against 480 shells.
+  - It feeds the guns welded to it. Bullets and railgun shells don't mix.
+- **The Mastodon:** four guns and two bullet magazines, 57 bullets each.
+
+Test: BPD-047.
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):

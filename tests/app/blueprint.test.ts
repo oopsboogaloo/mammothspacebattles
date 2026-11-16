@@ -405,7 +405,8 @@ describe("Mastodon Gun Ship, double engines, trapezoids and triangles", async ()
     const guns = m.components.filter((c) => c.kind === "weapon").map((c) => c.id);
     expect(guns).toHaveLength(4);
     for (const g of guns) expect(m.ship.links.filter((l) => l.kind === "ammo" && l.to === g)).toHaveLength(2);
-    expect(["mag-l", "mag-r"].map((id) => body(m, id).ammo!.count)).toEqual([115, 115]); // 0.4 × 1.4 m by the design rules
+    // Bullet magazines (0.4 × 1.4 m): bullets take twice the room of railgun shells, so 57, not 115.
+    expect(["mag-l", "mag-r"].map((id) => body(m, id).ammo!.count)).toEqual([57, 57]);
     // Each tank holds what the design rules give its inner area: the centre tank (1.2 × 0.65 m) 1.75 kg.
     const held = (id: string) => body(m, id).contents!.reduce((a, c) => a + c.mass, 0);
     expect(held("tank-c")).toBeCloseTo(4.05 * ((1.0 * 0.45) / (1.3 * 0.8)), 6);
@@ -699,4 +700,42 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     // Its mixer, with Action A on the game's fire control.
     expect(thrust.world.mix.rows.find((r) => r.channel === "fire")!.lines[0].control).toBe("fire");
   });
+});
+
+describe("the gun and the bullet magazine (Chloe, 16 November 2026)", async () => {
+  const { mastodonPreset, powerStats } = await import("../../src/app/blueprint/model.ts");
+  const { containerSpec, gunSpeed } = await import("../../src/app/blueprint/rules.ts");
+  const { measureNow } = await import("../../src/app/blueprint/measure.ts");
+  const m = mastodonPreset(scn);
+  const box = (w: number, h: number) => [{ x: -w / 2, y: -h / 2 }, { x: w / 2, y: -h / 2 }, { x: w / 2, y: h / 2 }, { x: -w / 2, y: h / 2 }];
+
+  it("BPD-047 a bullet magazine holds half the shells a railgun magazine of its size does: bullets take twice the room", () => {
+    expect(containerSpec("bullets", box(0.7, 0.45), 0.1).holds).toBe(30);
+    expect(containerSpec("magazine", box(0.7, 0.45), 0.1).holds).toBe(60);
+    expect(containerSpec("bullets", box(2, 2), 0.1).holds).toBe(Math.floor(containerSpec("magazine", box(2, 2), 0.1).holds / 2));
+  });
+
+  it("BPD-047 the gun needs no power; its muzzle speed comes from its barrel's length: 100 m/s at 0.7 m (the railgun's 144), as the square root", () => {
+    expect(gunSpeed(0.7)).toBe(100);
+    expect(gunSpeed(2.8)).toBe(200);
+    const g = body(m, "gun-l");
+    expect(g.magazine!.railgun).toMatchObject({ speed: 100 });
+    expect(g.magazine!.railgun!.shot).toBeUndefined();
+    expect(component(m, "gun-l").part).toBe("gun");
+    // A longer barrel: faster, and its muzzle at the new end.
+    const long = setParam(m, "gun-ol", "height", 1.4);
+    expect(body(long, "gun-ol").magazine!.railgun!.speed).toBeCloseTo(141.421, 3);
+    expect(body(long, "gun-ol").magazine!.at).toEqual({ x: 0, y: 0.86 });
+    // The Mastodon: four guns, two bullet magazines feeding all four, and no power system.
+    expect(m.components.filter((c) => c.part === "gun")).toHaveLength(4);
+    expect(m.components.filter((c) => c.part === "bullet-magazine")).toHaveLength(2);
+    expect(m.ship.links.filter((l) => l.kind === "ammo")).toHaveLength(8);
+    expect(powerStats(m)).toBeNull();
+  });
+
+  it("BPD-047 the Mastodon's guns fire with no power: Action A empties its bullet magazines", () => {
+    const [r] = measureNow(m, [{ "action-a": 1 }]);
+    // Four guns firing, with a recoil in proportion to 100 m/s, not 144.
+    expect(r.ahead).toBeLessThan(-4);
+  }, 60_000);
 });
