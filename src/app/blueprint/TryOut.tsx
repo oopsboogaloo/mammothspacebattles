@@ -87,7 +87,21 @@ function launch(): boolean {
   timeScale.value = 1;
   sandboxOverlays.value = new Set();
   playing.value = true;
+  replayHeld();
   return true;
+}
+
+/**
+ * What the player is holding (keys, controller buttons, the stick and triggers), so a fresh flight
+ * (Refuel & reset, the rock toggled) gets it at once: its world starts with no controls set, and
+ * the inputs, unchanged, would not be sent again until let go and pressed (Codex review on #156).
+ */
+const keysHeld = new Map<string, string>();
+const padAnalog = new Map<string, number>();
+function replayHeld(): void {
+  const on = new Set([...keysHeld.values(), ...padHeld]);
+  for (const c of on) sendControl(c, 1, `Held ${c}`, 9_000_002);
+  for (const [c, v] of padAnalog) if (v > 0 && !on.has(c)) sendControl(c, v, "Pad", 9_000_000);
 }
 
 export function startTry(): void {
@@ -133,7 +147,10 @@ const PAD: PadGame = {
         reverse: Math.max(a.down, a.lt, on(p.b), on(p.down && a.down === 0)),
       };
     },
-    set: (channel, value) => sandbox.value && sendControl(channel, value, "Pad", 9_000_000),
+    set: (channel, value) => {
+      padAnalog.set(channel, value);
+      if (sandbox.value) sendControl(channel, value, "Pad", 9_000_000);
+    },
   },
 };
 
@@ -229,7 +246,7 @@ export function TryOut() {
 
   useEffect(() => {
     const keys = loadKeys();
-    const held = new Map<string, string>();
+    const held = keysHeld;
     let group = Math.floor(Math.random() * 1e9);
     const down = (e: KeyboardEvent) => {
       if (e.code === "Escape") return back();

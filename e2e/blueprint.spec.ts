@@ -281,3 +281,15 @@ test("BPD-030 in Try it a thruster not welded to the cockpit doesn't answer the 
   await expect.poll(main, { timeout: 15_000 }).toBe("main.residual");
   await page.keyboard.up("ArrowUp");
 });
+
+test("BPD-033 a control held through Refuel & reset goes on working in the fresh flight", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("try-it").click();
+  await page.keyboard.down("ArrowUp");
+  const controls = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number>; time: number } } | null } }).__msb.sandbox()?.world.controls ?? {});
+  await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ main: 1 });
+  await page.keyboard.press("KeyR");
+  await page.waitForTimeout(300);
+  await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ forward: 1, main: 1 });
+  await page.keyboard.up("ArrowUp");
+});
