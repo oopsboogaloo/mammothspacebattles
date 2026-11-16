@@ -114,10 +114,10 @@ test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothi
   await page.getByTestId("mode-controls").click();
   await expect(page.getByTestId("mixer")).toContainText("not wired");
   await expect(page.getByTestId("response")).toContainText("Not wired: Light thruster");
-  await page.getByTestId("cell-back-fire").click();
-  await expect(page.getByTestId("lines-back").getByTestId("say")).toHaveText("Fires fully on Fire.");
+  await page.getByTestId("cell-back-action-a").click();
+  await expect(page.getByTestId("lines-back").getByTestId("say")).toHaveText("Fires fully on Action A.");
   await page.keyboard.down("Space");
-  await expect(page.getByTestId("control-fire")).toHaveClass(/held/);
+  await expect(page.getByTestId("control-action-a")).toHaveClass(/held/);
   // Thrust 1 has no free side for it, so it was placed clear of the ship: not welded to the
   // cockpit, it doesn't answer even when wired, and the checks say so.
   await expect(page.getByTestId("response")).toContainText("Not welded to the cockpit, so they won't answer: Light thruster");
@@ -292,4 +292,30 @@ test("BPD-033 a control held through Refuel & reset goes on working in the fresh
   await page.waitForTimeout(300);
   await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ forward: 1, main: 1 });
   await page.keyboard.up("ArrowUp");
+});
+
+test("BPD-035 parts never overlap: the preset's railgun and shield emitter are flagged, and widening a tank into its neighbours is refused", async ({ page }) => {
+  await openFresh(page);
+  await expect(page.getByTestId("overlapping")).toContainText("Railgun and Shield emitter");
+  await page.getByTestId("part-tank-l").locator("polygon").first().click();
+  const width = page.getByTestId("param-width").locator("input.num");
+  await width.fill("1.7");
+  await width.press("Enter");
+  await expect(page.getByTestId("toast")).toContainText("overlap Generator L and Magazine L");
+  await expect(width).toHaveValue("1.50");
+});
+
+test("BPD-034 the action buttons are named by what they do in this ship, and the player can rename them for it", async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await openFresh(page);
+  await page.getByTestId("mode-controls").tap();
+  await expect(page.getByTestId("screen-name-action-b")).toHaveAttribute("placeholder", "BEAM");
+  await page.getByTestId("screen-name-action-b").fill("grab");
+  await page.getByTestId("screen-name-action-b").press("Enter");
+  await page.getByTestId("try-it").tap();
+  await expect(page.getByTestId("thrust-fire")).toHaveText("FIRE");
+  await expect(page.getByTestId("thrust-tractor")).toHaveText("GRAB");
+  await expect(page.getByTestId("thrust-shield")).toHaveText("SHIELD");
+  await ctx.close();
 });

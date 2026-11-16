@@ -445,3 +445,8 @@ html, body, #root { height: 100%; overflow: hidden; }
 .tryview.touch .keys { display: none; }
 .tryview.touch .g { min-width: 0; padding: 4px 8px; }
 .tryview.touch .bar { width: 70px; }
+
+.bpapp .sname { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.bpapp .sname input { flex: 1; min-width: 0; height: 24px; background: rgba(0, 0, 0, .25); border: 1px solid var(--faint); border-radius: 3px; color: var(--ink); font: 12px "IBM Plex Mono", monospace; padding: 0 6px; text-transform: uppercase; }
+.bpapp .sname input::placeholder { color: var(--cyan); opacity: .8; }
+@media (pointer: coarse) { .bpapp .sname input { height: 36px; } }

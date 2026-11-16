@@ -35,6 +35,8 @@ export interface Ship {
 
 export interface Blueprint {
   format: 1;
+  /** What the player's actions are called on screen in this ship (by control id), where the player has named them. */
+  labels?: Record<string, string>;
   id: string;
   name: string;
   /** Presets ship with the game and are never changed: editing one makes a copy. */
@@ -188,8 +190,8 @@ export function thrustShip(scenario: { world: { thrust: { ship: { bodies: BodyIn
   const s = scenario.world.thrust.ship;
   const ship = strip({ bodies: s.bodies, joints: s.joints ?? [], links: s.links ?? [] });
   const mix = steerMixer(scenario.world.thrust.mix);
-  // The gun, tractor and shield answer their controls directly: their channels are the controls' names.
-  for (const ch of ["fire", "tractor", "shield"]) mix.rows.push({ channel: ch, lines: [{ control: ch, weight: 1 }] });
+  // The gun, the tractor beam and the shield on the player's actions A, B and C (the game's keys).
+  for (const [ch, action] of [["fire", "action-a"], ["tractor", "action-b"], ["shield", "action-c"]]) mix.rows.push({ channel: ch, lines: [{ control: action, weight: 1 }] });
   return { ship, mix };
 }
 
@@ -1114,4 +1116,76 @@ export function mirrorComponent(bp: Blueprint, compId: string, controls: { left:
     out = setRow(out, to[i], () => ({ ...structuredClone(row), channel: to[i], lines: row.lines.map((l) => ({ ...l, control: swap(l.control), ...(l.ease ? { ease: { ...l.ease, control: swap(l.ease.control) } } : {}) })) }));
   });
   return { bp: out, id: made.comp.id };
+}
+
+// ---------- overlaps (§3.2: components never overlap) ----------
+
+/** The components whose parts overlap this one's (more than touching). */
+export function overlapsOf(bp: Blueprint, compId: string): string[] {
+  const c = component(bp, compId);
+  const mine = c.bodies.map((id) => worldVertices(body(bp, id)));
+  return bp.components.filter((o) => o.id !== compId && o.bodies.some((id) => mine.some((m) => overlaps(m, worldVertices(body(bp, id)))))).map((o) => o.id);
+}
+
+/** Every overlapping pair, as [a, b] component ids (a before b in the list). */
+export function allOverlaps(bp: Blueprint): [string, string][] {
+  const out: [string, string][] = [];
+  const cs = bp.components;
+  const outlines = new Map(cs.map((c) => [c.id, c.bodies.map((id) => worldVertices(body(bp, id)))]));
+  for (let i = 0; i < cs.length; i++)
+    for (let j = i + 1; j < cs.length; j++) if (outlines.get(cs[i].id)!.some((p) => outlines.get(cs[j].id)!.some((q) => overlaps(p, q)))) out.push([cs[i].id, cs[j].id]);
+  return out;
+}
+
+/**
+ * An edit to one component, refused if it would make that component overlap another it didn't
+ * overlap before: the blueprint as it was, and the parts it would have run into.
+ */
+export function withoutNewOverlaps(before: Blueprint, after: Blueprint, compId: string): { bp: Blueprint; blocked: string[] } {
+  if (!after.components.some((c) => c.id === compId)) return { bp: after, blocked: [] };
+  const was = new Set(before.components.some((c) => c.id === compId) ? overlapsOf(before, compId) : []);
+  const now = overlapsOf(after, compId).filter((id) => !was.has(id));
+  return now.length ? { bp: before, blocked: now } : { bp: after, blocked: [] };
+}
+
+// ---------- action labels (§10) ----------
+
+/** What a driven channel is, in a word for a button: FIRE for a gun, SHIELD, BEAM, else the part's name. */
+function channelWord(bp: Blueprint, channel: string): string | null {
+  const c = componentOfChannel(bp, channel);
+  if (!c) return null;
+  for (const id of c.bodies) {
+    const b = body(bp, id);
+    if (b.magazine?.railgun?.channel === channel) return "FIRE";
+    if (b.shield?.channel === channel) return "SHIELD";
+    if (b.tractor?.channel === channel) return "BEAM";
+  }
+  return c.label.toUpperCase();
+}
+
+/**
+ * What a control is called on screen in this ship: the player's own name for it here, else the
+ * largest thing it drives (an action wired 100% to the shield is SHIELD), else its own name.
+ */
+export function actionLabel(bp: Blueprint, control: string, fallback: string): string {
+  const own = bp.labels?.[control]?.trim();
+  if (own) return own;
+  let best: { w: number; word: string } | null = null;
+  for (const r of bp.mix.rows)
+    for (const l of r.lines) {
+      if (l.control !== control) continue;
+      const word = channelWord(bp, r.channel);
+      if (word && (!best || l.weight > best.w)) best = { w: l.weight, word };
+    }
+  return best?.word ?? fallback.toUpperCase();
+}
+
+/** Names a control on screen in this ship ("" goes back to the automatic name). */
+export function setLabel(bp: Blueprint, control: string, label: string): Blueprint {
+  const out = structuredClone(bp);
+  const labels = { ...(out.labels ?? {}) };
+  if (label.trim()) labels[control] = label.trim().toUpperCase().slice(0, 12);
+  else delete labels[control];
+  out.labels = labels;
+  return out;
 }

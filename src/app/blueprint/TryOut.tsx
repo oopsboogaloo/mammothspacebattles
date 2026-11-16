@@ -5,8 +5,8 @@ import { useEffect, useState } from "preact/hooks";
 import { camera, openScenario, overlays as sandboxOverlays, playing, sandbox, screen, setFollow, timeScale, viewport } from "../state.ts";
 import { sendControl, Thrust } from "../Lander.tsx";
 import { View } from "../View.tsx";
-import { keyLabel, loadKeys, playerControls } from "./bindings.ts";
-import { type Blueprint } from "./model.ts";
+import { keyLabel, loadKeys, MOVEMENT, playerControls } from "./bindings.ts";
+import { actionLabel, type Blueprint } from "./model.ts";
 import { current, say, tryOut } from "./store.ts";
 import { loadSummary, useWeldLoads } from "./tryLoads.ts";
 import { shipControls } from "./measure.ts";
@@ -116,10 +116,10 @@ export function startTry(): void {
  * They set the player's controls, which the blueprint's wiring then mixes.
  */
 const PAD_BUTTONS: [keyof PadState, string][] = [
-  ["x", "fire"],
-  ["rb", "fire"],
-  ["y", "tractor"],
-  ["lb", "shield"],
+  ["x", "action-a"],
+  ["rb", "action-a"],
+  ["y", "action-b"],
+  ["lb", "action-c"],
 ];
 const padHeld = new Set<string>();
 const PAD: PadGame = {
@@ -374,9 +374,10 @@ export function TryOut() {
           <Thrust channel="left" label="L" side="left" className="mas-thrust" />
           <Thrust channel="forward" label="FWD" side="forward" className="mas-thrust" />
           <Thrust channel="reverse" label="REV" side="reverse" className="mas-thrust" />
-          <Thrust channel="shield" label="SHIELD" side="shield" className="mas-thrust" />
-          <Thrust channel="tractor" label="BEAM" side="tractor" className="mas-thrust" />
-          <Thrust channel="fire" label="FIRE" side="fire" className="mas-thrust" />
+          {/* The actions, each named by what it does in this ship (or the player's name for it). */}
+          <Thrust channel="action-c" label={actionLabel(bp, "action-c", "C")} name={`Action C: ${actionLabel(bp, "action-c", "C").toLowerCase()}`} side="shield" className="mas-thrust" />
+          <Thrust channel="action-b" label={actionLabel(bp, "action-b", "B")} name={`Action B: ${actionLabel(bp, "action-b", "B").toLowerCase()}`} side="tractor" className="mas-thrust" />
+          <Thrust channel="action-a" label={actionLabel(bp, "action-a", "A")} name={`Action A: ${actionLabel(bp, "action-a", "A").toLowerCase()}`} side="fire" className="mas-thrust" />
           <Thrust channel="right" label="R" side="right" className="mas-thrust" />
         </div>
       )}
@@ -387,7 +388,7 @@ export function TryOut() {
             {keysFor(c.id).map((k) => (
               <kbd key={k}>{k}</kbd>
             ))}{" "}
-            {c.name.toLowerCase()}
+            {MOVEMENT.has(c.id) ? c.name.toLowerCase() : actionLabel(bp, c.id, c.name).toLowerCase()}
           </span>
         ))}
       </div>

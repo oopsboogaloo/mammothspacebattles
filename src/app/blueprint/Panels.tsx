@@ -8,7 +8,7 @@ import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
-import { addComponent, mirrorComponent, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
 import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
@@ -204,6 +204,7 @@ export function PerformanceBox() {
     ["Joins", `${st.welds} welds · ${st.parts} parts`, st.welds, bs.welds],
   ];
   const loose = st.pieces > 1;
+  const crossing = allOverlaps(bp);
   return (
     <div class="stats" data-testid="performance">
       <div class="sh">
@@ -227,6 +228,11 @@ export function PerformanceBox() {
           })}
         </tbody>
       </table>
+      )}
+      {crossing.length > 0 && (
+        <div class="warnrow" data-testid="overlapping">
+          ▲ Overlapping: {crossing.map(([a, b]) => `${component(bp, a).label} and ${component(bp, b).label}`).join("; ")}. Move one clear.
+        </div>
       )}
       {loose && (
         <div class="warnrow" data-testid="loose">
@@ -254,6 +260,21 @@ export function MeasureButton({ bp, measuredNow }: { bp: Blueprint; measuredNow:
       ⏱ {measuredNow ? "Again" : "Measure"}
     </button>
   );
+}
+
+/**
+ * Components never overlap (§3.2): an edit that would push this one into another is refused, and
+ * the page says which part is in the way.
+ */
+let lastBlocked = "";
+function noOverlap(before: Blueprint, after: Blueprint, id: string): Blueprint {
+  const r = withoutNewOverlaps(before, after, id);
+  if (r.blocked.length) {
+    const msg = `That would make ${component(before, id).label} overlap ${r.blocked.map((x) => component(after, x).label).join(" and ")}. Move it clear first.`;
+    if (msg !== lastBlocked) say(msg);
+    lastBlocked = msg;
+  } else lastBlocked = "";
+  return r.bp;
 }
 
 // ---------- properties ----------
@@ -352,8 +373,8 @@ function ComponentProps({ id }: { id: string }) {
               readonly={p.readonly}
               note={p.note}
               changed={changed}
-              onReset={() => w !== undefined && edit((b) => setParam(b, id, p.key, w))}
-              onLive={(v) => live((b) => setParam(b, id, p.key, v))}
+              onReset={() => w !== undefined && edit((b) => noOverlap(b, setParam(b, id, p.key, w), id))}
+              onLive={(v) => live((b) => noOverlap(b, setParam(b, id, p.key, v), id))}
               onEnd={endGesture}
             />
           );
@@ -390,7 +411,7 @@ function ComponentProps({ id }: { id: string }) {
           ⇋ Mirror
         </button>
         {c.kind === "engine" && (
-          <button data-testid="flip-part" title="Turn it round to push the other way" onClick={() => edit((b) => flipComponent(b, id))}>
+          <button data-testid="flip-part" title="Turn it round to push the other way" onClick={() => edit((b) => noOverlap(b, flipComponent(b, id), id))}>
             ↕ Flip
           </button>
         )}

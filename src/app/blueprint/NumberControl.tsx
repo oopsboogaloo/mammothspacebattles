@@ -103,7 +103,9 @@ export function NumberControl(p: NumberControlProps) {
     setProblem(c !== v ? `Kept between ${fmt(p.min, p.decimals)} and ${fmt(p.max, p.decimals)} ${p.unit}` : null);
     p.onLive(snap(c));
     p.onEnd();
-    setText(fmt(c, p.decimals));
+    // Show the value as it now is: if the edit was refused (it would overlap a part, say), the
+    // box goes back to it; if it went through, the new value arrives with the next render.
+    setText(fmt(p.value, p.decimals));
   };
 
   // A stepper: one step now, then repeating while held (faster after a while). Shift: ×10.
@@ -182,7 +184,7 @@ export function NumberControl(p: NumberControlProps) {
                   const v = snap(p.value + (e.key === "ArrowUp" ? 1 : -1) * p.step * (e.shiftKey ? 10 : 1));
                   p.onLive(v);
                   p.onEnd();
-                  setText(fmt(v, p.decimals));
+                  setText(fmt(p.value, p.decimals));
                 }
               }}
             />

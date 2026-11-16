@@ -24,12 +24,19 @@ function load(): Saved {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
     if (raw) {
       const s = JSON.parse(raw) as Saved;
-      if (Array.isArray(s.mine)) return s;
+      if (Array.isArray(s.mine)) return { ...s, mine: s.mine.map(renameActions) };
     }
   } catch {
     // A broken save starts afresh rather than leaving the page blank.
   }
   return { mine: [], current: presets[0]?.id ?? "" };
+}
+
+/** Blueprints saved before the actions were named A, B and C were wired to Fire, Tractor and Shield. */
+function renameActions(bp: Blueprint): Blueprint {
+  const to: Record<string, string> = { fire: "action-a", tractor: "action-b", shield: "action-c" };
+  const r = (c: string) => to[c] ?? c;
+  return { ...bp, mix: { ...bp.mix, rules: bp.mix.rules, rows: bp.mix.rows.map((row) => ({ ...row, lines: row.lines.map((l) => ({ ...l, control: r(l.control), ...(l.ease ? { ease: { ...l.ease, control: r(l.ease.control) } } : {}) })) })) } };
 }
 
 const saved = load();

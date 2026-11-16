@@ -2,7 +2,7 @@
 // mass and thrust; select by clicking; pan by dragging the empty grid; zoom with the wheel, a pinch
 // or the buttons.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { addComponent, body, component, componentBounds, engineGeom, engines, jointPoint, moveComponent, place, SNAP, stats, weldingOf, welds, worldVertices, type Blueprint, type Kind } from "./model.ts";
+import { addComponent, allOverlaps, body, component, componentBounds, engineGeom, engines, jointPoint, moveComponent, place, SNAP, stats, weldingOf, welds, worldVertices, type Blueprint, type Kind } from "./model.ts";
 import { current, edit, mode, overlays, placing, preview, say, selection, type Placing } from "./store.ts";
 import { testHeld } from "./Controls.tsx";
 import { loadsFor } from "./tryLoads.ts";
@@ -205,6 +205,7 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
   const ov = overlays.value;
   const ws = welds(bp);
   const loads = loadsFor(bp);
+  const crossing = new Set(allOverlaps(bp).flat());
   const grid = gridLines(size.w, size.h, v, sx, sy, toWorld);
 
   return (
@@ -233,7 +234,8 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
               const pts = worldVertices(body(bp, id))
                 .map((p) => `${sx(p.x)},${sy(p.y)}`)
                 .join(" ");
-              return <polygon key={id} points={pts} fill={colour} fill-opacity={on ? 0.3 : 0.16} stroke={colour} stroke-width={on ? 2 : 1.3} stroke-linejoin="round" />;
+              const bad = crossing.has(c.id);
+              return <polygon key={id} points={pts} fill={colour} fill-opacity={on ? 0.3 : 0.16} stroke={bad ? "#ff7b7b" : colour} stroke-width={on ? 2 : bad ? 2 : 1.3} stroke-dasharray={bad ? "5 3" : undefined} stroke-linejoin="round" data-overlap={bad ? "1" : undefined} />;
             })}
           </g>
         );

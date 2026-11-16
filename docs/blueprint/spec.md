@@ -375,6 +375,18 @@ Differences from the design above:
   it; anything else controlled loses its control links. With no cockpit nothing answers. The
   estimate leaves such parts out, the checks name them, and the mixer's NOW shows them at 0%.
   Test: BPD-030.
+- **Components never overlap (16 November 2026):** moving, adding, mirroring and flipping were
+  already refused where they would overlap; now a property edit that would push a part into
+  another is refused too, with the parts in its way named, and the value goes back. Overlaps that
+  are already there (an imported design, or the preset's railgun standing through its shield
+  emitter, as in the game's ship) are outlined in red and named under Performance. Test: BPD-035.
+- **Actions A, B and C (16 November 2026):** the player's controls are the four movements and Action
+  A, B and C (on the keys and pad buttons that were Fire, Tractor and Shield; saved bindings and
+  blueprints move over). Each ship wires the actions to what it carries: Thrust 1 has A on the
+  railgun, B on the tractor beam, C on the shield. On screen (Try it's touch buttons and its key
+  legend) an action is named by the largest thing it drives in that ship (FIRE for a gun, SHIELD,
+  BEAM, else the part's name), or by the player's own name for it in that ship, set under the
+  action in Controls mode (blank: automatic). Test: BPD-034.
 - **Mirror (built 16 November 2026):** ⇋ Mirror on a selected part makes its mirror image across the
   ship's middle line (x = 0): shape, nozzle and internal welds reflected, welded where it touches,
   fed if an engine, named for the other side (BL → BR, L → R) and wired as the mirror of the

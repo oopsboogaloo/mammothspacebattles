@@ -24,13 +24,13 @@ describe("blueprint model", () => {
     expect(bp.preset).toBe(true);
   });
 
-  it("BPD-012 its wiring gives the game's engine values for every combination of controls, and fires its gun, tractor and shield on their own controls", () => {
+  it("BPD-012 its wiring gives the game's engine values for every combination of controls, and its gun, tractor and shield answer Actions A, B and C", () => {
     const steps = [0, 0.5, 1];
     for (const forward of steps)
       for (const left of steps)
         for (const right of steps)
           for (const reverse of steps) {
-            const c = { forward, left, right, reverse, fire: 1, tractor: 0, shield: 1 };
+            const c = { forward, left, right, reverse, "action-a": 1, "action-b": 0, "action-c": 1 };
             const got = mixerValues(bp.mix, c);
             for (const [ch, v] of Object.entries(steerValues(scn.world.thrust.mix, c))) expect(got[ch]).toBeCloseTo(v, 12);
             expect([got.fire, got.tractor, got.shield]).toEqual([1, 0, 1]);
@@ -329,5 +329,31 @@ describe("only what is welded to the cockpit answers", () => {
     expect(w.links.some((l) => l.kind === "control" && l.to === "gun")).toBe(false);
     const none = measureWorld(removeComponent(bp, "hull"));
     expect(none.mix).toBeUndefined();
+  });
+});
+
+describe("actions and overlaps", () => {
+  it("BPD-034 the actions are named on screen by the largest thing they drive, or the player's own name for them in this ship", async () => {
+    const { actionLabel, setLabel, setRow } = await import("../../src/app/blueprint/model.ts");
+    expect(["action-a", "action-b", "action-c"].map((c) => actionLabel(bp, c, c))).toEqual(["FIRE", "BEAM", "SHIELD"]);
+    // Action A rewired: 30% to the gun, 100% to the shield: it is SHIELD.
+    let b = setRow(bp, "fire", (r) => ({ ...r, lines: [{ control: "action-a", weight: 0.3 }] }));
+    b = setRow(b, "shield", (r) => ({ ...r, lines: [...r.lines, { control: "action-a", weight: 1 }] }));
+    expect(actionLabel(b, "action-a", "A")).toBe("SHIELD");
+    // Named by the player; cleared, automatic again; wired to nothing, its own name.
+    expect(actionLabel(setLabel(bp, "action-b", "grab"), "action-b", "B")).toBe("GRAB");
+    expect(actionLabel(setLabel(setLabel(bp, "action-b", "grab"), "action-b", ""), "action-b", "B")).toBe("BEAM");
+    expect(actionLabel(bp, "boost", "Boost")).toBe("BOOST");
+  });
+
+  it("BPD-035 components never overlap: the preset's one overlap is found, and an edit that would make a new one is refused", async () => {
+    const { allOverlaps, withoutNewOverlaps } = await import("../../src/app/blueprint/model.ts");
+    expect(allOverlaps(bp)).toEqual([["gun", "shield"]]);
+    const wider = setParam(bp, "tank-l", "width", 1.7);
+    const r = withoutNewOverlaps(bp, wider, "tank-l");
+    expect(r.bp).toBe(bp);
+    expect(r.blocked).toEqual(["gen-l", "mag-l"]);
+    // Narrower is fine.
+    expect(withoutNewOverlaps(bp, setParam(bp, "tank-l", "width", 1.4), "tank-l").blocked).toEqual([]);
   });
 });
