@@ -402,3 +402,27 @@ test("BPD-037 click the blueprint's name to rename it; a preset is renamed as yo
   await page.reload();
   await expect(page.getByTestId("drawing-name")).toHaveText("HORNET");
 });
+
+test("BPD-038 the Mastodon Gun Ship flies in Try it on its double engines, and Action A fires its four railguns from the magazines", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("open-drawer").click();
+  await page.getByTestId("design-MASTODON GUN SHIP").click();
+  await expect(page.getByTestId("drawing-name")).toHaveText("MASTODON GUN SHIP");
+  await page.getByRole("tab", { name: "FR" }).click();
+  await expect(page.getByTestId("card-triangle")).toBeVisible();
+  await page.getByTestId("try-it").click();
+  const world = () =>
+    page.evaluate(() => {
+      const w = (window as unknown as { __msb: { sandbox: () => { world: { time: number; bodies: { id: string; position: { y: number }; ammo?: { count: number } }[] } } | null } }).__msb.sandbox()?.world;
+      return { t: w?.time ?? 0, y: w?.bodies.find((b) => b.id === "hull")?.position.y ?? 0, shells: (w?.bodies ?? []).filter((b) => b.ammo).reduce((s, b) => s + b.ammo!.count, 0) };
+    });
+  await expect.poll(async () => (await world()).t, { timeout: 30_000 }).toBeGreaterThan(0.05);
+  const y0 = (await world()).y;
+  await page.keyboard.down("ArrowUp");
+  await expect.poll(async () => (await world()).y - y0, { timeout: 60_000, intervals: [50] }).toBeGreaterThan(1);
+  await page.keyboard.up("ArrowUp");
+  const before = (await world()).shells;
+  await page.keyboard.down("Space");
+  await expect.poll(async () => before - (await world()).shells, { timeout: 60_000 }).toBeGreaterThanOrEqual(8);
+  await page.keyboard.up("Space");
+});

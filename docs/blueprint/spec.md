@@ -417,6 +417,40 @@ Improvements so far:
 3. **Renaming:** click the blueprint's name in the top bar (a preset is renamed as your own copy),
    as well as Rename in the Blueprints drawer.
 
+## 17. The Mastodon Gun Ship, double engines, trapezoids and triangles (16 November 2026, Chloe)
+
+From Chloe's drawing (1 m to its scale bar; `mastodonPreset` in `model.ts`): a preset made of the
+regular parts. Symmetrical about the middle line, 6.3 × 2.45 m, 71.9 kg:
+
+- The cockpit (Thrust's, without the beam) over a centre fuel tank (1.2 × 0.65 m).
+- A magazine each side (0.4 × 1.4 m, 100 shells), a railgun standing on each.
+- A trapezoid fuel tank each side: its long side (1.4 m) on the magazine, its short (0.7 m) on the engine.
+- A **double engine** each side, then a trapezoid **mount** out to an outer railgun.
+- Wiring: each engine's rear nozzle on Forward, its front nozzle on Reverse. Turning, one engine's
+  rear and the other's front nozzle at a quarter. The four railguns are on Action A; the two
+  magazines feed all four.
+- Measured: 31 m/s² forward and back, 9.2 rad/s² turning, nothing breaking; full burn 26 s.
+
+**Double engine** (the Engines list): one part with two heads back to back, each with its own
+nozzle walls, injector and channel (`heads` on the component). It welds to the ship by its heads.
+A property change applies to both heads, which stay back to back.
+
+**Trapezoids and triangles** (`form` on the component; the new Frames type, and the trapezoid
+tank under Tanks):
+
+- Their properties are Base, Top (a trapezoid's) or Apex along (a triangle's, from the middle of
+  the base), Height, and Turn in quarter turns. The base is on the bottom at Turn 0.
+- At every turn their straight sides stay exactly square to the grid, so they weld like boxes:
+  welds still form only along sides that are square to the grid.
+- Resized, their mass and what they hold go with their area. Mirrored, they turn the other way.
+
+Also: a part added from the list now gets its control links, so the wiring reaches it in Try it.
+Before, an added engine or gun never fired there. And a shared side of exactly 0.3 m welds at two
+points, as the rule says.
+
+Tests: BPD-038 (the Mastodon, the double engine, Try it), BPD-039 (trapezoids and triangles),
+BPD-040 (control links on added parts).
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):

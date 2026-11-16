@@ -6,7 +6,7 @@
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, polygonArea, steerMixer } from "../../core/index.ts";
 
-export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility";
+export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
 export const KINDS: { kind: Kind; label: string; short: string }[] = [
   { kind: "cockpit", label: "Cockpits", short: "CO" },
@@ -17,6 +17,7 @@ export const KINDS: { kind: Kind; label: string; short: string }[] = [
   { kind: "generator", label: "Generators", short: "GE" },
   { kind: "battery", label: "Batteries", short: "BA" },
   { kind: "utility", label: "Utilities", short: "UT" },
+  { kind: "frame", label: "Frames", short: "FR" },
 ];
 
 export interface Component {
@@ -30,6 +31,29 @@ export interface Component {
    * ship's parts are kept as they are (THRUST OG) while the regular parts are improved.
    */
   part?: string;
+  /** A double engine's heads (an engine has one, its first body, when this is absent). */
+  heads?: string[];
+  /** A trapezoid or triangle part: its outline as the player sets it (§16). */
+  form?: Form;
+}
+
+/**
+ * A trapezoid or a triangle, in its body's frame: the base along the bottom (y = −height/2), the
+ * top (a trapezoid's) or the apex (a triangle's, `apex` along from the middle) at the top; then
+ * turned anticlockwise by `turn` (0, 90, 180 or 270°), so its sides stay square to the grid.
+ */
+export type Form = { kind: "trapezoid"; base: number; top: number; height: number; turn: number } | { kind: "triangle"; base: number; height: number; apex: number; turn: number };
+
+/** A form's outline, anticlockwise, centred on its bounding box. */
+export function formVertices(f: Form): Vec2[] {
+  const h = f.height / 2;
+  const raw = f.kind === "trapezoid" ? [{ x: -f.base / 2, y: -h }, { x: f.base / 2, y: -h }, { x: f.top / 2, y: h }, { x: -f.top / 2, y: h }] : [{ x: -f.base / 2, y: -h }, { x: f.base / 2, y: -h }, { x: f.apex, y: h }];
+  const box = boundsOf(raw);
+  const cx = (box.minX + box.maxX) / 2;
+  const t = (((Math.round(f.turn / 90) % 4) + 4) % 4) as 0 | 1 | 2 | 3;
+  // Exact quarter turns: no rounding error, so sides stay exactly square to the grid and weld.
+  const turn = (v: Vec2): Vec2 => [v, { x: -v.y, y: v.x }, { x: -v.x, y: -v.y }, { x: v.y, y: -v.x }][t];
+  return raw.map((v) => turn({ x: round(v.x - cx), y: v.y })).map((v) => ({ x: round(v.x) || 0, y: round(v.y) || 0 }));
 }
 
 export interface Ship {
@@ -266,6 +290,131 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   return bp;
 }
 
+// ---------- the Mastodon Gun Ship (Chloe's sketch, 16 November 2026) ----------
+
+/**
+ * The Mastodon Gun Ship, from Chloe's drawing (1 m to its scale bar): a cockpit over a fuel tank,
+ * a magazine each side with a railgun on top, a trapezoid fuel tank, a double engine (two heads back
+ * to back: the rear nozzle drives it forward, the front one back), and a trapezoid mount out to an
+ * outer railgun. Its parts are the regular ones (Thrust's materials, railgun, magazine and engine
+ * settings), with trapezoids for the shapes Thrust has no part for.
+ */
+export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
+  const t = thrustShip(scenario).ship;
+  const src = (id: string): BodyInput => structuredClone(t.bodies.find((b) => b.id === id)!);
+  const place = (b: BodyInput, id: string, x: number, y: number, angle = 0): BodyInput => ({ ...b, id, position: { x, y }, velocity: { x: 0, y: 0 }, angle, angularVelocity: 0 });
+  const bodies: BodyInput[] = [];
+  const joints: JointInput[] = [];
+  const components: Component[] = [];
+  const part = (c: Component, ...bs: BodyInput[]) => {
+    bodies.push(...bs);
+    components.push(c);
+  };
+  const scaled = (b: BodyInput, k: number) => {
+    b.mass = round(b.mass * k);
+    for (const st of b.contents ?? []) {
+      st.capacity = round(st.capacity * k, 9);
+      st.mass = round(st.mass * k, 9);
+    }
+    return b;
+  };
+  const gunBody = src("gun");
+  const shell = structuredClone(gunBody.magazine!.shell);
+
+  // The cockpit (Thrust's, without the tractor beam), over the centre tank.
+  const hull = src("hull");
+  delete hull.tractor;
+  hull.shape = { kind: "polygon", vertices: [{ x: -0.6, y: -0.375 }, { x: 0.6, y: -0.375 }, { x: 0.6, y: 0.375 }, { x: 0.3, y: 0.775 }, { x: -0.3, y: 0.775 }, { x: -0.6, y: 0.375 }] };
+  part({ id: "hull", kind: "cockpit", label: "Cockpit", part: "cockpit", bodies: ["hull"] }, place(hull, "hull", 0, 1.025));
+  const tank = src("tank-l");
+  const tankArea = 1.5; // Thrust's tank: 1.5 × 1 m
+  const centre = scaled({ ...tank, shape: { kind: "box", width: 1.2, height: 0.65 } }, (1.2 * 0.65) / tankArea);
+  part({ id: "tank-c", kind: "tank", label: "Centre tank", part: "tank", bodies: ["tank-c"] }, place(centre, "tank-c", 0, 0.325));
+
+  const mag = src("mag-l");
+  for (const [s, l] of [[-1, "L"], [1, "R"]] as const) {
+    const side = l.toLowerCase();
+    // Magazine: 0.4 × 1.4 m, Thrust's per area; 100 shells each for four guns.
+    const m = scaled({ ...structuredClone(mag), shape: { kind: "box", width: 0.4, height: 1.4 } }, (0.4 * 1.4) / (0.7 * 0.45));
+    m.ammo = { count: 100, shell: structuredClone(shell) };
+    part({ id: `mag-${side}`, kind: "storage", label: `Magazine ${l}`, part: "magazine", bodies: [`mag-${side}`] }, place(m, `mag-${side}`, s * 0.8, 0.7));
+    // The railguns: on the magazine, and out on the mount. No shells of their own: the magazines feed them.
+    for (const [id, label, x, y] of [[`gun-${side}`, `Railgun ${l}`, s * 0.75, 1.75], [`gun-o${side}`, `Outer railgun ${l}`, s * 3.0, 0.7]] as const) {
+      const g = structuredClone(gunBody);
+      g.magazine = { ...g.magazine!, count: 0, railgun: { ...g.magazine!.railgun!, channel: id } };
+      part({ id, kind: "weapon", label, part: "railgun", bodies: [id] }, place(g, id, x, y));
+    }
+    // The side tank: a trapezoid, its long side (1.4 m) on the magazine, its short (0.7 m) on the engine.
+    const form: Form = { kind: "trapezoid", base: 1.4, top: 0.7, height: 0.75, turn: s < 0 ? 90 : 270 };
+    const st = scaled({ ...structuredClone(tank), shape: { kind: "polygon", vertices: formVertices(form) } }, ((1.4 + 0.7) / 2) * 0.75 / tankArea);
+    part({ id: `tank-${side}`, kind: "tank", label: `Tank ${l}`, part: "trapezoid-tank", bodies: [`tank-${side}`], form }, place(st, `tank-${side}`, s * 1.375, 0.7));
+    // The double engine: two heads back to back across y = 0.7, each with its own walls.
+    const cx = s * 2.05;
+    const head = src("main");
+    const wall = src("main-wall-a");
+    const ids = { rear: `eng-${side}`, front: `eng-${side}-rev` };
+    const heads: BodyInput[] = [];
+    for (const [id, y, angle] of [[ids.rear, 0.525, 0], [ids.front, 0.875, Math.PI]] as const) {
+      const h = place(structuredClone(head), id, cx, y, angle);
+      h.shape = { kind: "box", width: 0.6, height: 0.35 };
+      h.mass = 1.2;
+      h.explosive = { ...h.explosive!, charge: round(1.2 * 0.008, 9) };
+      h.injector = { ...h.injector!, channel: id };
+      heads.push(h);
+      for (const [w, x] of [["a", -0.25], ["b", 0.25]] as const) {
+        const wb = place(structuredClone(wall), `${id}-w${w}`, 0, 0, angle);
+        wb.mass = 0.4;
+        wb.position = worldPoint(h, { x, y: -0.5 });
+        bodies.push(wb);
+        joints.push({ id: `${id}-w${w}`, a: id, b: wb.id, anchorA: { x: 0, y: 0 }, anchorB: { x: 0, y: 0 }, limits: { ...WELD_PRESETS[1].limits }, yield: WELD_PRESETS[1].yield });
+      }
+    }
+    part({ id: ids.rear, kind: "engine", label: `Engine ${l}`, part: "double-engine", bodies: [ids.rear, `${ids.rear}-wa`, `${ids.rear}-wb`, ids.front, `${ids.front}-wa`, `${ids.front}-wb`], heads: [ids.rear, ids.front] }, ...heads);
+    // The mount: a trapezoid from the engine (0.7 m) to the outer gun (0.35 m).
+    const mf: Form = { kind: "trapezoid", base: 0.7, top: 0.35, height: 0.5, turn: s < 0 ? 90 : 270 };
+    const mount: BodyInput = { id: `mount-${side}`, shape: { kind: "polygon", vertices: formVertices(mf) }, mass: 1.2, position: { x: s * 2.6, y: 0.7 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.3, material: { ...hull.material! } };
+    part({ id: `mount-${side}`, kind: "frame", label: `Mount ${l}`, part: "trapezoid", bodies: [`mount-${side}`], form: mf }, mount);
+  }
+  // In the ship's order: middle first, then out to each side.
+  let bp: Blueprint = { format: 1, id: "preset-mastodon", name: "MASTODON GUN SHIP", preset: true, rev: 1, ship: { bodies, joints, links: [] }, components, mix: { rules: structuredClone(thrustShip(scenario).mix.rules ?? []), rows: [] } };
+  for (const c of components.filter((x) => x.kind === "engine")) {
+    for (const u of engineUnits(bp, c)) {
+      const h = body(bp, u.head);
+      h.injector = { ...h.injector!, rate: 0, economy: h.injector!.economy };
+    }
+    bp = buildEngine(bp, c, { headWidth: 0.6, headHeight: 0.35, throat: 0.4, wall: 0.1, length: 0.7, flare: 9 });
+    bp = setParam(bp, c.id, "rate", MASTODON_FLOW);
+  }
+  for (const c of components) bp = reweld(bp, c.id);
+  refeed(bp);
+  reammo(bp);
+  relink(bp);
+  // Its wiring: each engine's rear nozzle forward, its front one back; turning, one forward and the
+  // other back, at a quarter (about Thrust's turn); the four railguns on Action A.
+  const row = (channel: string, lines: [string, number][]): MixerRow => ({ channel, lines: lines.map(([control, weight]) => ({ control, weight })) });
+  bp.mix.rows = [
+    row("eng-l", [["forward", 1], ["right", MASTODON_TURN]]),
+    row("eng-l-rev", [["reverse", 1], ["left", MASTODON_TURN]]),
+    row("eng-r", [["forward", 1], ["left", MASTODON_TURN]]),
+    row("eng-r-rev", [["reverse", 1], ["right", MASTODON_TURN]]),
+    ...["gun-l", "gun-r", "gun-ol", "gun-or"].map((g) => row(g, [["action-a", 1]])),
+  ];
+  return bp;
+}
+
+/** Each nozzle's flow at full, kg/s; and how hard the engines work to turn the ship. */
+const MASTODON_FLOW = 5.4;
+const MASTODON_TURN = 0.25;
+
+/**
+ * Parts with no preset to come from (a triangle), for the components list only: never opened.
+ */
+export function partsTemplate(): Blueprint {
+  const form: Form = { kind: "triangle", base: 0.6, height: 0.6, apex: 0, turn: 0 };
+  const tri: BodyInput = { id: "triangle", shape: { kind: "polygon", vertices: formVertices(form) }, mass: 0.8, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.3, material: { name: "hull", threshold: 150, toughness: 3000 } };
+  return { format: 1, id: "parts", name: "PARTS", preset: true, rev: 1, ship: { bodies: [tri], joints: [], links: [] }, components: [{ id: "triangle", kind: "frame", label: "Triangle", part: "triangle", bodies: ["triangle"], form }], mix: { rules: [], rows: [] } };
+}
+
 /** How far a part must rise to stand clear of what it overlaps: up to the top of the highest. */
 function overlapLift(bp: Blueprint, compId: string): number {
   const c = component(bp, compId);
@@ -278,6 +427,21 @@ function overlapLift(bp: Blueprint, compId: string): number {
     if (mine.some((m) => overlaps(m, ov))) top = Math.max(top, ...ov.map((v) => v.y));
   }
   return round(top - low);
+}
+
+/**
+ * Control links: every engine head, gun, shield and beam has one for its channel, so the wiring
+ * reaches it (a part added from the list arrived without one, and never fired in Try it).
+ */
+export function relink(bp: Blueprint): void {
+  const ids = new Set(bp.ship.bodies.map((b) => b.id));
+  bp.ship.links = bp.ship.links.filter((l) => l.kind !== "control" || ids.has(l.to));
+  for (const b of bp.ship.bodies) {
+    for (const ch of [b.injector?.channel, b.magazine?.railgun?.channel, b.shield?.channel, b.tractor?.channel]) {
+      if (!ch || bp.ship.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === ch)) continue;
+      bp.ship.links.push({ id: `ctl-${b.id}-${ch}`, kind: "control", channel: ch, to: b.id });
+    }
+  }
 }
 
 /** Shell feeds (WPN-015): every store of shells feeds every gun that fires shells like them. */
@@ -308,8 +472,24 @@ export const EXHAUST_SPEED_OPEN = 76;
 /** An engine's estimated exhaust speed: its walls enclosing a chamber, or not. */
 export const exhaustSpeed = (c: Component) => (c.bodies.length >= 3 ? EXHAUST_SPEED : EXHAUST_SPEED_OPEN);
 
+/**
+ * An engine's units: each head (a body with an injector) and the nozzle walls welded to it. Most
+ * engines have one; a double engine (the Mastodon's) has two back to back, firing opposite ways.
+ */
+export function engineUnits(bp: Blueprint, c: Component): { head: string; walls: string[] }[] {
+  const heads = c.bodies.filter((id) => body(bp, id).injector);
+  const rest = c.bodies.filter((id) => !heads.includes(id));
+  return heads.map((h) => ({
+    head: h,
+    walls: rest.filter((w) => bp.ship.joints.some((j) => (j.a === h && j.b === w) || (j.b === h && j.a === w))),
+  }));
+}
+
 export interface EngineInfo {
+  /** The component, and the head this push comes from. */
   id: string;
+  head: string;
+  walls: string[];
   channel: string;
   /** Where its push acts (the head's centre) and its direction (opposite the exhaust), ship frame. */
   at: Vec2;
@@ -321,12 +501,14 @@ export interface EngineInfo {
 export function engines(bp: Blueprint): EngineInfo[] {
   return bp.components
     .filter((c) => c.kind === "engine")
-    .map((c) => {
-      const h = body(bp, c.bodies[0]);
-      const inj = h.injector!;
-      const d = rot(inj.direction ?? { x: 0, y: -1 }, h.angle ?? 0);
-      return { id: c.id, channel: inj.channel, at: { ...h.position }, dir: { x: -d.x, y: -d.y }, thrust: (inj.rate ?? 0) * exhaustSpeed(c) };
-    });
+    .flatMap((c) =>
+      engineUnits(bp, c).map((u) => {
+        const h = body(bp, u.head);
+        const inj = h.injector!;
+        const d = rot(inj.direction ?? { x: 0, y: -1 }, h.angle ?? 0);
+        return { id: c.id, head: u.head, walls: u.walls, channel: inj.channel, at: { ...h.position }, dir: { x: -d.x, y: -d.y }, thrust: (inj.rate ?? 0) * (u.walls.length >= 2 ? EXHAUST_SPEED : EXHAUST_SPEED_OPEN) };
+      }),
+    );
 }
 
 export interface Stats {
@@ -417,7 +599,7 @@ export function response(bp: Blueprint, controls: Record<string, number>, st: St
   const throttles: Record<string, number> = {};
   for (const e of engines(bp)) {
     const t = joined.has(e.id) ? (values[e.channel] ?? 0) : 0;
-    throttles[e.id] = t;
+    throttles[e.channel] = t;
     const f = { x: e.dir.x * e.thrust * t, y: e.dir.y * e.thrust * t };
     fx += f.x;
     fy += f.y;
@@ -466,9 +648,11 @@ const DEG = Math.PI / 180;
 
 /** An engine's shape, read from its head and its two walls (in the head's frame, exhaust along −y). */
 export function engineGeom(bp: Blueprint, c: Component): EngineGeom {
-  const h = body(bp, c.bodies[0]);
+  // A double engine's two units are alike: the first stands for both.
+  const u = engineUnits(bp, c)[0];
+  const h = body(bp, u.head);
   if (h.shape.kind !== "box") throw new Error("An engine's head is a box");
-  const walls = c.bodies.slice(1).map((id) => body(bp, id));
+  const walls = u.walls.map((id) => body(bp, id));
   // Each wall's outline in the head's frame.
   const local = walls.map((w) => worldVertices(w).map((p) => localPoint(h, p)));
   const right = local.find((vs) => vs.reduce((s, v) => s + v.x, 0) > 0) ?? local[0];
@@ -492,15 +676,32 @@ export function engineGeom(bp: Blueprint, c: Component): EngineGeom {
 
 /** Rebuilds an engine's walls and their welds to the head from its shape. Bodies keep their ids, masses and materials. */
 function buildEngine(bp: Blueprint, c: Component, g: EngineGeom): Blueprint {
+  let out = clone(bp);
+  const units = engineUnits(bp, c);
+  for (const u of units) out = buildUnit(out, u.head, u.walls, g, units.length > 1);
+  if (units.length > 1) {
+    // Back to back: the heads' welds to each other, along the face they share, as the touch rule puts them.
+    const heads = new Set(units.map((u) => u.head));
+    const was = out.ship.joints.find((j) => heads.has(j.a) && heads.has(j.b));
+    out.ship.joints = out.ship.joints.filter((j) => !(heads.has(j.a) && heads.has(j.b)));
+    const [p, q] = units.map((u) => body(out, u.head));
+    let k = 0;
+    for (const e of touching(p, q)) for (const pt of weldPoints(e)) out.ship.joints.push({ id: `${c.id}-core-${k++}`, a: p.id, b: q.id, anchorA: rounded(localPoint(p, pt)), anchorB: rounded(localPoint(q, pt)), limits: { ...(was?.limits ?? WELD_PRESETS[2].limits) }, yield: was?.yield ?? WELD_PRESETS[2].yield } as JointInput);
+  }
+  return out;
+}
+
+/** One head and its walls, built to a shape. Back to back with another, its back face stays where it is. */
+function buildUnit(bp: Blueprint, headId: string, wallIds: string[], g: EngineGeom, backToBack: boolean): Blueprint {
   const out = clone(bp);
-  const h = body(out, c.bodies[0]);
+  const h = body(out, headId);
+  if (backToBack && h.shape.kind === "box") h.position = rounded(worldPoint(h, { x: 0, y: h.shape.height / 2 - g.headHeight / 2 }));
   h.shape = { kind: "box", width: g.headWidth, height: g.headHeight };
   const inj = h.injector!;
   inj.outlet = { x: 0, y: -g.headHeight / 2 - 0.05 };
   inj.chamber = { width: g.headWidth, length: g.length + 0.25 };
   inj.width = Math.min(inj.width ?? g.throat * 0.75, g.throat - 0.02);
   const dx = g.length * Math.tan(g.flare * DEG);
-  const wallIds = c.bodies.slice(1);
   // Which wall is which side: keep each on the side it was.
   const sides = wallIds.map((id) => (localPoint(h, body(out, id).position).x < 0 ? -1 : 1));
   wallIds.forEach((id, k) => {
@@ -545,7 +746,9 @@ export function params(bp: Blueprint, compId: string): Param[] {
   const mass = (tab: Tab = "build"): Param => ({ key: "mass", label: "Mass", unit: "kg", value: c.bodies.reduce((s, id) => s + body(bp, id).mass, 0), min: 0.05, max: 500, step: 0.1, decimals: 2, tab });
   if (c.kind === "engine") {
     const g = engineGeom(bp, c);
-    const inj = b.injector!;
+    const units = engineUnits(bp, c);
+    const inj = body(bp, units[0].head).injector!;
+    const each = units.length > 1 ? " (each)" : "";
     ps.push(
       { key: "headWidth", label: "Chamber width", unit: "m", value: g.headWidth, min: 0.2, max: 4, step: 0.05, decimals: 2, tab: "shape" },
       { key: "headHeight", label: "Head depth", unit: "m", value: g.headHeight, min: 0.05, max: 1, step: 0.01, decimals: 2, tab: "shape" },
@@ -553,12 +756,12 @@ export function params(bp: Blueprint, compId: string): Param[] {
       { key: "wall", label: "Wall thickness", unit: "m", value: g.wall, min: 0.02, max: 0.5, step: 0.01, decimals: 2, tab: "shape" },
       { key: "length", label: "Nozzle wall length", unit: "m", value: g.length, min: 0.1, max: 4, step: 0.05, decimals: 2, tab: "shape" },
       { key: "flare", label: "Nozzle flare", unit: "°", value: g.flare, min: -10, max: 45, step: 0.5, decimals: 1, tab: "shape" },
-      { key: "rate", label: "Flow (burn rate)", unit: "kg/s", value: inj.rate ?? 0, min: 0.05, max: 20, step: 0.05, decimals: 3, tab: "fuel" },
+      { key: "rate", label: `Flow (burn rate)${each}`, unit: "kg/s", value: inj.rate ?? 0, min: 0.05, max: 20, step: 0.05, decimals: 3, tab: "fuel" },
       { key: "economy", label: "Fuel efficiency", unit: "×", value: inj.economy ?? 1, min: 1, max: 200, step: 1, decimals: 0, tab: "fuel" },
       { key: "injWidth", label: "Injector width", unit: "m", value: inj.width ?? 0, min: 0.05, max: 4, step: 0.05, decimals: 2, tab: "fuel" },
-      { key: "thrust", label: "Thrust (est.)", unit: "N", value: (inj.rate ?? 0) * exhaustSpeed(c), min: 0, max: 1e5, step: 1, decimals: 0, tab: "fuel", readonly: true, note: `flow × ${exhaustSpeed(c)} m/s; Measure gives the real figure` },
-      { ...mass(), key: "headMass", label: "Head mass", value: b.mass },
-      { key: "wallMass", label: "Wall mass (each)", unit: "kg", value: c.bodies.length > 1 ? body(bp, c.bodies[1]).mass : 0, min: 0.01, max: 100, step: 0.05, decimals: 2, tab: "build" },
+      { key: "thrust", label: `Thrust (est.)${each}`, unit: "N", value: (inj.rate ?? 0) * exhaustSpeed(c), min: 0, max: 1e5, step: 1, decimals: 0, tab: "fuel", readonly: true, note: `flow × ${exhaustSpeed(c)} m/s; Measure gives the real figure` },
+      { ...mass(), key: "headMass", label: `Head mass${each}`, value: body(bp, units[0].head).mass },
+      { key: "wallMass", label: "Wall mass (each)", unit: "kg", value: units[0].walls.length ? body(bp, units[0].walls[0]).mass : 0, min: 0.01, max: 100, step: 0.05, decimals: 2, tab: "build" },
     );
     return ps;
   }
@@ -567,6 +770,13 @@ export function params(bp: Blueprint, compId: string): Param[] {
       { key: "width", label: "Width", unit: "m", value: b.shape.width, min: 0.05, max: 10, step: 0.05, decimals: 2, tab: "shape" },
       { key: "height", label: "Height", unit: "m", value: b.shape.height, min: 0.05, max: 10, step: 0.05, decimals: 2, tab: "shape" },
     );
+  } else if (c.form) {
+    const f = c.form;
+    ps.push({ key: "fBase", label: "Base", unit: "m", value: f.base, min: 0.1, max: 10, step: 0.05, decimals: 2, tab: "shape" });
+    if (f.kind === "trapezoid") ps.push({ key: "fTop", label: "Top", unit: "m", value: f.top, min: 0.05, max: 10, step: 0.05, decimals: 2, tab: "shape" });
+    ps.push({ key: "fHeight", label: "Height", unit: "m", value: f.height, min: 0.1, max: 10, step: 0.05, decimals: 2, tab: "shape" });
+    if (f.kind === "triangle") ps.push({ key: "fApex", label: "Apex along", unit: "m", value: f.apex, min: -5, max: 5, step: 0.05, decimals: 2, tab: "shape", note: "From the middle of the base: ± half the base makes a right angle" });
+    ps.push({ key: "fTurn", label: "Turn", unit: "°", value: f.turn, min: 0, max: 270, step: 90, decimals: 0, tab: "shape", note: "Which way the top points: 0 up, 90 left, 180 down, 270 right" });
   } else if (b.shape.kind === "polygon") {
     const box = boundsOf(b.shape.vertices);
     ps.push(
@@ -610,7 +820,41 @@ export function setParam(bp: Blueprint, compId: string, key: string, value: numb
       return key === "headWidth" || key === "headHeight" ? reweld(out, compId) : out;
     }
     const out = clone(bp);
-    const h = body(out, c.bodies[0]);
+    const units = engineUnits(bp, c);
+    for (const u of units) setHead(out, body(out, u.head), key, value);
+    if (key === "wallMass") for (const u of units) for (const id of u.walls) body(out, id).mass = value;
+    return out;
+  }
+  return setOther(bp, c, key, value);
+}
+
+/** A trapezoid's or triangle's outline: the same stuff, so its mass and what it holds go with its area. */
+function setForm(bp: Blueprint, compId: string, key: string, value: number): Blueprint {
+  const out = clone(bp);
+  const c = component(out, compId);
+  const f = { ...c.form! } as Form & { top?: number; apex?: number };
+  if (key === "fBase") f.base = value;
+  else if (key === "fTop") f.top = value;
+  else if (key === "fHeight") f.height = value;
+  else if (key === "fApex") f.apex = Math.max(-f.base / 2, Math.min(f.base / 2, value));
+  else if (key === "fTurn") f.turn = ((Math.round(value / 90) * 90) % 360 + 360) % 360;
+  if (f.kind === "triangle") f.apex = Math.max(-f.base / 2, Math.min(f.base / 2, f.apex));
+  const b = body(out, c.bodies[0]);
+  const before = Math.abs(polygonArea(shapeVertices(b.shape)));
+  b.shape = { kind: "polygon", vertices: formVertices(f) };
+  const k = Math.abs(polygonArea(b.shape.vertices)) / (before || 1);
+  b.mass = round(b.mass * k);
+  for (const s of b.contents ?? []) {
+    s.capacity = round(s.capacity * k, 9);
+    s.mass = round(s.mass * k, 9);
+  }
+  c.form = f;
+  return reweld(out, compId);
+}
+
+/** An engine head's fuel and build properties. */
+function setHead(out: Blueprint, h: BodyInput, key: string, value: number): void {
+  {
     const inj = h.injector!;
     if (key === "rate") {
       const was = inj.rate ?? value;
@@ -625,9 +869,13 @@ export function setParam(bp: Blueprint, compId: string, key: string, value: numb
     else if (key === "headMass") {
       h.mass = value;
       if (h.explosive) h.explosive.charge = round(value * 0.008, 9);
-    } else if (key === "wallMass") for (const id of c.bodies.slice(1)) body(out, id).mass = value;
-    return out;
+    }
   }
+}
+
+function setOther(bp: Blueprint, c: Component, key: string, value: number): Blueprint {
+  const compId = c.id;
+  if (c.form && ["fBase", "fTop", "fHeight", "fApex", "fTurn"].includes(key)) return setForm(bp, compId, key, value);
   const out = clone(bp);
   const b = body(out, c.bodies[0]);
   if ((key === "width" || key === "height") && b.shape.kind === "box") {
@@ -721,7 +969,7 @@ export function touching(p: BodyInput, q: BodyInput): Edge[] {
 /** Weld points along a shared stretch: one in the middle if it is under 0.3 m, else two, 0.1 m in from its ends. */
 export function weldPoints(e: Edge): Vec2[] {
   const len = Math.hypot(e.b.x - e.a.x, e.b.y - e.a.y);
-  if (len < 0.3) return [{ x: (e.a.x + e.b.x) / 2, y: (e.a.y + e.b.y) / 2 }];
+  if (len < 0.3 - 1e-6) return [{ x: (e.a.x + e.b.x) / 2, y: (e.a.y + e.b.y) / 2 }];
   const u = { x: (e.b.x - e.a.x) / len, y: (e.b.y - e.a.y) / len };
   return [
     { x: e.a.x + u.x * 0.1, y: e.a.y + u.y * 0.1 },
@@ -730,7 +978,8 @@ export function weldPoints(e: Edge): Vec2[] {
 }
 
 /** The bodies of a component that weld to others: an engine welds by its head only. */
-const weldingBodies = (c: Component) => (c.kind === "engine" ? c.bodies.slice(0, 1) : c.bodies);
+/** What welds to the rest of the ship: an engine by its heads (its nozzle walls hang off them), anything else by every body. */
+const weldingBodies = (c: Component) => (c.kind === "engine" ? (c.heads ?? c.bodies.slice(0, 1)) : c.bodies);
 
 /**
  * Remakes a component's welds from where it now touches the others (§3.2): its old welds go, and
@@ -952,14 +1201,15 @@ export function instantiate(bp: Blueprint, tpl: Blueprint, compId: string, label
   const bodies = c.bodies.map((bid) => {
     const b = structuredClone(body(tpl, bid));
     b.id = rename(bid);
-    if (b.injector) b.injector.channel = id;
+    // Each head its own channel: an engine's is its id; a double engine's second head's, that head's.
+    if (b.injector) b.injector.channel = b.id;
     if (b.magazine?.railgun) b.magazine.railgun.channel = id;
     if (b.tractor) delete b.tractor; // a cockpit's beam belongs with the projector and winch it was built with
     if (b.shield) b.shield = { ...b.shield, channel: id, from: [], blocks: [] };
     return b;
   });
   const joints = tpl.ship.joints.filter((j) => c.bodies.includes(j.a) && c.bodies.includes(j.b)).map((j) => ({ ...structuredClone(j), id: `${id}-${j.id}`, a: rename(j.a), b: rename(j.b) }));
-  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, label ?? c.label.replace(/ (L|R|BL|BR|FL|FR)( OG)?$/, "$2")), bodies: bodies.map((b) => b.id), ...(c.part ? { part: c.part } : {}) }, bodies, joints };
+  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, label ?? c.label.replace(/ (L|R|BL|BR|FL|FR)( OG)?$/, "$2")), bodies: bodies.map((b) => b.id), ...(c.part ? { part: c.part } : {}), ...(c.heads ? { heads: c.heads.map(rename) } : {}), ...(c.form ? { form: { ...c.form } } : {}) }, bodies, joints };
 }
 
 function uniqueLabel(bp: Blueprint, base: string): string {
@@ -971,7 +1221,7 @@ function uniqueLabel(bp: Blueprint, base: string): string {
 /** Fuel lines: every engine draws from every tank, with room to spare over what it burns. */
 function refeed(bp: Blueprint): void {
   const tanks = bp.components.filter((c) => c.kind === "tank").map((c) => body(bp, c.bodies[0]));
-  const engs = bp.components.filter((c) => c.kind === "engine").map((c) => body(bp, c.bodies[0]));
+  const engs = bp.components.filter((c) => c.kind === "engine").flatMap((c) => (c.heads ?? [c.bodies[0]]).map((id) => body(bp, id)));
   for (const e of engs) {
     const inj = e.injector!;
     const mix = inj.mixture ?? { h2: 1 / 9, o2: 8 / 9 };
@@ -1007,6 +1257,7 @@ export function addComponent(bp: Blueprint, made: { comp: Component; bodies: Bod
   }
   refeed(out);
   reammo(out);
+  relink(out);
   return reweld(out, made.comp.id);
 }
 
@@ -1159,6 +1410,8 @@ export function mirrorComponent(bp: Blueprint, compId: string, controls: { left:
   const box = componentBounds(bp, c);
   if (box.minX < -1e-6 && box.maxX > 1e-6) return { error: `${c.label} sits across the ship's middle line: there is no other side to mirror it to.` };
   const made = instantiate(bp, bp, compId, mirrorLabel(c.label));
+  // A trapezoid or triangle mirrored: turned the other way, its apex on the other side.
+  if (made.comp.form) made.comp.form = { ...made.comp.form, turn: (360 - made.comp.form.turn) % 360, ...(made.comp.form.kind === "triangle" ? { apex: -made.comp.form.apex } : {}) } as Form;
   for (const b of made.bodies) {
     b.position = { x: round(-b.position.x), y: b.position.y };
     b.angle = b.angle ? round(-b.angle, 9) : 0;

@@ -48,8 +48,8 @@ kbd { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; border: 1px so
 .tname small { display: block; font-size: 9.5px; letter-spacing: .2em; color: var(--dim); }
 .tname b { font-size: 17px; letter-spacing: .12em; font-weight: 500; }
 .tname .caret { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); color: var(--dim); font-size: 10px; }
-.dots { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; padding: 2px 8px 8px; border-bottom: 1px solid var(--faint); }
-.dot { height: 22px; font-size: 9.5px; letter-spacing: .06em; border-radius: 2px; color: var(--dim); }
+.dots { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; padding: 2px 8px 8px; border-bottom: 1px solid var(--faint); }
+.dot { height: 22px; font-size: 9.5px; letter-spacing: .02em; padding: 0; min-width: 0; border-radius: 2px; color: var(--dim); }
 .grid.touch .dot { height: 32px; }
 .dot.on { border-color: var(--cyan); color: var(--cyan); background: rgba(127, 212, 255, .1); }
 .listwrap { flex: 1; display: grid; grid-template-columns: 1fr 18px; min-height: 0; }

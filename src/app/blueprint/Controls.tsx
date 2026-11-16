@@ -357,7 +357,7 @@ export function MixerTable() {
             {rows.map(({ c, ch }) => {
               const row = bp.mix.rows.find((r) => r.channel === ch);
               const on = sel?.type === "component" && sel.id === c.id;
-              const v = c.kind === "engine" ? (now[c.id] ?? 0) : (values[ch] ?? 0);
+              const v = c.kind === "engine" ? (now[ch] ?? 0) : (values[ch] ?? 0);
               return (
                 <tr key={ch} class={on ? "sel" : ""}>
                   <th onClick={() => (selection.value = { type: "component", id: c.id })}>

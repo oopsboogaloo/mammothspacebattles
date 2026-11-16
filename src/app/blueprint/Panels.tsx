@@ -11,7 +11,7 @@ import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
 import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
-import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
+import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, parts, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
 
@@ -21,6 +21,8 @@ interface CatalogueItem {
   from: string; // the preset part it is made from
   /** Made from THRUST OG's part, kept as the game has it (not for the final game's list). */
   og?: boolean;
+  /** Where it comes from, if not THRUST 1: the Mastodon, or the parts with no preset (a triangle). */
+  tpl?: "mastodon" | "parts";
 }
 
 /** What can be added, made from the Thrust 1 preset's parts. */
@@ -28,7 +30,9 @@ export const CATALOGUE: CatalogueItem[] = [
   { kind: "cockpit", name: "Cockpit", from: "hull" },
   { kind: "engine", name: "Main thruster", from: "main" },
   { kind: "engine", name: "Light thruster", from: "back-l" },
+  { kind: "engine", name: "Double engine", from: "eng-l", tpl: "mastodon" },
   { kind: "tank", name: "Propellant tank", from: "tank-l" },
+  { kind: "tank", name: "Trapezoid tank", from: "tank-l", tpl: "mastodon" },
   { kind: "storage", name: "Magazine", from: "mag-l" },
   { kind: "weapon", name: "Railgun", from: "gun" },
   { kind: "generator", name: "Generator", from: "gen-l" },
@@ -36,10 +40,12 @@ export const CATALOGUE: CatalogueItem[] = [
   { kind: "utility", name: "Tractor projector", from: "tractor" },
   { kind: "utility", name: "Tether winch", from: "tether" },
   { kind: "utility", name: "Shield emitter", from: "shield" },
+  { kind: "frame", name: "Trapezoid", from: "mount-l", tpl: "mastodon" },
+  { kind: "frame", name: "Triangle", from: "triangle", tpl: "parts" },
 ];
-/** The OG parts: the same list, from THRUST OG. */
-const OG_ITEMS: CatalogueItem[] = CATALOGUE.map((it) => ({ ...it, name: `${it.name} OG`, og: true }));
-const templateOf = (it: CatalogueItem) => presets.find((p) => p.id === (it.og ? "preset-thrust-og" : "preset-thrust-1")) ?? presets[0];
+/** The OG parts: Thrust's, from THRUST OG. */
+const OG_ITEMS: CatalogueItem[] = CATALOGUE.filter((it) => !it.tpl).map((it) => ({ ...it, name: `${it.name} OG`, og: true }));
+const templateOf = (it: CatalogueItem) => (it.tpl === "parts" ? parts : presets.find((p) => p.id === (it.og ? "preset-thrust-og" : it.tpl === "mastodon" ? "preset-mastodon" : "preset-thrust-1")) ?? presets[0]);
 
 /** Adds a part at the nearest free place that welds it to the ship (＋, double-click, Duplicate). */
 export function addAtFreeSpot(tpl: Blueprint, from: string, label?: string): void {
@@ -148,13 +154,15 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
           // As it weighs on a ship: with what it holds (shells, propellant).
           const mass = c ? c.bodies.reduce((s, id) => s + bodyMass(body(preset, id) as Parameters<typeof bodyMass>[0]), 0) : 0;
           const firstOg = it.og && !items[i - 1]?.og;
-          const size = b?.shape.kind === "box" ? `${b.shape.width} × ${b.shape.height} m` : "";
+          const f = c?.form;
+          const size = f ? (f.kind === "trapezoid" ? `${f.base} / ${f.top} × ${f.height} m` : `${f.base} × ${f.height} m`) : b?.shape.kind === "box" ? `${b.shape.width} × ${b.shape.height} m` : "";
+          const nHeads = c?.heads?.length ?? 1;
           return (
             <Fragment key={it.name}>
             {firstOg && <div class="og-head" title="The Thrust game's parts as they are, kept for comparison while the regular parts are improved">OG · AS THRUST HAS THEM</div>}
             <div
               class={`card${placing.value && !placing.value.moving && placing.value.made.comp.label.startsWith(it.name.split(" ")[0]) ? " picked" : ""}`}
-              data-testid={`card-${it.from}${it.og ? "-og" : ""}`}
+              data-testid={`card-${it.tpl === "mastodon" ? `m-${it.from}` : it.from}${it.og ? "-og" : ""}`}
               title="Drag onto the blueprint, double-click, or ＋"
               onPointerDown={(e) => !(e.target as HTMLElement).closest("button") && dragFromList(e, preset, it.from, it.name)}
               onDblClick={() => addAtFreeSpot(preset, it.from, it.name)}
@@ -162,7 +170,7 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
               <div class="thumb">{c && <Thumb bp={preset} ids={c.bodies} />}</div>
               <div class="ctext">
                 <div class="cname">{it.name}</div>
-                <div class="cstat">{size || `${b?.injector ? `${b.injector.rate} kg/s` : ""}`}</div>
+                <div class="cstat">{size || `${b?.injector ? `${nHeads > 1 ? `${nHeads} × ` : ""}${b.injector.rate} kg/s` : ""}`}</div>
                 <div class="cstat">{mass.toFixed(2)} kg</div>
               </div>
               <button class="add" title="Add to the blueprint" aria-label={`Add ${it.name}`} onClick={() => addAtFreeSpot(preset, it.from, it.name)}>
@@ -197,9 +205,9 @@ export function PerformanceBox() {
   const [f, rv, l] = m ? m.map((x) => ({ ahead: x.ahead, turn: x.turn })) : est;
   const [bf, brv, bl] = bm ? bm.map((x) => ({ ahead: x.ahead, turn: x.turn })) : r(base, bs);
   const flow = engines(bp)
-    .filter((e) => (response(bp, { forward: 1 }, st).throttles[e.id] ?? 0) > 0)
+    .filter((e) => (response(bp, { forward: 1 }, st).throttles[e.channel] ?? 0) > 0)
     .reduce((s, e) => {
-      const inj = body(bp, e.id).injector!;
+      const inj = body(bp, e.head).injector!;
       return s + (inj.rate ?? 0) / (inj.economy ?? 1);
     }, 0);
   const burn = flow > 0 ? st.propellant / flow : NaN;

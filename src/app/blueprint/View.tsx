@@ -17,6 +17,7 @@ export const KIND_COLOUR: Record<Kind, string> = {
   generator: "#3fd0c0",
   battery: "#3fd0c0",
   utility: "#ff9f6b",
+  frame: "#9fb6d8",
 };
 
 export interface ViewState {
@@ -366,10 +367,9 @@ function Testing({ bp, sx, sy, zoom, com }: { bp: Blueprint; sx: (x: number) => 
   return (
     <g pointer-events="none" data-testid="testing">
       {engines(bp).map((e) => {
-        const t = r.throttles[e.id] ?? 0;
-        const h = body(bp, e.id);
-        const c = component(bp, e.id);
-        const walls = c.bodies.slice(1).map((id) => body(bp, id));
+        const t = r.throttles[e.channel] ?? 0;
+        const h = body(bp, e.head);
+        const walls = e.walls.map((id) => body(bp, id));
         const exitDepth = walls.length ? Math.max(...walls.flatMap((w) => worldVertices(w).map((p) => -((p.x - h.position.x) * e.dir.x + (p.y - h.position.y) * e.dir.y)))) : 0.2;
         const base = { x: h.position.x - e.dir.x * exitDepth, y: h.position.y - e.dir.y * exitDepth };
         const n = { x: -e.dir.y, y: e.dir.x };
@@ -378,15 +378,15 @@ function Testing({ bp, sx, sy, zoom, com }: { bp: Blueprint; sx: (x: number) => 
         const tip = { x: base.x - e.dir.x * len, y: base.y - e.dir.y * len };
         const tag = { x: h.position.x + (h.position.x >= com.x ? 1 : -1) * ((h.shape.kind === "box" ? h.shape.width / 2 : 0.3) + 0.45), y: h.position.y };
         return (
-          <g key={e.id}>
+          <g key={e.head}>
             {t > 0 && (
               <>
-                <linearGradient id={`plume-${e.id}`} gradientUnits="userSpaceOnUse" x1={sx(base.x)} y1={sy(base.y)} x2={sx(tip.x)} y2={sy(tip.y)}>
+                <linearGradient id={`plume-${e.head}`} gradientUnits="userSpaceOnUse" x1={sx(base.x)} y1={sy(base.y)} x2={sx(tip.x)} y2={sy(tip.y)}>
                   <stop offset="0" stop-color="#fff3c0" />
                   <stop offset=".5" stop-color="#ffb35a" />
                   <stop offset="1" stop-color="#ff6a2a" stop-opacity="0" />
                 </linearGradient>
-                <polygon points={`${sx(base.x + n.x * w)},${sy(base.y + n.y * w)} ${sx(base.x - n.x * w)},${sy(base.y - n.y * w)} ${sx(tip.x)},${sy(tip.y)}`} fill={`url(#plume-${e.id})`} opacity={0.45 + 0.5 * t} />
+                <polygon points={`${sx(base.x + n.x * w)},${sy(base.y + n.y * w)} ${sx(base.x - n.x * w)},${sy(base.y - n.y * w)} ${sx(tip.x)},${sy(tip.y)}`} fill={`url(#plume-${e.head})`} opacity={0.45 + 0.5 * t} />
               </>
             )}
             <g transform={`translate(${sx(tag.x)},${sy(tag.y)})`}>

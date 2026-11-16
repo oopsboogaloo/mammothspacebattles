@@ -387,3 +387,97 @@ describe("actions and overlaps", () => {
     expect(withoutNewOverlaps(bp, setParam(bp, "tank-l", "width", 1.4), "tank-l").blocked).toEqual([]);
   });
 });
+
+describe("Mastodon Gun Ship, double engines, trapezoids and triangles", async () => {
+  const { mastodonPreset, partsTemplate, formVertices, allOverlaps, pieces, engines, engineUnits, mirrorComponent, wiringChecks } = await import("../../src/app/blueprint/model.ts");
+  const { measureNow } = await import("../../src/app/blueprint/measure.ts");
+  const m = mastodonPreset(scn);
+  const moves = [{ id: "forward", name: "Forward" }, { id: "reverse", name: "Reverse" }, { id: "left", name: "Turn left" }, { id: "right", name: "Turn right" }];
+
+  it("BPD-038 the Mastodon is Chloe's drawing: 14 parts in one piece, none overlapping, 6.3 × 2.45 m, four railguns fed by two magazines, wired and balanced", () => {
+    expect(m.components).toHaveLength(14);
+    expect(pieces(m)).toHaveLength(1);
+    expect(allOverlaps(m)).toEqual([]);
+    const s = stats(m);
+    expect([s.width, s.height]).toEqual([6.3, 2.45]);
+    expect(Math.abs(s.com.x)).toBeLessThan(1e-9);
+    const guns = m.components.filter((c) => c.kind === "weapon").map((c) => c.id);
+    expect(guns).toHaveLength(4);
+    for (const g of guns) expect(m.ship.links.filter((l) => l.kind === "ammo" && l.to === g)).toHaveLength(2);
+    expect(["mag-l", "mag-r"].map((id) => body(m, id).ammo!.count)).toEqual([100, 100]);
+    // Every head and gun has its control link; the wiring checks find nothing wrong.
+    for (const b of m.ship.bodies.filter((x) => x.injector || x.magazine)) expect(m.ship.links.some((l) => l.kind === "control" && l.to === b.id)).toBe(true);
+    expect(wiringChecks(m, moves).every((c) => c.ok)).toBe(true);
+    // Every railgun welds by two points, as Thrust's does.
+    for (const g of guns) expect(welds(m).filter((w) => w.a === g || w.b === g).reduce((n, w) => n + w.joints.length, 0)).toBe(2);
+  });
+
+  it("BPD-038 a double engine is one part with two heads back to back, each its own channel: the rear pushes forward, the front back", () => {
+    const c = component(m, "eng-l");
+    expect(c.heads).toEqual(["eng-l", "eng-l-rev"]);
+    expect(engineUnits(m, c).map((u) => u.walls.length)).toEqual([2, 2]);
+    expect(engines(m).filter((e) => e.id === "eng-l").map((e) => [e.channel, Math.round(e.dir.y)])).toEqual([["eng-l", 1], ["eng-l-rev", -1]]);
+    expect(params(m, "eng-l").find((p) => p.key === "rate")?.label).toBe("Flow (burn rate) (each)");
+    // A change to it changes both heads, and they stay back to back, welded.
+    const deeper = setParam(m, "eng-l", "headHeight", 0.4);
+    const [a, b] = ["eng-l", "eng-l-rev"].map((id) => body(deeper, id));
+    expect(a.position.y + 0.2).toBeCloseTo(0.7, 6);
+    expect(b.position.y - 0.2).toBeCloseTo(0.7, 6);
+    expect(deeper.ship.joints.filter((j) => (j.a === a.id && j.b === b.id) || (j.a === b.id && j.b === a.id))).toHaveLength(2);
+    const faster = setParam(m, "eng-l", "rate", 6);
+    expect(["eng-l", "eng-l-rev"].map((id) => body(faster, id).injector!.rate)).toEqual([6, 6]);
+  });
+
+  it("BPD-038 measured: about 31 m/s² forward and back and 9 rad/s² turning, nothing breaking; Action A fires the four guns", () => {
+    const r = measureNow(m, [{ forward: 1 }, { reverse: 1 }, { left: 1 }, { "action-a": 1 }]);
+    expect(r[0].ahead).toBeGreaterThan(28);
+    expect(r[1].ahead).toBeLessThan(-28);
+    expect(r[2].turn).toBeGreaterThan(7);
+    expect(r[2].turn).toBeLessThan(12);
+    expect(r.map((x) => x.broke)).toEqual([0, 0, 0, 0]);
+    expect(r[3].ahead).toBeLessThan(-5); // four guns' recoil
+  }, 120_000);
+
+  it("BPD-039 trapezoids and triangles: outlines square to the grid at every quarter turn, so they weld; resizing scales what they hold; mirroring turns them the other way", () => {
+    for (const turn of [0, 90, 180, 270]) {
+      const vs = formVertices({ kind: "trapezoid", base: 1.4, top: 0.7, height: 0.75, turn });
+      expect(vs).toHaveLength(4);
+      // One side the base (1.4) and one the top (0.7), both along an axis.
+      const sides = vs.map((v, i) => [v, vs[(i + 1) % 4]]).filter(([p, q]) => p.x === q.x || p.y === q.y).map(([p, q]) => Math.hypot(q.x - p.x, q.y - p.y));
+      expect(sides.sort()).toEqual([0.7, 1.4]);
+    }
+    const tri = formVertices({ kind: "triangle", base: 0.6, height: 0.6, apex: 0.3, turn: 0 });
+    expect(tri).toContainEqual({ x: 0.3, y: 0.3 }); // a right angle over the base's end
+    // The side tank, made bigger: it holds more, and still welds to the magazine and the engine.
+    const t0 = body(m, "tank-l");
+    const big = setParam(m, "tank-l", "fHeight", 0.75);
+    expect(body(big, "tank-l").contents![1].capacity).toBeCloseTo(t0.contents![1].capacity, 9);
+    const wider = setParam(m, "tank-l", "fTop", 1.05);
+    expect(body(wider, "tank-l").contents![1].capacity).toBeGreaterThan(t0.contents![1].capacity);
+    expect(welds(wider).filter((w) => w.a === "tank-l" || w.b === "tank-l").length).toBe(2);
+    // Mirrored, the left mount becomes a right one, the same outline turned the other way.
+    const noR = removeComponent(removeComponent(m, "gun-or"), "mount-r");
+    const r = mirrorComponent(noR, "mount-l");
+    if ("error" in r) throw new Error(r.error);
+    expect(component(r.bp, r.id).form?.turn).toBe(270);
+    sameOutline(worldVertices(body(r.bp, component(r.bp, r.id).bodies[0])), worldVertices(body(m, "mount-r")));
+    // A triangle from the list is a frame part, with its outline's properties.
+    const parts = partsTemplate();
+    expect(params(parts, "triangle").map((p) => p.key)).toEqual(expect.arrayContaining(["fBase", "fHeight", "fApex", "fTurn"]));
+  });
+
+  it("BPD-040 a part added from the list has its control links, so the wiring reaches it in Try it", () => {
+    for (const [tpl, from] of [[m, "eng-l"], [m, "gun-l"], [bp, "back-l"]] as const) {
+      const made = instantiate(regular, tpl, from);
+      const out = addComponent(regular, made, 30, 0);
+      for (const b of made.bodies.filter((x) => x.injector || x.magazine)) {
+        const ch = b.injector?.channel ?? b.magazine!.railgun!.channel;
+        expect(out.ship.links.some((l) => l.kind === "control" && l.to === b.id && l.channel === ch)).toBe(true);
+      }
+    }
+    // A double engine added keeps a channel for each head.
+    const made = instantiate(regular, m, "eng-l");
+    expect(made.comp.heads).toHaveLength(2);
+    expect(new Set(made.bodies.filter((b) => b.injector).map((b) => b.injector!.channel)).size).toBe(2);
+  });
+});
