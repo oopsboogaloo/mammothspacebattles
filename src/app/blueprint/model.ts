@@ -1014,7 +1014,8 @@ const WALL_DENSITY = 0.75 / 0.11;
 /**
  * Builds (or rebuilds) a regular engine's walls from its head and its shape, the head's back face
  * staying where it is. Its walls are new bodies, welded in a chain: head, chamber walls, throat
- * pieces, nozzle walls; their welds Standard for their thickness.
+ * pieces, nozzle walls; and each throat piece and nozzle wall welded to the head as well, so the
+ * head holds every piece. Their welds are Standard for their thickness.
  */
 export function buildRocket(bp: Blueprint, compId: string, r: Rocket): Blueprint {
   const out = clone(bp);
@@ -1057,6 +1058,11 @@ export function buildRocket(bp: Blueprint, compId: string, r: Rocket): Blueprint
     join(`${h.id}-w-cw-${k}`, h, cw, { x: s * (r.chamberWidth / 2 - t / 2), y: top });
     join(`${h.id}-w-th-${k}`, cw, th, { x: s * (r.chamberWidth / 2 - t / 2), y: chamberBottom });
     join(`${h.id}-w-nz-${k}`, th, nz, { x: s * (r.throat / 2 + t / 2), y: throatBottom });
+    // And each held by the head directly, at the same points: through a chain of light pieces the
+    // welds could not hold their angles under the chamber's pressure, and the walls flapped (55° in
+    // a 10 s flight; 0.18° like this, THRUST OG's 0.08°).
+    join(`${h.id}-s-th-${k}`, h, th, { x: s * (r.chamberWidth / 2 - t / 2), y: chamberBottom });
+    join(`${h.id}-s-nz-${k}`, h, nz, { x: s * (r.throat / 2 + t / 2), y: throatBottom });
   }
   out.ship.bodies.push(...made);
   out.ship.joints.push(...joints);

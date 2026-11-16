@@ -784,6 +784,26 @@ describe("engines with chambers (design rules §5; Chloe, 16 November 2026)", as
     // The estimate is the same, engine by engine (the model's jet is the throat's, as before).
     expect(engines(regular).map((e) => e.thrust)).toEqual(engines(bp).map((e) => e.thrust));
   }, 60_000);
+  it("BPD-048 in a 10 s flight, forward and turning both ways, THRUST 1's engine walls hold their angles to their heads (within 1°) and no weld breaks", () => {
+    const w = measureWorld(regular);
+    const profile = getProfile("sandbox");
+    const welds0 = new Set(w.joints.map((j) => j.id));
+    const walls = regular.components.filter((c) => c.rocket).flatMap((c) => c.bodies.slice(1).map((id) => [c.bodies[0], id] as const));
+    const angle = (id: string) => w.bodies.find((b) => b.id === id)!.angle;
+    const rel0 = new Map(walls.map(([h, id]) => [id, angle(id) - angle(h)]));
+    const plan: Record<number, Record<string, number>> = { 0: { forward: 1 }, 720: { forward: 1, left: 1 }, 1200: { forward: 1, left: 0, right: 1 }, 1680: { forward: 1, right: 0 } };
+    let worst = 0;
+    for (let i = 0; i < 2400; i++) {
+      const set = plan[i] ? Object.entries(plan[i]).map(([channel, value]) => ({ type: "control.set" as const, channel, value })) : [];
+      stepInPlace(w, set, profile);
+      for (const [h, id] of walls) {
+        const d = angle(id) - angle(h) - rel0.get(id)!;
+        worst = Math.max(worst, Math.abs(Math.atan2(Math.sin(d), Math.cos(d))));
+      }
+    }
+    expect((worst * 180) / Math.PI).toBeLessThan(1);
+    expect([...welds0].filter((id) => !w.joints.some((j) => j.id === id))).toEqual([]);
+  }, 120_000);
 });
 
 describe("the Stegodon (Chloe's sketch, 16 November 2026)", async () => {

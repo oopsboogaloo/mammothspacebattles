@@ -571,6 +571,11 @@ double engine, whose heads are box chambers.
 - **A rocket** (`buildRocket`, the component's `rocket`): a head, two chamber walls, two throat
   pieces closing the chamber to a throat narrower than it, and two nozzle walls. Each is welded to
   the one before, Standard for its 0.1 m walls.
+  - Each throat piece and nozzle wall is also welded to the head, at the same point (Chloe, 16
+    November 2026). Welded only in a chain, the light pieces two or more welds from the head could
+    not hold their angles under the chamber's pressure, and the walls flapped, closed the throat and
+    broke away (55° in a 10 s flight). Held by the head as well, they stay within 0.2°, as THRUST OG's
+    walls do (0.08°).
   - Its shape is set in Shape: chamber width and length, head depth, throat, nozzle length and
     flare, and wall thickness.
   - What follows is shown:
