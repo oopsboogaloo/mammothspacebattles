@@ -1822,7 +1822,7 @@ function drawFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: Render
       const to = byId.get(l.to);
       if (!to) continue;
       const pt = toScreen(c, vp, to.position);
-      if (l.kind === "feed") {
+      if (l.kind === "feed" || l.kind === "ammo") {
         const from = byId.get(l.from);
         if (!from) continue;
         arrow(ctx, toScreen(c, vp, from.position), pt, COLORS.force, [6, 4]);

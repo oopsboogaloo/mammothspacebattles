@@ -445,3 +445,17 @@ html, body, #root { height: 100%; overflow: hidden; }
 .tryview.touch .keys { display: none; }
 .tryview.touch .g { min-width: 0; padding: 4px 8px; }
 .tryview.touch .bar { width: 70px; }
+
+.bpapp .sname { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.bpapp .sname input { flex: 1; min-width: 0; height: 24px; background: rgba(0, 0, 0, .25); border: 1px solid var(--faint); border-radius: 3px; color: var(--ink); font: 12px "IBM Plex Mono", monospace; padding: 0 6px; text-transform: uppercase; }
+.bpapp .sname input::placeholder { color: var(--cyan); opacity: .8; }
+@media (pointer: coarse) { .bpapp .sname input { height: 36px; } }
+
+/* The OG parts (THRUST OG's, as the game has them): a quiet heading above them in each list. */
+.og-head { font-size: 10px; letter-spacing: 0.12em; opacity: 0.6; padding: 8px 4px 2px; border-top: 1px dashed currentColor; margin-top: 4px; }
+
+/* The blueprint's name in the top bar: a button that becomes a box to rename it. */
+.bpapp .tn-btn { background: none; border: 0; color: inherit; padding: 2px 4px; cursor: text; white-space: nowrap; }
+.bpapp .tn-btn::after { content: "✎"; font-size: 12px; opacity: 0; margin-left: 6px; }
+.bpapp .tn-btn:hover::after, .bpapp .tn-btn:focus-visible::after { opacity: 0.7; }
+.bpapp input.tn { background: transparent; color: inherit; border: 1px solid var(--line, currentColor); padding: 2px 6px; width: 260px; text-transform: uppercase; }

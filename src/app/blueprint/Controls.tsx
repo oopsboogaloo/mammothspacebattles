@@ -4,8 +4,8 @@
 import { signal } from "@preact/signals";
 import { useEffect, useState } from "preact/hooks";
 import { mixerValues, type MixerLine, type MixerRow } from "../../core/index.ts";
-import { addControl, bindKey, controlName, keyLabel, keysFor, playerControls, playerKeys, unbindKey } from "./bindings.ts";
-import { channelsOf, component, componentOfChannel, describeRow, response, setRow, setRules, stats, wiringChecks, type Blueprint } from "./model.ts";
+import { addControl, bindKey, controlName, keyLabel, keysFor, MOVEMENT, playerControls, playerKeys, unbindKey } from "./bindings.ts";
+import { actionLabel, setLabel, channelsOf, component, componentOfChannel, describeRow, response, setRow, setRules, stats, wiringChecks, type Blueprint } from "./model.ts";
 import { NumberControl } from "./NumberControl.tsx";
 import { layout, StatsFold } from "./Layout.tsx";
 import { measurementOf } from "./measureClient.ts";
@@ -90,6 +90,35 @@ function KeyChips({ control }: { control: string }) {
   );
 }
 
+/**
+ * What an action is called on its touch button and in Try it's legend, in this ship: by default the
+ * largest thing it drives (wired 100% to the shield, it is SHIELD); the player can name it.
+ */
+function ScreenName({ control, fallback }: { control: string; fallback: string }) {
+  const bp = current.value;
+  const own = bp.labels?.[control] ?? "";
+  const auto = actionLabel({ ...bp, labels: {} }, control, fallback);
+  return (
+    <label class="sname" title="What its button says in Try it, in this ship. Leave empty for the automatic name: the largest thing it drives.">
+      <span>on screen</span>
+      <input
+        data-testid={`screen-name-${control}`}
+        value={own}
+        placeholder={auto}
+        maxLength={12}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter" || e.key === "Escape") (e.currentTarget as HTMLInputElement).blur();
+        }}
+        onBlur={(e) => {
+          const v = (e.currentTarget as HTMLInputElement).value;
+          if (v.trim().toUpperCase() !== own) edit((b) => setLabel(b, control, v));
+        }}
+      />
+    </label>
+  );
+}
+
 /** What each control drives in this ship. */
 function drives(bp: Blueprint, control: string): string[] {
   const out: string[] = [];
@@ -124,6 +153,7 @@ export function ControlsPanel() {
               </div>
               <KeyChips control={c.id} />
               <div class="drv">{drives(bp, c.id).join(" · ") || <span class="dimtxt">drives nothing in this ship</span>}</div>
+              {!MOVEMENT.has(c.id) && <ScreenName control={c.id} fallback={c.name} />}
             </div>
             <button class="testbtn" title="Hold to test" aria-label={`Test ${c.name}`} onPointerDown={() => hold(c.id, true)} onPointerUp={() => hold(c.id, false)} onPointerLeave={() => hold(c.id, false)}>
               {held[c.id] ? "●" : "○"}

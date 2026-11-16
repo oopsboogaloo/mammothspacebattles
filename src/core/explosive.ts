@@ -139,6 +139,8 @@ export function detonate(world: World, roots: ReadonlyMap<string, string> | null
   for (const s of shells) {
     const e = s.explosive!;
     if (!e.armed) continue;
+    // A magazine's charge is its shells (WPN-015): with none left in it, there is nothing to go off.
+    if (s.ammo && s.ammo.count < 1) continue;
     let J = 0;
     const own = e.safe && e.from !== undefined ? (roots?.get(e.from) ?? e.from) : undefined;
     for (const c of world.contacts) {

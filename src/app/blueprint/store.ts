@@ -2,7 +2,7 @@
 // and the view. Kept in the browser (localStorage) on every change.
 import { computed, signal } from "@preact/signals";
 import { scenarioFile } from "../scenarios.ts";
-import { thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
+import { thrustOgPreset, thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
 import type { BodyInput, JointInput } from "../../core/index.ts";
 
 const KEY = "msb.blueprints.v1";
@@ -11,7 +11,8 @@ export type Selection = { type: "component"; id: string } | { type: "weld"; id: 
 
 export const presets: Blueprint[] = (() => {
   const t1 = scenarioFile("thrust-1");
-  return t1 ? [thrustPreset(t1 as Parameters<typeof thrustPreset>[0])] : [];
+  // THRUST 1 from the regular parts; THRUST OG, the game's ship as it is, from the OG parts.
+  return t1 ? [thrustPreset(t1 as Parameters<typeof thrustPreset>[0]), thrustOgPreset(t1 as Parameters<typeof thrustPreset>[0])] : [];
 })();
 
 interface Saved {
@@ -24,12 +25,19 @@ function load(): Saved {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
     if (raw) {
       const s = JSON.parse(raw) as Saved;
-      if (Array.isArray(s.mine)) return s;
+      if (Array.isArray(s.mine)) return { ...s, mine: s.mine.map(renameActions) };
     }
   } catch {
     // A broken save starts afresh rather than leaving the page blank.
   }
   return { mine: [], current: presets[0]?.id ?? "" };
+}
+
+/** Blueprints saved before the actions were named A, B and C were wired to Fire, Tractor and Shield. */
+function renameActions(bp: Blueprint): Blueprint {
+  const to: Record<string, string> = { fire: "action-a", tractor: "action-b", shield: "action-c" };
+  const r = (c: string) => to[c] ?? c;
+  return { ...bp, mix: { ...bp.mix, rules: bp.mix.rules, rows: bp.mix.rows.map((row) => ({ ...row, lines: row.lines.map((l) => ({ ...l, control: r(l.control), ...(l.ease ? { ease: { ...l.ease, control: r(l.ease.control) } } : {}) })) })) } };
 }
 
 const saved = load();
@@ -197,7 +205,8 @@ export function importBlueprint(text: string): string | null {
   try {
     const bp = JSON.parse(text) as Blueprint;
     if (bp.format !== 1 || !bp.ship || !Array.isArray(bp.components) || !bp.mix) return "That file isn't a blueprint.";
-    const copy = { ...bp, id: newId(), name: uniqueName(bp.name || "IMPORTED"), preset: undefined };
+    // A file saved before the actions were named A, B and C is wired to Fire, Tractor and Shield.
+    const copy = { ...renameActions(bp), id: newId(), name: uniqueName(bp.name || "IMPORTED"), preset: undefined };
     delete copy.preset;
     mine.value = [...mine.value, copy];
     open(copy.id);

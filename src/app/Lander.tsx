@@ -327,7 +327,7 @@ export function sendControl(channel: string, value: number, label: string, group
 }
 
 /** Holds a channel at full while pressed: mouse, touch or pen, several at once (LND-030). */
-export function Thrust({ channel, label, side, className = "lander-thrust" }: { channel: string; label: string; side: string; className?: string }) {
+export function Thrust({ channel, label, side, className = "lander-thrust", name }: { channel: string; label: string; side: string; className?: string; name?: string }) {
   const group = useRef(0);
   const down = useRef(false);
   const set = (on: boolean) => {
@@ -339,7 +339,7 @@ export function Thrust({ channel, label, side, className = "lander-thrust" }: { 
   return (
     <button
       class={`${className} ${side}`}
-      aria-label={({ fire: "Fire", reverse: "Reverse", tractor: "Tractor", shield: "Shield", forward: "Forward", left: "Left", right: "Right" } as Record<string, string>)[side] ?? label}
+      aria-label={name ?? ({ fire: "Fire", reverse: "Reverse", tractor: "Tractor", shield: "Shield", forward: "Forward", left: "Left", right: "Right" } as Record<string, string>)[side] ?? label}
       data-testid={`thrust-${side}`}
       data-hold
       onPointerDown={(e) => {

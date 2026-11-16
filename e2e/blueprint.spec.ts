@@ -96,7 +96,7 @@ test("BPD-022 drag a tank in from the list: it snaps flush, shows green weld poi
 test("BPD-022 ＋ adds a part where it welds, and moving a part off the ship warns that the ship is in pieces", async ({ page }) => {
   await openFresh(page);
   await page.getByRole("tab", { name: "GE" }).click();
-  await page.getByRole("button", { name: "Add Generator" }).click();
+  await page.getByRole("button", { name: "Add Generator", exact: true }).click();
   await expect(page.getByTestId("selected-name")).toHaveText("Generator");
   await expect(page.getByTestId("performance")).toContainText("18 parts");
   const bat = (await page.getByTestId("part-battery").locator("polygon").first().boundingBox())!;
@@ -107,18 +107,26 @@ test("BPD-022 ＋ adds a part where it welds, and moving a part off the ship war
   await expect(page.getByTestId("loose")).toContainText("pieces");
 });
 
+/** Opens THRUST OG, the game's ship as it is (its railgun through the shield emitter, no free side for another thruster). */
+async function openOg(page: Page) {
+  await page.getByTestId("open-drawer").click();
+  await page.getByTestId("design-THRUST OG").click();
+  await expect(page.getByTestId("drawing-name")).toHaveText("THRUST OG");
+}
+
 test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothing is wired until the player does it, and nothing off the cockpit answers", async ({ page }) => {
   await openFresh(page);
+  await openOg(page);
   await page.getByRole("tab", { name: "EN" }).click();
-  await page.getByRole("button", { name: "Add Light thruster" }).click();
+  await page.getByRole("button", { name: "Add Light thruster", exact: true }).click();
   await page.getByTestId("mode-controls").click();
   await expect(page.getByTestId("mixer")).toContainText("not wired");
   await expect(page.getByTestId("response")).toContainText("Not wired: Light thruster");
-  await page.getByTestId("cell-back-fire").click();
-  await expect(page.getByTestId("lines-back").getByTestId("say")).toHaveText("Fires fully on Fire.");
+  await page.getByTestId("cell-back-action-a").click();
+  await expect(page.getByTestId("lines-back").getByTestId("say")).toHaveText("Fires fully on Action A.");
   await page.keyboard.down("Space");
-  await expect(page.getByTestId("control-fire")).toHaveClass(/held/);
-  // Thrust 1 has no free side for it, so it was placed clear of the ship: not welded to the
+  await expect(page.getByTestId("control-action-a")).toHaveClass(/held/);
+  // THRUST OG has no free side for it, so it was placed clear of the ship: not welded to the
   // cockpit, it doesn't answer even when wired, and the checks say so.
   await expect(page.getByTestId("response")).toContainText("Not welded to the cockpit, so they won't answer: Light thruster");
   await expect(page.getByTestId("mixer").locator("tr", { hasText: "Light thruster" })).toContainText("0%");
@@ -212,23 +220,30 @@ test("BPD-028 after a try-out each weld shows how hard it worked, and the page s
 
 test("BPD-029 a game controller flies Try it: A is forward, the stick turns, through the blueprint's wiring", async ({ page }) => {
   // A standard-mapping pad, held as a test sets it.
+  // As e2e/gamepad.spec.ts plugs one in: assigned, which every engine honours (WebKit ignores a defineProperty here).
   await page.addInitScript(() => {
     const pad = { id: "test pad", index: 0, connected: true, mapping: "standard", timestamp: 0, axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })) };
     (window as unknown as { __pad: typeof pad }).__pad = pad;
-    Object.defineProperty(navigator, "getGamepads", { value: () => [pad] });
+    navigator.getGamepads = () => [pad as unknown as Gamepad];
   });
   await openFresh(page);
   await page.getByTestId("try-it").click();
+  // Pressed only once the flight is running: a button already held as it starts counts for nothing
+  // until let go (gamepad.ts), and a slow browser can take a while to start it.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { time: number } } | null } }).__msb.sandbox()?.world.time ?? 0), { timeout: 30_000 }).toBeGreaterThan(0.05);
+  await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   await page.evaluate(() => {
     const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
-    p.buttons[0] = { ...p.buttons[0], pressed: true, value: 1 }; // A: forward
+    p.buttons[0].pressed = true; // A: forward
+    p.buttons[0].value = 1;
     p.axes[0] = 1; // stick right
   });
   const controls = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } | null } }).__msb.sandbox()?.world.controls ?? {});
   await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ forward: 1, main: 1, bl: 1, fr: 0.5 });
   await page.evaluate(() => {
     const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
-    p.buttons[0] = { ...p.buttons[0], pressed: false, value: 0 };
+    p.buttons[0].pressed = false;
+    p.buttons[0].value = 0;
     p.axes[0] = 0;
   });
   await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ main: 0 });
@@ -240,14 +255,14 @@ test("BPD-031 Try it's field is 120 × 75 m and wraps; the view follows the ship
   const w = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bounds: { min: { x: number; y: number }; max: { x: number; y: number }; wrap: boolean } } } } }).__msb.sandbox().world.bounds);
   expect([w.max.x - w.min.x, w.max.y - w.min.y, w.wrap]).toEqual([120, 75, true]);
   await page.keyboard.down("ArrowUp");
-  await page.waitForTimeout(1200);
+  // Held until it has flown, however slowly the browser runs the flight.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; position: { y: number } }[] } } } }).__msb.sandbox().world.bodies.find((b) => b.id === "hull")!.position.y), { timeout: 60_000, intervals: [50] }).toBeGreaterThan(1);
   await page.keyboard.up("ArrowUp");
   const cam = await page.evaluate(() => {
     const msb = (window as unknown as { __msb: { camera: () => { x: number; y: number; zoom: number }; sandbox: () => { world: { bodies: { id: string; position: { x: number; y: number } }[] } } } }).__msb;
     return { cam: msb.camera(), at: msb.sandbox().world.bodies.find((b) => b.id === "hull")!.position, vw: innerWidth };
   });
-  expect(cam.at.y).toBeGreaterThan(1); // it flew (the game pace is half real time)
-  expect(Math.abs(cam.cam.y - cam.at.y)).toBeLessThan(2); // and the view went with it
+    expect(Math.abs(cam.cam.y - cam.at.y)).toBeLessThan(2); // and the view went with it
   // It shows 60 m across (or 37.5 m up, whichever fits): about half the field.
   expect(cam.vw / cam.cam.zoom).toBeGreaterThanOrEqual(59.9);
   expect(cam.vw / cam.cam.zoom).toBeLessThan(75);
@@ -292,4 +307,98 @@ test("BPD-033 a control held through Refuel & reset goes on working in the fresh
   await page.waitForTimeout(300);
   await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ forward: 1, main: 1 });
   await page.keyboard.up("ArrowUp");
+});
+
+test("BPD-035 parts never overlap: THRUST OG's railgun and shield emitter are flagged (THRUST 1's railgun stands on it), and widening a tank into its neighbours is refused", async ({ page }) => {
+  await openFresh(page);
+  await expect(page.getByTestId("overlapping")).toHaveCount(0);
+  await openOg(page);
+  await expect(page.getByTestId("overlapping")).toContainText("Railgun OG and Shield emitter OG");
+  await page.getByTestId("part-tank-l").locator("polygon").first().click();
+  const width = page.getByTestId("param-width").locator("input.num");
+  await width.fill("1.7");
+  await width.press("Enter");
+  await expect(page.getByTestId("toast")).toContainText("overlap Generator L OG and Magazine L OG");
+  await expect(width).toHaveValue("1.50");
+});
+
+test("BPD-034 the action buttons are named by what they do in this ship, and the player can rename them for it", async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await openFresh(page);
+  await page.getByTestId("mode-controls").tap();
+  await expect(page.getByTestId("screen-name-action-b")).toHaveAttribute("placeholder", "BEAM");
+  await page.getByTestId("screen-name-action-b").fill("grab");
+  await page.getByTestId("screen-name-action-b").press("Enter");
+  await page.getByTestId("try-it").tap();
+  await expect(page.getByTestId("thrust-fire")).toHaveText("FIRE");
+  await expect(page.getByTestId("thrust-tractor")).toHaveText("GRAB");
+  await expect(page.getByTestId("thrust-shield")).toHaveText("SHIELD");
+  await ctx.close();
+});
+
+test("BPD-018 arrow keys in a value box change it and the box keeps up; leaving the box keeps the change", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("part-main").locator("polygon").nth(1).click();
+  const input = page.getByTestId("param-length").locator("input.num");
+  await input.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(input).toHaveValue("1.15");
+  await page.keyboard.press("ArrowUp");
+  await expect(input).toHaveValue("1.20");
+  await input.blur();
+  await expect(input).toHaveValue("1.20");
+});
+
+test("BPD-034 a blueprint file saved with the old Fire, Tractor and Shield wiring imports wired to Actions A, B and C", async ({ page }) => {
+  await openFresh(page);
+  const bp = await page.evaluate(() => (window as unknown as { __msb: { blueprint: () => unknown } }).__msb.blueprint());
+  const old = JSON.parse(JSON.stringify(bp).replaceAll('"action-a"', '"fire"').replaceAll('"action-b"', '"tractor"').replaceAll('"action-c"', '"shield"'));
+  old.preset = false;
+  await page.getByTestId("open-drawer").click();
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "⤒ Import" }).click();
+  await (await chooser).setFiles({ name: "old.blueprint.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(old)) });
+  await expect(page.getByTestId("drawing-name")).toContainText("THRUST 1");
+  const lines = await page.evaluate(() => (window as unknown as { __msb: { blueprint: () => { mix: { rows: { channel: string; lines: { control: string }[] }[] } } } }).__msb.blueprint().mix.rows.filter((r) => ["fire", "tractor", "shield"].includes(r.channel)).map((r) => r.lines[0].control));
+  expect(lines).toEqual(["action-a", "action-b", "action-c"]);
+});
+
+test("BPD-036 the OG parts are listed after the regular ones; in Try it, THRUST 1's railgun fires the shells its magazines hold", async ({ page }) => {
+  await openFresh(page);
+  // Storage: the regular magazine, then the OG one under its heading.
+  await page.getByRole("tab", { name: "ST" }).click();
+  await expect(page.getByTestId("kind-name")).toHaveText("STORAGE");
+  await expect(page.getByTestId("card-mag-l")).toContainText("13.00 kg"); // 3 kg and 60 shells
+  await expect(page.getByTestId("card-mag-l-og")).toContainText("3.00 kg");
+  await expect(page.getByText("OG · AS THRUST HAS THEM")).toBeVisible();
+  await page.getByTestId("try-it").click();
+  const shells = () =>
+    page.evaluate(() => {
+      const w = (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; ammo?: { count: number } }[] } } | null } }).__msb.sandbox()?.world;
+      return (w?.bodies ?? []).filter((b) => b.ammo).reduce((s, b) => s + b.ammo!.count, 0);
+    });
+  await expect.poll(shells, { timeout: 15_000 }).toBeLessThanOrEqual(119); // one already in the gun
+  await page.keyboard.down("Space");
+  await expect.poll(shells, { timeout: 60_000 }).toBeLessThan(115);
+  await page.keyboard.up("Space");
+});
+
+test("BPD-037 click the blueprint's name to rename it; a preset is renamed as your own copy", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("drawing-name").click();
+  const box = page.getByTestId("drawing-name-input");
+  await box.fill("Wasp");
+  await box.press("Enter");
+  await expect(page.getByTestId("drawing-name")).toHaveText("WASP");
+  await expect(page.getByText("EDITING", { exact: true })).toBeVisible();
+  // Renamed again, it stays the same blueprint (no second copy), and the preset is still THRUST 1.
+  await page.getByTestId("drawing-name").click();
+  await page.getByTestId("drawing-name-input").fill("Hornet");
+  await page.getByTestId("drawing-name-input").press("Enter");
+  await expect(page.getByTestId("drawing-name")).toHaveText("HORNET");
+  const names = await page.evaluate(() => JSON.parse(localStorage.getItem("msb.blueprints.v1")!).mine.map((b: { name: string }) => b.name));
+  expect(names).toEqual(["HORNET"]);
+  await page.reload();
+  await expect(page.getByTestId("drawing-name")).toHaveText("HORNET");
 });

@@ -1,6 +1,8 @@
 // The designer's panels (docs/blueprint/spec.md §2): components, properties, performance, and the
 // blueprints drawer.
+import { Fragment } from "preact";
 import { useState } from "preact/hooks";
+import { bodyMass } from "../../core/bodies.ts";
 import { NumberControl } from "./NumberControl.tsx";
 import { loadsFor } from "./tryLoads.ts";
 import { layout, StatsFold } from "./Layout.tsx";
@@ -8,7 +10,7 @@ import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
-import { addComponent, mirrorComponent, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
 import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
@@ -17,6 +19,8 @@ interface CatalogueItem {
   kind: Kind;
   name: string;
   from: string; // the preset part it is made from
+  /** Made from THRUST OG's part, kept as the game has it (not for the final game's list). */
+  og?: boolean;
 }
 
 /** What can be added, made from the Thrust 1 preset's parts. */
@@ -33,6 +37,9 @@ export const CATALOGUE: CatalogueItem[] = [
   { kind: "utility", name: "Tether winch", from: "tether" },
   { kind: "utility", name: "Shield emitter", from: "shield" },
 ];
+/** The OG parts: the same list, from THRUST OG. */
+const OG_ITEMS: CatalogueItem[] = CATALOGUE.map((it) => ({ ...it, name: `${it.name} OG`, og: true }));
+const templateOf = (it: CatalogueItem) => presets.find((p) => p.id === (it.og ? "preset-thrust-og" : "preset-thrust-1")) ?? presets[0];
 
 /** Adds a part at the nearest free place that welds it to the ship (＋, double-click, Duplicate). */
 export function addAtFreeSpot(tpl: Blueprint, from: string, label?: string): void {
@@ -105,9 +112,8 @@ function Thumb({ bp, ids }: { bp: Blueprint; ids: string[] }) {
 }
 
 export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; setKind: (i: number) => void }) {
-  const preset = presets[0];
   const kind = KINDS[kindIndex];
-  const items = CATALOGUE.filter((c) => c.kind === kind.kind);
+  const items = [...CATALOGUE, ...OG_ITEMS].filter((c) => c.kind === kind.kind);
   return (
     <section class="panel left" aria-label="Components">
       <header class="ph">
@@ -135,16 +141,20 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
         ))}
       </div>
       <div class="list" data-testid="catalogue">
-        {items.map((it) => {
+        {items.map((it, i) => {
+          const preset = templateOf(it);
           const c = preset && component(preset, it.from);
           const b = preset && body(preset, it.from);
-          const mass = c ? c.bodies.reduce((s, id) => s + body(preset, id).mass, 0) : 0;
+          // As it weighs on a ship: with what it holds (shells, propellant).
+          const mass = c ? c.bodies.reduce((s, id) => s + bodyMass(body(preset, id) as Parameters<typeof bodyMass>[0]), 0) : 0;
+          const firstOg = it.og && !items[i - 1]?.og;
           const size = b?.shape.kind === "box" ? `${b.shape.width} × ${b.shape.height} m` : "";
           return (
+            <Fragment key={it.name}>
+            {firstOg && <div class="og-head" title="The Thrust game's parts as they are, kept for comparison while the regular parts are improved">OG · AS THRUST HAS THEM</div>}
             <div
               class={`card${placing.value && !placing.value.moving && placing.value.made.comp.label.startsWith(it.name.split(" ")[0]) ? " picked" : ""}`}
-              key={it.name}
-              data-testid={`card-${it.from}`}
+              data-testid={`card-${it.from}${it.og ? "-og" : ""}`}
               title="Drag onto the blueprint, double-click, or ＋"
               onPointerDown={(e) => !(e.target as HTMLElement).closest("button") && dragFromList(e, preset, it.from, it.name)}
               onDblClick={() => addAtFreeSpot(preset, it.from, it.name)}
@@ -159,6 +169,7 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
                 ＋
               </button>
             </div>
+            </Fragment>
           );
         })}
         {!items.length && <div class="empty">None of these yet.</div>}
@@ -204,6 +215,7 @@ export function PerformanceBox() {
     ["Joins", `${st.welds} welds · ${st.parts} parts`, st.welds, bs.welds],
   ];
   const loose = st.pieces > 1;
+  const crossing = allOverlaps(bp);
   return (
     <div class="stats" data-testid="performance">
       <div class="sh">
@@ -227,6 +239,11 @@ export function PerformanceBox() {
           })}
         </tbody>
       </table>
+      )}
+      {crossing.length > 0 && (
+        <div class="warnrow" data-testid="overlapping">
+          ▲ Overlapping: {crossing.map(([a, b]) => `${component(bp, a).label} and ${component(bp, b).label}`).join("; ")}. Move one clear.
+        </div>
       )}
       {loose && (
         <div class="warnrow" data-testid="loose">
@@ -254,6 +271,21 @@ export function MeasureButton({ bp, measuredNow }: { bp: Blueprint; measuredNow:
       ⏱ {measuredNow ? "Again" : "Measure"}
     </button>
   );
+}
+
+/**
+ * Components never overlap (§3.2): an edit that would push this one into another is refused, and
+ * the page says which part is in the way.
+ */
+let lastBlocked = "";
+function noOverlap(before: Blueprint, after: Blueprint, id: string): Blueprint {
+  const r = withoutNewOverlaps(before, after, id);
+  if (r.blocked.length) {
+    const msg = `That would make ${component(before, id).label} overlap ${r.blocked.map((x) => component(after, x).label).join(" and ")}. Move it clear first.`;
+    if (msg !== lastBlocked) say(msg);
+    lastBlocked = msg;
+  } else lastBlocked = "";
+  return r.bp;
 }
 
 // ---------- properties ----------
@@ -352,8 +384,8 @@ function ComponentProps({ id }: { id: string }) {
               readonly={p.readonly}
               note={p.note}
               changed={changed}
-              onReset={() => w !== undefined && edit((b) => setParam(b, id, p.key, w))}
-              onLive={(v) => live((b) => setParam(b, id, p.key, v))}
+              onReset={() => w !== undefined && edit((b) => noOverlap(b, setParam(b, id, p.key, w), id))}
+              onLive={(v) => live((b) => noOverlap(b, setParam(b, id, p.key, v), id))}
               onEnd={endGesture}
             />
           );
@@ -390,7 +422,7 @@ function ComponentProps({ id }: { id: string }) {
           ⇋ Mirror
         </button>
         {c.kind === "engine" && (
-          <button data-testid="flip-part" title="Turn it round to push the other way" onClick={() => edit((b) => flipComponent(b, id))}>
+          <button data-testid="flip-part" title="Turn it round to push the other way" onClick={() => edit((b) => noOverlap(b, flipComponent(b, id), id))}>
             ↕ Flip
           </button>
         )}

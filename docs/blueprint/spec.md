@@ -375,11 +375,47 @@ Differences from the design above:
   it; anything else controlled loses its control links. With no cockpit nothing answers. The
   estimate leaves such parts out, the checks name them, and the mixer's NOW shows them at 0%.
   Test: BPD-030.
+- **Components never overlap (16 November 2026):** moving, adding, mirroring and flipping were
+  already refused where they would overlap; now a property edit that would push a part into
+  another is refused too, with the parts in its way named, and the value goes back. Overlaps that
+  are already there (an imported design, or the preset's railgun standing through its shield
+  emitter, as in the game's ship) are outlined in red and named under Performance. Test: BPD-035.
+- **Actions A, B and C (16 November 2026):** the player's controls are the four movements and Action
+  A, B and C (on the keys and pad buttons that were Fire, Tractor and Shield; saved bindings and
+  blueprints move over). Each ship wires the actions to what it carries: Thrust 1 has A on the
+  railgun, B on the tractor beam, C on the shield. On screen (Try it's touch buttons and its key
+  legend) an action is named by the largest thing it drives in that ship (FIRE for a gun, SHIELD,
+  BEAM, else the part's name), or by the player's own name for it in that ship, set under the
+  action in Controls mode (blank: automatic). Test: BPD-034.
 - **Mirror (built 16 November 2026):** ⇋ Mirror on a selected part makes its mirror image across the
   ship's middle line (x = 0): shape, nozzle and internal welds reflected, welded where it touches,
   fed if an engine, named for the other side (BL → BR, L → R) and wired as the mirror of the
   original (turn left and turn right swapped). Refused, with the reason, if that side is taken or
   the part sits on the middle line. Test: BPD-027.
+
+## 16. OG parts and regular parts (16 November 2026, Chloe)
+
+The Thrust game's ship stays as it is: the preset **THRUST OG**, every part an OG part
+(`cockpit_og`, `railgun_og`, `magazine_og`, …, the component's `part`), listed under each type
+after the regular parts, headed "OG · as Thrust has them". OG parts are never changed; the final
+game won't offer them. The **regular parts** start as copies of them and are improved as problems
+are found; **THRUST 1** is the same ship built from them.
+
+Improvements so far:
+
+1. **Magazines hold the shells.** In the game the railgun carries its 120 shells (20 kg, on the
+   nose) and the magazines hold nothing. A regular magazine stores shells (60 each in THRUST 1;
+   "Shells stored" under Function) and passes them to the railguns welded to it, one at a time, by
+   an ammo link (WPN-015); the regular railgun holds none of its own. A magazine knocked off the
+   ship feeds nothing, and takes its shells with it: the gun draws from the fullest magazine each
+   time, so the two empty together and losing one loses half what is left. A magazine blows up
+   when destroyed only while it holds shells. Same mass; the centre of mass 0.33 m further back
+   and the turn 9.9 rad/s² instead of 9.3 (Measure; forward and reverse unchanged).
+2. **The railgun stands on the shield emitter** instead of 0.12 m through it, welded to its top
+   (two points). Without its 20 kg of shells it no longer sways there: Measure gives the same
+   figures as before the lift, nothing breaking.
+3. **Renaming:** click the blueprint's name in the top bar (a preset is renamed as your own copy),
+   as well as Rename in the Blueprints drawer.
 
 ## Sources
 

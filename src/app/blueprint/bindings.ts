@@ -13,10 +13,13 @@ export const DEFAULT_CONTROLS: PlayerControl[] = [
   { id: "reverse", name: "Reverse", kind: "analog" },
   { id: "left", name: "Turn left", kind: "analog" },
   { id: "right", name: "Turn right", kind: "analog" },
-  { id: "fire", name: "Fire", kind: "hold" },
-  { id: "tractor", name: "Tractor", kind: "hold" },
-  { id: "shield", name: "Shield", kind: "hold" },
+  { id: "action-a", name: "Action A", kind: "hold" },
+  { id: "action-b", name: "Action B", kind: "hold" },
+  { id: "action-c", name: "Action C", kind: "hold" },
 ];
+
+/** The movement controls; the rest are actions, which each ship wires to what it carries. */
+export const MOVEMENT = new Set(["forward", "reverse", "left", "right"]);
 
 /** Keys as Mammoth Thrust's (src/app/Thrust.tsx), by KeyboardEvent.code. */
 export const DEFAULT_KEYS: Record<string, string> = {
@@ -31,15 +34,18 @@ export const DEFAULT_KEYS: Record<string, string> = {
   ArrowUp: "forward",
   KeyS: "reverse",
   ArrowDown: "reverse",
-  Space: "fire",
-  KeyW: "fire",
-  KeyZ: "tractor",
-  Slash: "tractor",
-  KeyX: "shield",
-  Period: "shield",
+  Space: "action-a",
+  KeyW: "action-a",
+  KeyZ: "action-b",
+  Slash: "action-b",
+  KeyX: "action-c",
+  Period: "action-c",
 };
 
-const KEY = "msb.controls.v1";
+const KEY = "msb.controls.v2";
+/** Before the actions were named A, B and C, they were Fire, Tractor and Shield. */
+const OLD_KEY = "msb.controls.v1";
+const RENAMED: Record<string, string> = { fire: "action-a", tractor: "action-b", shield: "action-c" };
 
 interface Saved {
   controls: PlayerControl[];
@@ -48,6 +54,14 @@ interface Saved {
 
 function load(): Saved {
   try {
+    const old = typeof localStorage !== "undefined" && !localStorage.getItem(KEY) ? localStorage.getItem(OLD_KEY) : null;
+    if (old) {
+      // Keep the player's keys, moved onto the renamed actions.
+      const s = JSON.parse(old) as Partial<Saved>;
+      const keys = Object.fromEntries(Object.entries(s.keys ?? {}).map(([k, c]) => [k, RENAMED[c] ?? c]));
+      const extra = (s.controls ?? []).filter((c) => !DEFAULT_CONTROLS.some((d) => d.id === c.id) && !RENAMED[c.id]);
+      localStorage.setItem(KEY, JSON.stringify({ controls: [...DEFAULT_CONTROLS, ...extra], keys }));
+    }
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
     if (raw) {
       const s = JSON.parse(raw) as Partial<Saved>;

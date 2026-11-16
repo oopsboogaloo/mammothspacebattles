@@ -312,6 +312,20 @@ function validateBody(v: V, b: unknown, path: string, partial = false): void {
       if (c.damping !== undefined) num(v, c.damping, `${cp}.damping`, { min: 0 });
     }
   }
+  if (b.ammo !== undefined) {
+    const a = b.ammo;
+    const ap = `${path}.ammo`;
+    if (!isObj(a)) err(v, ap, "must be an object {count, shell}");
+    else {
+      num(v, a.count, `${ap}.count`, { int: true, min: 0 });
+      if (!isObj(a.shell)) err(v, `${ap}.shell`, "must be a body without id or motion: {shape, mass, …}");
+      else {
+        validateShape(v, a.shell.shape, `${ap}.shell.shape`);
+        num(v, a.shell.mass, `${ap}.shell.mass`, { positive: true });
+        if (a.shell.explosive !== undefined) validateExplosive(v, a.shell.explosive, a.shell.mass, `${ap}.shell.explosive`);
+      }
+    }
+  }
   if (b.magazine !== undefined) {
     const m = b.magazine;
     const mp = `${path}.magazine`;
@@ -528,7 +542,8 @@ function validateLink(v: V, l: unknown, path: string): void {
     str(v, l.resource, `${path}.resource`);
     num(v, l.rate, `${path}.rate`, { positive: true });
   } else if (l.kind === "control") str(v, l.channel, `${path}.channel`);
-  else err(v, `${path}.kind`, 'must be "feed" or "control"');
+  else if (l.kind === "ammo") str(v, l.from, `${path}.from`);
+  else err(v, `${path}.kind`, 'must be "feed", "control" or "ammo"');
 }
 
 function validateRect(v: V, min: unknown, max: unknown, path: string, minKey = "min", maxKey = "max"): void {
