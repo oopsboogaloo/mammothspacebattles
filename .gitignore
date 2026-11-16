@@ -6,3 +6,4 @@ playwright-report/
 test-results/
 bench.json
 wasm/solver/target/
+__pycache__/
