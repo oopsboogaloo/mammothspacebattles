@@ -475,6 +475,74 @@ sides weld and snap exactly as before.
 
 Tests: BPD-041 (turning, welding and snapping at an angle), BPD-042 (resizing).
 
+## 19. Design rules, step 1: tanks and magazines (16 November 2026)
+
+The rules of `design-rules-proposal.md` §1–3, as approved, are built in `src/app/blueprint/rules.ts`.
+They apply to the regular tanks (box and trapezoid) and magazines; the OG parts keep their
+figures.
+
+- **What it holds goes with its inner area:** the outline moved in by the wall on every side.
+  - A tank holds 3.89 kg of propellant per m² (H₂ : O₂ 1 : 8).
+  - A magazine holds 480 shells per m², rounded down after a 10⁻⁶ tolerance.
+- **Its dry mass goes with its wall area:** 4.35 kg per m² for a tank, 15.8 kg per m² for a magazine.
+- **Wall thickness is a setting** (Build tab): 0.02–0.3 m, at most a quarter of the smaller side,
+  0.1 m by default. In proportion to it go:
+  - the container's material (threshold and toughness);
+  - its welds: each weld is quality × k × the thinner wall it joins, with Light, Standard and Heavy
+    at ×0.5, ×1 and ×2;
+  - its weight.
+  - Thicker walls leave less room inside.
+- **Size limits:** a tank 0.3–3 m each way, a magazine 0.3–2 m. A typed size past them is refused;
+  a dragged one stops at them.
+- **Its explosion goes with what it can hold.** A magazine with no shells left still doesn't go off.
+- **Readouts:** what it holds, dry mass, and strength against Thrust's.
+
+**At the defaults THRUST 1 is unchanged:** 61.2 kg, 36.1 m/s² forward, 9.85 rad/s² turning, every
+weld Standard. The Mastodon, its parts now sized by the rules, is 78.5 kg with 5.3 kg of propellant
+and 115 shells in each magazine: 28.6 m/s² forward and back, 8.6 rad/s² turning.
+
+Tests: BPD-043 (Thrust's figures at Thrust's sizes; inner areas; exactly 60 shells), BPD-044 (wall
+thickness, welds, size limits).
+
+## 20. Design rules, step 2: power (16 November 2026)
+
+The rules of `design-rules-proposal.md` §4, as approved (core: PWR-001…PWR-004, `src/core/power.ts`).
+
+- **Battery:** 2,700 kJ per m² of outline (THRUST 1's: 1,620 kJ), 3.3 kg per m², 0.2–2 m each way.
+  It starts full; its charge explodes in proportion to its capacity.
+- **Generator:** up to 400 kW per m² (THRUST 1's pair: 448 kW), 3.6 kg per m², 0.3–2 m each way.
+  - It burns the ship's propellant at 1,000 kJ per kg, only while the batteries have room.
+- **What draws power:**
+  - the shield: 400 kW while up, and 1.25 kJ per N·s of each hit, at least 25 kJ;
+  - each railgun shot: 3.5 kJ (to be raised);
+  - the tractor beam: 10 kW while on;
+  - the tether: 5 kW while held.
+- **A ship with no battery or generator has no power system** and runs as before power existed:
+  the games' own ships, THRUST OG, and the Mastodon (which carries neither).
+- **Measured:** THRUST 1 holding its shield up burns fuel through its generators within 5% of
+  THRUST OG's direct burn. With its generators off, the battery alone holds the shield up about 4 s.
+- **On screen:**
+  - battery and generator readouts on their parts (Function tab);
+  - battery and generator gauges in Try it;
+  - in the games, battery charge and generator load bars on the HUD, shown only for a ship that
+    has a power system.
+
+Tests: BPD-045, and `tests/core/power.test.ts`.
+
+## 21. Play a design in a game (16 November 2026, Chloe; for debugging)
+
+**Play in…** (top bar) saves the blueprint and opens Mammoth Thrust, Asteroids or Lander with
+`?blueprint=1` (`src/app/playtest.ts`).
+
+- Every level that game loads carries the blueprint's ship in place of its own.
+- Its parts are numbered as the game's ships are (`p{n}-…`) and laid out round its cockpit.
+- Its hull, gun, beam and tank are named for the game.
+- Its own wiring drives it: Actions A, B and C on the game's fire, beam and shield controls.
+- The game's title (Lander: its level list) and pause menu offer **Back to blueprint**.
+- Opened normally, the games are unchanged. This is not the players' path.
+
+Test: BPD-046.
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):

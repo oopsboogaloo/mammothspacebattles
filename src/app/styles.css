@@ -425,3 +425,9 @@ button { cursor: pointer; }
 .mmn-note small + small { margin-top: 4px; opacity: 0.85; }
 .mas-btn.small.on { background: #fff; color: #000; }
 @media (hover: hover) and (pointer: fine) { .mmn-stick { opacity: 0.35; } .mmn-stick:hover { opacity: 1; } }
+
+/* The ship's power (design rules §4): battery charge and generator load, for ships that have them. */
+.mas-fuel.mas-power { width: 96px; }
+.mas-fuel.mas-power i { background: #7fd4ff; }
+.mas-fuel.mas-power.gen i { background: #ffd36a; }
+.mas-fuel.mas-power.gen i.low { background: #ff9f6b; }

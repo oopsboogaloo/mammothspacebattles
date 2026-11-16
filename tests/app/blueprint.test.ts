@@ -50,8 +50,9 @@ describe("blueprint model", () => {
     expect(component(more, made.comp.id).part).toBe("magazine");
     expect(removeComponent(more, made.comp.id).ship.links.filter((l) => l.kind === "ammo")).toHaveLength(2);
     // Its shells are a property of the magazine.
-    expect(params(regular, "mag-l").find((p) => p.key === "ammo")?.value).toBe(60);
-    expect(body(setParam(regular, "mag-l", "ammo", 10), "mag-l").ammo!.count).toBe(10);
+    // What it holds follows from its size and walls (the design rules): thinner walls, more room.
+    expect(params(regular, "mag-l").find((p) => p.key === "holds")?.value).toBe(60);
+    expect(body(setParam(regular, "mag-l", "wall", 0.05), "mag-l").ammo!.count).toBe(100);
   });
 
   it("BPD-012 its wiring gives the game's engine values for every combination of controls, and its gun, tractor and shield answer Actions A, B and C", () => {
@@ -404,10 +405,12 @@ describe("Mastodon Gun Ship, double engines, trapezoids and triangles", async ()
     const guns = m.components.filter((c) => c.kind === "weapon").map((c) => c.id);
     expect(guns).toHaveLength(4);
     for (const g of guns) expect(m.ship.links.filter((l) => l.kind === "ammo" && l.to === g)).toHaveLength(2);
-    expect(["mag-l", "mag-r"].map((id) => body(m, id).ammo!.count)).toEqual([100, 100]);
-    // Each tank holds Thrust's propellant per square metre: the side tanks 0.7875 m², the centre 0.78 m².
-    const thrustO2 = body(bp, "tank-l").contents!.find((c) => c.resource === "o2")!.capacity / 1.5;
-    for (const [id, area] of [["tank-l", 0.7875], ["tank-r", 0.7875], ["tank-c", 0.78]] as const) expect(body(m, id).contents!.find((c) => c.resource === "o2")!.capacity).toBeCloseTo(thrustO2 * area, 6);
+    expect(["mag-l", "mag-r"].map((id) => body(m, id).ammo!.count)).toEqual([115, 115]); // 0.4 × 1.4 m by the design rules
+    // Each tank holds what the design rules give its inner area: the centre tank (1.2 × 0.65 m) 1.75 kg.
+    const held = (id: string) => body(m, id).contents!.reduce((a, c) => a + c.mass, 0);
+    expect(held("tank-c")).toBeCloseTo(4.05 * ((1.0 * 0.45) / (1.3 * 0.8)), 6);
+    expect(held("tank-l")).toBeCloseTo(held("tank-r"), 9);
+    expect(held("tank-l")).toBeGreaterThan(1.5);
     // Every head and gun has its control link; the wiring checks find nothing wrong.
     for (const b of m.ship.bodies.filter((x) => x.injector || x.magazine)) expect(m.ship.links.some((l) => l.kind === "control" && l.to === b.id)).toBe(true);
     expect(wiringChecks(m, moves).every((c) => c.ok)).toBe(true);
@@ -531,7 +534,8 @@ describe("turning and resizing parts (§3.6)", async () => {
     const big = resizeComponent(regular, "tank-l", 1.8, 1.2, fixed, { x: 1, y: 1 });
     expect(componentSize(big, "tank-l")).toEqual({ w: 1.8, h: 1.2 });
     expect(body(big, "tank-l").position).toEqual({ x: fixed.x + 0.9, y: fixed.y + 0.6 });
-    expect(body(big, "tank-l").contents![1].capacity).toBeCloseTo(t.contents![1].capacity * ((1.8 * 1.2) / 1.5), 9);
+    // By the design rules: its inner area, 1.6 × 1.0 against Thrust's 1.3 × 0.8.
+    expect(body(big, "tank-l").contents![1].capacity).toBeCloseTo(t.contents![1].capacity * ((1.6 * 1.0) / (1.3 * 0.8)), 8);
     // Turned 30°: the corner opposite the one dragged stays put in the ship's frame.
     const turned = rotateComponent(two(0), "b", 30);
     const bb = body(turned, "b");
@@ -551,5 +555,148 @@ describe("turning and resizing parts (§3.6)", async () => {
     const r0 = body(m, "tank-l");
     const deeper = resizeComponent(m, "tank-l", s0.w + 0.25, s0.h, { x: r0.position.x + s0.w / 2, y: r0.position.y }, { x: -1, y: 0 });
     expect(component(deeper, "tank-l").form).toMatchObject({ base: 1.4, top: 0.7, height: 1 });
+  });
+});
+
+describe("design rules: tanks and magazines (docs/blueprint/design-rules-proposal.md §1–3)", async () => {
+  const { containerKind, WELD_PRESETS: presets, weldPresetsFor } = await import("../../src/app/blueprint/model.ts");
+  const { containerSpec, innerArea, CONTAINERS } = await import("../../src/app/blueprint/rules.ts");
+  const box = (w: number, h: number) => [{ x: -w / 2, y: -h / 2 }, { x: w / 2, y: -h / 2 }, { x: w / 2, y: h / 2 }, { x: -w / 2, y: h / 2 }];
+
+  it("BPD-043 at Thrust's sizes and 0.1 m walls the rules give Thrust's own figures: THRUST 1's tanks and magazines are THRUST OG's, shells apart", () => {
+    for (const id of ["tank-l", "tank-r"]) {
+      const [r, o] = [body(regular, id), body(bp, id)];
+      expect(r.mass).toBe(o.mass);
+      expect(r.material).toEqual(o.material);
+      expect(r.explosive).toEqual(o.explosive);
+      for (const res of ["h2", "o2"]) expect(r.contents!.find((c) => c.resource === res)!.capacity).toBeCloseTo(o.contents!.find((c) => c.resource === res)!.capacity, 9);
+    }
+    for (const id of ["mag-l", "mag-r"]) {
+      const [r, o] = [body(regular, id), body(bp, id)];
+      expect([r.mass, r.ammo!.count, r.explosive!.charge]).toEqual([o.mass, 60, o.explosive!.charge]);
+      expect(r.material).toEqual(o.material);
+    }
+    // The OG parts follow no rules; the regular ones do.
+    expect(containerKind(component(bp, "tank-l"))).toBeNull();
+    expect(containerKind(component(regular, "tank-l"))).toBe("tank");
+    // Every weld at the default walls is Standard, as in the game.
+    expect(welds(regular).flatMap((w) => w.joints).filter((j) => j.limits!.tension !== 22950 && !/gun|shield/.test(j.a + j.b))).toEqual([]);
+    expect(presets.map((p) => p.limits.tension)).toEqual([11475, 22950, 45900]);
+  });
+
+  it("BPD-043 inner area: each side moved in by the wall, for boxes, trapezoids and triangles; nothing inside when the walls fill it", () => {
+    expect(innerArea(box(1.5, 1), 0.1)).toBeCloseTo(1.3 * 0.8, 12);
+    expect(innerArea(box(0.3, 0.3), 0.2)).toBe(0);
+    // A right triangle's inradius is (a + b − c) ÷ 2: walls that thick leave nothing.
+    const tri = [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 0, y: 4 }];
+    expect(innerArea(tri, 0.5)).toBeCloseTo(6 * ((1 - 0.5) / 1) ** 2, 9);
+    expect(innerArea(tri, 1.01)).toBe(0);
+    // Exactly 60 shells in THRUST 1's magazine, though 0.125 m² × 480 is 59.999… in floating point.
+    expect(containerSpec("magazine", box(0.7, 0.45), 0.1).holds).toBe(60);
+    expect(CONTAINERS.magazine.perArea).toBeCloseTo(480, 9);
+  });
+
+  it("BPD-044 wall thickness: thicker is stronger (welds and armour) and heavier, and holds less; the welds go with the thinner wall", () => {
+    const thin = setParam(regular, "tank-l", "wall", 0.05);
+    const thick = setParam(regular, "tank-l", "wall", 0.2);
+    const held = (b: typeof bp) => body(b, "tank-l").contents!.reduce((a, c) => a + c.mass, 0);
+    expect(held(thin)).toBeCloseTo(4.05 * ((1.4 * 0.9) / 1.04), 6); // 4.91 kg
+    expect(held(thick)).toBeCloseTo(4.05 * ((1.1 * 0.6) / 1.04), 6); // 2.57 kg
+    expect([body(thin, "tank-l").mass, body(thick, "tank-l").mass]).toEqual([1.043478, 3.652174]);
+    expect(body(thin, "tank-l").material).toMatchObject({ threshold: 30, toughness: 250 });
+    expect(body(thick, "tank-l").material).toMatchObject({ threshold: 120, toughness: 1000 });
+    // Its welds to the generator: half as strong with thinner walls; no stronger with thicker (the generator's 0.1 m is then the thinner).
+    const tension = (b: typeof bp) => welds(b).find((w) => [w.a, w.b].includes("tank-l") && [w.a, w.b].includes("gen-l"))!.joints[0].limits!.tension;
+    expect([tension(thin), tension(regular), tension(thick)]).toEqual([11475, 22950, 22950]);
+    expect(weldPresetsFor(thin, welds(thin).find((w) => [w.a, w.b].includes("tank-l") && [w.a, w.b].includes("gen-l"))!.id).map((p) => p.limits.tension)).toEqual([5737.5, 11475, 22950]);
+    // No thicker than a quarter of its smaller side, or 0.3 m.
+    expect(component(setParam(regular, "tank-l", "wall", 0.9), "tank-l").wall).toBe(0.25);
+  });
+
+  it("BPD-044 size limits: a tank 0.3 to 3 m each way, a magazine 0.3 to 2 m; a resize past them stops at them", () => {
+    expect(params(regular, "tank-l").find((p) => p.key === "width")).toMatchObject({ min: 0.3, max: 3 });
+    expect(params(regular, "mag-l").find((p) => p.key === "height")).toMatchObject({ min: 0.3, max: 2 });
+    // Typed past the limit: refused.
+    expect(setParam(regular, "mag-l", "width", 2.5)).toBe(regular);
+    // Dragged past it: stops there.
+    const t = body(regular, "tank-l");
+    const small = resizeOk(regular, "tank-l", 0.1, 0.1, { x: t.position.x - 0.75, y: t.position.y - 0.5 });
+    expect(componentSizeOf(small, "tank-l")).toEqual({ w: 0.3, h: 0.3 });
+  });
+});
+
+async function importResize() {
+  return await import("../../src/app/blueprint/model.ts");
+}
+const { resizeComponent: resizeOk0, componentSize: componentSizeOf } = await importResize();
+function resizeOk(b: Parameters<typeof resizeOk0>[0], id: string, w: number, h: number, fixed: { x: number; y: number }) {
+  return resizeOk0(b, id, w, h, fixed, { x: 1, y: 1 });
+}
+
+describe("design rules: power (design-rules-proposal.md §4)", async () => {
+  const { powerStats, mastodonPreset } = await import("../../src/app/blueprint/model.ts");
+  const { measureWorld } = await import("../../src/app/blueprint/measure.ts");
+  const { getProfile, powerOf, stepInPlace } = await import("../../src/core/index.ts");
+  const { withBlueprint } = await import("../../src/app/playtest.ts");
+
+  it("BPD-045 THRUST 1's battery stores 1,620 kJ and its generators make 448 kW, from their areas, at Thrust's masses; the shield, railgun and beam draw power; the OG parts and the Mastodon have none", () => {
+    expect(body(regular, "battery").power).toEqual({ capacity: 1620 });
+    expect(["gen-l", "gen-r"].map((id) => body(regular, id).power)).toEqual([{ output: 224, perKg: 1000 }, { output: 224, perKg: 1000 }]);
+    for (const id of ["battery", "gen-l", "gen-r"]) expect(body(regular, id).mass).toBe(body(bp, id).mass);
+    expect(body(regular, "shield").shield).toMatchObject({ draw: 400, hitDraw: 1.25, minHitDraw: 25 });
+    expect(body(regular, "gun").magazine!.railgun!.shot).toBe(3.5);
+    expect(body(regular, "hull").tractor).toMatchObject({ draw: 10, tetherDraw: 5 });
+    expect(powerStats(regular)).toMatchObject({ stored: 1620, output: 448, shieldDraw: 400, shieldSeconds: Infinity });
+    // THRUST OG is the game's ship: no power system.
+    expect(powerStats(bp)).toBeNull();
+    expect(body(bp, "shield").shield!.draw).toBeUndefined();
+    expect(powerStats(mastodonPreset(scn))).toBeNull();
+    // A bigger battery stores more, in proportion to its area.
+    const big = setParam(regular, "battery", "width", 1.8);
+    expect(body(big, "battery").power!.capacity).toBeCloseTo(1620 * 1.5, 6);
+    expect(params(regular, "battery").find((p) => p.key === "width")).toMatchObject({ min: 0.2, max: 2 });
+  });
+
+  it("BPD-045 holding THRUST 1's shield up burns fuel through its generators at today's rate, within 5%; with no generators it drops when the battery is spent (about 4 s)", () => {
+    const run = (b: typeof bp, seconds: number) => {
+      const w = measureWorld(b);
+      const fuel = () => w.bodies.filter((x) => !x.injector).reduce((s, x) => s + (x.contents ?? []).reduce((a, c) => a + c.mass, 0), 0);
+      const f0 = fuel();
+      stepInPlace(w, [{ type: "control.set", channel: "action-c", value: 1 }], getProfile("sandbox"));
+      let upFor = 0;
+      for (let i = 1; i < 240 * seconds; i++) {
+        stepInPlace(w, [], getProfile("sandbox"));
+        if (w.bodies.some((x) => x.shape.kind === "disc")) upFor = i / 240;
+      }
+      return { burned: f0 - fuel(), upFor, power: powerOf(w, "hull") };
+    };
+    const og = run(bp, 4);
+    const t1 = run(regular, 4);
+    expect(t1.burned / og.burned).toBeGreaterThan(0.95);
+    expect(t1.burned / og.burned).toBeLessThan(1.05);
+    // Generators off (still welded in place, holding the wings): the battery alone holds it about 4 s (1,620 kJ ÷ 400 kW).
+    const noGen = structuredClone(regular);
+    for (const id of ["gen-l", "gen-r"]) delete body(noGen, id).power;
+    const r = run(noGen, 6);
+    expect(r.upFor).toBeGreaterThan(3.8);
+    expect(r.upFor).toBeLessThan(4.3);
+  }, 120_000);
+
+  it("BPD-046 a blueprint played in a game: its parts numbered as the game's ships, round its cockpit, its hull and gun named, and its wiring with the actions on the game's controls", () => {
+    const thrust = withBlueprint(scn, regular) as { world: { thrust: { ship: { bodies: { id: string; position: { x: number; y: number }; injector?: { channel: string }; shield?: { from: string[]; blocks: string[] } }[]; links: { from?: string; to: string; channel?: string }[] }; hull: string; gun?: string; tractor: string; mix?: unknown }; mix: { rows: { channel: string; lines: { control: string }[] }[] } } };
+    const g = thrust.world.thrust;
+    expect(g.hull).toBe("p{n}-hull");
+    expect(g.gun).toBe("p{n}-gun");
+    expect(g.tractor).toBe("p{n}-hull");
+    expect(g.mix).toBeUndefined();
+    expect(g.ship.bodies.every((b) => b.id.startsWith("p{n}-"))).toBe(true);
+    expect(g.ship.bodies.find((b) => b.id === "p{n}-hull")!.position).toEqual({ x: 0, y: 0 });
+    // Channels are not ids: they stay as they are; ids in links and the shield's tanks are numbered.
+    expect(g.ship.bodies.find((b) => b.id === "p{n}-main")!.injector!.channel).toBe("main");
+    expect(g.ship.bodies.find((b) => b.id === "p{n}-shield")!.shield!.from).toEqual(["p{n}-tank-l", "p{n}-tank-r"]);
+    expect(g.ship.bodies.find((b) => b.id === "p{n}-shield")!.shield!.blocks).toContain("main");
+    expect(g.ship.links.every((l) => l.to.startsWith("p{n}-") && (l.from === undefined || l.from.startsWith("p{n}-")))).toBe(true);
+    // Its mixer, with Action A on the game's fire control.
+    expect(thrust.world.mix.rows.find((r) => r.channel === "fire")!.lines[0].control).toBe("fire");
   });
 });

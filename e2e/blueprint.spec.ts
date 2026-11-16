@@ -465,3 +465,29 @@ test("BPD-041 BPD-042 drag the round handle to turn a part in 15° steps, and a 
   expect(after.position.x - after.shape.width! / 2).toBeCloseTo(before.position.x - before.shape.width! / 2, 5);
   expect(after.position.y - after.shape.height! / 2).toBeCloseTo(before.position.y - before.shape.height! / 2, 5);
 });
+
+test("BPD-046 Play in a game: Thrust flies the blueprint's ship, with its battery and generator gauges, and its menus lead back to the designer", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("play-in").click();
+  await page.getByTestId("play-in-thrust").click();
+  await page.waitForURL(/thrust\.html\?blueprint=1/);
+  await expect(page.getByTestId("back-to-blueprint")).toBeVisible();
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("hud-battery")).toBeVisible();
+  await expect(page.getByTestId("hud-generators")).toBeVisible();
+  const ids = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string }[] } } } }).__msb.sandbox().world.bodies.map((b) => b.id));
+  expect(ids).toEqual(expect.arrayContaining(["p1-hull", "p1-battery", "p1-mag-l"]));
+  await page.getByTestId("mth-pause").click();
+  await page.getByTestId("back-to-blueprint").click();
+  await page.waitForURL(/blueprint\.html/);
+  await expect(page.getByTestId("drawing-name")).toBeVisible();
+});
+
+test("BPD-046 the game on its own flies its own ship: no way back to a blueprint, and no power gauges (the game's ship has no power system)", async ({ page }) => {
+  await page.goto("./thrust.html");
+  await expect(page.getByTestId("mth-start")).toBeVisible();
+  await expect(page.getByTestId("back-to-blueprint")).toHaveCount(0);
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-hud")).toBeVisible();
+  await expect(page.getByTestId("hud-battery")).toHaveCount(0);
+});

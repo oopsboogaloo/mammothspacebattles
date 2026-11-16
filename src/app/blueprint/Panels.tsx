@@ -10,7 +10,7 @@ import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
-import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, weldPresetsFor, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
 import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, parts, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
@@ -456,7 +456,8 @@ function WeldProps({ id }: { id: string }) {
   const j = w.joints[0];
   const lim = { ...WELD_PRESETS[1].limits, ...j.limits } as Record<"tension" | "compression" | "shear" | "torque", number>;
   const y = j.yield ?? 0;
-  const preset = WELD_PRESETS.find((p) => (Object.keys(p.limits) as (keyof typeof lim)[]).every((k) => Math.abs(p.limits[k]! - lim[k]) < 1e-6) && Math.abs(p.yield - y) < 1e-9);
+  const presets = weldPresetsFor(bp, id);
+  const preset = presets.find((p) => (Object.keys(p.limits) as (keyof typeof lim)[]).every((k) => Math.abs(p.limits[k]! - lim[k]) < 1e-6) && Math.abs(p.yield - y) < 1e-9);
   const a = component(bp, w.a);
   const b = component(bp, w.b);
   const pts = w.joints.length;
@@ -489,7 +490,7 @@ function WeldProps({ id }: { id: string }) {
       </div>
       <div class="seg">
         <span>Strength</span>
-        {WELD_PRESETS.map((p) => (
+        {presets.map((p) => (
           <button key={p.name} class={preset?.name === p.name ? "on" : ""} onClick={() => edit((bb) => setWeld(bb, id, p.limits, p.yield))}>
             {p.name}
           </button>

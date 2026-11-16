@@ -10,6 +10,7 @@
 
 import { add, cross, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { bodyMass } from "./bodies.ts";
+import { takeEnergy } from "./power.ts";
 import { collide } from "./collide.ts";
 import { massProps } from "./shapes.ts";
 import type { Body, World } from "./world.ts";
@@ -19,6 +20,8 @@ export interface Railgun {
   channel: string;
   /** Launch speed relative to the muzzle, m/s. */
   speed: number;
+  /** Energy each shot draws from its ship's batteries, kJ (PWR-004): with too little stored it doesn't fire. */
+  shot?: number;
 }
 
 /** A railgun's channel is on, through a working control link. */
@@ -54,6 +57,8 @@ export function fireRailguns(world: World, dt: number, addBody: (w: World, b: Bo
     // A blocked muzzle doesn't fire: the shell would appear inside, or past, what blocks it.
     const placed = { shape: shell.shape, position: shell.position, rot: sinCos(angle) };
     if (world.bodies.some((o) => collide(placed, { shape: o.shape, position: o.position, rot: sinCos(o.angle) }, 0, 0)?.points.some((p) => p.separation < 0))) continue;
+    // Powered: the shot's energy, or no shot (PWR-004).
+    if (mag.railgun.shot && !takeEnergy(world, null, b.id, mag.railgun.shot)) continue;
     if (shell.explosive) shell.explosive = { ...shell.explosive, from: b.id, armed: false };
     // The shell's mass leaves the gun, with the momentum it carries.
     const m0 = bodyMass(b);

@@ -6,6 +6,7 @@
 // pushed out by it and turned back at it, and the ship bounces off rock with it. While it is up the
 // ship's engines and gun don't work. It burns fuel fast, and faster for every hit it takes.
 
+import { drainEnergy, takeEnergy } from "./power.ts";
 import { assemblyRoots } from "./joints.ts";
 import { bodyMass } from "./bodies.ts";
 import { add, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
@@ -24,6 +25,14 @@ export interface Shield {
   /** Fuel each hit costs, kg for each N·s of the hit's impulse, and at least `minHit` kg. */
   hitBurn: number;
   minHit: number;
+  /**
+   * Powered instead (PWR-004): while up it draws `draw` kW from its ship's batteries, and each hit
+   * `hitDraw` kJ for each N·s, at least `minHitDraw` kJ; it burns no fuel itself (the generators do).
+   * With too little stored it drops. A ship with no power system keeps it up free.
+   */
+  draw?: number;
+  hitDraw?: number;
+  minHitDraw?: number;
   /** The control channels switched off while it is up (the ship's engines and gun). */
   blocks: string[];
   /** The field's mass, kg: light. */
@@ -138,8 +147,10 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
       const linked = world.links.some((l) => l.kind === "control" && l.to === gen.id && l.channel === s.channel && l.integrity > 0 && !l.off);
       const host = world.bodies.find((b) => b.id === s.to);
       const tanks = fuelOf(world, gen, roots);
+      const powered = s.draw !== undefined;
       const held = linked && gen.integrity > 0 && !!host && roots.get(host.id) === roots.get(gen.id) && (world.controls[s.channel] ?? 0) > 0;
-      if (!held || !tanks.length) {
+      // Powered: its steady draw for this step, or it can't stay up.
+      if (!held || (powered ? !takeEnergy(world, roots, gen.id, s.draw! * dt) : !tanks.length)) {
         s.r = undefined;
         changed = dropField(world, gen) || changed;
         continue;
@@ -169,15 +180,22 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
       // The elastic field's spring (SHD-006).
       if (s.spring && spring(world, field, host, s, roots, dt)) changed = true;
       // Its fuel: a steady burn, and more for each hit in the step before (a new contact with the field).
-      let kg = s.burn * dt;
+      let kg = powered ? 0 : s.burn * dt;
       for (let i = world.events.length - 1; i >= 0 && world.events[i].tick >= world.tick - 1; i--) {
         const e = world.events[i];
         if (e.type !== "collision" || e.tick !== world.tick - 1 || (e.data.a !== id && e.data.b !== id)) continue;
+        const by = e.data.a === id ? String(e.data.b) : String(e.data.a);
+        if (powered) {
+          // A hit drains the batteries; one bigger than they hold empties them, and the field drops next step.
+          const kJ = Math.max(s.minHitDraw ?? 0, (s.hitDraw ?? 0) * Number(e.data.impulse ?? 0));
+          world.events.push({ tick: world.tick, type: "shield.hit", data: { id: gen.id, by, energy: drainEnergy(world, roots, gen.id, kJ) } });
+          continue;
+        }
         const hit = Math.max(s.minHit, s.hitBurn * Number(e.data.impulse ?? 0));
         kg += hit;
-        world.events.push({ tick: world.tick, type: "shield.hit", data: { id: gen.id, by: e.data.a === id ? String(e.data.b) : String(e.data.a), fuel: hit } });
+        world.events.push({ tick: world.tick, type: "shield.hit", data: { id: gen.id, by, fuel: hit } });
       }
-      if (burnFrom(tanks, kg) > 0) changed = true;
+      if (kg > 0 && burnFrom(tanks, kg) > 0) changed = true;
       // Its ship's engines and gun don't work while it is up.
       const root = roots.get(gen.id);
       for (const l of world.links) if (l.kind === "control" && s.blocks.includes(l.channel) && roots.get(l.to) === root) blocked.add(l.id);

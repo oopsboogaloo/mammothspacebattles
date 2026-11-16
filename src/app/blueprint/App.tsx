@@ -5,6 +5,7 @@ import { BlueprintView, view } from "./View.tsx";
 import { removeComponent, removeWeld, KINDS } from "./model.ts";
 import { canRedo, canUndo, current, drawerOpen, edit, mode, overlays, placing, preview, redo, rename, selection, toast, tryOut, undo } from "./store.ts";
 import { TryOut, startTry } from "./TryOut.tsx";
+import { playIn, type PlaytestGame } from "../playtest.ts";
 import { layout, narrow, PanelToggle, setLayout, useNarrow } from "./Layout.tsx";
 import { ControlsPanel, MixerTable, ResponseBox, testHeld, useTestKeys, WiringPanel } from "./Controls.tsx";
 
@@ -59,6 +60,32 @@ function BlueprintName() {
   );
 }
 
+/** For debugging designs (Chloe, 16 November 2026): play a game with this ship; the game's menus lead back. */
+function PlayIn({ disabled }: { disabled: boolean }) {
+  const [open, setOpen] = useState(false);
+  const games: [PlaytestGame, string][] = [
+    ["thrust", "Mammoth Thrust"],
+    ["asteroids", "Mammoth Asteroids"],
+    ["lander", "Mammoth Lander"],
+  ];
+  return (
+    <div class="playin">
+      <button class="ib" disabled={disabled} title={disabled ? "It needs a cockpit to fly" : "Play a game with this ship (for testing)"} onClick={() => setOpen(!open)} data-testid="play-in">
+        ⇱<span class="lbl"> Play in…</span>
+      </button>
+      {open && (
+        <div class="playin-menu" role="menu" onMouseLeave={() => setOpen(false)}>
+          {games.map(([g, name]) => (
+            <button key={g} role="menuitem" onClick={() => playIn(g, current.value)} data-testid={`play-in-${g}`}>
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TopBar() {
   const bp = current.value;
   return (
@@ -100,6 +127,7 @@ function TopBar() {
       <button class="ib fitbtn" title="Show the whole ship (Z)" onClick={() => view.fit()}>
         ⤢<span class="lbl"> Fit</span>
       </button>
+      <PlayIn disabled={!bp.components.some((c) => c.kind === "cockpit")} />
       <button class="try" title="Fly it in the sandbox (Enter)" onClick={startTry} data-testid="try-it" disabled={!bp.ship.bodies.length}>
         ▶<span class="lbl"> TRY IT</span>
       </button>
