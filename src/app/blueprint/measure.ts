@@ -21,6 +21,15 @@ export interface MeasuredRow {
   broke: number;
 }
 
+/**
+ * The wiring and the damage rules as Try it has them: the controls reach only what is welded to the
+ * cockpit, and with no cockpit nothing answers (shipRules.ts).
+ */
+export function shipControls(bp: Blueprint): Record<string, unknown> {
+  const cockpit = bp.components.find((c) => c.kind === "cockpit")?.bodies[0];
+  return cockpit ? { mix: bp.mix, shipRules: { hull: cockpit, ship: { bodies: bp.ship.bodies, links: bp.ship.links } } } : {};
+}
+
 /** The world a measurement runs in: the blueprint's ship alone, at rest, with its wiring. */
 export function measureWorld(bp: Blueprint): World {
   const ship = structuredClone(bp.ship);
@@ -34,7 +43,7 @@ export function measureWorld(bp: Blueprint): World {
       name: "blueprint-measure",
       profile: "sandbox",
       seed: 1,
-      world: { gravity: { x: 0, y: 0 }, bodies: ship.bodies, joints: ship.joints, links: ship.links, mix: bp.mix },
+      world: { gravity: { x: 0, y: 0 }, bodies: ship.bodies, joints: ship.joints, links: ship.links, ...shipControls(bp) },
       timeline: [],
       end: { steps: 1 },
       probes: [],

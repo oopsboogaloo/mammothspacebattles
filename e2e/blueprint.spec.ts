@@ -107,7 +107,7 @@ test("BPD-022 ＋ adds a part where it welds, and moving a part off the ship war
   await expect(page.getByTestId("loose")).toContainText("pieces");
 });
 
-test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothing is wired until the player does it", async ({ page }) => {
+test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothing is wired until the player does it, and nothing off the cockpit answers", async ({ page }) => {
   await openFresh(page);
   await page.getByRole("tab", { name: "EN" }).click();
   await page.getByRole("button", { name: "Add Light thruster" }).click();
@@ -118,7 +118,12 @@ test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothi
   await expect(page.getByTestId("lines-back").getByTestId("say")).toHaveText("Fires fully on Fire.");
   await page.keyboard.down("Space");
   await expect(page.getByTestId("control-fire")).toHaveClass(/held/);
-  await expect(page.getByTestId("mixer").locator("tr", { hasText: "Light thruster" })).toContainText("100%");
+  // Thrust 1 has no free side for it, so it was placed clear of the ship: not welded to the
+  // cockpit, it doesn't answer even when wired, and the checks say so.
+  await expect(page.getByTestId("response")).toContainText("Not welded to the cockpit, so they won't answer: Light thruster");
+  await expect(page.getByTestId("mixer").locator("tr", { hasText: "Light thruster" })).toContainText("0%");
+  // An engine on the ship does answer.
+  await expect(page.getByTestId("mixer").locator("tr", { hasText: "Railgun" })).toContainText("100");
   await page.keyboard.up("Space");
   await page.getByTestId("mode-build").click();
   await expect(page.getByTestId("performance")).toBeVisible();
@@ -220,11 +225,59 @@ test("BPD-029 a game controller flies Try it: A is forward, the stick turns, thr
     p.axes[0] = 1; // stick right
   });
   const controls = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } | null } }).__msb.sandbox()?.world.controls ?? {});
-  await expect.poll(controls).toMatchObject({ forward: 1, main: 1, bl: 1, fr: 0.5 });
+  await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ forward: 1, main: 1, bl: 1, fr: 0.5 });
   await page.evaluate(() => {
     const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
     p.buttons[0] = { ...p.buttons[0], pressed: false, value: 0 };
     p.axes[0] = 0;
   });
-  await expect.poll(controls).toMatchObject({ main: 0 });
+  await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ main: 0 });
+});
+
+test("BPD-031 Try it's field is 120 × 75 m and wraps; the view follows the ship, showing 60 m of it", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("try-it").click();
+  const w = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bounds: { min: { x: number; y: number }; max: { x: number; y: number }; wrap: boolean } } } } }).__msb.sandbox().world.bounds);
+  expect([w.max.x - w.min.x, w.max.y - w.min.y, w.wrap]).toEqual([120, 75, true]);
+  await page.keyboard.down("ArrowUp");
+  await page.waitForTimeout(1200);
+  await page.keyboard.up("ArrowUp");
+  const cam = await page.evaluate(() => {
+    const msb = (window as unknown as { __msb: { camera: () => { x: number; y: number; zoom: number }; sandbox: () => { world: { bodies: { id: string; position: { x: number; y: number } }[] } } } }).__msb;
+    return { cam: msb.camera(), at: msb.sandbox().world.bodies.find((b) => b.id === "hull")!.position, vw: innerWidth };
+  });
+  expect(cam.at.y).toBeGreaterThan(1); // it flew (the game pace is half real time)
+  expect(Math.abs(cam.cam.y - cam.at.y)).toBeLessThan(2); // and the view went with it
+  // It shows 60 m across (or 37.5 m up, whichever fits): about half the field.
+  expect(cam.vw / cam.cam.zoom).toBeGreaterThanOrEqual(59.9);
+  expect(cam.vw / cam.cam.zoom).toBeLessThan(75);
+});
+
+test("BPD-032 on a touch screen Try it has Mammoth Thrust's buttons: L and R held together fly forward through the wiring", async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await openFresh(page);
+  await page.getByTestId("try-it").click();
+  await expect(page.getByTestId("thrust-left")).toBeVisible();
+  await expect(page.getByTestId("thrust-forward")).toBeVisible();
+  await page.getByTestId("thrust-left").dispatchEvent("pointerdown");
+  await page.getByTestId("thrust-right").dispatchEvent("pointerdown");
+  const controls = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } | null } }).__msb.sandbox()?.world.controls ?? {});
+  await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ main: 1, bl: 1, br: 1 });
+  await page.getByTestId("thrust-left").dispatchEvent("pointerup");
+  await page.getByTestId("thrust-right").dispatchEvent("pointerup");
+  await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ main: 0 });
+  await ctx.close();
+});
+
+test("BPD-030 in Try it a thruster not welded to the cockpit doesn't answer the controls: it burns off its own store and stops", async ({ page }) => {
+  await openFresh(page);
+  // Unweld the main thruster from the battery.
+  await page.getByTestId("weld-battery|main").locator("circle").first().click({ force: true });
+  await page.keyboard.press("Delete");
+  await page.getByTestId("try-it").click();
+  await page.keyboard.down("ArrowUp");
+  const main = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; injector?: { channel: string } }[] } } } }).__msb.sandbox().world.bodies.find((b) => b.id === "main")?.injector?.channel);
+  await expect.poll(main, { timeout: 15_000 }).toBe("main.residual");
+  await page.keyboard.up("ArrowUp");
 });

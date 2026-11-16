@@ -19,6 +19,7 @@ import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEA
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
 import { applyMixer, type Mixer } from "./mixer.ts";
+import { runShipRules, type ShipRules } from "./shipRules.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
 import { driveMoon, runMoon, startMoon, type MoonGame, type MoonSpec } from "./moon.ts";
@@ -388,6 +389,8 @@ export interface World {
   frame?: Frame;
   /** The ship's wiring from a blueprint (docs/blueprint/spec.md §10): the controls held set its engines' and devices' channels each step. */
   mix?: Mixer;
+  /** The damage rules of a ship flown outside the games (shipRules.ts): what comes off the cockpit stops answering the controls. */
+  shipRules?: ShipRules;
   /**
    * The ledger's bookkeeping skipped (Chloe, 14 November 2026: in a game nothing reads it). The
    * physics is the same either way: the ledger only records. Set by Mammoth Thrust's page in play;
@@ -477,7 +480,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame; mix?: Mixer } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame; mix?: Mixer; shipRules?: ShipRules } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -502,6 +505,7 @@ export function createWorld(
   };
   if (extra.frame) world.frame = { centre: { ...extra.frame.centre }, omega: extra.frame.omega };
   if (extra.mix) world.mix = structuredClone(extra.mix);
+  if (extra.shipRules) world.shipRules = structuredClone(extra.shipRules);
   for (const body of bodies) addBody(world, body);
   // The ground's rock, from its outline (TER-001).
   if (extra.terrain) world.terrain = startTerrain(world, extra.terrain, TERRAIN_OPS);
@@ -1831,6 +1835,9 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
       addDelta(sources.boundary, diff(t0, after));
     }
   }
+
+  // A blueprint ship's damage rules (the designer's Try it): what comes off the cockpit stops answering.
+  if (world.shipRules) runShipRules(world);
 
   // Moon Mammoth (MMN-051, MMN-053): the mammoth put back at a flag, and a rock let go or put back,
   // through the boundary.

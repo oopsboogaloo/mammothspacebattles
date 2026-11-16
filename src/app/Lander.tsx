@@ -339,7 +339,7 @@ export function Thrust({ channel, label, side, className = "lander-thrust" }: { 
   return (
     <button
       class={`${className} ${side}`}
-      aria-label={side === "fire" ? "Fire" : side === "reverse" ? "Reverse" : side === "tractor" ? "Tractor" : side === "left" ? "Left" : "Right"}
+      aria-label={({ fire: "Fire", reverse: "Reverse", tractor: "Tractor", shield: "Shield", forward: "Forward", left: "Left", right: "Right" } as Record<string, string>)[side] ?? label}
       data-testid={`thrust-${side}`}
       data-hold
       onPointerDown={(e) => {

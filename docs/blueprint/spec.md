@@ -362,6 +362,19 @@ Differences from the design above:
   far as it is pushed; forward is the stick up, the right trigger or A; reverse the stick down, the
   left trigger or B; X or the right bumper fires, Y is the tractor, the left bumper the shield;
   Start pauses. It sets the player's controls, which the blueprint's wiring mixes. Test: BPD-029.
+- **Try it, larger, with touch (16 November 2026):** the field is 120 × 75 m (was 60 × 37.5) and
+  still wraps; the view follows the ship, showing 60 m of it, and goes on past an edge with it as
+  Mammoth Thrust's does. On a touch screen it has Mammoth Thrust's buttons (L and R in the corners,
+  both together forward through the wiring; REV, SHIELD, FIRE, BEAM), and FWD for a ship wired
+  without that rule (`?touch=1` shows them with a mouse). Tests: BPD-031, BPD-032.
+- **Only what is welded to the cockpit answers (16 November 2026):** in Try it and Measure the
+  games' damage rules apply (MAS-037, MAS-038, MTH-062; now `src/core/shipRules.ts`, a world's
+  `shipRules`): an engine not welded to the cockpit has its fuel line cut, burns off what its own
+  store holds on a channel of its own, held on, and is then dead; one still joined to a tank that
+  came off with it burns on from that tank until it is empty; the tank leaks where the line left
+  it; anything else controlled loses its control links. With no cockpit nothing answers. The
+  estimate leaves such parts out, the checks name them, and the mixer's NOW shows them at 0%.
+  Test: BPD-030.
 - **Mirror (built 16 November 2026):** ⇋ Mirror on a selected part makes its mirror image across the
   ship's middle line (x = 0): shape, nozzle and internal welds reflected, welded where it touches,
   fed if an engine, named for the other side (BL → BR, L → R) and wired as the mirror of the

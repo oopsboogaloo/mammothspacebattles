@@ -298,6 +298,13 @@ export function pieces(bp: Blueprint): string[][] {
   return [...groups.values()];
 }
 
+/** The components welded, directly or through others, to the (first) cockpit: the ship the controls reach. */
+export function joinedToCockpit(bp: Blueprint): Set<string> {
+  const cockpit = bp.components.find((c) => c.kind === "cockpit");
+  if (!cockpit) return new Set();
+  return new Set(pieces(bp).find((p) => p.includes(cockpit.id)) ?? [cockpit.id]);
+}
+
 export function stats(bp: Blueprint): Stats {
   let m = 0;
   let mx = 0;
@@ -337,12 +344,14 @@ export function stats(bp: Blueprint): Stats {
 /** What holding these controls does, estimated: acceleration ahead (+y) and sideways (+x), m/s², and turn, rad/s² (+ anticlockwise). */
 export function response(bp: Blueprint, controls: Record<string, number>, st: Stats = stats(bp)): { ahead: number; side: number; turn: number; throttles: Record<string, number> } {
   const values = mixerValues(bp.mix, controls);
+  // Only what is welded to the cockpit answers the controls (shipRules.ts).
+  const joined = joinedToCockpit(bp);
   let fx = 0;
   let fy = 0;
   let tau = 0;
   const throttles: Record<string, number> = {};
   for (const e of engines(bp)) {
-    const t = values[e.channel] ?? 0;
+    const t = joined.has(e.id) ? (values[e.channel] ?? 0) : 0;
     throttles[e.id] = t;
     const f = { x: e.dir.x * e.thrust * t, y: e.dir.y * e.thrust * t };
     fx += f.x;
@@ -1036,8 +1045,13 @@ export function describeRow(row: MixerRow | undefined, name: (control: string) =
 export function wiringChecks(bp: Blueprint, controls: { id: string; name: string }[]): { ok: boolean; text: string }[] {
   const out: { ok: boolean; text: string }[] = [];
   const name = (id: string) => controls.find((c) => c.id === id)?.name ?? id;
+  const joined = joinedToCockpit(bp);
+  if (!bp.components.some((c) => c.kind === "cockpit")) out.push({ ok: false, text: "No cockpit: nothing answers the controls" });
+  const loose = bp.components.filter((c) => channelsOf(bp, c.id).length && !joined.has(c.id));
+  if (loose.length && joined.size) out.push({ ok: false, text: `Not welded to the cockpit, so they won't answer: ${loose.map((c) => c.label).join(", ")}` });
   const unwired = bp.components.filter((c) => channelsOf(bp, c.id).some((ch) => !bp.mix.rows.find((r) => r.channel === ch)?.lines.length));
   out.push(unwired.length ? { ok: false, text: `Not wired: ${unwired.map((c) => c.label).join(", ")}` } : { ok: true, text: "Every engine and device is driven by a control" });
+  out.sort((a, b) => Number(a.ok) - Number(b.ok));
   const st = stats(bp);
   for (const c of ["forward", "reverse"]) {
     const r = response(bp, { [c]: 1 }, st);

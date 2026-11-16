@@ -31,6 +31,7 @@ export { runDuel, startDuel, type Duel, type DuelGoal, type DuelPhase, type Duel
 export * from "./lander.ts";
 export * from "./arcade.ts";
 export * from "./mixer.ts";
+export * from "./shipRules.ts";
 export * from "./terrain.ts";
 export * from "./thrust.ts";
 export * from "./moon.ts";
