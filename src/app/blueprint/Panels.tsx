@@ -2,6 +2,7 @@
 // blueprints drawer.
 import { useState } from "preact/hooks";
 import { NumberControl } from "./NumberControl.tsx";
+import { layout, StatsFold } from "./Layout.tsx";
 import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
@@ -207,7 +208,9 @@ export function PerformanceBox() {
       <div class="sh">
         PERFORMANCE <small>full tanks · {m ? "✓ measured" : "est."}</small>
         <MeasureButton bp={bp} measuredNow={!!m} />
+        <StatsFold />
       </div>
+      {layout.value.stats && (
       <table>
         <tbody>
           {rows.map(([k, v, now, was]) => {
@@ -223,6 +226,7 @@ export function PerformanceBox() {
           })}
         </tbody>
       </table>
+      )}
       {loose && (
         <div class="warnrow" data-testid="loose">
           ▲ Not all joined: the ship is in {st.pieces} pieces

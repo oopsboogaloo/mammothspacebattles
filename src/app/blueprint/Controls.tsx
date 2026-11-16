@@ -7,6 +7,7 @@ import { mixerValues, type MixerLine, type MixerRow } from "../../core/index.ts"
 import { addControl, bindKey, controlName, keyLabel, keysFor, playerControls, playerKeys, unbindKey } from "./bindings.ts";
 import { channelsOf, component, componentOfChannel, describeRow, response, setRow, setRules, stats, wiringChecks, type Blueprint } from "./model.ts";
 import { NumberControl } from "./NumberControl.tsx";
+import { layout, StatsFold } from "./Layout.tsx";
 import { measurementOf } from "./measureClient.ts";
 import { MeasureButton } from "./Panels.tsx";
 import { current, edit, endGesture, live, mode, selection } from "./store.ts";
@@ -399,7 +400,10 @@ export function ResponseBox() {
       <div class="sh">
         RESPONSE <small>what each control does · {m ? "✓ measured" : "est."}</small>
         <MeasureButton bp={bp} measuredNow={!!m} />
+        <StatsFold />
       </div>
+      {layout.value.stats && (
+      <>
       <table>
         <thead>
           <tr>
@@ -430,6 +434,8 @@ export function ResponseBox() {
           </div>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }

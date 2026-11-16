@@ -380,3 +380,59 @@ html, body, #root { height: 100%; overflow: hidden; }
 .bpapp .measure { height: 22px; padding: 0 8px; border-radius: 3px; font-size: 11px; letter-spacing: .04em; color: var(--cyan); border: 1px solid rgba(127, 212, 255, .5); background: none; float: none; margin: 0; }
 .bpapp .measure.busy { border-style: dashed; display: inline-flex; align-items: center; }
 .bpapp .mtick { color: var(--go); }
+
+/* Panels shown or hidden from the top bar's two toggles (Layout.tsx). A hidden panel's column is
+   empty; on narrow screens an open panel floats over the blueprint from its edge. */
+.bpapp .grid { position: relative; }
+.bpapp .grid.lclosed { grid-template-columns: 0 minmax(0, 1fr) 300px; }
+.bpapp .grid.rclosed { grid-template-columns: 248px minmax(0, 1fr) 0; }
+.bpapp .grid.lclosed.rclosed { grid-template-columns: 0 minmax(0, 1fr) 0; }
+.bpapp .grid.narrow .panel.left, .bpapp .grid.narrow .panel.right { position: absolute; width: min(300px, 86vw); z-index: 20; box-shadow: 0 10px 40px rgba(0, 0, 0, .55); }
+.bpapp .ptoggle { padding: 0 8px; color: var(--dim); }
+.bpapp .ptoggle.on { color: var(--cyan); border-color: var(--cyan); background: rgba(127, 212, 255, .08); }
+.bpapp .ptoggle svg { display: block; }
+.bpapp .stats .sfold { height: 22px; min-width: 22px; padding: 0 4px; color: var(--cyan); }
+
+/* The top bar on narrower screens: icons for words. */
+@media (max-width: 1180px) {
+  .bpapp .top { gap: 5px; padding: 0 6px; }
+  .bpapp .tog .ib .lbl, .bpapp .title .tl { display: none; }
+  .bpapp .title { padding: 0 8px; gap: 6px; }
+  .bpapp .tn { max-width: 170px; font-size: 16px; }
+  .bpapp .modes button { padding: 0 8px; letter-spacing: .08em; }
+}
+@media (max-width: 760px) {
+  .bpapp .bp-menu span, .bpapp .ib .lbl, .bpapp .badge { display: none; }
+  .bpapp .try { padding: 0 12px; }
+  .bpapp .tn { max-width: 110px; }
+  .bpapp .tblock { display: none; }
+}
+@media (max-width: 560px) {
+  .bpapp .top { overflow-x: auto; }
+  .bpapp .tog { display: none; }
+}
+.bpapp .top > * { flex-shrink: 0; }
+.bpapp .top .title { flex-shrink: 1; min-width: 0; }
+.bpapp .modes button { white-space: nowrap; }
+.bpapp .status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; line-height: 26px; }
+@media (max-width: 1180px) { .bpapp .modes button { font-size: 11px; letter-spacing: .04em; padding: 0 7px; } }
+@media (max-width: 760px) {
+  .bpapp .zoom { top: auto; bottom: 56px; }
+  .bpapp .stats { min-width: 0; max-width: calc(100% - 20px); left: 10px; }
+  .bpapp .stats .sh small { display: none; }
+}
+/* A floating panel is placed within its own grid cell (the rail's), so it sits beside the rail. */
+.bpapp .grid.narrow .panel.left, .bpapp .grid.narrow .panel.right { top: 0; bottom: 0; }
+.bpapp .grid.narrow .panel.left { left: 100%; }
+.bpapp .grid.narrow .panel.right { right: 100%; left: auto; }
+@media (pointer: coarse) { .bpapp .grid.narrow .panel.left, .bpapp .grid.narrow .panel.right { top: 0; bottom: 0; } }
+@media (max-width: 560px) {
+  .bpapp .top .grp button[aria-label="Redo"], .bpapp .fitbtn { display: none; }
+}
+@media (max-width: 1180px) {
+  .bpapp .title .badge { display: none; }
+  .bpapp .top .title { min-width: 76px; }
+}
+@media (max-width: 1000px) {
+  .bpapp .bp-menu span, .bpapp .fitbtn .lbl { display: none; }
+}

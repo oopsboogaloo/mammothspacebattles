@@ -137,3 +137,44 @@ test("BPD-025 Measure runs the real physics in the background and shows the meas
   await rate.locator("input.num").press("Enter");
   await expect(page.getByTestId("performance")).toContainText("est.");
 });
+
+test("BPD-026 two toggles in the top bar hide and show the left and right panels, the blueprint widening; the choice is kept after a reload", async ({ page }) => {
+  await openFresh(page);
+  const view = page.getByTestId("blueprint-view");
+  const wide = (await view.boundingBox())!.width;
+  await expect(page.getByTestId("toggle-left")).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("toggle-left").click();
+  await page.getByTestId("toggle-right").click();
+  await expect(page.getByRole("region", { name: "Components" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Properties" })).toHaveCount(0);
+  await expect(page.getByTestId("toggle-right")).toHaveAttribute("aria-pressed", "false");
+  expect((await view.boundingBox())!.width).toBeGreaterThan(wide + 500);
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Components" })).toHaveCount(0);
+  await page.getByTestId("toggle-right").click();
+  await expect(page.getByRole("region", { name: "Properties" })).toBeVisible();
+  // \ toggles both.
+  await page.keyboard.press("Backslash");
+  await expect(page.getByRole("region", { name: "Properties" })).toHaveCount(0);
+  await page.keyboard.press("Backslash");
+  await expect(page.getByRole("region", { name: "Components" })).toBeVisible();
+  // The performance table folds to its header.
+  await page.getByTestId("fold-stats").click();
+  await expect(page.getByTestId("performance")).not.toContainText("Mass");
+});
+
+test("BPD-026 on a folding phone's inner screen the panels start hidden, open over the blueprint without narrowing it, and nothing scrolls the page", async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 884, height: 1104 }, hasTouch: true });
+  const page = await ctx.newPage();
+  await openFresh(page);
+  const view = page.getByTestId("blueprint-view");
+  await expect(page.getByTestId("toggle-left")).toHaveAttribute("aria-pressed", "false");
+  const w = (await view.boundingBox())!.width;
+  expect(w).toBeGreaterThan(860);
+  await page.getByTestId("toggle-right").tap();
+  await expect(page.getByRole("region", { name: "Properties" })).toBeVisible();
+  expect((await view.boundingBox())!.width).toBe(w);
+  const scrolls = await page.evaluate(() => [document.documentElement.scrollHeight > innerHeight, document.documentElement.scrollWidth > innerWidth]);
+  expect(scrolls).toEqual([false, false]);
+  await ctx.close();
+});
