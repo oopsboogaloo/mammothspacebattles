@@ -2,7 +2,7 @@
 // designer's regular rockets have one.
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { component, loxodonPreset, phiomiaPreset, stegodonPreset, thrustOgPreset, thrustPreset, mastodonPreset, type Blueprint } from "../../src/app/blueprint/model.ts";
+import { component, loxodonPreset, mirrorComponent, phiomiaPreset, removeComponent, setParam, stegodonPreset, thrustOgPreset, thrustPreset, mastodonPreset, type Blueprint } from "../../src/app/blueprint/model.ts";
 import { measureWorld } from "../../src/app/blueprint/measure.ts";
 import { getProfile, mixture, stepInPlace, type World } from "../../src/core/index.ts";
 import { nozzleFlow } from "../../src/core/nozzle.ts";
@@ -105,5 +105,30 @@ describe("the new rockets' nozzles (PRP-012)", () => {
     expect(b.y).toBeGreaterThan(0);
     // Equal and opposite sideways, to the chamber grid's resolution at the throat's edges.
     expect(Math.abs(a.x + b.x)).toBeLessThan(0.01 * Math.abs(a.x));
+  }, 120_000);
+
+  it("PRP-012 a nozzle that narrows (negative flare) has its narrowest point at the exit: it declares no nozzle and keeps the throat's jet, and the blueprint still measures", () => {
+    const bp = setParam(presets.t1, "main", "flare", -1);
+    expect(bp.ship.bodies.find((b) => b.id === "main")!.injector!.nozzle).toBeUndefined();
+    expect(() => measureWorld(bp)).not.toThrow();
+    // And back to a flare of 0 or more, it has one again.
+    expect(setParam(bp, "main", "flare", 5).ship.bodies.find((b) => b.id === "main")!.injector!.nozzle).toBeDefined();
+  });
+
+  it("PRP-012 a mirrored engine's walls are still pushed outward: each wall's side comes from where it is, not the order it is listed in", () => {
+    const out = mirrorComponent(removeComponent(presets.phi, "eng-r"), "eng-l");
+    if ("error" in out) throw new Error(out.error);
+    const w = measureWorld(out.bp);
+    stepInPlace(w, [{ type: "control.set", channel: "forward", value: 1 }], sandbox);
+    for (let i = 0; i < 120; i++) stepInPlace(w, [], sandbox);
+    const head = w.bodies.find((b) => b.id === out.id)!;
+    const shape = vesselShape(w, head)!;
+    expect(shape.nozzle).toBeDefined();
+    const loads = wallLoads(w, head, shape, 1 / 240);
+    for (const id of shape.nozzle!.walls) {
+      const wall = w.bodies.find((b) => b.id === id)!;
+      // The engine fires down, so outward is away from the head's x.
+      expect(Math.sign(loads.get(id)!.x), id).toBe(Math.sign(wall.position.x - head.position.x));
+    }
   }, 120_000);
 });

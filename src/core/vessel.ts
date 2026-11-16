@@ -874,9 +874,13 @@ export function wallLoads(world: World, b: Body, shape: VesselShape, dt: number)
     const along = nz.length / sc.c; // each wall's length
     const N = P * flow.wallPressure * along;
     let forward = { x: 0, y: 0 };
-    for (const [k, side] of [[0, -1], [1, 1]] as const) {
-      const body = byId.get(nz.walls[k]);
+    const mid = (shape.openFrom + shape.openTo) / 2;
+    for (const id of nz.walls) {
+      const body = byId.get(id);
       if (!body) continue;
+      // Which side of the axis it is on, from where it is (a mirrored engine lists its walls the other way round).
+      const rel = sub(invRotate(q, sub(body.position, b.position)), f.outlet);
+      const side = dot(rel, f.perp) < mid ? -1 : 1;
       // Engine frame: the wall runs from the throat's edge, out by the half-angle; its normal points away from the axis and upstream.
       const edge = side < 0 ? shape.openFrom : shape.openTo;
       const tangent = add(scale(f.dir, sc.c), scale(f.perp, side * sc.s));

@@ -1258,8 +1258,13 @@ export function buildRocket(bp: Blueprint, compId: string, r: Rocket): Blueprint
   c.bodies = [h.id, ...made.map((b) => b.id)];
   c.rocket = { ...r };
   // Its nozzle works (PRP-012): the exhaust leaves at the exit. Only these rockets declare one; the
-  // OG engines and the double engine keep the throat's jet.
-  if (h.injector) h.injector = { ...h.injector, nozzle: { length: r.nozzleLength, flare: r.flare, walls: [`${h.id}-nz-a`, `${h.id}-nz-b`] } };
+  // OG engines and the double engine keep the throat's jet. A nozzle that narrows (a negative flare)
+  // has its narrowest point at the exit, not the throat: 1D theory doesn't hold, so it keeps the throat's jet too.
+  if (h.injector) {
+    const inj = { ...h.injector };
+    delete inj.nozzle;
+    h.injector = r.flare >= 0 ? { ...inj, nozzle: { length: r.nozzleLength, flare: r.flare, walls: [`${h.id}-nz-a`, `${h.id}-nz-b`] } } : inj;
+  }
   // Its gas: the injector a little into the chamber, and the interior it may hold, chamber to nozzle exit.
   const inj = h.injector!;
   inj.outlet = { x: 0, y: round(top - Math.min(0.05, r.chamberLength / 2)) };
