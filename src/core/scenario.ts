@@ -11,6 +11,7 @@ import { generateAsteroid, type AsteroidSpec } from "./asteroid.ts";
 import type { LandingGoal } from "./landing.ts";
 import type { DuelGoal } from "./duel.ts";
 import type { ArcadeSpec } from "./arcade.ts";
+import type { Mixer } from "./mixer.ts";
 import type { TerrainSpec } from "./terrain.ts";
 import type { ThrustSpec } from "./thrust.ts";
 import type { MoonSpec } from "./moon.ts";
@@ -71,7 +72,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame; mix?: Mixer };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -535,6 +536,45 @@ function validateRect(v: V, min: unknown, max: unknown, path: string, minKey = "
   if (isObj(min) && isObj(max) && typeof min.x === "number" && typeof max.x === "number" && typeof min.y === "number" && typeof max.y === "number") {
     if (!(max.x > min.x) || !(max.y > min.y)) err(v, `${path}.${maxKey}`, `must be above and right of ${minKey}`);
   }
+}
+
+/** A blueprint ship's wiring (docs/blueprint/spec.md §10; mixer.ts). */
+function validateMixer(v: V, m: unknown, path: string): void {
+  if (!isObj(m)) return err(v, path, "must be an object {rules?, rows}");
+  if (m.rules !== undefined) {
+    if (!Array.isArray(m.rules)) err(v, `${path}.rules`, "must be a list");
+    else
+      m.rules.forEach((r: unknown, i: number) => {
+        const p = `${path}.rules[${i}]`;
+        if (!isObj(r) || !Array.isArray(r.opposites) || r.opposites.length !== 2) return err(v, `${p}.opposites`, "must be two controls' names");
+        r.opposites.forEach((c: unknown, k: number) => str(v, c, `${p}.opposites[${k}]`));
+        if (r.both !== undefined) str(v, r.both, `${p}.both`);
+      });
+  }
+  if (!Array.isArray(m.rows)) return err(v, `${path}.rows`, "must be a list of rows");
+  const seen = new Set<string>();
+  m.rows.forEach((row: unknown, i: number) => {
+    const p = `${path}.rows[${i}]`;
+    if (!isObj(row)) return err(v, p, "must be an object {channel, lines}");
+    if (str(v, row.channel, `${p}.channel`)) {
+      if (seen.has(row.channel as string)) err(v, `${p}.channel`, "is driven by another row too");
+      seen.add(row.channel as string);
+    }
+    if (row.combine !== undefined && !["max", "sum", "min"].includes(row.combine as string)) err(v, `${p}.combine`, 'must be "max", "sum" or "min"');
+    if (row.limit !== undefined) num(v, row.limit, `${p}.limit`, { min: 0, max: 1 });
+    if (!Array.isArray(row.lines)) return err(v, `${p}.lines`, "must be a list of lines");
+    row.lines.forEach((l: unknown, k: number) => {
+      const lp = `${p}.lines[${k}]`;
+      if (!isObj(l)) return err(v, lp, "must be an object {control, weight, ease?}");
+      str(v, l.control, `${lp}.control`);
+      num(v, l.weight, `${lp}.weight`, { min: 0, max: 1 });
+      if (l.ease !== undefined) {
+        if (!isObj(l.ease)) return err(v, `${lp}.ease`, "must be an object {control, amount}");
+        str(v, l.ease.control, `${lp}.ease.control`);
+        num(v, l.ease.amount, `${lp}.ease.amount`, { min: 0, max: 1 });
+      }
+    });
+  });
 }
 
 function validateFill(v: V, f: unknown, path: string): void {
@@ -1123,6 +1163,7 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
         num(v, f.omega, "$.world.frame.omega", {});
       }
     }
+    if (data.world.mix !== undefined) validateMixer(v, data.world.mix, "$.world.mix");
     if (data.world.thrust !== undefined) validateThrust(v, data.world.thrust, data.world.bodies, "$.world.thrust");
     if (data.world.moon !== undefined) validateMoon(v, data.world.moon, data.world.bodies, "$.world.moon");
   }
@@ -1248,7 +1289,7 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, moon: scn.world.moon, terrain: scn.world.terrain, frame: scn.world.frame },
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, moon: scn.world.moon, terrain: scn.world.terrain, frame: scn.world.frame, mix: scn.world.mix },
     getProfile(scn.profile),
   );
 }

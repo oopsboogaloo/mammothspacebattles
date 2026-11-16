@@ -18,6 +18,7 @@ import { collide } from "./collide.ts";
 import { applyDamage, BREACH_WIDTH, defaultBreach, LEAK_PARCEL, LEAK_RADIUS, LEAK_SPEED, leakRate, type Breach, type Material } from "./damage.ts";
 import { judgeLanding, startLanding, type Challenge, type LandingGoal } from "./landing.ts";
 import { runDuel, startDuel, type Duel, type DuelGoal } from "./duel.ts";
+import { applyMixer, type Mixer } from "./mixer.ts";
 import { arcadeMix, mixControls, runArcade, startArcade, type ArcadeGame, type ArcadeOps, type ArcadeSpec } from "./arcade.ts";
 import { runThrust, startThrust, type ThrustGame, type ThrustSpec } from "./thrust.ts";
 import { driveMoon, runMoon, startMoon, type MoonGame, type MoonSpec } from "./moon.ts";
@@ -385,6 +386,8 @@ export interface World {
    * outside the frame stays put on screen while the frame turns under it. Their work is the field's.
    */
   frame?: Frame;
+  /** The ship's wiring from a blueprint (docs/blueprint/spec.md §10): the controls held set its engines' and devices' channels each step. */
+  mix?: Mixer;
   /**
    * The ledger's bookkeeping skipped (Chloe, 14 November 2026: in a game nothing reads it). The
    * physics is the same either way: the ledger only records. Set by Mammoth Thrust's page in play;
@@ -474,7 +477,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame; mix?: Mixer } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -498,6 +501,7 @@ export function createWorld(
     pendingDebug: [],
   };
   if (extra.frame) world.frame = { centre: { ...extra.frame.centre }, omega: extra.frame.omega };
+  if (extra.mix) world.mix = structuredClone(extra.mix);
   for (const body of bodies) addBody(world, body);
   // The ground's rock, from its outline (TER-001).
   if (extra.terrain) world.terrain = startTerrain(world, extra.terrain, TERRAIN_OPS);
@@ -1438,6 +1442,8 @@ export function stepInPlace(world: World, commands: readonly Command[], profile:
   // Mammoth Asteroids' ship: the player's controls drive its engines (MAS-035).
   if (world.arcade?.spec.mix) arcadeMix(world);
   if (world.thrust?.spec.mix) mixControls(world, world.thrust.spec.mix);
+  // A blueprint ship's wiring (the designer's Try it).
+  if (world.mix) applyMixer(world);
   // AI pilots decide and set their own channels, as a player's keys would (AIP-001, AIP-002).
   if (world.bodies.some((b) => b.pilot)) runPilots(world, profile.timestep);
   mark("commands");
