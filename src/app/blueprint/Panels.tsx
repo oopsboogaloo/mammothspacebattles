@@ -2,9 +2,9 @@
 // blueprints drawer.
 import { useState } from "preact/hooks";
 import { NumberControl } from "./NumberControl.tsx";
-import { KIND_COLOUR } from "./View.tsx";
-import { body, component, engines, KINDS, params, removeComponent, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
-import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, presets, remove, rename, say, selection } from "./store.ts";
+import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
+import { addComponent, body, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
 
@@ -29,7 +29,58 @@ export const CATALOGUE: CatalogueItem[] = [
   { kind: "utility", name: "Shield emitter", from: "shield" },
 ];
 
-export const pickedKind = { value: 1 };
+/** Adds a part at the nearest free place that welds it to the ship (＋, double-click, Duplicate). */
+export function addAtFreeSpot(tpl: Blueprint, from: string): void {
+  const made = instantiate(current.value, tpl, from);
+  const spot = freeSpot(current.value, made.bodies, weldingOf(made.comp));
+  let welded = false;
+  edit((b) => {
+    const out = addComponent(b, made, spot.dx, spot.dy);
+    welded = out.ship.joints.some((j) => made.comp.bodies.includes(j.a) || made.comp.bodies.includes(j.b));
+    return out;
+  });
+  selection.value = { type: "component", id: made.comp.id };
+  if (!welded) say(`${made.comp.label} is placed clear of the ship: there's no free side it fits against. Drag it where it should weld.`);
+}
+
+/** Dragging a card from the list onto the blueprint (§3.1). */
+function dragFromList(e: PointerEvent, tpl: Blueprint, from: string): void {
+  if (e.button !== 0) return;
+  e.preventDefault(); // no text selection while dragging
+  const start = { x: e.clientX, y: e.clientY };
+  let started = false;
+  const move = (m: PointerEvent) => {
+    if (!started) {
+      if (Math.hypot(m.clientX - start.x, m.clientY - start.y) < 6) return;
+      started = true;
+      placing.value = { made: instantiate(current.value, tpl, from), at: null };
+    }
+    const w = view.clientToWorld?.(m.clientX, m.clientY);
+    const pl = placing.value;
+    if (!w || !pl) return;
+    if (!w.inside) {
+      placing.value = { ...pl, at: null };
+      preview.value = null;
+      return;
+    }
+    placing.value = placeAt(pl, w, m.shiftKey);
+  };
+  const up = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    window.removeEventListener("pointercancel", up);
+    const pl = placing.value;
+    if (!started || !pl) return;
+    if (pl.at) drop(pl);
+    else {
+      placing.value = null;
+      preview.value = null;
+    }
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+  window.addEventListener("pointercancel", up);
+}
 
 function Thumb({ bp, ids }: { bp: Blueprint; ids: string[] }) {
   const outlines = ids.map((id) => worldVertices(body(bp, id)));
@@ -85,14 +136,21 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
           const mass = c ? c.bodies.reduce((s, id) => s + body(preset, id).mass, 0) : 0;
           const size = b?.shape.kind === "box" ? `${b.shape.width} × ${b.shape.height} m` : "";
           return (
-            <div class="card" key={it.name}>
+            <div
+              class={`card${placing.value && !placing.value.moving && placing.value.made.comp.label.startsWith(it.name.split(" ")[0]) ? " picked" : ""}`}
+              key={it.name}
+              data-testid={`card-${it.from}`}
+              title="Drag onto the blueprint, double-click, or ＋"
+              onPointerDown={(e) => !(e.target as HTMLElement).closest("button") && dragFromList(e, preset, it.from)}
+              onDblClick={() => addAtFreeSpot(preset, it.from)}
+            >
               <div class="thumb">{c && <Thumb bp={preset} ids={c.bodies} />}</div>
               <div class="ctext">
                 <div class="cname">{it.name}</div>
                 <div class="cstat">{size || `${b?.injector ? `${b.injector.rate} kg/s` : ""}`}</div>
                 <div class="cstat">{mass.toFixed(2)} kg</div>
               </div>
-              <button class="add" title="Add to the blueprint" aria-label={`Add ${it.name}`} onClick={() => say("Adding parts (＋, drag or double-click) comes in the next build stage.")}>
+              <button class="add" title="Add to the blueprint" aria-label={`Add ${it.name}`} onClick={() => addAtFreeSpot(preset, it.from)}>
                 ＋
               </button>
             </div>
@@ -110,7 +168,8 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
 const n = (x: number, d = 1) => (Number.isFinite(x) ? x.toFixed(d) : "—");
 
 export function PerformanceBox() {
-  const bp = current.value;
+  // While a part is being placed, what dropping it would do.
+  const bp = preview.value ?? current.value;
   const base = baseline.value;
   const st = stats(bp);
   const bs = stats(base);
@@ -134,6 +193,7 @@ export function PerformanceBox() {
     ["Full-burn time", `${Number.isFinite(burn) ? n(burn, 0) : "—"} s`, burn, burn],
     ["Joins", `${st.welds} welds · ${st.parts} parts`, st.welds, bs.welds],
   ];
+  const loose = st.pieces > 1;
   return (
     <div class="stats" data-testid="performance">
       <div class="sh">
@@ -154,6 +214,11 @@ export function PerformanceBox() {
           })}
         </tbody>
       </table>
+      {loose && (
+        <div class="warnrow" data-testid="loose">
+          ▲ Not all joined: the ship is in {st.pieces} pieces
+        </div>
+      )}
     </div>
   );
 }
@@ -267,6 +332,14 @@ function ComponentProps({ id }: { id: string }) {
         </div>
       </div>
       <div class="actions">
+        <button data-testid="duplicate-part" title="Another like it, placed where it welds (Ctrl+D)" onClick={() => addAtFreeSpot(current.value, id)}>
+          ⧉ Duplicate
+        </button>
+        {c.kind === "engine" && (
+          <button data-testid="flip-part" title="Turn it round to push the other way" onClick={() => edit((b) => flipComponent(b, id))}>
+            ↕ Flip
+          </button>
+        )}
         <button
           class="danger"
           data-testid="remove-part"

@@ -1,7 +1,7 @@
 // The blueprint designer's model (docs/blueprint/spec.md; src/app/blueprint/model.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { body, component, engineGeom, jointPoint, params, reweld, setParam, stats, thrustPreset, welds, worldVertices, response } from "../../src/app/blueprint/model.ts";
+import { addComponent, body, component, engineGeom, flipComponent, freeSpot, instantiate, jointPoint, overlaps, params, place, removeComponent, reweld, setParam, stats, thrustPreset, welds, weldingOf, worldVertices, response } from "../../src/app/blueprint/model.ts";
 import { mixerValues, steerValues } from "../../src/core/index.ts";
 
 const scn = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
@@ -153,5 +153,73 @@ describe("typed numbers", () => {
     expect(parseTyped("abc", "m")).toBeNull();
     expect(parseTyped("1+", "m")).toBeNull();
     expect(parseTyped("alert(1)", "m")).toBeNull();
+  });
+});
+
+describe("placing parts", () => {
+  it("BPD-022 a new tank dropped near where Tank R was snaps flush against Generator R, lines up, and welds at two points", () => {
+    const b = removeComponent(bp, "tank-r");
+    const made = instantiate(b, bp, "tank-r");
+    // The template sits where Tank R was; drop it 0.15 m out and 0.1 m low.
+    const p = place(b, made.bodies, weldingOf(made.comp), 0.15, -0.1);
+    expect(p.snapped).toBe(true);
+    expect(p.overlap).toBe(false);
+    expect(p.dx).toBeCloseTo(0, 9);
+    expect(p.dy).toBeCloseTo(0, 9);
+    expect(p.touches).toContain("gen-r");
+    const added = addComponent(b, made, p.dx, p.dy);
+    const w = welds(added).find((x) => x.id === `gen-r|${made.comp.id}`)!;
+    expect(w.joints.length).toBe(2);
+    // It feeds every engine, and has no controls of its own.
+    const feeds = added.ship.links.filter((l) => l.kind === "feed" && l.from === made.bodies[0].id);
+    expect(new Set(feeds.map((l) => (l as { to: string }).to))).toEqual(new Set(["main", "back-l", "back-r", "front-l", "front-r"]));
+    expect(added.mix.rows.length).toBe(bp.mix.rows.length);
+  });
+
+  it("BPD-022 a part can't be dropped into another; with snapping off it lands on the 0.05 m grid", () => {
+    const made = instantiate(bp, bp, "tank-r");
+    expect(place(bp, made.bodies, weldingOf(made.comp), -2.05, 0).overlap).toBe(true);
+    const p = place(bp, made.bodies, weldingOf(made.comp), 2.013, 3.022, { free: true });
+    expect(Math.abs((made.bodies[0].position.x + p.dx) / 0.05 - Math.round((made.bodies[0].position.x + p.dx) / 0.05))).toBeLessThan(1e-6);
+    expect(overlaps([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }], [{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }, { x: 1, y: 1 }])).toBe(false);
+  });
+
+  it("BPD-022 a new engine gets its own channel and an empty mixer row (the player wires it), fuel from every tank, and a spot that overlaps nothing", () => {
+    const made = instantiate(bp, bp, "back-l");
+    const spot = freeSpot(bp, made.bodies, weldingOf(made.comp));
+    const added = addComponent(bp, made, spot.dx, spot.dy);
+    const head = body(added, made.comp.bodies[0]);
+    expect(head.injector!.channel).toBe(made.comp.id);
+    expect(added.mix.rows.find((r) => r.channel === made.comp.id)).toEqual({ channel: made.comp.id, lines: [] });
+    expect(added.ship.links.filter((l) => l.kind === "feed" && l.to === head.id).length).toBe(4);
+    // The Thrust ship has no side free for an engine's splayed walls, so this one lands clear of it, overlapping nothing.
+    for (const id of made.comp.bodies)
+      for (const o of bp.ship.bodies) expect(overlaps(worldVertices(body(added, id)), worldVertices(o))).toBe(false);
+  });
+
+  it("BPD-022 a new battery's free spot is flush against the ship, welded", () => {
+    const made = instantiate(bp, bp, "battery");
+    const spot = freeSpot(bp, made.bodies, weldingOf(made.comp));
+    const added = addComponent(bp, made, spot.dx, spot.dy);
+    expect(welds(added).some((w) => w.a === made.comp.id || w.b === made.comp.id)).toBe(true);
+  });
+
+  it("BPD-022 flipping an engine twice puts it back", () => {
+    const twice = flipComponent(flipComponent(bp, "back-l"), "back-l");
+    for (const id of component(bp, "back-l").bodies) {
+      const p = worldVertices(body(twice, id));
+      const q = worldVertices(body(bp, id));
+      for (const v of p) expect(q.some((w) => Math.hypot(v.x - w.x, v.y - w.y) < 1e-5)).toBe(true);
+    }
+    void reweld;
+  });
+});
+
+describe("pieces", () => {
+  it("BPD-023 the preset is one piece; moving the battery away leaves the main thruster, welded only to it, as a second piece and the battery a third", async () => {
+    const { pieces, moveComponent } = await import("../../src/app/blueprint/model.ts");
+    expect(pieces(bp).length).toBe(1);
+    const moved = moveComponent(bp, "battery", 0, -3);
+    expect(pieces(moved).length).toBe(3);
   });
 });

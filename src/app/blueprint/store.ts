@@ -2,7 +2,8 @@
 // and the view. Kept in the browser (localStorage) on every change.
 import { computed, signal } from "@preact/signals";
 import { scenarioFile } from "../scenarios.ts";
-import { thrustPreset, type Blueprint } from "./model.ts";
+import { thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
+import type { BodyInput, JointInput } from "../../core/index.ts";
 
 const KEY = "msb.blueprints.v1";
 
@@ -46,6 +47,17 @@ export const drawerOpen = signal(false);
 export const tryOut = signal(false);
 export const toast = signal<string | null>(null);
 export const overlays = signal({ com: true, thrust: true, welds: true, dims: false, snap: true });
+
+/** A part being placed: a new one from the list, or one dragged on the blueprint (§3.2). */
+export interface Placing {
+  made: { comp: Component; bodies: BodyInput[]; joints: JointInput[] };
+  /** Moving a part already on the blueprint: its id. */
+  moving?: string;
+  at: Placement | null;
+}
+export const placing = signal<Placing | null>(null);
+/** The blueprint as it would be if the part were dropped now: the performance table shows it. */
+export const preview = signal<Blueprint | null>(null);
 
 const undoStack = signal<Blueprint[]>([]);
 const redoStack = signal<Blueprint[]>([]);

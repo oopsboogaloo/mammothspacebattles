@@ -254,3 +254,7 @@ html, body, #root { height: 100%; overflow: hidden; }
 .bpapp .zoom .zl { padding: 2px 3px; white-space: nowrap; }
 .tryview .keys { top: 58px; bottom: auto; right: 10px; flex-wrap: wrap; max-width: 760px; justify-content: flex-end; }
 .tryview .g { min-width: 96px; }
+.bpapp { user-select: none; -webkit-user-select: none; }
+.bpapp input, .bpapp textarea { user-select: text; -webkit-user-select: text; }
+.bpapp .card { touch-action: none; cursor: grab; }
+.bpapp .warnrow { border-top: 1px solid var(--faint); padding: 4px 10px; color: var(--warn); font-size: 12px; }

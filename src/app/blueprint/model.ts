@@ -267,6 +267,27 @@ export interface Stats {
   welds: number;
   weldPoints: number;
   propellant: number;
+  /** How many separate pieces the welds make (1: the ship holds together). */
+  pieces: number;
+}
+
+/** The ship's separate pieces: components joined by welds, each piece a list of component ids. */
+export function pieces(bp: Blueprint): string[][] {
+  const parent = new Map(bp.components.map((c) => [c.id, c.id]));
+  const find = (x: string): string => {
+    const p = parent.get(x)!;
+    if (p === x) return x;
+    const r = find(p);
+    parent.set(x, r);
+    return r;
+  };
+  for (const w of welds(bp)) parent.set(find(w.a), find(w.b));
+  const groups = new Map<string, string[]>();
+  for (const c of bp.components) {
+    const r = find(c.id);
+    groups.set(r, [...(groups.get(r) ?? []), c.id]);
+  }
+  return [...groups.values()];
 }
 
 export function stats(bp: Blueprint): Stats {
@@ -301,6 +322,7 @@ export function stats(bp: Blueprint): Stats {
     welds: ws.length,
     weldPoints: ws.reduce((s, w) => s + w.joints.length, 0),
     propellant,
+    pieces: pieces(bp).length,
   };
 }
 
@@ -561,19 +583,28 @@ export const WELD_PRESETS: { name: string; limits: JointInput["limits"] & object
 interface Edge {
   a: Vec2;
   b: Vec2;
+  /** The way the side faces, out of its body (a unit vector along x or y). */
+  out?: Vec2;
 }
 
 /** A body's sides that run along x or y, in the ship's frame. */
 function straightEdges(b: BodyInput): Edge[] {
-  const vs = worldVertices(b);
+  let vs = worldVertices(b);
+  if (polygonArea(vs) < 0) vs = [...vs].reverse(); // anticlockwise, so each side's outside is on its right
   const out: Edge[] = [];
   for (let i = 0; i < vs.length; i++) {
     const a = vs[i];
     const c = vs[(i + 1) % vs.length];
-    if (Math.abs(a.x - c.x) < 1e-6 || Math.abs(a.y - c.y) < 1e-6) out.push({ a, b: c });
+    if (Math.abs(a.x - c.x) < 1e-6 || Math.abs(a.y - c.y) < 1e-6) {
+      const len = Math.hypot(c.x - a.x, c.y - a.y) || 1;
+      out.push({ a, b: c, out: { x: Math.round((c.y - a.y) / len), y: Math.round(-(c.x - a.x) / len) } });
+    }
   }
   return out;
 }
+
+/** Two sides that face each other (so the parts would meet there, not overlap). */
+const facing = (e: Edge, f: Edge) => !!e.out && !!f.out && e.out.x === -f.out.x && e.out.y === -f.out.y;
 
 const TOUCH = 1e-3;
 
@@ -583,7 +614,7 @@ export function touching(p: BodyInput, q: BodyInput): Edge[] {
   for (const e of straightEdges(p)) {
     for (const f of straightEdges(q)) {
       const vertical = Math.abs(e.a.x - e.b.x) < 1e-6;
-      if (vertical !== Math.abs(f.a.x - f.b.x) < 1e-6) continue;
+      if (vertical !== Math.abs(f.a.x - f.b.x) < 1e-6 || !facing(e, f)) continue;
       if (vertical) {
         if (Math.abs(e.a.x - f.a.x) > TOUCH) continue;
         const lo = Math.max(Math.min(e.a.y, e.b.y), Math.min(f.a.y, f.b.y));
@@ -701,3 +732,246 @@ export function shipArea(bp: Blueprint): number {
   return bp.ship.bodies.reduce((s, b) => s + Math.abs(polygonArea(shapeVertices(b.shape))), 0);
 }
 
+
+// ---------- placing: snapping, adding, flipping (§3.1, §3.2) ----------
+
+/** How close an edge must come to snap, m (the view passes at least 16 screen pixels' worth). */
+export const SNAP = 0.25;
+/** Where a part lands when snapping is off, m. */
+export const GRID = 0.05;
+
+export interface Placement {
+  dx: number;
+  dy: number;
+  snapped: boolean;
+  /** It would overlap another part: it can't go there. */
+  overlap: boolean;
+  /** The components it would weld to, and where. */
+  touches: string[];
+  points: Vec2[];
+  /** Lines to draw: what it lined up with. */
+  guides: Edge[];
+}
+
+const shifted = (b: BodyInput, dx: number, dy: number): BodyInput => ({ ...b, position: { x: b.position.x + dx, y: b.position.y + dy } });
+
+/** Whether two convex outlines overlap by more than a hair (separating axes). */
+export function overlaps(p: Vec2[], q: Vec2[], eps = 1e-4): boolean {
+  for (const poly of [p, q]) {
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      const n = { x: -(b.y - a.y), y: b.x - a.x };
+      const len = Math.hypot(n.x, n.y) || 1;
+      const proj = (vs: Vec2[]) => vs.map((v) => (v.x * n.x + v.y * n.y) / len);
+      const pp = proj(p);
+      const qq = proj(q);
+      if (Math.min(Math.max(...pp), Math.max(...qq)) - Math.max(Math.min(...pp), Math.min(...qq)) <= eps) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Where moving bodies (a component, or one being added) land if dropped moved by (dx, dy): snapped
+ * flush to the nearest side within `tol` and lined up with its ends or middle, or on the grid if
+ * `free`. Says what it would weld to and whether it would overlap anything.
+ */
+export function place(bp: Blueprint, moving: BodyInput[], welding: string[], dx: number, dy: number, opts: { tol?: number; free?: boolean; exclude?: string } = {}): Placement {
+  const tol = opts.tol ?? SNAP;
+  const others = bp.components.filter((c) => c.id !== opts.exclude);
+  const otherWeld = others.flatMap((c) => weldingBodies(c).map((id) => body(bp, id)));
+  const otherAll = others.flatMap((c) => c.bodies.map((id) => body(bp, id)));
+  let cx = 0;
+  let cy = 0;
+  let snapped = false;
+  const guides: Edge[] = [];
+  if (opts.free) {
+    const ref = moving[0].position;
+    cx = Math.round((ref.x + dx) / GRID) * GRID - (ref.x + dx);
+    cy = Math.round((ref.y + dy) / GRID) * GRID - (ref.y + dy);
+  } else {
+    const mov = moving.filter((b) => welding.includes(b.id)).map((b) => shifted(b, dx, dy));
+    // Flush against a side: the smallest move that makes a side of ours meet a side of theirs.
+    let bestX: { d: number; f: Edge; e: Edge } | null = null;
+    let bestY: { d: number; f: Edge; e: Edge } | null = null;
+    for (const m of mov)
+      for (const e of straightEdges(m))
+        for (const o of otherWeld)
+          for (const f of straightEdges(o)) {
+            const vert = Math.abs(e.a.x - e.b.x) < 1e-6;
+            if (vert !== Math.abs(f.a.x - f.b.x) < 1e-6 || !facing(e, f)) continue;
+            const [ea, eb, fa, fb] = vert ? [e.a.y, e.b.y, f.a.y, f.b.y] : [e.a.x, e.b.x, f.a.x, f.b.x];
+            const gap = Math.max(Math.min(ea, eb), Math.min(fa, fb)) - Math.min(Math.max(ea, eb), Math.max(fa, fb));
+            if (gap > -0.02) continue; // not alongside each other: they must share some length, not just a corner
+            const d = vert ? f.a.x - e.a.x : f.a.y - e.a.y;
+            if (Math.abs(d) > tol) continue;
+            if (vert ? !bestX || Math.abs(d) < Math.abs(bestX.d) : !bestY || Math.abs(d) < Math.abs(bestY.d)) {
+              if (vert) bestX = { d, e, f };
+              else bestY = { d, e, f };
+            }
+          }
+    if (bestX) cx = bestX.d;
+    if (bestY) cy = bestY.d;
+    snapped = !!(bestX || bestY);
+    // Lined up along the side it meets: its end or middle with theirs, if near.
+    const align = (best: { e: Edge; f: Edge } | null, vert: boolean) => {
+      if (!best) return 0;
+      const along = (q: Edge) => (vert ? [Math.min(q.a.y, q.b.y), Math.max(q.a.y, q.b.y)] : [Math.min(q.a.x, q.b.x), Math.max(q.a.x, q.b.x)]);
+      const [e0, e1] = along(best.e);
+      const [f0, f1] = along(best.f);
+      const options = [f0 - e0, f1 - e1, (f0 + f1) / 2 - (e0 + e1) / 2];
+      const pick = options.filter((o) => Math.abs(o) <= tol).sort((p, q) => Math.abs(p) - Math.abs(q))[0];
+      if (pick !== undefined) guides.push(best.f);
+      return pick ?? 0;
+    };
+    if (bestX && !bestY) cy = align(bestX, true);
+    else if (bestY && !bestX) cx = align(bestY, false);
+    else if (bestX && bestY) guides.push(bestX.f, bestY.f);
+  }
+  const fx = dx + cx;
+  const fy = dy + cy;
+  const landed = moving.map((b) => shifted(b, fx, fy));
+  const overlap = landed.some((m) => otherAll.some((o) => overlaps(worldVertices(m), worldVertices(o))));
+  const touches = new Set<string>();
+  const points: Vec2[] = [];
+  for (const m of landed.filter((b) => welding.includes(b.id)))
+    for (const c of others)
+      for (const id of weldingBodies(c))
+        for (const e of touching(m, body(bp, id))) {
+          touches.add(c.id);
+          points.push(...weldPoints(e));
+        }
+  return { dx: round(fx), dy: round(fy), snapped, overlap, touches: [...touches], points, guides };
+}
+
+/** The bodies of a component that weld to others (an engine's head only). */
+export function weldingOf(c: Component): string[] {
+  return weldingBodies(c);
+}
+
+function uniqueId(bp: Blueprint, base: string): string {
+  const used = new Set([...bp.ship.bodies.map((b) => b.id), ...bp.components.map((c) => c.id), ...bp.mix.rows.map((r) => r.channel)]);
+  if (!used.has(base)) return base;
+  for (let i = 2; ; i++) if (!used.has(`${base}-${i}`)) return `${base}-${i}`;
+}
+
+/** A copy of a template's component (from a preset), as new bodies with new ids, unplaced. */
+export function instantiate(bp: Blueprint, tpl: Blueprint, compId: string): { comp: Component; bodies: BodyInput[]; joints: JointInput[] } {
+  const c = component(tpl, compId);
+  const base = compId.replace(/-(l|r)$/, "");
+  const id = uniqueId(bp, base === "hull" ? "cockpit" : base);
+  const rename = (old: string) => (old === compId ? id : old.startsWith(compId) ? id + old.slice(compId.length) : `${id}-${old}`);
+  const bodies = c.bodies.map((bid) => {
+    const b = structuredClone(body(tpl, bid));
+    b.id = rename(bid);
+    if (b.injector) b.injector.channel = id;
+    if (b.magazine?.railgun) b.magazine.railgun.channel = id;
+    if (b.tractor) delete b.tractor; // a cockpit's beam belongs with the projector and winch it was built with
+    if (b.shield) b.shield = { ...b.shield, channel: id, from: [], blocks: [] };
+    return b;
+  });
+  const joints = tpl.ship.joints.filter((j) => c.bodies.includes(j.a) && c.bodies.includes(j.b)).map((j) => ({ ...structuredClone(j), id: `${id}-${j.id}`, a: rename(j.a), b: rename(j.b) }));
+  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, c.label.replace(/ (L|R|BL|BR|FL|FR)$/, "")), bodies: bodies.map((b) => b.id) }, bodies, joints };
+}
+
+function uniqueLabel(bp: Blueprint, base: string): string {
+  const used = new Set(bp.components.map((c) => c.label));
+  if (!used.has(base)) return base;
+  for (let i = 2; ; i++) if (!used.has(`${base} ${i}`)) return `${base} ${i}`;
+}
+
+/** Fuel lines: every engine draws from every tank, with room to spare over what it burns. */
+function refeed(bp: Blueprint): void {
+  const tanks = bp.components.filter((c) => c.kind === "tank").map((c) => body(bp, c.bodies[0]));
+  const engs = bp.components.filter((c) => c.kind === "engine").map((c) => body(bp, c.bodies[0]));
+  for (const e of engs) {
+    const inj = e.injector!;
+    const mix = inj.mixture ?? { h2: 1 / 9, o2: 8 / 9 };
+    for (const t of tanks) {
+      for (const s of t.contents ?? []) {
+        const frac = mix[s.resource] ?? 0;
+        if (!frac) continue;
+        if (bp.ship.links.some((l) => l.kind === "feed" && l.from === t.id && l.to === e.id && l.resource === s.resource)) continue;
+        bp.ship.links.push({ id: `feed-${s.resource}-${e.id}-${t.id}`, kind: "feed", from: t.id, to: e.id, resource: s.resource, rate: round(((inj.rate ?? 0) * frac * 2) / (inj.economy ?? 1) / Math.max(1, tanks.length), 9) } as LinkInput);
+      }
+    }
+  }
+}
+
+/** Adds a made component where it was placed: welded where it touches, fed if it is an engine or a tank, with a mixer row (no lines: the player wires it). */
+export function addComponent(bp: Blueprint, made: { comp: Component; bodies: BodyInput[]; joints: JointInput[] }, dx: number, dy: number): Blueprint {
+  const out = clone(bp);
+  for (const b of made.bodies) out.ship.bodies.push(shifted(b, dx, dy));
+  out.ship.joints.push(...made.joints);
+  out.components.push(made.comp);
+  for (const b of made.bodies) {
+    const ch = b.injector?.channel ?? b.magazine?.railgun?.channel ?? b.shield?.channel;
+    if (ch && !out.mix.rows.some((r) => r.channel === ch)) out.mix = { ...out.mix, rows: [...out.mix.rows, { channel: ch, lines: [] }] };
+  }
+  // A new shield emitter burns from the ship's tanks, lifts the cockpit and stops its engines and guns.
+  for (const b of made.bodies) {
+    if (!b.shield) continue;
+    const s = body(out, b.id).shield!;
+    const cockpit = out.components.find((c) => c.kind === "cockpit");
+    s.from = out.components.filter((c) => c.kind === "tank").map((c) => c.bodies[0]);
+    if (cockpit) s.to = cockpit.bodies[0];
+    s.blocks = out.ship.bodies.map((x) => x.injector?.channel ?? x.magazine?.railgun?.channel).filter((x): x is string => !!x);
+  }
+  refeed(out);
+  return reweld(out, made.comp.id);
+}
+
+/** A free spot for a new part: flush against some side of the ship, nearest its centre of mass, overlapping nothing. */
+export function freeSpot(bp: Blueprint, moving: BodyInput[], welding: string[]): { dx: number; dy: number } {
+  if (!bp.ship.bodies.length) {
+    const c = moving[0].position;
+    return { dx: -c.x, dy: -c.y };
+  }
+  const st = stats(bp);
+  // Its welding side (an engine's head) goes flush against a side of the ship.
+  const mine = boundsOf(moving.filter((b) => welding.includes(b.id)).flatMap(worldVertices));
+  const mw = mine.maxX - mine.minX;
+  const mh = mine.maxY - mine.minY;
+  const mcx = (mine.minX + mine.maxX) / 2;
+  const mcy = (mine.minY + mine.maxY) / 2;
+  let best: { dx: number; dy: number; d: number } | null = null;
+  for (const c of bp.components) {
+    const b = componentBounds(bp, c);
+    const cx = (b.minX + b.maxX) / 2;
+    const cy = (b.minY + b.maxY) / 2;
+    const spots = [
+      { x: b.maxX + mw / 2, y: cy },
+      { x: b.minX - mw / 2, y: cy },
+      { x: cx, y: b.maxY + mh / 2 },
+      { x: cx, y: b.minY - mh / 2 },
+    ];
+    for (const s of spots) {
+      const p = place(bp, moving, welding, s.x - mcx, s.y - mcy);
+      if (p.overlap) continue;
+      const d = Math.hypot(s.x - st.com.x, s.y - st.com.y) + (p.touches.length ? 0 : 1000); // welded beats nearer
+      if (!best || d < best.d) best = { dx: p.dx, dy: p.dy, d };
+    }
+  }
+  if (best) return best;
+  const all = boundsOf(bp.ship.bodies.flatMap(worldVertices));
+  return { dx: all.maxX + 0.5 + mw / 2 - mcx, dy: (all.minY + all.maxY) / 2 - mcy };
+}
+
+/** Turns a component round end for end about its main body (an engine to face the other way). */
+export function flipComponent(bp: Blueprint, compId: string): Blueprint {
+  const out = clone(bp);
+  const c = component(out, compId);
+  const centre = { ...body(out, c.bodies[0]).position };
+  for (const id of c.bodies) {
+    const b = body(out, id);
+    b.position = { x: round(2 * centre.x - b.position.x), y: round(2 * centre.y - b.position.y) };
+    b.angle = ((b.angle ?? 0) + Math.PI) % (2 * Math.PI);
+  }
+  return reweld(out, compId);
+}
+
+/** Moves a component to where `place` put it, without its old welds; rewelded where it lands. */
+export function moveTo(bp: Blueprint, compId: string, p: Placement): Blueprint {
+  return moveComponent(bp, compId, p.dx, p.dy);
+}

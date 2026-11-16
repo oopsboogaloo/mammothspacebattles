@@ -2,8 +2,8 @@
 // mass and thrust; select by clicking; pan by dragging the empty grid; zoom with the wheel, a pinch
 // or the buttons.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { body, componentBounds, engineGeom, engines, jointPoint, stats, welds, worldVertices, type Blueprint, type Kind } from "./model.ts";
-import { current, overlays, selection } from "./store.ts";
+import { addComponent, body, component, componentBounds, engineGeom, engines, jointPoint, moveComponent, place, SNAP, stats, weldingOf, welds, worldVertices, type Blueprint, type Kind } from "./model.ts";
+import { current, edit, overlays, placing, preview, say, selection, type Placing } from "./store.ts";
 
 export const KIND_COLOUR: Record<Kind, string> = {
   cockpit: "#a9b4ff",
@@ -34,7 +34,37 @@ export function fitView(bp: Blueprint, w: number, h: number): ViewState {
   return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, zoom };
 }
 
-export const view = { fit: () => {} };
+export const view: { fit: () => void; zoomBy?: (k: number) => void; clientToWorld?: (x: number, y: number) => { x: number; y: number; inside: boolean }; tol?: () => number } = { fit: () => {} };
+
+/** Where a placing part would land if dropped with its main body at world point `w`. */
+export function placeAt(pl: Placing, w: { x: number; y: number }, free: boolean): Placing {
+  const bp = current.value;
+  const main = pl.made.bodies[0].position;
+  const at = place(bp, pl.made.bodies, weldingOf(pl.made.comp), w.x - main.x, w.y - main.y, { free: free || !overlays.value.snap, tol: view.tol?.() ?? SNAP, exclude: pl.moving });
+  preview.value = at.overlap ? null : pl.moving ? moveComponent(bp, pl.moving, at.dx, at.dy) : addComponent(bp, pl.made, at.dx, at.dy);
+  return { ...pl, at };
+}
+
+/** Drops a placing part where it would land; refuses an overlap, with the reason. */
+export function drop(pl: Placing): void {
+  placing.value = null;
+  preview.value = null;
+  const at = pl.at;
+  if (!at) return;
+  if (at.overlap) {
+    say("It can't go there: it would overlap another part.");
+    return;
+  }
+  if (pl.moving) {
+    if (Math.abs(at.dx) < 1e-9 && Math.abs(at.dy) < 1e-9) return;
+    edit((b) => moveComponent(b, pl.moving!, at.dx, at.dy));
+    selection.value = { type: "component", id: pl.moving };
+  } else {
+    edit((b) => addComponent(b, pl.made, at.dx, at.dy));
+    selection.value = { type: "component", id: pl.made.comp.id };
+  }
+  if (!at.touches.length) say("Placed, but not touching the ship: it isn't welded. Drag it against a part to weld it.");
+}
 
 export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
   const bp = current.value;
@@ -43,7 +73,7 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
   const [v, setV] = useState<ViewState>({ x: 0, y: 0, zoom: 100 });
   const fitted = useRef<string | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pan = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean; hit: string | null } | null>(null);
+  const pan = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean; hit: string | null; grab?: { x: number; y: number } } | null>(null);
   const pinch = useRef<{ d: number; zoom: number } | null>(null);
 
   useEffect(() => {
@@ -78,6 +108,13 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
   };
   (view as { zoomBy?: (k: number) => void }).zoomBy = (k) => zoomAt(size.w / 2, size.h / 2, k);
 
+  view.clientToWorld = (cx, cy) => {
+    const r = ref.current!.getBoundingClientRect();
+    const w = toWorld(cx - r.left, cy - r.top);
+    return { ...w, inside: cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom };
+  };
+  // Snap within 16 screen pixels, or 0.25 m, whichever is more.
+  view.tol = () => Math.max(SNAP, 16 / v.zoom);
   const local = (e: PointerEvent | WheelEvent) => {
     const r = ref.current!.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -93,7 +130,9 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
     } else {
       // What is under the pointer, read now: once captured, the pointer's later events come to the view itself.
       const hit = ((e.target as Element).closest("[data-hit]") as HTMLElement | null)?.getAttribute("data-hit") ?? null;
-      pan.current = { x: p.x, y: p.y, vx: v.x, vy: v.y, moved: false, hit };
+      // Grabbing a part: where on it, so it moves with the pointer.
+      const grab = hit?.startsWith("comp:") ? toWorld(p.x, p.y) : undefined;
+      pan.current = { x: p.x, y: p.y, vx: v.x, vy: v.y, moved: false, hit, grab };
     }
   };
   const onMove = (e: PointerEvent) => {
@@ -110,6 +149,21 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
     const pn = pan.current;
     if (!pn) return;
     if (Math.hypot(p.x - pn.x, p.y - pn.y) > 4) pn.moved = true;
+    if (pn.moved && pn.grab && pn.hit) {
+      // Dragging a part: it follows the pointer and snaps (§3.2).
+      const id = pn.hit.slice(5);
+      const bp0 = current.value;
+      let pl = placing.value;
+      if (!pl || pl.moving !== id) {
+        const c = component(bp0, id);
+        pl = { moving: id, made: { comp: c, bodies: c.bodies.map((b) => body(bp0, b)), joints: [] }, at: null };
+        selection.value = { type: "component", id };
+      }
+      const w = toWorld(p.x, p.y);
+      const main = pl.made.bodies[0].position;
+      placing.value = placeAt(pl, { x: main.x + w.x - pn.grab.x, y: main.y + w.y - pn.grab.y }, e.shiftKey);
+      return;
+    }
     if (pn.moved) setV((o) => ({ ...o, x: pn.vx - (p.x - pn.x) / o.zoom, y: pn.vy + (p.y - pn.y) / o.zoom }));
   };
   const onUp = (e: PointerEvent) => {
@@ -117,6 +171,7 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
     if (pointers.current.size < 2) pinch.current = null;
     const pn = pan.current;
     pan.current = null;
+    if (placing.value?.moving) return drop(placing.value);
     if (pn && !pn.moved) {
       // A click: what is under it, else nothing.
       const h = pn.hit;
@@ -148,8 +203,9 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
       {bp.components.map((c) => {
         const colour = KIND_COLOUR[c.kind];
         const on = sel?.type === "component" && sel.id === c.id;
+        const lifted = placing.value?.moving === c.id && !!placing.value.at;
         return (
-          <g key={c.id} data-hit={`comp:${c.id}`} class="part" data-testid={`part-${c.id}`}>
+          <g key={c.id} data-hit={`comp:${c.id}`} class="part" data-testid={`part-${c.id}`} opacity={lifted ? 0.25 : 1}>
             {c.bodies.map((id) => {
               const pts = worldVertices(body(bp, id))
                 .map((p) => `${sx(p.x)},${sy(p.y)}`)
@@ -190,6 +246,15 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
           );
         })}
       {ov.com && st.mass > 0 && <ComMarker x={sx(st.com.x)} y={sy(st.com.y)} />}
+      {placing.value?.at && <Ghost pl={placing.value} sx={sx} sy={sy} />}
+      {placing.value?.at && preview.value && ov.com && (() => {
+        const ps = stats(preview.value);
+        return Math.hypot(ps.com.x - st.com.x, ps.com.y - st.com.y) > 0.01 ? (
+          <g opacity={0.55}>
+            <ComMarker x={sx(ps.com.x)} y={sy(ps.com.y)} />
+          </g>
+        ) : null;
+      })()}
       <ScaleBar zoom={v.zoom} h={size.h} />
     </svg>
   );
@@ -259,6 +324,38 @@ function Selected({ bp, id, sx, sy, dims, zoom }: { bp: Blueprint; id: string; s
         <rect key={i} x={x - 4} y={y - 4} width={8} height={8} fill="#0b1430" stroke="#ffe08a" stroke-width={1.5} />
       ))}
       {dimEls}
+    </g>
+  );
+}
+
+function Ghost({ pl, sx, sy }: { pl: Placing; sx: (x: number) => number; sy: (y: number) => number }) {
+  const at = pl.at!;
+  const colour = at.overlap ? "#ff7b7b" : at.touches.length ? "#7dffb0" : "#7fd4ff";
+  return (
+    <g pointer-events="none" data-testid="ghost" data-state={at.overlap ? "overlap" : at.touches.length ? "weld" : "free"}>
+      {pl.made.bodies.map((b) => (
+        <polygon
+          key={b.id}
+          points={worldVertices({ ...b, position: { x: b.position.x + at.dx, y: b.position.y + at.dy } })
+            .map((p) => `${sx(p.x)},${sy(p.y)}`)
+            .join(" ")}
+          fill={colour}
+          fill-opacity={0.1}
+          stroke={colour}
+          stroke-width={2}
+          stroke-dasharray="7 5"
+        />
+      ))}
+      {at.guides.map((g, i) => (
+        <line key={i} x1={sx(g.a.x)} y1={sy(g.a.y)} x2={sx(g.b.x)} y2={sy(g.b.y)} stroke="#7dffb0" stroke-dasharray="4 4" stroke-width={1.5} opacity={0.8} />
+      ))}
+      {!at.overlap &&
+        at.points.map((p, i) => (
+          <g key={i}>
+            <circle cx={sx(p.x)} cy={sy(p.y)} r={7} fill="none" stroke="#7dffb0" stroke-width={2} />
+            <circle cx={sx(p.x)} cy={sy(p.y)} r={3} fill="#7dffb0" />
+          </g>
+        ))}
     </g>
   );
 }

@@ -1,9 +1,9 @@
 // The blueprint designer's page (docs/blueprint/spec.md): one screen that never scrolls as a whole.
 import { useEffect, useState } from "preact/hooks";
-import { BlueprintsDrawer, ComponentsPanel, PerformanceBox, PropertiesPanel } from "./Panels.tsx";
+import { addAtFreeSpot, BlueprintsDrawer, ComponentsPanel, PerformanceBox, PropertiesPanel } from "./Panels.tsx";
 import { BlueprintView, view } from "./View.tsx";
 import { removeComponent, removeWeld, KINDS } from "./model.ts";
-import { canRedo, canUndo, current, drawerOpen, edit, overlays, redo, selection, toast, tryOut, undo } from "./store.ts";
+import { canRedo, canUndo, current, drawerOpen, edit, overlays, placing, preview, redo, selection, toast, tryOut, undo } from "./store.ts";
 import { TryOut, startTry } from "./TryOut.tsx";
 
 type Toggle = keyof typeof overlays.value;
@@ -59,6 +59,8 @@ function TopBar() {
 }
 
 function hint(): string {
+  const pl = placing.value;
+  if (pl?.at) return pl.at.overlap ? "Red: it would overlap a part · move it clear · Esc: cancel" : pl.at.touches.length ? "Green: it will weld there · release to place · Shift: no snapping · Esc: cancel" : "Blue: it won't touch the ship, so it won't be welded · Shift: no snapping · Esc: cancel";
   const s = selection.value;
   if (s?.type === "component") return "Part selected · change it on the right · Del removes it · Tab: next part · Esc: deselect";
   if (s?.type === "weld") return "Weld selected · click a part's name to go to it · Del removes the weld · Esc: deselect";
@@ -80,12 +82,19 @@ export function BlueprintApp() {
         e.preventDefault();
         if (e.shiftKey) redo();
         else undo();
+      } else if (mod && k === "d") {
+        e.preventDefault();
+        const s = selection.value;
+        if (s?.type === "component") addAtFreeSpot(current.value, s.id);
       } else if (mod && k === "y") {
         e.preventDefault();
         redo();
       } else if (mod) return;
       else if (e.key === "Escape") {
-        if (drawerOpen.value) drawerOpen.value = false;
+        if (placing.value) {
+          placing.value = null;
+          preview.value = null;
+        } else if (drawerOpen.value) drawerOpen.value = false;
         else selection.value = null;
       } else if (e.key === "Delete" || e.key === "Backspace") {
         const s = selection.value;
@@ -144,15 +153,15 @@ export function BlueprintApp() {
             </div>
           </div>
           <div class="zoom">
-            <button aria-label="Zoom in" onClick={() => (view as { zoomBy?: (k: number) => void }).zoomBy?.(1.25)}>
+            <button aria-label="Zoom in" onClick={() => view.zoomBy?.(1.25)}>
               ＋
             </button>
             <div class="zl">{Math.round(zoom)} px/m</div>
-            <button aria-label="Zoom out" onClick={() => (view as { zoomBy?: (k: number) => void }).zoomBy?.(0.8)}>
+            <button aria-label="Zoom out" onClick={() => view.zoomBy?.(0.8)}>
               −
             </button>
           </div>
-          {!bp.ship.bodies.length && <div class="emptyhint">An empty blueprint. Parts can be added in the next build stage; open THRUST 1 from ☰ BLUEPRINTS meanwhile.</div>}
+          {!bp.ship.bodies.length && <div class="emptyhint">An empty blueprint. Start with a cockpit: drag one in from the left (Cockpits), double-click it, or press its ＋.</div>}
         </main>
         <PropertiesPanel />
         <footer class="status">{hint()}</footer>
