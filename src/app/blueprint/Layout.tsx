@@ -1,6 +1,6 @@
-// The page's layout (docs/blueprint/spec.md §2): the side panels fold to slim rails, and on a
-// narrow screen (a folding phone, a small tablet) open panels float over the blueprint instead of
-// squeezing it. The choice is kept in the browser.
+// The page's layout (docs/blueprint/spec.md §2): two toggles in the top bar show or hide the left
+// and right panels; on a narrow screen (a folding phone, a small tablet) open panels float over the
+// blueprint instead of squeezing it. The choice is kept in the browser.
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 
@@ -49,22 +49,20 @@ export function useNarrow(): void {
   }, []);
 }
 
-/** The fold button in a side panel's header. */
-export function FoldButton({ side }: { side: "left" | "right" }) {
+/**
+ * The top bar's two panel toggles, as most editors have them: a window outline with its left or
+ * right side filled while that panel is open. Click to show or hide the panel; \ toggles both.
+ */
+export function PanelToggle({ side }: { side: "left" | "right" }) {
+  const open = layout.value[side];
+  const name = side === "left" ? "the left panel (components, controls)" : "the right panel (properties)";
   return (
-    <button class="ib sm fold" data-testid={`fold-${side}`} title="Fold this panel away (\\ for both)" aria-label={`Fold the ${side} panel`} onClick={() => setLayout({ [side]: false })}>
-      {side === "left" ? "⇤" : "⇥"}
-    </button>
-  );
-}
-
-/** A folded panel: a slim rail with its name; tap it to open the panel again. */
-export function Rail({ side, label, note }: { side: "left" | "right"; label: string; note?: string }) {
-  return (
-    <button class={`rail ${side}`} data-testid={`rail-${side}`} title={`Open ${label.toLowerCase()} (\\ for both)`} aria-label={`Open ${label.toLowerCase()}`} onClick={() => setLayout({ [side]: true })}>
-      <span class="ricon">{side === "left" ? "⇥" : "⇤"}</span>
-      <span class="rlabel">{label}</span>
-      {note && <span class="rnote">{note}</span>}
+    <button class={`ib ptoggle${open ? " on" : ""}`} data-testid={`toggle-${side}`} aria-pressed={open} aria-label={`${open ? "Hide" : "Show"} ${name}`} title={`${open ? "Hide" : "Show"} ${name} (\\ for both)`} onClick={() => setLayout({ [side]: !open })}>
+      <svg width="20" height="16" viewBox="0 0 20 16" aria-hidden="true">
+        <rect x="1" y="1.5" width="18" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4" />
+        <rect x={side === "left" ? 1.7 : 13.3} y="2.2" width="5" height="11.6" fill={open ? "currentColor" : "none"} />
+        <line x1={side === "left" ? 7 : 13} x2={side === "left" ? 7 : 13} y1="1.5" y2="14.5" stroke="currentColor" stroke-width="1.4" />
+      </svg>
     </button>
   );
 }

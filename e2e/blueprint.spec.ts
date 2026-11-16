@@ -138,36 +138,40 @@ test("BPD-025 Measure runs the real physics in the background and shows the meas
   await expect(page.getByTestId("performance")).toContainText("est.");
 });
 
-test("BPD-026 the side panels fold to rails and open again, the blueprint widening; the choice is kept after a reload", async ({ page }) => {
+test("BPD-026 two toggles in the top bar hide and show the left and right panels, the blueprint widening; the choice is kept after a reload", async ({ page }) => {
   await openFresh(page);
   const view = page.getByTestId("blueprint-view");
   const wide = (await view.boundingBox())!.width;
-  await page.getByTestId("fold-left").click();
-  await page.getByTestId("fold-right").click();
-  await expect(page.getByTestId("rail-left")).toBeVisible();
-  await expect(page.getByTestId("rail-right")).toBeVisible();
-  expect((await view.boundingBox())!.width).toBeGreaterThan(wide + 400);
-  // The properties rail names the part selected.
-  await page.getByTestId("part-main").locator("polygon").nth(1).click();
-  await expect(page.getByTestId("rail-right")).toContainText("Main thruster");
+  await expect(page.getByTestId("toggle-left")).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("toggle-left").click();
+  await page.getByTestId("toggle-right").click();
+  await expect(page.getByRole("region", { name: "Components" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Properties" })).toHaveCount(0);
+  await expect(page.getByTestId("toggle-right")).toHaveAttribute("aria-pressed", "false");
+  expect((await view.boundingBox())!.width).toBeGreaterThan(wide + 500);
   await page.reload();
-  await expect(page.getByTestId("rail-left")).toBeVisible();
-  await page.getByTestId("rail-right").click();
+  await expect(page.getByRole("region", { name: "Components" })).toHaveCount(0);
+  await page.getByTestId("toggle-right").click();
   await expect(page.getByRole("region", { name: "Properties" })).toBeVisible();
+  // \ toggles both.
+  await page.keyboard.press("Backslash");
+  await expect(page.getByRole("region", { name: "Properties" })).toHaveCount(0);
+  await page.keyboard.press("Backslash");
+  await expect(page.getByRole("region", { name: "Components" })).toBeVisible();
   // The performance table folds to its header.
   await page.getByTestId("fold-stats").click();
   await expect(page.getByTestId("performance")).not.toContainText("Mass");
 });
 
-test("BPD-026 on a folding phone's inner screen the panels start folded, open over the blueprint without narrowing it, and nothing scrolls the page", async ({ browser }) => {
+test("BPD-026 on a folding phone's inner screen the panels start hidden, open over the blueprint without narrowing it, and nothing scrolls the page", async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 884, height: 1104 }, hasTouch: true });
   const page = await ctx.newPage();
   await openFresh(page);
   const view = page.getByTestId("blueprint-view");
-  await expect(page.getByTestId("rail-left")).toBeVisible();
+  await expect(page.getByTestId("toggle-left")).toHaveAttribute("aria-pressed", "false");
   const w = (await view.boundingBox())!.width;
-  expect(w).toBeGreaterThan(780);
-  await page.getByTestId("rail-right").tap();
+  expect(w).toBeGreaterThan(860);
+  await page.getByTestId("toggle-right").tap();
   await expect(page.getByRole("region", { name: "Properties" })).toBeVisible();
   expect((await view.boundingBox())!.width).toBe(w);
   const scrolls = await page.evaluate(() => [document.documentElement.scrollHeight > innerHeight, document.documentElement.scrollWidth > innerWidth]);

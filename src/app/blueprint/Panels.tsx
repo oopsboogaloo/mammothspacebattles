@@ -2,7 +2,7 @@
 // blueprints drawer.
 import { useState } from "preact/hooks";
 import { NumberControl } from "./NumberControl.tsx";
-import { FoldButton, layout, StatsFold } from "./Layout.tsx";
+import { layout, StatsFold } from "./Layout.tsx";
 import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
@@ -111,7 +111,6 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
     <section class="panel left" aria-label="Components">
       <header class="ph">
         <span class="phl">COMPONENTS</span>
-        <FoldButton side="left" />
       </header>
       <div class="typesel">
         <button class="arrow" title="Previous type ([)" aria-label="Previous type" onClick={() => setKind((kindIndex + KINDS.length - 1) % KINDS.length)}>
@@ -266,7 +265,6 @@ export function PropertiesPanel() {
     <section class="panel right" aria-label="Properties">
       <header class="ph">
         <span class="phl">PROPERTIES</span>
-        <FoldButton side="right" />
       </header>
       {!sel && <ShipSummary />}
       {sel?.type === "component" && current.value.components.some((c) => c.id === sel.id) && <ComponentProps id={sel.id} key={sel.id} />}

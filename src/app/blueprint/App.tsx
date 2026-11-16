@@ -5,7 +5,7 @@ import { BlueprintView, view } from "./View.tsx";
 import { removeComponent, removeWeld, KINDS } from "./model.ts";
 import { canRedo, canUndo, current, drawerOpen, edit, mode, overlays, placing, preview, redo, selection, toast, tryOut, undo } from "./store.ts";
 import { TryOut, startTry } from "./TryOut.tsx";
-import { layout, narrow, Rail, setLayout, useNarrow } from "./Layout.tsx";
+import { layout, narrow, PanelToggle, setLayout, useNarrow } from "./Layout.tsx";
 import { ControlsPanel, MixerTable, ResponseBox, testHeld, useTestKeys, WiringPanel } from "./Controls.tsx";
 
 type Toggle = keyof typeof overlays.value;
@@ -24,6 +24,7 @@ function TopBar() {
   const bp = current.value;
   return (
     <header class="top">
+      <PanelToggle side="left" />
       <button class="ib bp-menu" title="Blueprints: new, open, duplicate, import, export (O)" onClick={() => (drawerOpen.value = true)} data-testid="open-drawer">
         ☰ <span>BLUEPRINTS</span>
       </button>
@@ -65,16 +66,9 @@ function TopBar() {
       <button class="try" title="Fly it in the sandbox (Enter)" onClick={startTry} data-testid="try-it" disabled={!bp.ship.bodies.length}>
         ▶<span class="lbl"> TRY IT</span>
       </button>
+      <PanelToggle side="right" />
     </header>
   );
-}
-
-/** What the folded properties rail says: the part selected, if any. */
-function railNote(): string | undefined {
-  const s = selection.value;
-  if (s?.type === "component") return current.value.components.find((c) => c.id === s.id)?.label;
-  if (s?.type === "weld") return "Weld";
-  return undefined;
 }
 
 function hint(): string {
@@ -160,9 +154,9 @@ export function BlueprintApp() {
   const bp = current.value;
   return (
     <div class="bpapp">
-      <div class={`grid${narrow.value ? " narrow" : ""}${layout.value.left && !narrow.value ? "" : " lrail"}${layout.value.right && !narrow.value ? "" : " rrail"}`}>
+      <div class={`grid${narrow.value ? " narrow" : ""}${layout.value.left && !narrow.value ? "" : " lclosed"}${layout.value.right && !narrow.value ? "" : " rclosed"}`}>
         <TopBar />
-        {!layout.value.left ? <Rail side="left" label={controls ? "CONTROLS" : "COMPONENTS"} /> : controls ? <ControlsPanel /> : <ComponentsPanel kindIndex={kind} setKind={setKind} />}
+        {!layout.value.left ? null : controls ? <ControlsPanel /> : <ComponentsPanel kindIndex={kind} setKind={setKind} />}
         <main class={`canvas${controls ? " ctlmode" : ""}`}>
           <div class="ctltop">
           <BlueprintView onZoom={setZoom} />
@@ -198,7 +192,7 @@ export function BlueprintApp() {
           {controls && <MixerTable />}
           {!bp.ship.bodies.length && <div class="emptyhint">An empty blueprint. Start with a cockpit: drag one in from the left (Cockpits), double-click it, or press its ＋.</div>}
         </main>
-        {!layout.value.right ? <Rail side="right" label="PROPERTIES" note={railNote()} /> : controls ? <WiringPanel /> : <PropertiesPanel />}
+        {!layout.value.right ? null : controls ? <WiringPanel /> : <PropertiesPanel />}
         <footer class="status">{hint()}</footer>
       </div>
       {drawerOpen.value && <BlueprintsDrawer />}
