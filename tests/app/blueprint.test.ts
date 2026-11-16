@@ -880,3 +880,70 @@ describe("the Stegodon (Chloe's sketch, 16 November 2026)", async () => {
     expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
   }, 120_000);
 });
+
+describe("the Phiomia (Chloe's sketch, 16 November 2026)", async () => {
+  const { phiomiaPreset, mastodonPreset, allOverlaps, pieces, wiringChecks, response, powerStats } = await import("../../src/app/blueprint/model.ts");
+  const { measureNow, measureWorld } = await import("../../src/app/blueprint/measure.ts");
+  const { getProfile, stepInPlace } = await import("../../src/core/index.ts");
+  const ph = phiomiaPreset(scn);
+  const moves = [{ id: "forward", name: "Forward" }, { id: "left", name: "Turn left" }, { id: "right", name: "Turn right" }];
+
+  it("BPD-050 the simplest ship in one piece: the Mastodon's cockpit, a tank, a spine to a crossbar, a rocket hanging at each end; no weapon, no power system", () => {
+    expect(pieces(ph)).toHaveLength(1);
+    expect(allOverlaps(ph)).toEqual([]);
+    expect(body(ph, "hull").shape).toEqual(body(mastodonPreset(scn), "hull").shape);
+    expect(Math.abs(stats(ph).com.x)).toBeLessThan(1e-9);
+    expect(ph.components.map((c) => c.kind).sort()).toEqual(["cockpit", "engine", "engine", "frame", "frame", "tank"]);
+    const joined = (a: string, b: string) => welds(ph).some((w) => [w.a, w.b].includes(a) && [w.a, w.b].includes(b));
+    expect([joined("hull", "tank"), joined("tank", "spine"), joined("spine", "bar"), joined("bar", "eng-l"), joined("bar", "eng-r")]).toEqual([true, true, true, true, true]);
+    for (const id of ["eng-l", "eng-r"]) {
+      expect(component(ph, id).rocket).toBeDefined();
+      // Hanging down, firing past the cockpit's sides.
+      expect(body(ph, id).angle).toBe(0);
+      expect(Math.abs(body(ph, id).position.x)).toBeGreaterThan(0.6 + 0.25);
+    }
+    expect(powerStats(ph)).toBeNull();
+    expect(wiringChecks(ph, moves).every((c) => c.ok)).toBe(true);
+  });
+
+  it("BPD-050 its wiring: forward fires both engines; a turn, the engine away from it; forward and a turn, that engine alone", () => {
+    const fired = (controls: Record<string, number>) => Object.entries(response(ph, controls).throttles).filter(([, v]) => v > 0).map(([k]) => k).sort();
+    expect(fired({ forward: 1 })).toEqual(["eng-l", "eng-r"]);
+    expect(fired({ left: 1 })).toEqual(["eng-r"]);
+    expect(fired({ right: 1 })).toEqual(["eng-l"]);
+    expect(fired({ forward: 1, left: 1 })).toEqual(["eng-r"]);
+    expect(fired({ forward: 1, right: 1 })).toEqual(["eng-l"]);
+    expect(response(ph, { left: 1 }).turn).toBeGreaterThan(0);
+  });
+
+  it("BPD-050 measured: gentle, about 11.6 m/s² forward and 4.5 rad/s² turning, both ways alike; forward alone goes straight", () => {
+    const r = measureNow(ph, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
+    expect(r[0].ahead).toBeGreaterThan(9);
+    expect(r[0].ahead).toBeLessThan(14);
+    expect(Math.abs(r[0].turn)).toBeLessThan(0.5);
+    expect(Math.abs(r[0].side)).toBeLessThan(0.5);
+    expect(r[1].turn).toBeGreaterThan(3.5);
+    expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.5);
+    expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
+  }, 120_000);
+
+  it("BPD-050 its beams hold: in a 20 s flight, forward and turning both ways (no more than 1 s at a time), no weld breaks and its parts stay within 5° of the cockpit", () => {
+    const w = measureWorld(ph);
+    const profile = getProfile("sandbox");
+    const welds0 = w.joints.map((j) => j.id);
+    const ids = ["tank", "spine", "bar", "eng-l", "eng-r"];
+    const angle = (id: string) => w.bodies.find((b) => b.id === id)!.angle;
+    const rel0 = new Map(ids.map((id) => [id, angle(id) - angle("hull")]));
+    const plan: Record<number, Record<string, number>> = { 0: { forward: 1 }, 240: { forward: 1, left: 1 }, 480: { forward: 1, left: 0, right: 1 }, 720: { forward: 0, right: 0, left: 1 }, 960: { left: 0, right: 1 }, 1200: { right: 0 } };
+    let worst = 0;
+    for (let i = 0; i < 4800; i++) {
+      stepInPlace(w, plan[i] ? Object.entries(plan[i]).map(([channel, value]) => ({ type: "control.set" as const, channel, value })) : [], profile);
+      for (const id of ids) {
+        const d = angle(id) - angle("hull") - rel0.get(id)!;
+        worst = Math.max(worst, Math.abs(Math.atan2(Math.sin(d), Math.cos(d))));
+      }
+    }
+    expect((worst * 180) / Math.PI).toBeLessThan(5);
+    expect(welds0.filter((id) => !w.joints.some((j) => j.id === id))).toEqual([]);
+  }, 120_000);
+});

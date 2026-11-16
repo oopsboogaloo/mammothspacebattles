@@ -589,6 +589,73 @@ export function stegodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
 const STEGODON_MAIN_FLOW = 3.4;
 const STEGODON_TAIL_FLOW = 0.5;
 
+// ---------- the Phiomia (Chloe's sketch, 16 November 2026) ----------
+
+/**
+ * The Phiomia: the simplest ship, from Chloe's drawing, with the Mastodon's cockpit for scale. The
+ * cockpit, a fuel tank on its top, and a spine up from the tank to a crossbar; at each end of the
+ * crossbar a small rocket hangs, firing down past the cockpit's sides. The spine and crossbar are
+ * only structure, so the engines are gentle. Forward fires both; a turn, the engine on the side
+ * away from it; forward and a turn, that engine alone.
+ */
+export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
+  const t = thrustShip(scenario).ship;
+  const src = (id: string): BodyInput => structuredClone(t.bodies.find((b) => b.id === id)!);
+  const at = (b: BodyInput, id: string, x: number, y: number): BodyInput => ({ ...b, id, position: { x: round(x), y: round(y) }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 });
+  const hull = src("hull");
+  delete hull.tractor;
+  const engine = phiomiaEngine();
+  const bodies: BodyInput[] = [];
+  const components: Component[] = [];
+  const add = (c: Component, b: BodyInput) => {
+    bodies.push(b);
+    components.push(c);
+  };
+  const beam = (id: string, label: string, width: number, height: number, mass: number, x: number, y: number) => {
+    const form: Form = { kind: "trapezoid", base: width, top: width, height, turn: 0 };
+    add({ id, kind: "frame", label, part: "trapezoid", bodies: [id], form }, { id, shape: { kind: "polygon", vertices: formVertices(form) }, mass, position: { x: round(x), y: round(y) }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.3, material: { ...hull.material! } });
+  };
+  // The cockpit (the Mastodon's), its bottom at y = 0, its top 0.6 m across at y = 1.15.
+  hull.shape = { kind: "polygon", vertices: [{ x: -0.6, y: -0.375 }, { x: 0.6, y: -0.375 }, { x: 0.6, y: 0.375 }, { x: 0.3, y: 0.775 }, { x: -0.3, y: 0.775 }, { x: -0.6, y: 0.375 }] };
+  add({ id: "hull", kind: "cockpit", label: "Cockpit", part: "cockpit", bodies: ["hull"] }, at(hull, "hull", 0, 0.375));
+  // The tank on the cockpit's top, as wide.
+  add({ id: "tank", kind: "tank", label: "Tank", part: "tank", bodies: ["tank"] }, { ...at(src("tank-l"), "tank", 0, 1.5), shape: { kind: "box", width: 0.6, height: 0.7 } });
+  // The spine, up to the crossbar; the crossbar between the engines' heads.
+  beam("spine", "Spine", 0.15, 0.9, 0.5, 0, 2.3);
+  beam("bar", "Crossbar", 1.7, 0.15, 0.9, 0, 2.825);
+  // The engines: their heads level with the crossbar, at its ends.
+  for (const [s, l] of [[-1, "L"], [1, "R"]] as const) {
+    const id = `eng-${l.toLowerCase()}`;
+    const head = at(src("main"), id, s * 1.1, 2.825);
+    head.shape = { kind: "box", width: engine.chamberWidth, height: engine.headHeight };
+    head.mass = 0.5;
+    head.explosive = { ...head.explosive!, charge: round(0.5 * 0.008, 9) };
+    head.injector = { ...head.injector!, channel: id };
+    add({ id, kind: "engine", label: `Engine ${l}`, part: "main-thruster", bodies: [id], rocket: engine }, head);
+  }
+  let bp: Blueprint = { format: 1, id: "preset-phiomia", name: "PHIOMIA", preset: true, rev: 1, ship: { bodies, joints: [], links: [] }, components, mix: { rules: structuredClone(thrustShip(scenario).mix.rules ?? []), rows: [] } };
+  for (const id of ["eng-l", "eng-r"]) {
+    bp = buildRocket(bp, id, engine);
+    bp = setParam(bp, id, "rate", PHIOMIA_FLOW);
+  }
+  for (const c of bp.components) applyRules(bp, c.id);
+  for (const c of bp.components) bp = reweld(bp, c.id);
+  refeed(bp);
+  reammo(bp);
+  relink(bp);
+  const row = (channel: string, lines: MixerRow["lines"]): MixerRow => ({ channel, lines });
+  bp.mix.rows = [
+    row("eng-l", [{ control: "forward", weight: 1, ease: { control: "left", amount: 1 } }, { control: "right", weight: 1 }]),
+    row("eng-r", [{ control: "forward", weight: 1, ease: { control: "right", amount: 1 } }, { control: "left", weight: 1 }]),
+  ];
+  return bp;
+}
+
+/** The Phiomia's engines: 0.5 m chambers, a 0.25 m throat, nozzles flared to the chamber's inside. */
+const phiomiaEngine = (): Rocket => ({ chamberWidth: 0.5, chamberLength: 0.35, headHeight: 0.15, throat: 0.25, nozzleLength: 0.5, flare: round(Math.atan((0.5 - 2 * 0.1 - 0.25) / 2 / 0.5) / DEG, 6), wall: 0.1, nozzleMass: 0.3 });
+/** Each engine's flow at full, kg/s: gentle, for a ship held together by its beams. */
+const PHIOMIA_FLOW = 0.3;
+
 /**
  * Parts with no preset to come from (a triangle), for the components list only: never opened.
  */
