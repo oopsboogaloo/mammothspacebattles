@@ -40,6 +40,8 @@ export interface Component {
   rocket?: Rocket;
   /** A trapezoid or triangle part: its outline as the player sets it (§16). */
   form?: Form;
+  /** A container's blast while it can hold nothing (its body then has none), kept for when it can again. */
+  blast?: NonNullable<BodyInput["explosive"]>;
 }
 
 /**
@@ -648,8 +650,14 @@ export function applyContainer(bp: Blueprint, compId: string): void {
   b.mass = s.dryMass;
   b.material = { ...s.material };
   // Nothing it can hold, nothing to go off.
-  if (b.explosive && s.charge > 0) b.explosive = { ...b.explosive, charge: s.charge };
-  else if (b.explosive) delete b.explosive;
+  const blast = b.explosive ?? c.blast;
+  if (blast && s.charge > 0) {
+    b.explosive = { ...blast, charge: s.charge };
+    delete c.blast;
+  } else if (blast) {
+    c.blast = blast;
+    delete b.explosive;
+  }
   if (kind === "tank") {
     b.contents = (Object.entries(MIXTURE) as [string, number][]).map(([resource, f]) => {
       const kg = round(s.holds * f, 9);
@@ -1275,8 +1283,8 @@ export function setParam(bp: Blueprint, compId: string, key: string, value: numb
       const r = { ...c.rocket, [map[key]]: value };
       // The throat narrower than the chamber, inside its walls.
       r.throat = Math.min(r.throat, r.chamberWidth - 2 * r.wall);
-      const out = buildRocket(bp, compId, r);
-      return key === "headWidth" || key === "headHeight" ? reweld(out, compId) : out;
+      // Its chamber walls can hold other parts (the Stegodon's mounts): rebuilt, they weld again.
+      return reweld(buildRocket(bp, compId, r), compId);
     }
   }
   if (c.kind === "engine") {

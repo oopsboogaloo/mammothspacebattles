@@ -822,6 +822,35 @@ describe("the Stegodon (Chloe's sketch, 16 November 2026)", async () => {
     expect(response(st, { forward: 1, left: 1 }).turn).toBeGreaterThan(0);
   });
 
+  it("BPD-049 changing a main engine's nozzle or chamber keeps what is welded to its chamber walls", () => {
+    const held = (bp: typeof st) => welds(bp).filter((w) => w.a.startsWith("eng-l") !== w.b.startsWith("eng-l") && [w.a, w.b].some((id) => id.startsWith("eng-l"))).map((w) => [w.a, w.b].sort().join("|")).sort();
+    const before = held(st);
+    expect(before.length).toBeGreaterThan(0);
+    for (const key of ["flare", "throat", "wall", "chamberLength", "length"]) {
+      const p = params(st, "eng-l").find((x) => x.key === key);
+      expect(p, key).toBeDefined();
+      const out = setParam(st, "eng-l", key, p!.value as number);
+      expect(held(out), key).toEqual(before);
+      expect(pieces(out), key).toHaveLength(1);
+    }
+  });
+
+  it("BPD-049 a tank shrunk until it holds nothing has no blast; grown back, it has its blast again", () => {
+    const m = mastodonPreset(scn);
+    const charge = body(m, "tank-l").explosive?.charge ?? 0;
+    expect(charge).toBeGreaterThan(0);
+    let bp = setParam(m, "tank-l", "fTop", 0.05);
+    bp = setParam(bp, "tank-l", "fHeight", 0.3);
+    bp = setParam(bp, "tank-l", "fBase", 0.3);
+    bp = setParam(bp, "tank-l", "wall", 0.075);
+    expect(body(bp, "tank-l").explosive).toBeUndefined();
+    bp = setParam(bp, "tank-l", "wall", 0.02);
+    expect(body(bp, "tank-l").explosive?.charge ?? 0).toBeGreaterThan(0);
+    for (const [k, v] of Object.entries(component(m, "tank-l").form!)) if (k !== "kind" && k !== "turn") bp = setParam(bp, "tank-l", "f" + k[0].toUpperCase() + k.slice(1), v as number);
+    bp = setParam(bp, "tank-l", "wall", component(m, "tank-l").wall ?? 0.1);
+    expect(body(bp, "tank-l").explosive).toEqual(body(m, "tank-l").explosive);
+  });
+
   it("BPD-049 measured: about 32 m/s² forward, 6 rad/s² turning on the tail alone, both ways alike", () => {
     const r = measureNow(st, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
     expect(r[0].ahead).toBeGreaterThan(28);
