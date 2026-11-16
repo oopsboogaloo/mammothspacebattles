@@ -405,6 +405,9 @@ describe("Mastodon Gun Ship, double engines, trapezoids and triangles", async ()
     expect(guns).toHaveLength(4);
     for (const g of guns) expect(m.ship.links.filter((l) => l.kind === "ammo" && l.to === g)).toHaveLength(2);
     expect(["mag-l", "mag-r"].map((id) => body(m, id).ammo!.count)).toEqual([100, 100]);
+    // Each tank holds Thrust's propellant per square metre: the side tanks 0.7875 m², the centre 0.78 m².
+    const thrustO2 = body(bp, "tank-l").contents!.find((c) => c.resource === "o2")!.capacity / 1.5;
+    for (const [id, area] of [["tank-l", 0.7875], ["tank-r", 0.7875], ["tank-c", 0.78]] as const) expect(body(m, id).contents!.find((c) => c.resource === "o2")!.capacity).toBeCloseTo(thrustO2 * area, 6);
     // Every head and gun has its control link; the wiring checks find nothing wrong.
     for (const b of m.ship.bodies.filter((x) => x.injector || x.magazine)) expect(m.ship.links.some((l) => l.kind === "control" && l.to === b.id)).toBe(true);
     expect(wiringChecks(m, moves).every((c) => c.ok)).toBe(true);

@@ -419,7 +419,7 @@ Improvements so far:
 ## 17. The Mastodon Gun Ship, double engines, trapezoids and triangles (16 November 2026, Chloe)
 
 From Chloe's drawing (1 m to its scale bar; `mastodonPreset` in `model.ts`): a preset made of the
-regular parts. Symmetrical about the middle line, 6.3 × 2.45 m, 71.9 kg:
+regular parts. Symmetrical about the middle line, 6.3 × 2.45 m, 73.9 kg:
 
 - The cockpit (Thrust's, without the beam) over a centre fuel tank (1.2 × 0.65 m).
 - A magazine each side (0.4 × 1.4 m, 100 shells), a railgun standing on each.
@@ -428,7 +428,7 @@ regular parts. Symmetrical about the middle line, 6.3 × 2.45 m, 71.9 kg:
 - Wiring: each engine's rear nozzle on Forward, its front nozzle on Reverse. Turning, one engine's
   rear and the other's front nozzle at a quarter. The four railguns are on Action A; the two
   magazines feed all four.
-- Measured: 31 m/s² forward and back, 9.2 rad/s² turning, nothing breaking; full burn 26 s.
+- Measured: 30 m/s² forward and back, 8.9 rad/s² turning, nothing breaking; full burn 39 s.
 
 **Double engine** (the Engines list): one part with two heads back to back, each with its own
 nozzle walls, injector and channel (`heads` on the component). It welds to the ship by its heads.

@@ -328,7 +328,8 @@ export function mastodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
   part({ id: "hull", kind: "cockpit", label: "Cockpit", part: "cockpit", bodies: ["hull"] }, place(hull, "hull", 0, 1.025));
   const tank = src("tank-l");
   const tankArea = 1.5; // Thrust's tank: 1.5 × 1 m
-  const centre = scaled({ ...tank, shape: { kind: "box", width: 1.2, height: 0.65 } }, (1.2 * 0.65) / tankArea);
+  // A copy: scaling mutates what it is given, and the side tanks are made from the same source.
+  const centre = scaled({ ...structuredClone(tank), shape: { kind: "box", width: 1.2, height: 0.65 } }, (1.2 * 0.65) / tankArea);
   part({ id: "tank-c", kind: "tank", label: "Centre tank", part: "tank", bodies: ["tank-c"] }, place(centre, "tank-c", 0, 0.325));
 
   const mag = src("mag-l");
