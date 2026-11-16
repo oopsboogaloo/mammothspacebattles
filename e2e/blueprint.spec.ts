@@ -107,8 +107,16 @@ test("BPD-022 ＋ adds a part where it welds, and moving a part off the ship war
   await expect(page.getByTestId("loose")).toContainText("pieces");
 });
 
+/** Opens THRUST OG, the game's ship as it is (its railgun through the shield emitter, no free side for another thruster). */
+async function openOg(page: Page) {
+  await page.getByTestId("open-drawer").click();
+  await page.getByTestId("design-THRUST OG").click();
+  await expect(page.getByTestId("drawing-name")).toHaveText("THRUST OG");
+}
+
 test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothing is wired until the player does it, and nothing off the cockpit answers", async ({ page }) => {
   await openFresh(page);
+  await openOg(page);
   await page.getByRole("tab", { name: "EN" }).click();
   await page.getByRole("button", { name: "Add Light thruster", exact: true }).click();
   await page.getByTestId("mode-controls").click();
@@ -118,7 +126,7 @@ test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothi
   await expect(page.getByTestId("lines-back").getByTestId("say")).toHaveText("Fires fully on Action A.");
   await page.keyboard.down("Space");
   await expect(page.getByTestId("control-action-a")).toHaveClass(/held/);
-  // Thrust 1 has no free side for it, so it was placed clear of the ship: not welded to the
+  // THRUST OG has no free side for it, so it was placed clear of the ship: not welded to the
   // cockpit, it doesn't answer even when wired, and the checks say so.
   await expect(page.getByTestId("response")).toContainText("Not welded to the cockpit, so they won't answer: Light thruster");
   await expect(page.getByTestId("mixer").locator("tr", { hasText: "Light thruster" })).toContainText("0%");
@@ -297,14 +305,16 @@ test("BPD-033 a control held through Refuel & reset goes on working in the fresh
   await page.keyboard.up("ArrowUp");
 });
 
-test("BPD-035 parts never overlap: the preset's railgun and shield emitter are flagged, and widening a tank into its neighbours is refused", async ({ page }) => {
+test("BPD-035 parts never overlap: THRUST OG's railgun and shield emitter are flagged (THRUST 1's railgun stands on it), and widening a tank into its neighbours is refused", async ({ page }) => {
   await openFresh(page);
-  await expect(page.getByTestId("overlapping")).toContainText("Railgun and Shield emitter");
+  await expect(page.getByTestId("overlapping")).toHaveCount(0);
+  await openOg(page);
+  await expect(page.getByTestId("overlapping")).toContainText("Railgun OG and Shield emitter OG");
   await page.getByTestId("part-tank-l").locator("polygon").first().click();
   const width = page.getByTestId("param-width").locator("input.num");
   await width.fill("1.7");
   await width.press("Enter");
-  await expect(page.getByTestId("toast")).toContainText("overlap Generator L and Magazine L");
+  await expect(page.getByTestId("toast")).toContainText("overlap Generator L OG and Magazine L OG");
   await expect(width).toHaveValue("1.50");
 });
 
@@ -368,4 +378,23 @@ test("BPD-036 the OG parts are listed after the regular ones; in Try it, THRUST 
   await page.keyboard.down("Space");
   await expect.poll(shells, { timeout: 60_000 }).toBeLessThan(115);
   await page.keyboard.up("Space");
+});
+
+test("BPD-037 click the blueprint's name to rename it; a preset is renamed as your own copy", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("drawing-name").click();
+  const box = page.getByTestId("drawing-name-input");
+  await box.fill("Wasp");
+  await box.press("Enter");
+  await expect(page.getByTestId("drawing-name")).toHaveText("WASP");
+  await expect(page.getByText("EDITING", { exact: true })).toBeVisible();
+  // Renamed again, it stays the same blueprint (no second copy), and the preset is still THRUST 1.
+  await page.getByTestId("drawing-name").click();
+  await page.getByTestId("drawing-name-input").fill("Hornet");
+  await page.getByTestId("drawing-name-input").press("Enter");
+  await expect(page.getByTestId("drawing-name")).toHaveText("HORNET");
+  const names = await page.evaluate(() => JSON.parse(localStorage.getItem("msb.blueprints.v1")!).mine.map((b: { name: string }) => b.name));
+  expect(names).toEqual(["HORNET"]);
+  await page.reload();
+  await expect(page.getByTestId("drawing-name")).toHaveText("HORNET");
 });

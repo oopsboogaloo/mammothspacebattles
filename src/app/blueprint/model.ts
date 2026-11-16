@@ -246,7 +246,8 @@ export function thrustOgPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
 /**
  * THRUST 1: the same ship built from the regular parts, which differ from the OG ones where they
  * have been improved. So far: the magazines hold the shells (60 each) and pass them to the railgun
- * through ammo links (WPN-015); the railgun holds none of its own.
+ * through ammo links (WPN-015), and go off when destroyed only while they hold some; the railgun
+ * holds none of its own, and stands on the shield emitter instead of through it.
  */
 export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Blueprint {
   const { ship, mix } = thrustShip(scenario);
@@ -257,9 +258,26 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
     for (const m of mags) m.ammo = { count: each, shell: structuredClone(gun.magazine.shell) };
     gun.magazine.count -= each * mags.length;
   }
-  const bp: Blueprint = { format: 1, id: "preset-thrust-1", name: "THRUST 1", preset: true, rev: 1, ship, components: groupComponents(ship, THRUST_PARTS), mix };
+  let bp: Blueprint = { format: 1, id: "preset-thrust-1", name: "THRUST 1", preset: true, rev: 1, ship, components: groupComponents(ship, THRUST_PARTS), mix };
   reammo(bp);
+  // The railgun stands on the shield emitter, not through it (in the game it overlaps it by 0.12 m).
+  const lift = overlapLift(bp, "gun");
+  if (lift > 0) bp = moveComponent(bp, "gun", 0, lift);
   return bp;
+}
+
+/** How far a part must rise to stand clear of what it overlaps: up to the top of the highest. */
+function overlapLift(bp: Blueprint, compId: string): number {
+  const c = component(bp, compId);
+  const mine = c.bodies.map((id) => worldVertices(body(bp, id)));
+  const low = Math.min(...mine.flat().map((v) => v.y));
+  let top = low;
+  for (const o of bp.ship.bodies) {
+    if (c.bodies.includes(o.id)) continue;
+    const ov = worldVertices(o);
+    if (mine.some((m) => overlaps(m, ov))) top = Math.max(top, ...ov.map((v) => v.y));
+  }
+  return round(top - low);
 }
 
 /** Shell feeds (WPN-015): every store of shells feeds every gun that fires shells like them. */

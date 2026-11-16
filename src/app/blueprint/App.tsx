@@ -3,7 +3,7 @@ import { useEffect, useState } from "preact/hooks";
 import { addAtFreeSpot, BlueprintsDrawer, ComponentsPanel, PerformanceBox, PropertiesPanel } from "./Panels.tsx";
 import { BlueprintView, view } from "./View.tsx";
 import { removeComponent, removeWeld, KINDS } from "./model.ts";
-import { canRedo, canUndo, current, drawerOpen, edit, mode, overlays, placing, preview, redo, selection, toast, tryOut, undo } from "./store.ts";
+import { canRedo, canUndo, current, drawerOpen, edit, mode, overlays, placing, preview, redo, rename, selection, toast, tryOut, undo } from "./store.ts";
 import { TryOut, startTry } from "./TryOut.tsx";
 import { layout, narrow, PanelToggle, setLayout, useNarrow } from "./Layout.tsx";
 import { ControlsPanel, MixerTable, ResponseBox, testHeld, useTestKeys, WiringPanel } from "./Controls.tsx";
@@ -20,6 +20,45 @@ function toggle(k: Toggle) {
   overlays.value = { ...overlays.value, [k]: !overlays.value[k] };
 }
 
+/** The blueprint's name: click to rename it. A preset is renamed as a copy (presets never change). */
+function BlueprintName() {
+  const bp = current.value;
+  const [editing, setEditing] = useState(false);
+  if (editing)
+    return (
+      <input
+        class="tn rename"
+        aria-label="Blueprint name"
+        data-testid="drawing-name-input"
+        value={bp.name}
+        maxLength={40}
+        ref={(el) => {
+          if (el && document.activeElement !== el) {
+            el.focus();
+            el.select();
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+          if (e.key === "Escape") setEditing(false);
+          e.stopPropagation(); // typing a name doesn't press the page's keys
+        }}
+        onBlur={(e) => {
+          const name = (e.currentTarget as HTMLInputElement).value.trim();
+          setEditing(false);
+          if (!name || name.toUpperCase() === bp.name) return;
+          if (current.value.preset) edit((b) => b); // the copy, which the name then goes to
+          rename(current.value.id, name);
+        }}
+      />
+    );
+  return (
+    <button class="tn tn-btn" data-testid="drawing-name" title={bp.preset ? "Rename (makes your own copy: presets never change)" : "Rename"} onClick={() => setEditing(true)}>
+      {bp.name}
+    </button>
+  );
+}
+
 function TopBar() {
   const bp = current.value;
   return (
@@ -30,9 +69,7 @@ function TopBar() {
       </button>
       <div class="title">
         <span class="tl">DRAWING</span>
-        <span class="tn" data-testid="drawing-name">
-          {bp.name}
-        </span>
+        <BlueprintName />
         {bp.preset ? <span class="badge">PRESET</span> : <span class="badge edit">EDITING</span>}
       </div>
       <div class="modes" role="tablist">

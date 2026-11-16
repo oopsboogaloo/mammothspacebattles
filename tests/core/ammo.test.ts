@@ -7,7 +7,7 @@ const shell = { shape: { kind: "box", width: 0.26, height: 0.22 }, mass: 0.2, re
 const box = (id: string, x: number, y: number, extra: Record<string, unknown> = {}) => ({ id, shape: { kind: "box", width: 1, height: 1 }, mass: 3, position: { x, y }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, ...extra });
 
 /** A railgun with no shells of its own, a magazine of 3 welded under it, and one of 5 floating free. */
-function world(): World {
+function world(joined = false): World {
   return initialWorld(
     parseScenario({
       schema: 1,
@@ -19,11 +19,12 @@ function world(): World {
         bodies: [
           box("gun", 0, 1, { mass: 1, magazine: { count: 0, reload: 0.125, at: { x: 0, y: 0.65 }, angle: 0, shell, railgun: { channel: "fire", speed: 100 } } }),
           box("mag", 0, 0, { ammo: { count: 3, shell } }),
-          box("loose", 5, 0, { ammo: { count: 5, shell } }),
+          box("loose", joined ? 1 : 5, 0, { ammo: { count: joined ? 3 : 5, shell } }),
         ],
         joints: [
           { id: "w1", a: "gun", b: "mag", anchorA: { x: -0.4, y: -0.5 }, anchorB: { x: -0.4, y: 0.5 } },
           { id: "w2", a: "gun", b: "mag", anchorA: { x: 0.4, y: -0.5 }, anchorB: { x: 0.4, y: 0.5 } },
+          ...(joined ? [{ id: "w3", a: "mag", b: "loose", anchorA: { x: 0.5, y: 0 }, anchorB: { x: -0.5, y: 0 } }] : []),
         ],
         links: [
           { id: "ctl", kind: "control", channel: "fire", to: "gun" },
@@ -57,6 +58,35 @@ describe("shell feeds (WPN-015)", () => {
     const p1 = computeTotals(w).momentum;
     expect(Math.hypot(p1.x - p0.x, p1.y - p0.y)).toBeLessThan(1e-9);
     expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("WPN-015 a magazine knocked off takes its shells with it: the gun, fed evenly from both, keeps the other half", () => {
+    // A second magazine of 3 welded beside the first.
+    const w = world(true);
+    stepInPlace(w, [{ type: "control.set", channel: "fire", value: 1 }], sandbox);
+    for (let i = 0; i < 70; i++) stepInPlace(w, [], sandbox);
+    // Fed from the fuller each time, so they empty together.
+    expect(Math.abs(get(w, "mag").ammo!.count - get(w, "loose").ammo!.count)).toBeLessThanOrEqual(1);
+    // Knocked off: its shells go with it, and the gun fires only the rest.
+    stepInPlace(w, [{ type: "joint.remove", id: "w3" } as never, { type: "control.set", channel: "fire", value: 0 }], sandbox);
+    const kept = get(w, "loose").ammo!.count;
+    stepInPlace(w, [{ type: "control.set", channel: "fire", value: 1 }], sandbox);
+    for (let i = 0; i < 480; i++) stepInPlace(w, [], sandbox);
+    expect(get(w, "loose").ammo!.count).toBe(kept);
+    expect(get(w, "mag").ammo!.count).toBe(0);
+    expect(w.ledger.violations).toBe(0);
+  }, 60_000);
+
+  it("WPN-015 a magazine's charge goes off when it is destroyed only while it holds shells", () => {
+    for (const count of [0, 2]) {
+      const w = world();
+      const mag = get(w, "loose");
+      mag.ammo!.count = count;
+      mag.explosive = { charge: 0.5, arm: 1e6, fragments: 4, radius: 2, whenDestroyed: true, armed: true } as never;
+      mag.integrity = 0;
+      stepInPlace(w, [], sandbox);
+      expect(w.events.some((e) => e.type === "detonation" && (e.data as { id: string }).id === "loose")).toBe(count > 0);
+    }
   }, 60_000);
 
   it("WPN-015 scenarios check an ammo link's ends: shells stored at one, a gun at the other", () => {

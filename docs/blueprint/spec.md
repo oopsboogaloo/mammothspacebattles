@@ -407,8 +407,15 @@ Improvements so far:
    nose) and the magazines hold nothing. A regular magazine stores shells (60 each in THRUST 1;
    "Shells stored" under Function) and passes them to the railguns welded to it, one at a time, by
    an ammo link (WPN-015); the regular railgun holds none of its own. A magazine knocked off the
-   ship feeds nothing. Same mass; the centre of mass 0.33 m further back and the turn 9.9 rad/s²
-   instead of 9.3 (Measure; forward and reverse unchanged).
+   ship feeds nothing, and takes its shells with it: the gun draws from the fullest magazine each
+   time, so the two empty together and losing one loses half what is left. A magazine blows up
+   when destroyed only while it holds shells. Same mass; the centre of mass 0.33 m further back
+   and the turn 9.9 rad/s² instead of 9.3 (Measure; forward and reverse unchanged).
+2. **The railgun stands on the shield emitter** instead of 0.12 m through it, welded to its top
+   (two points). Without its 20 kg of shells it no longer sways there: Measure gives the same
+   figures as before the lift, nothing breaking.
+3. **Renaming:** click the blueprint's name in the top bar (a preset is renamed as your own copy),
+   as well as Rename in the Blueprints drawer.
 
 ## Sources
 

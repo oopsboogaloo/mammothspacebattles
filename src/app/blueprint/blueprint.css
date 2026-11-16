@@ -453,3 +453,9 @@ html, body, #root { height: 100%; overflow: hidden; }
 
 /* The OG parts (THRUST OG's, as the game has them): a quiet heading above them in each list. */
 .og-head { font-size: 10px; letter-spacing: 0.12em; opacity: 0.6; padding: 8px 4px 2px; border-top: 1px dashed currentColor; margin-top: 4px; }
+
+/* The blueprint's name in the top bar: a button that becomes a box to rename it. */
+.bpapp .tn-btn { background: none; border: 0; color: inherit; padding: 2px 4px; cursor: text; white-space: nowrap; }
+.bpapp .tn-btn::after { content: "✎"; font-size: 12px; opacity: 0; margin-left: 6px; }
+.bpapp .tn-btn:hover::after, .bpapp .tn-btn:focus-visible::after { opacity: 0.7; }
+.bpapp input.tn { background: transparent; color: inherit; border: 1px solid var(--line, currentColor); padding: 2px 6px; width: 260px; text-transform: uppercase; }
