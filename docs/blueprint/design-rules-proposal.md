@@ -24,35 +24,62 @@ these rules flies as it does today, within a few per cent.
 
 ## 1. Rules shared by every container (tanks, magazines)
 
-**Wall thickness t.**
+**Wall thickness t is a setting** (decided 16 November 2026, Chloe).
 
-- Walls are 0.05 m all round, the same for every container for now.
+- It is **0.1 m by default** (Thrust's), and can be set from **0.02 m to 0.3 m**. It can be no more
+  than a quarter of the container's smaller side, so there is always room inside.
 - What a container holds goes with its **inner** area: the outline moved in by t on every side.
 - Its dry mass goes with its **wall** area: the outer area less the inner.
 
-**Why this matters:**
+**t decides three things, all in proportion to it:**
 
-- Small containers are mostly wall, so they are heavy for what they hold.
-- Big ones are efficient, but they are one big target with one big explosion.
-- That is the trade real tanks make.
+| | Rule | At Thrust's 0.1 m |
+|---|---|---|
+| **Weight** | dry mass = wall area × the material's density | Thrust's masses |
+| **Weld strength** | each weld's limits are k × the **thinner** wall of the two parts it joins: k_T 229,500 N/m, k_C 459,000, k_S 160,500, k_M 55,200 N·m/m (the engine document's k, §5) | today's Standard welds: tension 22,950 N, compression 45,900, shear 16,050, torque 5,520 N·m |
+| **Damage capacity** | the material's threshold and toughness (DMG-002) × t ÷ 0.1 m | Thrust's materials: tank 60 J and 500 J; magazine 150 J and 3,000 J |
 
-**Shapes:** the same rule works for boxes, trapezoids and triangles. The inner outline is the outer
-one offset inward, so no new code is needed per shape.
+**Thicker walls:**
+
+- are stronger, both the welds and the container against hits;
+- hold less, because there is less room inside;
+- weigh more.
+
+**Big containers are efficient** (little wall for what they hold) but are one big target with one
+big explosion. Small ones are mostly wall.
+
+**One rule for every part's welds:**
+
+- Parts that don't have a thickness setting yet count as 0.1 m. These are the cockpit, generators,
+  battery and utilities.
+- So at the defaults every weld is Standard, as today.
+- The weld presets (Light, Standard, Heavy) stay, as the weld's own quality: ×0.5, ×1 and ×2 on top
+  of the thickness rule.
+- Engines' walls follow the same rule (§5).
+
+**Shapes:** boxes, trapezoids and triangles alike. The inner outline is the outer one offset inward
+by t.
 
 ## 2. Fuel tanks
 
 | Rule | Value | Calibrated from Thrust's tank (1.5 × 1.0 m, 2 kg dry, 4.05 kg propellant) |
 |---|---|---|
-| Propellant held | **3.21 kg per m² of inner area**, H₂ : O₂ 1 : 8 by mass | inner 1.4 × 0.9 = 1.26 m² → 4.05 kg |
-| Dry mass | **8.3 kg per m² of wall** | wall 0.24 m² → 2.0 kg |
+| Propellant held | **3.89 kg per m² of inner area**, H₂ : O₂ 1 : 8 by mass | inner 1.3 × 0.8 = 1.04 m² → 4.05 kg |
+| Dry mass | **4.35 kg per m² of wall** (tank material) | wall 0.46 m² → 2.0 kg |
+| Damage | tank material, 60 J and 500 J at 0.1 m, in proportion to t | Thrust's |
 | Explosion when destroyed | charge **0.0123 kg per kg of propellant** held at the time | 0.05 kg charge at 4.05 kg |
-| Size limits | **0.3 m to 3.0 m** each way (bounding box); trapezoid and triangle sides at least 0.15 m | below 0.3 m the inner space is under a quarter of the outline |
+| Size limits | **0.3 m to 3.0 m** each way (bounding box); trapezoid and triangle sides at least 0.15 m | |
 
-**Examples:**
+**Examples, 0.1 m walls unless given:**
 
-- The Mastodon's centre tank (1.2 × 0.65 m) would hold 1.94 kg; it is 2.11 kg today, scaled by outline.
-- A 3 × 1 m tank holds 8.4 kg for 3.3 kg dry.
-- A 0.3 × 0.3 m tank holds 0.13 kg for 0.42 kg dry.
+| Tank | Holds | Dry |
+|---|---|---|
+| Thrust's, 1.5 × 1.0 m | 4.05 kg | 2.0 kg |
+| the same with 0.05 m walls | 4.91 kg | 1.04 kg, half the weld strength, half the damage capacity |
+| the same with 0.2 m walls | 2.57 kg | 3.65 kg, twice as strong |
+| the Mastodon's centre tank, 1.2 × 0.65 m | 1.75 kg (2.11 kg today) | 1.43 kg |
+| 3 × 1 m | 8.72 kg | 3.3 kg |
+| 0.3 × 0.3 m, the smallest | 0.04 kg | 0.35 kg |
 
 **Fuel efficiency (`economy`, 66 on every Thrust engine)** is a flight-test cheat: it makes 65 parts
 in 66 of the exhaust from nothing. I propose making it a fixed game constant (66) for regular engines,
@@ -62,15 +89,21 @@ not a design setting, so the tank rules above stay honest.
 
 | Rule | Value | Calibrated from THRUST 1's magazine (0.7 × 0.45 m, 3 kg dry, 60 shells) |
 |---|---|---|
-| Shells held | **285 per m² of inner area**, rounded down | inner 0.6 × 0.35 = 0.21 m² → 60 |
-| Dry mass | **28.6 kg per m² of wall** (armoured: 3.4 times a tank's) | wall 0.105 m² → 3.0 kg |
+| Shells held | **480 per m² of inner area**, rounded down | inner 0.5 × 0.25 = 0.125 m² → 60 |
+| Dry mass | **15.8 kg per m² of wall** (hull material, armoured) | wall 0.19 m² → 3.0 kg |
+| Damage | hull material, 150 J and 3,000 J at 0.1 m, in proportion to t | Thrust's |
 | Explosion when destroyed | charge **1/60 kg per shell** held (none when empty, as now) | 1 kg at 60 shells |
-| Size limits | **0.3 m to 2.0 m** each way | 0.3 × 0.3 m holds 11 shells |
+| Size limits | **0.3 m to 2.0 m** each way | |
 
-**Examples:**
+**Examples, 0.1 m walls unless given:**
 
-- The Mastodon's magazine (0.4 × 1.4 m) would hold 111 shells; it holds 100 today.
-- A 2 × 2 m magazine holds 1,031 shells, 172 kg of them.
+| Magazine | Shells | Dry |
+|---|---|---|
+| THRUST 1's, 0.7 × 0.45 m | 60 | 3.0 kg |
+| the same with 0.05 m walls | 100 | 1.66 kg, but half as strong |
+| the Mastodon's, 0.4 × 1.4 m | 115 (100 today) | 5.05 kg |
+| 2 × 2 m | 1,555 | 12 kg |
+| 0.3 × 0.3 m, the smallest | 4 | 1.26 kg |
 
 **The shell itself** stays the railgun's: 0.167 kg. Its mass belongs to the magazine, as now.
 
@@ -207,7 +240,7 @@ So the ship looks much as it does, and its damage model is kept.
 
 **Pressure-fed tanks** (decided in the document; I suggest **later**, as its own step):
 
-- Tank walls thicken with the highest chamber pressure they feed: t ≥ p_max · L ÷ (2 k_T).
+- A tank's wall thickness (§1) must be at least p_max · L ÷ (2 k_T), where p_max is the highest chamber pressure it feeds.
 - So high pressure costs tank mass and capacity.
 - It ties §2 to §5. It isn't needed for THRUST 1 to fly as today.
 
@@ -224,8 +257,8 @@ So the ship looks much as it does, and its damage model is kept.
 
 ## 7. Order of work
 
-1. **Containers:** the tank and magazine rules and the size limits; THRUST 1 and the Mastodon
-   rebuilt from them. Measured against today.
+1. **Containers:** the tank and magazine rules, wall thickness (weight, welds, damage) and the size
+   limits; THRUST 1 and the Mastodon rebuilt from them. Measured against today.
 2. **Power:**
    - in the physics: battery, generators, and draws for the shield, railgun, beam and tether;
    - in the designer: the rules, readouts and Try it gauges;
@@ -241,7 +274,7 @@ Each step ships as its own PR with its measured figures against THRUST 1 today.
 
 ## 8. For you to decide
 
-1. **Container walls fixed at 0.05 m** for now, or a setting from the start?
+1. ~~Container walls fixed or a setting?~~ **Decided: a setting** (0.02–0.3 m, 0.1 m default), driving weight, weld strength and damage capacity (§1).
 2. **The power exchange rate and sizes:**
    - 1,000 kJ per kg of fuel;
    - battery about 4 s of shield;
