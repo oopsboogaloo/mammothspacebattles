@@ -488,6 +488,14 @@ function validateInjector(v: V, i: unknown, path: string): void {
     if (!isObj(i.chamber)) err(v, `${path}.chamber`, "must be an object {width, length}");
     else for (const k of ["width", "length"]) num(v, i.chamber[k], `${path}.chamber.${k}`, { positive: true });
   }
+  if (i.nozzle !== undefined) {
+    if (!isObj(i.nozzle)) err(v, `${path}.nozzle`, "must be an object {length, flare, walls}");
+    else {
+      num(v, i.nozzle.length, `${path}.nozzle.length`, { positive: true });
+      num(v, i.nozzle.flare, `${path}.nozzle.flare`, { min: 0, max: 80 });
+      if (!Array.isArray(i.nozzle.walls) || i.nozzle.walls.length !== 2 || !i.nozzle.walls.every((w: unknown) => typeof w === "string")) err(v, `${path}.nozzle.walls`, "must be the two walls' body ids");
+    }
+  }
   if (i.mixture !== undefined) {
     if (!isObj(i.mixture) || !Object.keys(i.mixture).length) return err(v, `${path}.mixture`, "must be an object of species mass fractions");
     let sum = 0;

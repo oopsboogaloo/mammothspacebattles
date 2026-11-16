@@ -19,6 +19,7 @@ import { bodyMass, bodiesById } from "./bodies.ts";
 import { burn, dropParcels, mixture, parcelAt, type Parcel, type WallBody } from "./gas.ts";
 import { assemblyRoots, topologyToken } from "./joints.ts";
 import { add, cross, dot, invRotate, length, powPos, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
+import { nozzleFlow } from "./nozzle.ts";
 import { localVertices, massProps, type Shape } from "./shapes.ts";
 import type { Body, World } from "./world.ts";
 
@@ -56,6 +57,11 @@ export interface VesselShape {
   box: { minX: number; minY: number; maxX: number; maxY: number };
   /** The chamber's extent as a rectangle in the engine's frame, for drawing. */
   outline: Vec2[];
+  /**
+   * The nozzle past the throat (PRP-012), when the injector declares one and both its walls are
+   * still on: its length (m), its walls' half-angle (rad), the exit's width (m) and the walls' ids.
+   */
+  nozzle?: { length: number; halfAngle: number; exit: number; walls: string[] };
 }
 
 const CELLS_ACROSS = 64;
@@ -206,6 +212,7 @@ export function vesselShape(world: World, b: Body, roots = assemblyRoots(world))
 interface LastShape {
   topo: object;
   refs: object[]; // outlet, direction, chamber, then each member's shape, then each weld and its anchors
+  nozzle: object | undefined;
   memberIdx: number[];
   weldIdx: number[];
   angles: number[];
@@ -217,7 +224,7 @@ function unchanged(world: World, b: Body, last: LastShape, topo: object): boolea
   if (last.topo !== topo) return false;
   const inj = b.injector!;
   const r = last.refs;
-  if (r[0] !== inj.outlet || r[1] !== inj.direction || r[2] !== inj.chamber) return false;
+  if (r[0] !== inj.outlet || r[1] !== inj.direction || r[2] !== inj.chamber || last.nozzle !== inj.nozzle) return false;
   let k = 3;
   for (const i of last.memberIdx) if (world.bodies[i].shape !== r[k++]) return false;
   for (let n = 0; n < last.weldIdx.length; n++) {
@@ -246,8 +253,16 @@ function vesselShapeNow(world: World, b: Body, roots: ReadonlyMap<string, string
   });
   const welds = weldIdx.map((i) => world.joints[i]);
   const refs: object[] = [inj.outlet, inj.direction, inj.chamber!, ...members.map((m) => m.shape), ...welds.flatMap((j) => [j.anchorA, j.anchorB])];
-  const shape = shapeFor(b, f, members, world);
-  lastShape.set(b, { topo, refs, memberIdx, weldIdx, angles: welds.map((j) => j.referenceAngle), shape });
+  let shape = shapeFor(b, f, members, world);
+  // The nozzle counts while both its walls are still welded on (PRP-012).
+  const nz = inj.nozzle;
+  if (shape && nz && nz.walls.length === 2 && nz.walls.every((id) => ids.has(id))) {
+    const halfAngle = (nz.flare * Math.PI) / 180;
+    const q = sinCos(halfAngle);
+    const exit = shape.openTo - shape.openFrom + (2 * nz.length * q.s) / q.c;
+    shape = { ...shape, nozzle: { length: nz.length, halfAngle, exit, walls: nz.walls } };
+  }
+  lastShape.set(b, { topo, refs, nozzle: inj.nozzle, memberIdx, weldIdx, angles: welds.map((j) => j.referenceAngle), shape });
   return shape;
 }
 
@@ -715,14 +730,21 @@ export function runVessel(world: World, b: Body, shape: VesselShape, drawn: { ma
   }
   const GOLDEN = 0.6180339887498949;
   const pm = parcelMassOf(world, inj);
+  // With a nozzle (PRP-012) the exhaust leaves at its exit, across its width. It carries the exit's
+  // momentum, λ·vₑ (nozzle.ts), and its heat: the plume's pressure on the plug across the exit gives
+  // the exit's pressure term pₑAₑ. (Released at the full effective speed instead, the plume's
+  // pressure counted that term twice: each engine 10-20% over theory.)
+  const nz = shape.nozzle;
+  const flow = nz ? nozzleFlow(nz.exit / W, g, nz.halfAngle) : null;
+  const mid = (shape.openFrom + shape.openTo) / 2;
   while (v.credit >= pm && v.mass > pm && world.gas.count + out.length < limit) {
     const dm = pm;
     const u = Math.max(0, v.thermal / v.mass);
     const uStar = u * starT;
     const cStar = Math.sqrt(g * (g - 1) * uStar);
     const frac = (((v.count + 0.5) * GOLDEN) % 1);
-    const across = shape.openFrom + (0.15 + 0.7 * frac) * W;
-    const local = at(f, shape.throat + inj.radius, across);
+    const across = nz ? mid + (frac - 0.5) * 0.7 * nz.exit : shape.openFrom + (0.15 + 0.7 * frac) * W;
+    const local = at(f, shape.throat + (nz ? nz.length : 0) + inj.radius, across);
     const point = add(b.position, rotate(q, local));
     const r = sub(point, b.position);
     const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
@@ -731,9 +753,11 @@ export function runVessel(world: World, b: Body, shape: VesselShape, drawn: { ma
     // on the plug only through the parcels just released, and at the game's detail they were too
     // sparse to carry it (about 40% of it, docs/perf/gpu-gas-phase0.md §15). Each kilogram still
     // carries the throat's stagnation enthalpy, γ·u* + c*²/2, as heat plus motion.
-    const vOut = cStar * (1 + 1 / g);
+    // Through a nozzle, the exit's speed λ·vₑ: faster, and the parcel cooler, from the same
+    // stagnation enthalpy.
+    const vOut = flow ? cStar * flow.momentum : cStar * (1 + 1 / g);
     const vParcel = add(vPoint, scale(rotate(q, f.dir), vOut));
-    const p = release(world, b, dm, dm * (g * uStar + 0.5 * cStar * cStar - 0.5 * vOut * vOut), point, vParcel, inj.radius);
+    const p = release(world, b, dm, dm * Math.max(0, g * uStar + 0.5 * cStar * cStar - 0.5 * vOut * vOut), point, vParcel, inj.radius);
     out.push(p);
     v.credit -= dm;
     v.count++;
@@ -784,13 +808,18 @@ export function spill(world: World, b: Body): Parcel[] {
   return out;
 }
 
-/** The plug across a holding vessel's throat: a thin wall moving with the engine, for the gas step. */
+/**
+ * The plug across a holding vessel's throat, or its nozzle's exit while it has one (PRP-012): a thin
+ * wall moving with the engine, for the gas step. Gas can't flow back past it, and its push is part
+ * of the thrust.
+ */
 export function plugWall(b: Body, shape: VesselShape): WallBody | null {
-  const W = shape.openTo - shape.openFrom;
+  const nz = shape.nozzle;
+  const W = nz ? nz.exit : shape.openTo - shape.openFrom;
   if (!(W > 0)) return null;
   const f = frameOf(b)!;
   const t = shape.h * 2;
-  const cLocal = at(f, shape.throat - t / 2, (shape.openFrom + shape.openTo) / 2);
+  const cLocal = at(f, shape.throat + (nz ? nz.length : 0) - t / 2, (shape.openFrom + shape.openTo) / 2);
   const corners = [
     add(scale(f.perp, -W / 2), scale(f.dir, -t / 2)),
     add(scale(f.perp, W / 2), scale(f.dir, -t / 2)),
@@ -831,6 +860,37 @@ export function wallLoads(world: World, b: Body, shape: VesselShape, dt: number)
     const rel = sub(body.position, b.position);
     const angular = l.m - cross(rel, F);
     out.set(l.id, { x: P * dt * F.x, y: P * dt * F.y, angular: P * dt * angular });
+  }
+  // The nozzle's walls (PRP-012): the falling pressure along each pushes it outward and forward, and
+  // the head, through the welds, carries that forward push to the ship (the jet's recoil on the head
+  // already moves the ship by the whole thrust: these only load the welds).
+  const nz = shape.nozzle;
+  if (nz) {
+    const f = frameOf(b)!;
+    const g = mixture(v.composition).gamma;
+    const W = shape.openTo - shape.openFrom;
+    const flow = nozzleFlow(nz.exit / W, g, nz.halfAngle);
+    const sc = sinCos(nz.halfAngle);
+    const along = nz.length / sc.c; // each wall's length
+    const N = P * flow.wallPressure * along;
+    let forward = { x: 0, y: 0 };
+    for (const [k, side] of [[0, -1], [1, 1]] as const) {
+      const body = byId.get(nz.walls[k]);
+      if (!body) continue;
+      // Engine frame: the wall runs from the throat's edge, out by the half-angle; its normal points away from the axis and upstream.
+      const edge = side < 0 ? shape.openFrom : shape.openTo;
+      const tangent = add(scale(f.dir, sc.c), scale(f.perp, side * sc.s));
+      const normal = add(scale(f.perp, side * sc.c), scale(f.dir, -sc.s));
+      const pointLocal = add(at(f, shape.throat, edge), scale(tangent, flow.wallCentre * along));
+      const F = rotate(q, scale(normal, N));
+      const point = add(b.position, rotate(q, pointLocal));
+      const e = out.get(body.id) ?? { x: 0, y: 0, angular: 0 };
+      out.set(body.id, { x: e.x + F.x * dt, y: e.y + F.y * dt, angular: e.angular + cross(sub(point, body.position), F) * dt });
+      forward = add(forward, F);
+    }
+    // The head takes the walls' push back, so the gas's loads still sum to the jet's.
+    const e = out.get(b.id) ?? { x: 0, y: 0, angular: 0 };
+    out.set(b.id, { x: e.x - forward.x * dt, y: e.y - forward.y * dt, angular: e.angular });
   }
   return out;
 }

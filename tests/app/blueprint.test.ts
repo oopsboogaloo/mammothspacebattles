@@ -874,10 +874,10 @@ describe("the Stegodon (Chloe's sketch, 16 November 2026)", async () => {
     expect(body(bp, "tank-l").explosive).toEqual(body(m, "tank-l").explosive);
   });
 
-  it("BPD-049 measured: about 32 m/s² forward, 6 rad/s² turning on the tail alone, both ways alike", () => {
+  it("BPD-049 measured: about 26 m/s² forward (its nozzles working, PRP-012), 6 rad/s² turning on the tail alone, both ways alike", () => {
     const r = measureNow(st, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
-    expect(r[0].ahead).toBeGreaterThan(28);
-    expect(r[0].ahead).toBeLessThan(36);
+    expect(r[0].ahead).toBeGreaterThan(23);
+    expect(r[0].ahead).toBeLessThan(29);
     expect(r[1].turn).toBeGreaterThan(5);
     expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.5);
     expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
@@ -922,13 +922,13 @@ describe("the Phiomia (Chloe's sketch, 16 November 2026)", async () => {
     expect(response(ph, { left: 1 }).turn).toBeLessThan(0);
   });
 
-  it("BPD-050 measured: gentle, about 11.6 m/s² forward and 4.5 rad/s² turning, both ways alike; forward alone goes straight", () => {
+  it("BPD-050 measured: gentle, about 7.4 m/s² forward and 2.8 rad/s² turning (its nozzles working, PRP-012), both ways alike; forward alone goes straight", () => {
     const r = measureNow(ph, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
-    expect(r[0].ahead).toBeGreaterThan(9);
-    expect(r[0].ahead).toBeLessThan(14);
+    expect(r[0].ahead).toBeGreaterThan(6);
+    expect(r[0].ahead).toBeLessThan(9);
     expect(Math.abs(r[0].turn)).toBeLessThan(0.5);
     expect(Math.abs(r[0].side)).toBeLessThan(0.5);
-    expect(r[1].turn).toBeLessThan(-3.5);
+    expect(r[1].turn).toBeLessThan(-2);
     expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.5);
     expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
   }, 120_000);

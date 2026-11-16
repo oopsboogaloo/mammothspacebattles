@@ -209,6 +209,14 @@ export interface Injector {
    */
   chamber?: { width: number; length: number };
   /**
+   * The nozzle past the throat (PRP-012), declared by the engines built to the design rules: its
+   * length from the throat (m), its walls' half-angle (degrees) and the two walls' body ids. While
+   * the chamber is held as one volume and both walls are still welded on, the exhaust leaves at the
+   * nozzle's exit at the 1D isentropic exit speed, and the nozzle's pressure loads its walls.
+   * Absent (every engine but the designer's regular rockets): the jet leaves at the throat, as ever.
+   */
+  nozzle?: { length: number; flare: number; walls: string[] };
+  /**
    * Fuel economy (FLT-010, a flight-test cheat): the stores supply 1/economy of each parcel's mass,
    * so propellant lasts `economy` times as long at the same thrust. The rest is made from nothing,
    * and the ledger records it under `supply`. Absent or 1: mass is conserved.

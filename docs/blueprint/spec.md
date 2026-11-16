@@ -603,9 +603,9 @@ double engine, whose heads are box chambers.
   |---|---|---|
   | Weight | 61.2 kg | 58.8 kg |
   | Fuel | 8.10 kg | 6.08 kg |
-  | Forward | 36.1 m/s² | 37.4 m/s² |
-  | Reverse | 9.8 m/s² | 10.2 m/s² |
-  | Turn | 9.3 rad/s² | 11.3 rad/s² |
+  | Forward | 36.1 m/s² | 37.4 m/s² (36.1 with working nozzles, §27) |
+  | Reverse | 9.8 m/s² | 10.2 m/s² (9.7, §27) |
+  | Turn | 9.3 rad/s² | 11.3 rad/s² (9.8, §27) |
 
   The ship is lighter, and lightest at its wings.
 
@@ -636,7 +636,7 @@ layout.
   - a turn alone fires the tail;
   - forward with a turn fires one main engine and the opposite side of the tail.
   - There is no reverse. The guns are on Action A. It has no power system.
-- **Measured:** 44.1 kg; 31.8 m/s² forward; 6.0 rad/s² turning on the tail alone.
+- **Measured:** 44.1 kg; 31.8 m/s² forward (26.2 with working nozzles, §27); 6.0 rad/s² turning on the tail alone.
   - Forward with a turn is much stronger: 24 rad/s², one main engine being far off the centre of
     mass.
   - Held for 1.4 s it spins the ship to 35 rad/s, and the turning main engine's head-to-chamber
@@ -664,6 +664,8 @@ The simplest ship (`phiomiaPreset`), using the Mastodon's cockpit for scale.
   - forward with a turn fires that engine alone.
   - There is no reverse, no weapon and no power system.
 - **Measured:** 12.6 kg; 11.6 m/s² forward (THRUST OG: 36); about 4.9 rad/s² turning, both ways alike.
+  With working nozzles (§27): 7.4 m/s² forward and 2.8 rad/s² turning, and forward alone no longer
+  turns it (its jets no longer cling to one side of the throat).
   - The tank gives about 80 s of full forward, at the game's fuel economy of 66.
   - It holds together: no weld breaks in a 20 s flight, forward and turning, and its parts stay
     within 1.3° of each other.
@@ -701,7 +703,8 @@ A light transport and lander (`loxodonPreset`), using the Mastodon's cockpit for
     turns.
   - There is no reverse, no weapon and no power system.
 - **Measured:** 12.1 kg; 14 m/s² forward, going straight (the lander levels' gravity is 1.6);
-  4.6 rad/s² turning alone, both ways alike; 5.8 rad/s² forward with a turn.
+  4.6 rad/s² turning alone, both ways alike; 5.8 rad/s² forward with a turn. With working nozzles
+  (§27): 13.7 m/s² forward, 4.5 rad/s² turning.
   - 0.57 kg of fuel: about 47 s of full forward.
   - It holds: no weld breaks in a 20 s flight, and its parts stay within 0.01° of the cockpit.
 - **Two rule fixes it needed:**
@@ -721,6 +724,32 @@ A light transport and lander (`loxodonPreset`), using the Mastodon's cockpit for
       nose 0.84 m back in its first step: a fix there is for Chloe to decide.
 
 Test: BPD-051.
+
+## 27. Working nozzles (16 November 2026, Chloe)
+
+The regular rockets' nozzles now work (design rules §5; `docs/spec.md` PRP-012). Only the new
+engines change: **the OG engines, the double engine and every game's ships keep the throat's jet,
+exactly as before** (THRUST OG measures 36.10 m/s² forward either way).
+
+- `buildRocket` declares each rocket's nozzle on its head (`injector.nozzle`: length, half-angle and
+  its two walls); `instantiate` renames the walls with the part.
+- In flight the exhaust leaves at the nozzle's exit, faster and cooler; the nozzle's pressure loads
+  its walls' welds. If a nozzle wall comes off, the jet leaves at the throat again.
+- **Measured alone**, each rocket is within −4% to +8% of the textbook nozzle. The throat jet it
+  replaces ran 23–41% over its own theory, more for narrow throats, so the presets change:
+
+  | | Before | With working nozzles |
+  |---|---|---|
+  | THRUST 1 forward / reverse / turn | 37.4 m/s² / 10.2 / 10.5 rad/s² | 36.1 / 9.7 / 9.8 (THRUST OG: 36.1 / 9.8 / 9.3) |
+  | Stegodon forward | 28.8 m/s² | 26.2 |
+  | Phiomia forward / turn | 11.6 m/s² / 4.9 rad/s² | 7.4 / 2.8 |
+  | Loxodon forward / turn | 14.0 m/s² / 4.6 rad/s² | 13.7 / 4.5 |
+  | Mastodon (double engines) | 37.9 m/s² | 37.9 (unchanged) |
+
+- Not done yet (design rules §5): the L* rule, the pressure-fed tanks' limit, and the readouts
+  (thrust, Isp, wall margins) in Properties.
+
+Tests: PRP-012 (`tests/core/nozzle.test.ts`, `tests/app/nozzle.test.ts`).
 
 ## Sources
 
