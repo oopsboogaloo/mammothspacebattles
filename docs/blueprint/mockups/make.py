@@ -244,7 +244,7 @@ def stats_box(rows, title="THRUST 1", sub="Preset · read-only — Duplicate to 
 
 
 STD_STATS = [
-    ("Mass", "61.2 kg", "", ""), ("Width × height", "5.2 × 3.6 m", "", ""),
+    ("Mass", "61.2 kg", "", ""), ("Width × height", "5.6 × 3.65 m", "", ""),
     ("Accel. forward", "28.3 m/s²", "", ""), ("Accel. reverse", "4.2 m/s²", "", ""),
     ("Turn", "≈ 7 rad/s²", "", ""), ("Thrust ÷ mass", "Fwd 2.9 g", "", ""),
     ("Full-burn time", "— s", "", ""), ("Joins", "20 welds · 17 parts", "", ""),
@@ -397,7 +397,7 @@ def build():
     ghost += f'<line x1="{ccx+14}" y1="{ccy}" x2="{ccx+0.31*s+24}" y2="{ccy}" stroke="#ffb35a" stroke-width="2" marker-end="url(#arr)" opacity=".9"/>'
     ghost += f'<g opacity=".55">{com_marker(ccx+0.31*s+34, ccy, 8)}</g><text x="{ccx+20}" y="{ccy-16}" class="warnlbl">CoM → 0.31 m</text>'
     layer2 += ghost + scalebar(24, ch - 30, 86)
-    st2 = [("Mass", "61.2 → 67.3 kg", "+6.1", "up"), ("Width × height", "6.7 × 3.6 m", "+1.5", "up"),
+    st2 = [("Mass", "61.2 → 67.3 kg", "+6.1", "up"), ("Width × height", "7.1 × 3.65 m", "+1.5", "up"),
            ("Accel. forward", "25.7 m/s²", "−2.6", "down"), ("Accel. reverse", "3.8 m/s²", "−0.4", "down"),
            ("Turn", "≈ 5.9 rad/s²", "−1.1", "down"), ("Thrust ÷ mass", "Fwd 2.6 g", "", ""),
            ("Full-burn time", "— s", "+", "up"), ("Joins", "21 welds · 18 parts", "+1", "")]

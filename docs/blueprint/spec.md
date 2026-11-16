@@ -143,7 +143,7 @@ last save in green/red, and the projected change while dragging:
 | Row | How |
 |---|---|
 | Mass | sum of bodies + contents + shells (Thrust: 61.2 kg) |
-| Width × height | bounding box (Thrust: 5.2 × 3.6 m) |
+| Width × height | bounding box (Thrust: 5.6 × 3.65 m) |
 | Accel. forward / reverse | from the mixer: the engines Forward (or Reverse) drives, ÷ mass |
 | Turn | from the mixer: net torque of what Turn left / right drives, about the centre of mass, ÷ moment of inertia |
 | Thrust ÷ mass | in g |
