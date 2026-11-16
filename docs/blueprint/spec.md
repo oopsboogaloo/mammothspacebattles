@@ -1,6 +1,6 @@
 # Blueprint designer — specification (draft for discussion)
 
-Status: **draft, 16 November 2026.** Nothing is built yet. Mockups are in [`mockups/`](mockups/)
+Status: **draft, 16 November 2026; decisions of the same day in §14.** Nothing is built yet. Mockups are in [`mockups/`](mockups/)
 (PNG, plus the HTML they are rendered from: `python3 make.py && node shoot.mjs` in that folder).
 The ship in every mockup is drawn from the real Thrust ship (`scenarios/thrust-1.json`,
 `world.thrust.ship`), so its shapes, weld points and centre of mass are true. Performance
@@ -25,7 +25,7 @@ up). Phone is not a goal.
 
 | Area | What | Mockup |
 |---|---|---|
-| Top bar | ☰ Blueprints menu · drawing name and state (PRESET / EDITING, ● unsaved) · undo/redo · overlay toggles (CoM, Thrust, Welds, Dims, Snap) · Fit · **▶ TRY IT** | all |
+| Top bar | ☰ Blueprints menu · drawing name and state (PRESET / EDITING, ● unsaved) · **BUILD / CONTROLS** mode switch · undo/redo · overlay toggles (CoM, Thrust, Welds, Dims, Snap) · Fit · **▶ TRY IT** | all |
 | Left: Components | Type picker ◀ ENGINES ▶, plus a row of 8 type tabs for direct access; a vertical list of component cards (line drawing, name, two key numbers, ＋ button); its own scrollbar with arrows; the list also scrolls by drag or wheel | 01, 02 |
 | Centre: Blueprint | Grid (1 m major, 0.2 m minor), the ship, scale bar, title block, zoom buttons; a Performance table top right | 01–03 |
 | Right: Properties | The selected component or weld: name and summary, then tabs (SHAPE · FUEL · BUILD · LINKS for an engine) so a type's fields fit without scrolling; derived readouts; Duplicate / Mirror / Remove | 01, 03 |
@@ -109,7 +109,7 @@ editor treats as one. Every property maps to a field already in the scenario for
 | Component | Bodies | SHAPE | FUEL / FUNCTION | BUILD | LINKS |
 |---|---|---|---|---|---|
 | Cockpit | 1 polygon | width, height, nose width, nose length | tractor (if fitted here): range, arc, force | material, mass | channels it drives |
-| Engine | head + 2 nozzle walls | chamber width, chamber length, throat width, wall thickness, nozzle wall length, nozzle flare | flow (kg/s, the sketch's "burn rate"), mixture H₂:O₂, igniter, economy | material, mass (derived) | control channel / role, feeds (which tanks) |
+| Engine | head + 2 nozzle walls | chamber width, chamber length, throat width, wall thickness, nozzle wall length, nozzle flare | flow (kg/s, the sketch's "burn rate"), mixture, igniter, fuel efficiency | material, mass (derived) | feeds (which tanks); its controls are set in Controls mode (§10) |
 | Tank | 1 box | width, height | H₂ and O₂ capacity (derived from volume, editable), fill at start | material, mass, explodes when destroyed (charge) | feeds out |
 | Magazine | 1 box | width, height | shell count, shell mass | material, mass, explosive charge | which gun it feeds |
 | Railgun | 1 box | width, length | speed, reload | material, mass | fire channel |
@@ -144,8 +144,8 @@ last save in green/red, and the projected change while dragging:
 |---|---|
 | Mass | sum of bodies + contents + shells (Thrust: 61.2 kg) |
 | Width × height | bounding box (Thrust: 5.2 × 3.6 m) |
-| Accel. forward / reverse | thrust of the engines in each role ÷ mass |
-| Turn | net torque of the turn engines about the centre of mass ÷ moment of inertia |
+| Accel. forward / reverse | from the mixer: the engines Forward (or Reverse) drives, ÷ mass |
+| Turn | from the mixer: net torque of what Turn left / right drives, about the centre of mass, ÷ moment of inertia |
 | Thrust ÷ mass | in g |
 | Full-burn time | propellant ÷ total flow of the forward engines |
 | Joins | welds and parts (Thrust: 20 welds, 26 weld points, 17 components) |
@@ -155,9 +155,17 @@ last save in green/red, and the projected change while dragging:
 that runs the real simulation headless in the worker for a second (as `docs/ship-designs.md`
 measures) and replaces the estimates with measured values, marked as such. Recommended because the
 real thrust depends on the nozzle walls in ways the formula misses (`docs/perf/gpu-gas-phase0.md`).
+A first estimate for the Thrust ship shows the gap: taking each side thruster as about 128 N and
+the main about 1,475 N (from the measured 28.3 and 4.2 m/s²), and the moment of inertia from the
+parts' shapes (about 133 kg·m²), one turn control gives about 4.0 rad/s², against the "about 7"
+in `docs/games/mammoth-thrust.md`. Mockup 07 shows the estimate; Measure would settle it.
 
 Overlays: centre of mass (marker as KSP's), thrust arrows sized by thrust, weld points, dimension
 lines on the selection, grid snap. Later: centre of thrust, as KSP and its RCS Build Aid mod show.
+
+**Fuel efficiency** (the scenario's `economy`, ×66 on the Thrust ship) is an ordinary FUEL field,
+not a cheat: in the game world the propellant isn't really hydrogen and oxygen (it will be made
+from crystals the player collects), and the ships are far lighter than real ones.
 
 ## 8. Blueprints (mockup 04)
 
@@ -166,8 +174,9 @@ lines on the selection, grid snap. Later: centre of thrust, as KSP and its RCS B
 mass, acceleration and engine count.
 
 - **Presets** ship with the game and cannot be changed. Editing one asks once, then makes "<name>
-  copy" and edits that. First preset: **Thrust 1**, exactly the Thrust ship. Later: Asteroids ship,
-  Lander, Gunship 3, Mammoth (`docs/ship-designs.md`).
+  copy" and edits that. The only preset for now is **Thrust 1**, exactly the Thrust ship: the gold
+  standard (easy to fly, vulnerable, and it blows apart nicely). The other ships in
+  `docs/ship-designs.md` wait until they are rebalanced against the improved model.
 - **Mine** are kept in the browser (localStorage) and saved automatically on every change, with
   undo history for the session. Export/Import moves them between devices.
 - A blueprint is the existing ship format (`bodies`, `joints`, `links`, plus the control mix) with a
@@ -181,19 +190,68 @@ mass, acceleration and engine count.
   one rock to the side to fly round and shoot; stars for a sense of motion;
 - a top bar: **◀ BACK TO BLUEPRINT (Esc)**, Refuel & reset (R), Pause (Space), rock on/off;
 - gauges: fuel, shells, speed, spin, parts lost; the control keys shown;
-- controls as Mammoth Asteroids/Thrust (forward, turn, reverse, fire, tractor, shield), mapped to
-  the engines by the role each engine has in its LINKS tab;
+- the blueprint's own controls and mixer (§10), with their keys and game-controller bindings;
 - nothing in the try-out changes the blueprint. Back returns to the blueprint exactly as left
   (selection, zoom, tab).
 
-## 10. Later (designed for, not built now)
+## 10. Controls mode (mockup 07)
+
+The player decides how their controls drive their engines and devices: nothing is guessed, because
+players will build ships nobody can predict. **BUILD / CONTROLS** in the top bar switches mode
+(B / K). The blueprint stays in the middle; the panels change:
+
+- **Left: Controls.** The ship's controls: name, kind (*analog*, 0–100%, from a stick or trigger;
+  or *hold*, on/off), and their bindings as chips (keys, game-controller buttons, sticks, triggers).
+  ＋ on a control binds one more: press it. ＋ New control adds one (Strafe, Boost, Brake …).
+  **Rules** sit under the list: the Thrust ship's is *Turn left + Turn right are opposites: held
+  together they cancel and count as Forward*.
+- **Bottom of the centre: the Mixer**, a matrix: a row for everything that can be driven (each
+  engine, gun, tractor, tether, shield), a column for each control. A cell holds a line's weight
+  and, in orange, what eases it. Click an empty cell to add a line; click a filled one to edit it.
+  A NOW column shows each row's throttle while testing.
+- **Right: the selected row's lines**, as an RC transmitter's mixer screen (EdgeTX): each line is
+  *control × weight*, optionally *eased by* another control (× (1 − amount × that control)). The
+  row takes the **largest** of its lines (or their sum, or least). A sentence says what it does in
+  words: "Fires fully on Turn right. Fires on Forward, except while Turn left is held."
+  Mirror to BR, Copy lines and Throttle limit are there.
+- **Test by holding the keys** (or ● on a control): engines on the blueprint show their throttle
+  and a plume; the centre of mass shows the result (green arrow and turn arc).
+- **Response** replaces Performance: for each control, and for what is held now, the acceleration
+  ahead, sideways and the turn, estimated, with Measure (§7). Checks under it: every engine driven
+  by something; Forward and Reverse don't turn the ship; Turn left and right mirror each other.
+  Problems show in orange with the row that causes them; they warn, never forbid.
+- Drag a control from the left onto an engine on the blueprint to add a line at 100%.
+
+**The Thrust ship's mix in these terms** (`src/core/arcade.ts`, `steerValues`, MAS-054), which the
+Thrust 1 preset must reproduce exactly:
+
+| Driven | Lines (largest wins) |
+|---|---|
+| Main thruster | Forward 100% |
+| Thruster BL | Turn right 100% · Forward 100% eased by Turn left 100% |
+| Thruster BR | Turn left 100% · Forward 100% eased by Turn right 100% |
+| Thruster FL | Reverse 100% · Turn left 100% eased by Forward 50% |
+| Thruster FR | Reverse 100% · Turn right 100% eased by Forward 50% |
+| Railgun, tractor, shield | Fire, Tractor, Shield: on |
+
+with the rule that Turn left and Turn right held together cancel and count as Forward (so "Turn
+right" in a line is the net turn, right less left). Bindings as the game's: Forward ↑, A, right
+trigger, stick up; Reverse S, ↓, B, left trigger; Turn left Q, ←, left Shift, left Ctrl, stick;
+Turn right E, →, right Shift, right Ctrl, stick; Fire Space, W, X, right bumper; Tractor Z, /, Y;
+Shield X, ., left bumper (`src/app/Thrust.tsx`). Self-destruct stays a game button, not a control.
+
+The data: a blueprint's `controls` (names, kinds, bindings, rules) and `mix` (per driven channel,
+its lines and how they combine). It generalises today's `SteerMix` and `MixRow` (both in
+`arcade.ts`); the games could later take a blueprint's mix instead of their fixed one.
+
+## 11. Later (designed for, not built now)
 
 - Rotating components (handle + 15° snap) and triangular/wedge components to join at angles.
 - Resizing by dragging handles on the blueprint (for now: by the SHAPE fields).
 - Damage and repair: the blueprint of a damaged ship shows lost parts as dashed outlines to rebuild.
 - Cost and build limits for the game proper.
 
-## 11. Requirements (to be numbered BPD-xxx and traced to tests when agreed)
+## 12. Requirements (to be numbered BPD-xxx and traced to tests when agreed)
 
 1. The editor fits one screen at 1280×720 and up, and at iPad landscape (1180×820), with no page
    scrolling.
@@ -207,23 +265,28 @@ mass, acceleration and engine count.
    can be exported and imported.
 9. Try it flies the current design, fuelled, in a wrapping gravity-free field with one rock; Esc
    returns to the unchanged blueprint.
-10. Thrust 1 is a preset identical to the Thrust game's ship (same bodies, joints and links).
+10. Thrust 1 is a preset identical to the Thrust game's ship (same bodies, joints and links), and
+    its mix gives the same engine values as `steerValues` for every combination of controls.
+11. Every engine and device's controls are set by the player in Controls mode; none is guessed.
+    Each control can be tested in the editor, showing the ship's response.
+12. The sandbox's start screen links to the designer (`blueprint.html`), beside the games.
 
-## 12. Questions for you (with my recommendation)
+## 13. Open questions
 
-1. **Engine as one component with six shape numbers** (recommended), rather than placing chamber,
-   throat and walls separately. Separate pieces could come later as an "advanced" mode.
-2. **Where it lives:** its own page, `blueprint.html`, like the games (recommended), reachable from
-   each game later.
-3. **Stats:** instant estimates plus a Measure button that runs the real physics (recommended), or
-   estimates only.
-4. **Engine roles for Try it:** each engine gets a role (forward, reverse, turn left, turn right,
-   or a combination like the Thrust ship's front thrusters) chosen in LINKS, defaulting from where
-   the engine sits relative to the centre of mass (recommended).
-5. **Economy cheat:** keep the Thrust ship's ×66 fuel economy in the preset and show it as a BUILD
-   field, or hide it from the player?
-6. **Mixed preset list:** include the other five ships as presets in the first version, or Thrust 1
-   only (as you asked) and add them after?
+1. Controls mode: are *eased by* lines and *opposites* rules enough for the mixes you have in mind?
+   EdgeTX also has curves (gentle near centre) and delays; they can be added as line options.
+2. Should a blueprint's controls be its own, or should the player have one set of controls shared
+   by all their ships, with only the mixer per ship? The mockup assumes per ship.
+
+## 14. Decisions (16 November 2026, Chloe)
+
+- An engine is one component, shaped by its six numbers.
+- Its own page, `blueprint.html`, as the games; linked from the main sandbox.
+- Estimates plus a Measure button.
+- Each engine's controls are set by the player, never guessed; the control-linking UI needs care,
+  as the Thrust ship's mix shows (§10).
+- Fuel efficiency is part of the game world, not a cheat: an ordinary property.
+- Thrust 1 is the only preset for now: the model ship.
 
 ## Sources
 
@@ -234,6 +297,8 @@ mass, acceleration and engine count.
   <https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html>
 - KSP wiki, Centre of mass and Centre of thrust markers: <https://wiki.kerbalspaceprogram.com/wiki/CG>,
   <https://wiki.kerbalspaceprogram.com/wiki/CoT>; RCS Build Aid: <https://github.com/m4v/RCSBuildAid>
-- This repo: `docs/spec.md` §8 (sandbox UI principles), §9.5 (propulsion, PRP-011);
+- EdgeTX manual, Mixes (weight, offset, add / multiply / replace lines):
+  <https://manual.edgetx.org/bw-radios/model-select/inputs-mixes-and-outputs/mixes>
+- This repo: `src/core/arcade.ts` (`steerValues`, `MixRow`); `docs/spec.md` §8 (sandbox UI principles), §9.5 (propulsion, PRP-011);
   `docs/ship-designs.md`; `docs/games/mammoth-asteroids.md` (28.3 m/s² forward, 4.2 reverse,
   3.5 rad/s² turn); `docs/games/mammoth-thrust.md` (about 7 rad/s² with the tractor and tether).

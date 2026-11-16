@@ -190,3 +190,11 @@ kbd { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; border: 1px so
 .grid.touch .sl { margin-top: 2px; }
 .grid.touch .derived div { padding: 4px 10px; }
 .grid.touch .actions { padding: 6px 10px; }
+
+.modes { display: flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.modes button { height: calc(var(--tgt) - 2px); padding: 0 12px; border: none; letter-spacing: .14em; font-size: 12px; color: var(--dim); }
+.modes button.on { background: var(--ink); color: var(--bg); font-weight: 600; }
+
+.top { gap: 8px; } .top * { white-space: nowrap; }
+.tog .ib { padding: 0 7px; font-size: 11.5px; }
+.tn { font-size: 18px; }

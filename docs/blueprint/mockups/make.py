@@ -251,14 +251,15 @@ STD_STATS = [
 ]
 
 
-def topbar(name="THRUST 1", dirty=False, touch=False, preset=True):
+def topbar(name="THRUST 1", dirty=False, touch=False, preset=True, mode="build"):
     badge = '<span class="badge">PRESET</span>' if preset else '<span class="badge edit">EDITING</span>'
     return f"""
 <header class="top">
   <button class="ib menu" title="Blueprints: new, open, duplicate, import, export (Ctrl+O)">☰ <span>BLUEPRINTS</span></button>
   <div class="title"><span class="tl">DRAWING</span><span class="tn">{name}{'<i>●</i>' if dirty else ''}</span>{badge}</div>
+  <div class="modes"><button class="{'on' if mode=='build' else ''}" title="Build: place and shape parts (B)">BUILD</button><button class="{'on' if mode=='controls' else ''}" title="Controls: link controls to engines and devices (K)">CONTROLS</button></div>
   <div class="grp"><button class="ib" title="Undo (Ctrl+Z)">↶</button><button class="ib" title="Redo (Ctrl+Shift+Z)">↷</button></div>
-  <div class="grp tog"><button class="ib on" title="Centre of mass (C)">◉ CoM</button><button class="ib on" title="Thrust arrows (T)">↑ Thrust</button><button class="ib on" title="Welds (W)">• Welds</button><button class="ib" title="Dimensions (D)">⟷ Dims</button><button class="ib on" title="Snap (S, hold Shift to override)">⌗ Snap</button></div>
+  <div class="grp tog"><button class="ib on" title="Centre of mass (C)">◉ CoM</button><button class="ib on" title="Thrust arrows (T)">↑ Thrust</button>{'' if mode=='controls' else '<button class="ib on" title="Welds (W)">• Welds</button><button class="ib" title="Dimensions (D)">⟷ Dims</button><button class="ib on" title="Snap (S, hold Shift to override)">⌗ Snap</button>'}</div>
   <div class="spacer"></div>
   <button class="ib" title="Fit (Z)">⤢ Fit</button>
   <button class="try" title="Try it in the sandbox (Enter)">▶ TRY IT</button>
@@ -280,7 +281,7 @@ def scalebar(x, y, px_per_m):
 
 
 def title_block(name="THRUST 1"):
-    return f"""<div class="tblock"><div><small>DRAWING</small><b>{name}</b></div><div><small>SCALE</small><b>1 m = 100 px</b></div>
+    return f"""<div class="tblock"><div><small>DRAWING</small><b>{name}</b></div><div><small>GRID</small><b>1 m · 0.2 m</b></div>
  <div><small>REV</small><b>7</b></div><div><small>DESIGNER</small><b>MAMMOTH YARD</b></div></div>"""
 
 
@@ -379,10 +380,10 @@ def build():
           "<b>Main thruster</b> selected · drag to move (its welds re-form where it lands) · <kbd>Del</kbd> remove · <kbd>Tab</kbd> next part · <kbd>Esc</kbd> deselect"), W, H))
 
     # 2. Dragging a tank in (snap preview)
-    layer2, cx, cy = ship_layer(cw, ch, 100, ox=-60, oy=10, show_welds=True)
+    layer2, cx, cy = ship_layer(cw, ch, 86, ox=-70, oy=10, show_welds=True)
     # ghost tank snapped below back-r thruster? put it to the right of tank-r: x=2.05+1.5=3.55
     gx, gy = 3.55 + 0.0, -0.549612
-    s = 100; X = cx + gx * s; Y = cy - gy * s
+    s = 86; X = cx + gx * s; Y = cy - gy * s
     ghost = (f'<g><rect x="{X-0.75*s}" y="{Y-0.5*s}" width="{1.5*s}" height="{1.0*s}" fill="{COL["tank"]}" fill-opacity="0.12" stroke="#7dffb0" stroke-width="2" stroke-dasharray="7 5"/>'
              f'<text x="{X-28}" y="{Y+5}" class="ghostlbl">TANK</text>'
              f'<circle cx="{X-0.75*s}" cy="{Y-0.4*s}" r="7" fill="none" stroke="#7dffb0" stroke-width="2"/><circle cx="{X-0.75*s}" cy="{Y-0.4*s}" r="3" fill="#7dffb0"/>'
@@ -395,7 +396,7 @@ def build():
     ccx, ccy = cx, cy
     ghost += f'<line x1="{ccx+14}" y1="{ccy}" x2="{ccx+0.31*s+24}" y2="{ccy}" stroke="#ffb35a" stroke-width="2" marker-end="url(#arr)" opacity=".9"/>'
     ghost += f'<g opacity=".55">{com_marker(ccx+0.31*s+34, ccy, 8)}</g><text x="{ccx+20}" y="{ccy-16}" class="warnlbl">CoM → 0.31 m</text>'
-    layer2 += ghost + scalebar(24, ch - 30, 100)
+    layer2 += ghost + scalebar(24, ch - 30, 86)
     st2 = [("Mass", "61.2 → 67.3 kg", "+6.1", "up"), ("Width × height", "6.7 × 3.6 m", "+1.5", "up"),
            ("Accel. forward", "25.7 m/s²", "−2.6", "down"), ("Accel. reverse", "3.8 m/s²", "−0.4", "down"),
            ("Turn", "≈ 5.9 rad/s²", "−1.1", "down"), ("Thrust ÷ mass", "Fwd 2.6 g", "", ""),
@@ -481,4 +482,6 @@ def build():
 
 if __name__ == "__main__":
     build()
+    import controls
+    controls.build()
     print("written")

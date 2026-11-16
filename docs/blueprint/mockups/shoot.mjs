@@ -1,6 +1,14 @@
 // Renders each mockup HTML to a PNG beside it. Run from the repo root: node docs/blueprint/mockups/shoot.mjs
 import { createRequire } from "node:module";
-const { chromium } = createRequire(import.meta.url)("playwright");
+// The repo declares @playwright/test (which re-exports chromium); a global playwright also works.
+const require = createRequire(import.meta.url);
+const { chromium } = (() => {
+  try {
+    return require("@playwright/test");
+  } catch {
+    return require("playwright");
+  }
+})();
 import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
