@@ -37,9 +37,11 @@ describe("blueprint model", () => {
     expect(["mag-l", "mag-r"].map((id) => body(regular, id).ammo?.count)).toEqual([60, 60]);
     expect(body(regular, "mag-l").ammo!.shell).toEqual(body(bp, "gun").magazine!.shell);
     expect(regular.ship.links.filter((l) => l.kind === "ammo").map((l) => [l.kind === "ammo" && l.from, l.to])).toEqual([["mag-l", "gun"], ["mag-r", "gun"]]);
-    // The same mass; its centre lower, the 20 kg of shells being in the magazines, not the nose.
+    // The same mass but for its smaller wing tanks (room for its engines' chambers); its centre
+    // lower, the 20 kg of shells being in the magazines, not the nose.
     const [o, r] = [stats(bp), stats(regular)];
-    expect(r.mass).toBeCloseTo(o.mass, 9);
+    const tanks = (b: typeof bp) => ["tank-l", "tank-r"].reduce((sum, id) => sum + body(b, id).mass + body(b, id).contents!.reduce((a, c) => a + c.mass, 0), 0);
+    expect(r.mass).toBeCloseTo(o.mass - tanks(bp) + tanks(regular), 9);
     expect(r.com.y).toBeLessThan(o.com.y - 0.2);
     expect(Math.abs(r.com.x)).toBeLessThan(1e-9);
     // A regular magazine added later feeds the railgun too; removed, its line goes with it.
@@ -531,12 +533,14 @@ describe("turning and resizing parts (§3.6)", async () => {
   it("BPD-042 resizing from a corner keeps the opposite corner where it is, at any angle; what the part holds goes with its area", () => {
     const t = body(regular, "tank-l");
     // Drag the top-right corner: the bottom-left stays.
-    const fixed = { x: t.position.x - 0.75, y: t.position.y - 0.5 };
+    const th = t.shape.kind === "box" ? t.shape.height : 0;
+    const fixed = { x: t.position.x - 0.75, y: t.position.y - th / 2 };
     const big = resizeComponent(regular, "tank-l", 1.8, 1.2, fixed, { x: 1, y: 1 });
     expect(componentSize(big, "tank-l")).toEqual({ w: 1.8, h: 1.2 });
-    expect(body(big, "tank-l").position).toEqual({ x: fixed.x + 0.9, y: fixed.y + 0.6 });
-    // By the design rules: its inner area, 1.6 × 1.0 against Thrust's 1.3 × 0.8.
-    expect(body(big, "tank-l").contents![1].capacity).toBeCloseTo(t.contents![1].capacity * ((1.6 * 1.0) / (1.3 * 0.8)), 8);
+    expect(body(big, "tank-l").position.x).toBeCloseTo(fixed.x + 0.9, 9);
+    expect(body(big, "tank-l").position.y).toBeCloseTo(fixed.y + 0.6, 9);
+    // By the design rules: its inner area, 1.6 × 1.0 against THRUST 1's 1.3 × 0.6.
+    expect(body(big, "tank-l").contents![1].capacity).toBeCloseTo(t.contents![1].capacity * ((1.6 * 1.0) / (1.3 * (th - 0.2))), 8);
     // Turned 30°: the corner opposite the one dragged stays put in the ship's frame.
     const turned = rotateComponent(two(0), "b", 30);
     const bb = body(turned, "b");
@@ -564,14 +568,15 @@ describe("design rules: tanks and magazines (docs/blueprint/design-rules-proposa
   const { containerSpec, innerArea, CONTAINERS } = await import("../../src/app/blueprint/rules.ts");
   const box = (w: number, h: number) => [{ x: -w / 2, y: -h / 2 }, { x: w / 2, y: -h / 2 }, { x: w / 2, y: h / 2 }, { x: -w / 2, y: h / 2 }];
 
-  it("BPD-043 at Thrust's sizes and 0.1 m walls the rules give Thrust's own figures: THRUST 1's tanks and magazines are THRUST OG's, shells apart", () => {
-    for (const id of ["tank-l", "tank-r"]) {
-      const [r, o] = [body(regular, id), body(bp, id)];
-      expect(r.mass).toBe(o.mass);
-      expect(r.material).toEqual(o.material);
-      expect(r.explosive).toEqual(o.explosive);
-      for (const res of ["h2", "o2"]) expect(r.contents!.find((c) => c.resource === res)!.capacity).toBeCloseTo(o.contents!.find((c) => c.resource === res)!.capacity, 9);
-    }
+  it("BPD-043 at Thrust's sizes and 0.1 m walls the rules give Thrust's own figures: Thrust's tank, and THRUST 1's magazines (its tanks are shorter, for its engines' chambers)", () => {
+    // Thrust's tank, 1.5 × 1.0 m: its 4.05 kg and 2 kg exactly.
+    const tankSpec = containerSpec("tank", box(1.5, 1), 0.1);
+    expect(tankSpec.holds).toBeCloseTo(4.05, 9);
+    expect(tankSpec.dryMass).toBeCloseTo(2, 6);
+    expect(tankSpec.material).toEqual(body(bp, "tank-l").material);
+    expect(tankSpec.charge).toBeCloseTo(body(bp, "tank-l").explosive!.charge, 9);
+    // THRUST 1's, 1.5 × 0.8 m, by the same rule: 1.3 × 0.6 m inside.
+    for (const id of ["tank-l", "tank-r"]) expect(body(regular, id).contents!.reduce((a, c) => a + c.mass, 0)).toBeCloseTo((4.05 * (1.3 * 0.6)) / (1.3 * 0.8), 9);
     for (const id of ["mag-l", "mag-r"]) {
       const [r, o] = [body(regular, id), body(bp, id)];
       expect([r.mass, r.ammo!.count, r.explosive!.charge]).toEqual([o.mass, 60, o.explosive!.charge]);
@@ -601,17 +606,18 @@ describe("design rules: tanks and magazines (docs/blueprint/design-rules-proposa
     const thin = setParam(regular, "tank-l", "wall", 0.05);
     const thick = setParam(regular, "tank-l", "wall", 0.2);
     const held = (b: typeof bp) => body(b, "tank-l").contents!.reduce((a, c) => a + c.mass, 0);
-    expect(held(thin)).toBeCloseTo(4.05 * ((1.4 * 0.9) / 1.04), 6); // 4.91 kg
-    expect(held(thick)).toBeCloseTo(4.05 * ((1.1 * 0.6) / 1.04), 6); // 2.57 kg
-    expect([body(thin, "tank-l").mass, body(thick, "tank-l").mass]).toEqual([1.043478, 3.652174]);
+    // THRUST 1's tank, 1.5 × 0.8 m.
+    expect(held(thin)).toBeCloseTo(4.05 * ((1.4 * 0.7) / 1.04), 6); // 3.82 kg
+    expect(held(thick)).toBeCloseTo(4.05 * ((1.1 * 0.4) / 1.04), 6); // 1.71 kg
+    expect([body(thin, "tank-l").mass, body(thick, "tank-l").mass]).toEqual([0.956522, 3.304348]);
     expect(body(thin, "tank-l").material).toMatchObject({ threshold: 30, toughness: 250 });
     expect(body(thick, "tank-l").material).toMatchObject({ threshold: 120, toughness: 1000 });
     // Its welds to the generator: half as strong with thinner walls; no stronger with thicker (the generator's 0.1 m is then the thinner).
     const tension = (b: typeof bp) => welds(b).find((w) => [w.a, w.b].includes("tank-l") && [w.a, w.b].includes("gen-l"))!.joints[0].limits!.tension;
     expect([tension(thin), tension(regular), tension(thick)]).toEqual([11475, 22950, 22950]);
     expect(weldPresetsFor(thin, welds(thin).find((w) => [w.a, w.b].includes("tank-l") && [w.a, w.b].includes("gen-l"))!.id).map((p) => p.limits.tension)).toEqual([5737.5, 11475, 22950]);
-    // No thicker than a quarter of its smaller side, or 0.3 m.
-    expect(component(setParam(regular, "tank-l", "wall", 0.9), "tank-l").wall).toBe(0.25);
+    // No thicker than a quarter of its smaller side (0.8 m), or 0.3 m.
+    expect(component(setParam(regular, "tank-l", "wall", 0.9), "tank-l").wall).toBe(0.2);
   });
 
   it("BPD-044 size limits: a tank 0.3 to 3 m each way, a magazine 0.3 to 2 m; a resize past them stops at them", () => {
@@ -737,5 +743,45 @@ describe("the gun and the bullet magazine (Chloe, 16 November 2026)", async () =
     const [r] = measureNow(m, [{ "action-a": 1 }]);
     // Four guns firing, with a recoil in proportion to 100 m/s, not 144.
     expect(r.ahead).toBeLessThan(-4);
+  }, 60_000);
+});
+
+describe("engines with chambers (design rules §5; Chloe, 16 November 2026)", async () => {
+  const { engineGeom, mastodonPreset, engines } = await import("../../src/app/blueprint/model.ts");
+  const { measureWorld } = await import("../../src/app/blueprint/measure.ts");
+  const { getProfile, stepInPlace } = await import("../../src/core/index.ts");
+
+  it("BPD-048 THRUST 1's engines are rockets: a chamber, a throat narrower than it, and a nozzle to the same exit, at the same mass; THRUST OG's and the double engine are as they were", () => {
+    for (const id of ["main", "back-l", "back-r", "front-l", "front-r"]) {
+      const c = component(regular, id);
+      expect(c.rocket).toBeDefined();
+      expect(c.bodies).toHaveLength(7); // head, two chamber walls, two throat pieces, two nozzle walls
+      expect(c.rocket!.throat).toBeLessThan(c.rocket!.chamberWidth - 2 * c.rocket!.wall + 1e-9);
+      const og = component(bp, id);
+      expect(og.rocket).toBeUndefined();
+      const g = engineGeom(bp, og);
+      const ogExit = g.throat + 2 * g.length * Math.tan((g.flare * Math.PI) / 180);
+      const r = c.rocket!;
+      expect(r.throat + 2 * r.nozzleLength * Math.tan((r.flare * Math.PI) / 180)).toBeCloseTo(ogExit, 6);
+      const mass = (b: typeof bp, cc: typeof c) => cc.bodies.reduce((s, x) => s + body(b, x).mass, 0);
+      expect(mass(regular, c)).toBeCloseTo(mass(bp, og), 6);
+    }
+    expect(component(mastodonPreset(scn), "eng-l").rocket).toBeUndefined();
+    // The chamber properties, and what follows from them.
+    const keys = params(regular, "main").map((p) => p.key);
+    expect(keys).toEqual(expect.arrayContaining(["chamberLength", "pressure", "areaRatio", "lstar", "wallMargin"]));
+    expect(params(regular, "main").find((p) => p.key === "pressure")!.value).toBeGreaterThan(1000); // 7.78 kg/s through 0.8 m
+  });
+
+  it("BPD-048 in flight the physics holds each chamber's gas as a sealed volume, and each engine pushes as THRUST OG's does", () => {
+    const thrustOf = (b: typeof bp) => {
+      const w = measureWorld(b);
+      stepInPlace(w, [{ type: "control.set", channel: "forward", value: 1 }], getProfile("sandbox"));
+      for (let i = 0; i < 240; i++) stepInPlace(w, [], getProfile("sandbox"));
+      return { sealed: !!w.bodies.find((x) => x.id === "main")!.injector!.vessel, w };
+    };
+    expect(thrustOf(regular).sealed).toBe(true);
+    // The estimate is the same, engine by engine (the model's jet is the throat's, as before).
+    expect(engines(regular).map((e) => e.thrust)).toEqual(engines(bp).map((e) => e.thrust));
   }, 60_000);
 });
