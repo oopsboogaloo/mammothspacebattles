@@ -337,10 +337,15 @@ Differences from the design above:
   the tractor and tether on a second cockpit, and power for generators and batteries are not built.
 - **New engines draw fuel from every tank** (fuel lines are plumbing, not controls); their controls
   stay unwired until the player wires them.
-- **Estimates differ from the measured figures**: forward 33.1 against 28.3 m/s², reverse 9.0
-  against 4.2, turn 8.5 rad/s² against "about 7". The estimate takes every engine's exhaust at
-  190 m/s; the side thrusters are much weaker than that in the physics. Measure (§7) is not built
-  yet, nor live weld loads after Try it, nor a game controller in Try it.
+- **Measure (§7), built the same day:** ⏱ Measure (in Performance and Response) runs the real
+  physics in a worker, as the design log measures (each control held from rest, no gravity;
+  acceleration between 0.5 and 1.5 s, turn between 0.5 and 1.0 s), in about 2.5 s. Measured figures
+  show ✓ and stay until the ship or its wiring changes; a design measured before shows its figures
+  again. Thrust 1 measures 36.1 m/s² forward, 9.8 reverse and 9.28 rad/s² each way, as
+  `docs/ship-designs.md` ("Nozzle walls": 36.1 and 9.8; the 28.3 and 4.2 in older notes are out of
+  date). The instant estimate now takes 206 m/s exhaust for a walled engine (76 m/s without walls),
+  from the same notes, and comes within 1% (35.9, 9.8, 9.24). Test: BPD-025.
+- **Not built yet:** live weld loads after Try it, a game controller in Try it.
 
 ## Sources
 

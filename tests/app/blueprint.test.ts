@@ -241,3 +241,27 @@ describe("wiring", () => {
     expect(checks.some((t) => t.startsWith("Forward also turns the ship"))).toBe(true);
   });
 });
+
+describe("measure", () => {
+  it("BPD-025 Measure runs the real physics: Thrust 1 gives the design log's 36.1 m/s² forward and 9.8 reverse, turns that mirror, and no broken welds; the estimate is within 2%", async () => {
+    const { measureNow, measureKey } = await import("../../src/app/blueprint/measure.ts");
+    const rows: Record<string, number>[] = [{ forward: 1 }, { reverse: 1 }, { left: 1 }, { right: 1 }];
+    const [f, rv, l, r] = measureNow(bp, rows);
+    expect(f.ahead).toBeCloseTo(36.1, 1);
+    expect(rv.ahead).toBeCloseTo(-9.8, 1);
+    expect(Math.abs(f.turn)).toBeLessThan(0.1);
+    expect(l.turn).toBeGreaterThan(8);
+    expect(r.turn).toBeCloseTo(-l.turn, 1);
+    expect([f, rv, l, r].every((x) => x.broke === 0)).toBe(true);
+    const st = stats(bp);
+    for (const [i, c] of rows.entries()) {
+      const est = response(bp, c, st);
+      const got = [f, rv, l, r][i];
+      const want = i < 2 ? got.ahead : got.turn;
+      expect(Math.abs((i < 2 ? est.ahead : est.turn) - want) / Math.abs(want)).toBeLessThan(0.02);
+    }
+    // A change to the ship or its wiring is a different measurement.
+    expect(measureKey(setParam(bp, "main", "rate", 7))).not.toBe(measureKey(bp));
+    expect(measureKey(structuredClone(bp))).toBe(measureKey(bp));
+  }, 60_000);
+});

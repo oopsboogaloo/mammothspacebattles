@@ -123,3 +123,17 @@ test("BPD-024 wire a new engine in the mixer and test it by holding a key: nothi
   await page.getByTestId("mode-build").click();
   await expect(page.getByTestId("performance")).toBeVisible();
 });
+
+test("BPD-025 Measure runs the real physics in the background and shows the measured figures until the blueprint changes", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("measure").click();
+  await expect(page.getByTestId("performance")).toContainText("✓ measured", { timeout: 30_000 });
+  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward3[56]\.\d m\/s² ✓/);
+  // A change makes it an estimate again; undo brings the measurement back.
+  await page.getByTestId("part-main").locator("polygon").nth(1).click();
+  const rate = page.getByTestId("param-rate");
+  await page.getByRole("region", { name: "Properties" }).getByRole("tab", { name: "FUEL" }).click();
+  await rate.locator("input.num").fill("5");
+  await rate.locator("input.num").press("Enter");
+  await expect(page.getByTestId("performance")).toContainText("est.");
+});

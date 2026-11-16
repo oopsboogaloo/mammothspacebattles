@@ -232,8 +232,16 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
 
 // ---------- stats ----------
 
-/** Effective exhaust speed for the instant thrust estimate, m/s (docs/ship-designs.md: about 160–200). */
-export const EXHAUST_SPEED = 190;
+/**
+ * Effective exhaust speed for the instant thrust estimate, m/s: thrust ÷ flow as measured on the
+ * Thrust ship's engines (docs/ship-designs.md, "Nozzle walls": 206–207 m/s with walls, whatever
+ * their shape; about 76 m/s without, the chamber then being loose parcels). Measure gives the real figure.
+ */
+export const EXHAUST_SPEED = 206;
+export const EXHAUST_SPEED_OPEN = 76;
+
+/** An engine's estimated exhaust speed: its walls enclosing a chamber, or not. */
+export const exhaustSpeed = (c: Component) => (c.bodies.length >= 3 ? EXHAUST_SPEED : EXHAUST_SPEED_OPEN);
 
 export interface EngineInfo {
   id: string;
@@ -252,7 +260,7 @@ export function engines(bp: Blueprint): EngineInfo[] {
       const h = body(bp, c.bodies[0]);
       const inj = h.injector!;
       const d = rot(inj.direction ?? { x: 0, y: -1 }, h.angle ?? 0);
-      return { id: c.id, channel: inj.channel, at: { ...h.position }, dir: { x: -d.x, y: -d.y }, thrust: (inj.rate ?? 0) * EXHAUST_SPEED };
+      return { id: c.id, channel: inj.channel, at: { ...h.position }, dir: { x: -d.x, y: -d.y }, thrust: (inj.rate ?? 0) * exhaustSpeed(c) };
     });
 }
 
@@ -474,7 +482,7 @@ export function params(bp: Blueprint, compId: string): Param[] {
       { key: "rate", label: "Flow (burn rate)", unit: "kg/s", value: inj.rate ?? 0, min: 0.05, max: 20, step: 0.05, decimals: 3, tab: "fuel" },
       { key: "economy", label: "Fuel efficiency", unit: "×", value: inj.economy ?? 1, min: 1, max: 200, step: 1, decimals: 0, tab: "fuel" },
       { key: "injWidth", label: "Injector width", unit: "m", value: inj.width ?? 0, min: 0.05, max: 4, step: 0.05, decimals: 2, tab: "fuel" },
-      { key: "thrust", label: "Thrust (est.)", unit: "N", value: (inj.rate ?? 0) * EXHAUST_SPEED, min: 0, max: 1e5, step: 1, decimals: 0, tab: "fuel", readonly: true, note: `flow × ${EXHAUST_SPEED} m/s; Measure gives the real figure` },
+      { key: "thrust", label: "Thrust (est.)", unit: "N", value: (inj.rate ?? 0) * exhaustSpeed(c), min: 0, max: 1e5, step: 1, decimals: 0, tab: "fuel", readonly: true, note: `flow × ${exhaustSpeed(c)} m/s; Measure gives the real figure` },
       { ...mass(), key: "headMass", label: "Head mass", value: b.mass },
       { key: "wallMass", label: "Wall mass (each)", unit: "kg", value: c.bodies.length > 1 ? body(bp, c.bodies[1]).mass : 0, min: 0.01, max: 100, step: 0.05, decimals: 2, tab: "build" },
     );
