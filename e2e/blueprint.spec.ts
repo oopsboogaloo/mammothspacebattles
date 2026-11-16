@@ -178,3 +178,53 @@ test("BPD-026 on a folding phone's inner screen the panels start hidden, open ov
   expect(scrolls).toEqual([false, false]);
   await ctx.close();
 });
+
+test("BPD-027 Mirror makes a part's mirror image on the other side, wired with turn left and right swapped; a taken side is refused with the reason", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("part-back-r").locator("polygon").nth(1).click();
+  await page.keyboard.press("Delete");
+  await page.getByTestId("part-back-l").locator("polygon").nth(1).click();
+  await page.getByTestId("mirror-part").click();
+  await expect(page.getByTestId("selected-name")).toHaveText("Thruster BR");
+  await page.getByRole("region", { name: "Properties" }).getByRole("tab", { name: "CONTROLS" }).click();
+  await expect(page.getByTestId("say").first()).toHaveText("Fires fully on Turn left. Fires fully on Forward, except while Turn right is held.");
+  await page.getByTestId("part-tank-l").locator("polygon").first().click();
+  await page.getByTestId("mirror-part").click();
+  await expect(page.getByTestId("toast")).toContainText("other side is taken");
+});
+
+test("BPD-028 after a try-out each weld shows how hard it worked, and the page says which worked hardest", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("try-it").click();
+  await page.keyboard.down("ArrowUp");
+  await page.waitForTimeout(1500);
+  await page.keyboard.up("ArrowUp");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("toast")).toContainText(/hardest-worked weld reached \d+% of its limit|welds? broke/);
+  await page.getByTestId("weld-gen-l|tank-l").locator("circle").first().click({ force: true });
+  await expect(page.getByTestId("weld-load")).toHaveText(/^\d+% (tension|compression|shear|torque)$|^BROKE$/);
+});
+
+test("BPD-029 a game controller flies Try it: A is forward, the stick turns, through the blueprint's wiring", async ({ page }) => {
+  // A standard-mapping pad, held as a test sets it.
+  await page.addInitScript(() => {
+    const pad = { id: "test pad", index: 0, connected: true, mapping: "standard", timestamp: 0, axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })) };
+    (window as unknown as { __pad: typeof pad }).__pad = pad;
+    Object.defineProperty(navigator, "getGamepads", { value: () => [pad] });
+  });
+  await openFresh(page);
+  await page.getByTestId("try-it").click();
+  await page.evaluate(() => {
+    const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
+    p.buttons[0] = { ...p.buttons[0], pressed: true, value: 1 }; // A: forward
+    p.axes[0] = 1; // stick right
+  });
+  const controls = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } | null } }).__msb.sandbox()?.world.controls ?? {});
+  await expect.poll(controls).toMatchObject({ forward: 1, main: 1, bl: 1, fr: 0.5 });
+  await page.evaluate(() => {
+    const p = (window as unknown as { __pad: { buttons: { pressed: boolean; value: number }[]; axes: number[] } }).__pad;
+    p.buttons[0] = { ...p.buttons[0], pressed: false, value: 0 };
+    p.axes[0] = 0;
+  });
+  await expect.poll(controls).toMatchObject({ main: 0 });
+});

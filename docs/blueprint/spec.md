@@ -352,7 +352,21 @@ Differences from the design above:
   blueprint. Below 1000 px wide the panels start hidden and open over the blueprint rather than
   narrowing it. The top bar drops its words for icons as it narrows. ▾ folds the performance or
   response table to its header. Kept in the browser. Test: BPD-026.
-- **Not built yet:** live weld loads after Try it, a game controller in Try it.
+- **Weld loads from Try it (built 16 November 2026):** while the ship flies, each weld's worst
+  load as a share of its limit (and which way: tension, compression, shear or torque) and whether
+  it broke are kept for the blueprint as flown. Back on the blueprint the weld points take their
+  colour (green, amber from 50%, red from 80%, a cross if broken), the weld panel's LAST TRY-OUT
+  shows the figure, and a message names the hardest-worked weld or how many broke. Read each frame
+  from the flying world, so a peak between frames can be missed. Test: BPD-028.
+- **A game controller in Try it (built 16 November 2026):** as Mammoth Thrust's: the stick turns as
+  far as it is pushed; forward is the stick up, the right trigger or A; reverse the stick down, the
+  left trigger or B; X or the right bumper fires, Y is the tractor, the left bumper the shield;
+  Start pauses. It sets the player's controls, which the blueprint's wiring mixes. Test: BPD-029.
+- **Mirror (built 16 November 2026):** ⇋ Mirror on a selected part makes its mirror image across the
+  ship's middle line (x = 0): shape, nozzle and internal welds reflected, welded where it touches,
+  fed if an engine, named for the other side (BL → BR, L → R) and wired as the mirror of the
+  original (turn left and turn right swapped). Refused, with the reason, if that side is taken or
+  the part sits on the middle line. Test: BPD-027.
 
 ## Sources
 

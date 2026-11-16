@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { addComponent, body, component, componentBounds, engineGeom, engines, jointPoint, moveComponent, place, SNAP, stats, weldingOf, welds, worldVertices, type Blueprint, type Kind } from "./model.ts";
 import { current, edit, mode, overlays, placing, preview, say, selection, type Placing } from "./store.ts";
 import { testHeld } from "./Controls.tsx";
+import { loadsFor } from "./tryLoads.ts";
 import { response } from "./model.ts";
 
 export const KIND_COLOUR: Record<Kind, string> = {
@@ -203,6 +204,7 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
   const sel = selection.value;
   const ov = overlays.value;
   const ws = welds(bp);
+  const loads = loadsFor(bp);
   const grid = gridLines(size.w, size.h, v, sx, sy, toWorld);
 
   return (
@@ -247,6 +249,9 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
       {ov.welds &&
         ws.map((w) => {
           const on = sel?.type === "weld" && sel.id === w.id;
+          // After a try-out, each weld point takes the colour of how hard it worked: amber from half its limit, red near it, a cross if it broke.
+          const ld = loads?.[w.id];
+          const ring = !ld ? "#e8f0ff" : ld.broke || ld.peak >= 0.8 ? "#ff7b7b" : ld.peak >= 0.5 ? "#ffb35a" : "#7dffb0";
           return (
             <g key={w.id} data-hit={`weld:${w.id}`} class="weld" data-testid={`weld-${w.id}`}>
               {w.joints.map((j) => {
@@ -257,9 +262,10 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
                     <circle cx={sx(p.x)} cy={sy(p.y)} r={5} fill="#ffe08a" />
                   </g>
                 ) : (
-                  <g key={j.id}>
+                  <g key={j.id} data-load={ld ? (ld.broke ? "broke" : Math.round(ld.peak * 100)) : undefined}>
                     <circle cx={sx(p.x)} cy={sy(p.y)} r={7} fill="transparent" />
-                    <circle cx={sx(p.x)} cy={sy(p.y)} r={4} fill="#0b1430" stroke="#e8f0ff" stroke-width={1.4} />
+                    <circle cx={sx(p.x)} cy={sy(p.y)} r={ld ? 5 : 4} fill="#0b1430" stroke={ring} stroke-width={ld ? 2 : 1.4} />
+                    {ld?.broke && <path d={`M ${sx(p.x) - 3} ${sy(p.y) - 3} L ${sx(p.x) + 3} ${sy(p.y) + 3} M ${sx(p.x) + 3} ${sy(p.y) - 3} L ${sx(p.x) - 3} ${sy(p.y) + 3}`} stroke={ring} stroke-width={1.6} />}
                   </g>
                 );
               })}

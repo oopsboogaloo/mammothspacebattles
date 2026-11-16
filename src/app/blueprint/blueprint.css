@@ -436,3 +436,5 @@ html, body, #root { height: 100%; overflow: hidden; }
 @media (max-width: 1000px) {
   .bpapp .bp-menu span, .bpapp .fitbtn .lbl { display: none; }
 }
+.bpapp .derived b.bad { color: var(--bad); } .bpapp .derived b.hot { color: var(--bad); } .bpapp .derived b.warm { color: var(--warn); }
+.bpapp .actions { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); }

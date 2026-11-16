@@ -7,7 +7,9 @@ import { sendControl } from "../Lander.tsx";
 import { View } from "../View.tsx";
 import { keyLabel, loadKeys, playerControls } from "./bindings.ts";
 import { type Blueprint } from "./model.ts";
-import { current, tryOut } from "./store.ts";
+import { current, say, tryOut } from "./store.ts";
+import { loadSummary, useWeldLoads } from "./tryLoads.ts";
+import { usePad, type PadAnalog, type PadGame, type PadState } from "../gamepad.ts";
 
 const HALF = { x: 30, y: 18.75 };
 
@@ -86,7 +88,51 @@ export function startTry(): void {
   if (launch()) tryOut.value = true;
 }
 
+/**
+ * A game controller, as Mammoth Thrust's (src/app/Thrust.tsx): the stick turns as far as it is
+ * pushed; forward is the stick up, the right trigger or A; reverse the stick down, the left trigger
+ * or B; X or the right bumper fires, Y is the tractor, the left bumper the shield; Start pauses.
+ * They set the player's controls, which the blueprint's wiring then mixes.
+ */
+const PAD_BUTTONS: [keyof PadState, string][] = [
+  ["x", "fire"],
+  ["rb", "fire"],
+  ["y", "tractor"],
+  ["lb", "shield"],
+];
+const padHeld = new Set<string>();
+const PAD: PadGame = {
+  flying: () => tryOut.value && !!sandbox.value && playing.value,
+  controls: (p) => [...new Set(PAD_BUTTONS.filter(([b]) => p[b]).map(([, c]) => c))],
+  set: (control, on) => {
+    if (!sandbox.value) return;
+    if (on === padHeld.has(control)) return;
+    if (on) padHeld.add(control);
+    else padHeld.delete(control);
+    sendControl(control, on ? 1 : 0, "Pad", 9_000_001);
+  },
+  pause: () => {
+    if (!tryOut.value || !sandbox.value) return false;
+    playing.value = !playing.value;
+    return true;
+  },
+  analog: {
+    values: (p: PadState, a: PadAnalog) => {
+      const on = (b: boolean) => (b ? 1 : 0);
+      return {
+        left: Math.max(a.left, on(p.left && a.left === 0)),
+        right: Math.max(a.right, on(p.right && a.right === 0)),
+        forward: Math.max(a.up, a.rt, on(p.a), on(p.up && a.up === 0)),
+        reverse: Math.max(a.down, a.lt, on(p.b), on(p.down && a.down === 0)),
+      };
+    },
+    set: (channel, value) => sandbox.value && sendControl(channel, value, "Pad", 9_000_000),
+  },
+};
+
 function back(): void {
+  const summary = loadSummary(current.value);
+  if (summary) say(summary);
   playing.value = false;
   tryOut.value = false;
 }
@@ -143,6 +189,8 @@ function useGauges(bp: Blueprint) {
 export function TryOut() {
   const bp = current.value;
   const g = useGauges(bp);
+  useWeldLoads(bp);
+  usePad(PAD);
   const [paused, setPaused] = useState(false);
   const [rock, setRock] = useState(rockOn);
   useFieldCamera();

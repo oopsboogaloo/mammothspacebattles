@@ -1051,3 +1051,53 @@ export function wiringChecks(bp: Blueprint, controls: { id: string; name: string
   if (out.length === 1 && out[0].ok) out.push({ ok: true, text: "Forward and Reverse don't turn the ship; the turns mirror each other" });
   return out;
 }
+
+// ---------- mirror (§5) ----------
+
+/** The other side's name: "Thruster BL" ↔ "Thruster BR", "Tank L" ↔ "Tank R". */
+function mirrorLabel(label: string): string {
+  const m = /^(.*?)(\s)(L|R|BL|BR|FL|FR)$/.exec(label);
+  if (!m) return `${label} (mirror)`;
+  const swap: Record<string, string> = { L: "R", R: "L", BL: "BR", BR: "BL", FL: "FR", FR: "FL" };
+  return `${m[1]}${m[2]}${swap[m[3]]}`;
+}
+
+/**
+ * A mirror image of a component on the other side of the ship's middle line (x = 0, the cockpit's
+ * axis): its shape reflected, welded where it then touches, fed if an engine, and wired as the
+ * mirror of its own wiring (turn left and turn right swapped). Returns null, with the reason, if the
+ * other side is taken or the part sits on the middle line.
+ */
+export function mirrorComponent(bp: Blueprint, compId: string, controls: { left: string; right: string } = { left: "left", right: "right" }): { bp: Blueprint; id: string } | { error: string } {
+  const c = component(bp, compId);
+  const box = componentBounds(bp, c);
+  if (box.minX < -1e-6 && box.maxX > 1e-6) return { error: `${c.label} sits across the ship's middle line: there is no other side to mirror it to.` };
+  const made = instantiate(bp, bp, compId, mirrorLabel(c.label));
+  for (const b of made.bodies) {
+    b.position = { x: round(-b.position.x), y: b.position.y };
+    b.angle = b.angle ? round(-b.angle, 9) : 0;
+    // Reflected across the body's own vertical axis, then turned back to anticlockwise.
+    if (b.shape.kind === "polygon") b.shape = { kind: "polygon", vertices: b.shape.vertices.map((v) => ({ x: -v.x, y: v.y })).reverse() };
+    for (const a of ["outlet", "direction"] as const) {
+      const v = b.injector?.[a];
+      if (v && b.injector) b.injector[a] = { x: 0 - v.x || 0, y: v.y }; // no −0
+    }
+  }
+  for (const j of made.joints) {
+    j.anchorA = { x: -j.anchorA.x, y: j.anchorA.y };
+    j.anchorB = { x: -j.anchorB.x, y: j.anchorB.y };
+  }
+  const others = bp.components.flatMap((o) => o.bodies.map((id) => body(bp, id)));
+  if (made.bodies.some((m) => others.some((o) => overlaps(worldVertices(m), worldVertices(o))))) return { error: `The other side is taken: a mirrored ${c.label} would overlap a part there.` };
+  let out = addComponent(bp, made, 0, 0);
+  // Its wiring: the original's lines with left and right swapped.
+  const swap = (k: string) => (k === controls.left ? controls.right : k === controls.right ? controls.left : k);
+  const from = channelsOf(bp, compId);
+  const to = channelsOf(out, made.comp.id);
+  from.forEach((ch, i) => {
+    const row = bp.mix.rows.find((r) => r.channel === ch);
+    if (!row || !to[i]) return;
+    out = setRow(out, to[i], () => ({ ...structuredClone(row), channel: to[i], lines: row.lines.map((l) => ({ ...l, control: swap(l.control), ...(l.ease ? { ease: { ...l.ease, control: swap(l.ease.control) } } : {}) })) }));
+  });
+  return { bp: out, id: made.comp.id };
+}
