@@ -217,6 +217,12 @@ export interface Injector {
    */
   nozzle?: { length: number; flare: number; walls: string[] };
   /**
+   * How completely the chamber burns its propellant before it leaves (0–1; design rules §5, the L*
+   * rule): its jet leaves at this fraction of the speed, the rest staying as heat. Declared by the
+   * designer's regular rockets with a short chamber; absent, 1.
+   */
+  efficiency?: number;
+  /**
    * Fuel economy (FLT-010, a flight-test cheat): the stores supply 1/economy of each parcel's mass,
    * so propellant lasts `economy` times as long at the same thrust. The rest is made from nothing,
    * and the ledger records it under `supply`. Absent or 1: mass is conserved.

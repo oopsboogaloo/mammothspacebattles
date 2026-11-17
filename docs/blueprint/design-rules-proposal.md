@@ -276,7 +276,7 @@ So the ship looks much as it does, and its damage model is kept.
    - in the physics: battery, generators, and draws for the shield, railgun, beam and tether;
    - in the designer: the rules, readouts and Try it gauges;
    - shield fuel use measured against today's.
-3. **Rockets** *(the chambered geometry built, `spec.md` §23; the nozzle physics built, §27; the L\* rule, the pressure-fed limit and the readouts still to do)***:**
+3. **Rockets** *(the chambered geometry built, `spec.md` §23; the nozzle physics, §27; the L\* rule, the pressure ceilings and their readouts, §28)***:**
    - in the physics: `nozzleFlow` (pure, tested against textbook values), then opt-in exhaust at the
      exit and wall loads;
    - then the rocket part, THRUST 1's new engines, and L\*₀ calibrated;
@@ -298,6 +298,21 @@ Each step ships as its own PR with its measured figures against THRUST 1 today.
 4. **Fuel efficiency is fixed at 66 for regular engines**, not a player setting. Chloe may tune it.
    Later engines may be more or less efficient, made from rarer or commoner materials.
 5. **Engines are pressure-fed:** no ship has to carry a power source (the Mastodon carries none).
+
+### Rockets (17 November 2026, Chloe)
+
+6. **Working nozzles, on the new engines only.** The OG engines, the double engine and every game's
+   ships keep the throat's jet; the presets keep their new, honest figures (no rebalance).
+7. **The L\* rule, choice B:** L\*₀ = 0.30 m, THRUST 1's main engine. Below it a chamber burns
+   √(L\* ÷ L\*₀) of its propellant's energy, never under 70%: "smaller, lighter thrusters should have
+   some disadvantage, or why would you not make all the thrusters tiny?" THRUST 1's light
+   thrusters' chambers grow from 0.10 to 0.19 m (L\* 0.304) to keep their thrust.
+8. **Pressure ceilings:** a wall t thick spanning L holds 2·k_P·t ÷ L, **k_P = 25,700 N/m** (THRUST
+   1's main engine runs at half what its tanks can feed). A pressure-fed engine's chamber runs at
+   most its weakest feeding tank's hold ÷ **1.5** ("let's see what 1.5 does"), and at most what its
+   own walls hold. Its most flow is ceiling × throat ÷ c\*, so its most thrust grows with its
+   throat. **The designer stops you at the ceiling**; an edit that lowers it brings the flow down.
+   The tank pressure rule of §5 (2·k_T) is replaced by this.
    - So a tank must hold the pressure of the chambers it feeds.
    - That rule comes in with the rockets (step 3), as the tank-wall check in §5.3.
    - The order of work's step 4 keeps only separate H₂/O₂ tanks and pumped engines.

@@ -488,6 +488,7 @@ function validateInjector(v: V, i: unknown, path: string): void {
     if (!isObj(i.chamber)) err(v, `${path}.chamber`, "must be an object {width, length}");
     else for (const k of ["width", "length"]) num(v, i.chamber[k], `${path}.chamber.${k}`, { positive: true });
   }
+  if (i.efficiency !== undefined) num(v, i.efficiency, `${path}.efficiency`, { positive: true, max: 1 });
   if (i.nozzle !== undefined) {
     if (!isObj(i.nozzle)) err(v, `${path}.nozzle`, "must be an object {length, flare, walls}");
     else {
