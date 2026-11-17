@@ -2,7 +2,7 @@
 // and the view. Kept in the browser (localStorage) on every change.
 import { computed, signal } from "@preact/signals";
 import { scenarioFile } from "../scenarios.ts";
-import { capRates, loxodonPreset, mastodonPreset, partsTemplate, phiomiaPreset, stegodonPreset, thrustOgPreset, thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
+import { capRates, capWelds, loxodonPreset, mastodonPreset, partsTemplate, phiomiaPreset, stegodonPreset, thrustOgPreset, thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
 import type { BodyInput, JointInput } from "../../core/index.ts";
 
 const KEY = "msb.blueprints.v1";
@@ -128,7 +128,10 @@ function store(bp: Blueprint): void {
 function capped(bp: Blueprint): Blueprint {
   const out = capRates(bp);
   if (out.cut.length) say(`${out.cut.join(", ")}: flow cut to what ${out.cut.length > 1 ? "their" : "its"} tanks can feed (pressure ceiling).`);
-  return out.bp;
+  // Welds stronger than the ship's size allows step down (a ship under 8 parts: Light; under 15: up to Standard).
+  const w = capWelds(out.bp);
+  if (w.cut.length) say(`${w.cut.join(", ")}: weld${w.cut.length > 1 ? "s" : ""} stepped down to what a ship of ${w.bp.components.length} parts may use.`);
+  return w.bp;
 }
 
 /**

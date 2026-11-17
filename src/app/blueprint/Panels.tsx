@@ -10,7 +10,7 @@ import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
-import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, weldMass, wallOf, weldPresetsFor, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, weldMass, wallOf, weldPresetOpen, weldPresetsFor, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
 import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, parts, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
@@ -495,7 +495,14 @@ function WeldProps({ id }: { id: string }) {
       <div class="seg">
         <span>Strength</span>
         {presets.map((p) => (
-          <button key={p.name} class={preset?.name === p.name ? "on" : ""} onClick={() => edit((bb) => setWeld(bb, id, p.limits, p.yield))}>
+          <button
+            key={p.name}
+            class={preset?.name === p.name ? "on" : ""}
+            disabled={!og && !weldPresetOpen(bp, p.quality).open}
+            title={og ? undefined : weldPresetOpen(bp, p.quality).why}
+            data-testid={`weld-preset-${p.name.toLowerCase()}`}
+            onClick={() => edit((bb) => setWeld(bb, id, p.limits, p.yield))}
+          >
             {p.name}
             {!og && <small> {(pts * weldMass({ ...j, limits: p.limits }, Math.min(wallOf(a), wallOf(b)))).toFixed(3)} kg</small>}
           </button>
