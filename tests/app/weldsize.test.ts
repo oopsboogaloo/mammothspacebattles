@@ -49,4 +49,16 @@ describe("weld sizes by ship size (BPD-055)", () => {
     expect(capWelds(phi).cut.length).toBe(1);
     expect(qualities(capWelds(phi).bp).every((q) => Math.abs(q - 0.5) < 1e-9)).toBe(true);
   });
+
+  it("BPD-055 a weld's size is its strongest limit, each against its own: raising compression, shear or torque to Heavy on a Light-only ship steps it down too", () => {
+    let phi = phiomiaPreset(level);
+    const pw = welds(phi)[0];
+    const heavy = weldPresetsFor(phi, pw.id)[2].limits;
+    phi = setWeld(phi, pw.id, { compression: heavy.compression, shear: heavy.shear, torque: heavy.torque });
+    const { bp, cut } = capWelds(phi);
+    expect(cut.length).toBe(1);
+    const j = welds(bp).find((x) => x.id === pw.id)!.joints[0];
+    const light = weldPresetsFor(bp, pw.id)[0].limits;
+    expect([j.limits!.compression, j.limits!.shear, j.limits!.torque]).toEqual([light.compression, light.shear, light.torque]);
+  });
 });

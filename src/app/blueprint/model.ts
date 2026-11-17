@@ -213,8 +213,17 @@ export function weldMasses(bp: Blueprint): Map<string, number> {
   return out;
 }
 
-/** One weld point's mass, kg, from its tension limit (its quality) and the thinner wall it joins. */
-export const weldMass = (j: JointInput, thinner: number): number => weldPointMass(thinner, (j.limits?.tension ?? WELD_K.tension * thinner) / (WELD_K.tension * thinner));
+/**
+ * A weld point's quality: its strongest limit over a Standard weld's for the thinner wall it joins,
+ * each against its own (tension, compression, shear, torque: the physics uses all four).
+ */
+export function qualityOf(j: JointInput, thinner: number): number {
+  const keys = ["tension", "compression", "shear", "torque"] as const;
+  return Math.max(...keys.map((k) => (j.limits?.[k] ?? WELD_K[k] * thinner) / (WELD_K[k] * thinner)));
+}
+
+/** One weld point's mass, kg, from its quality (its strongest limit) and the thinner wall it joins. */
+export const weldMass = (j: JointInput, thinner: number): number => weldPointMass(thinner, qualityOf(j, thinner));
 
 /** Where a joint is, in the ship's frame (its anchor on a). */
 export function jointPoint(bp: Blueprint, j: JointInput): Vec2 {
@@ -1714,8 +1723,6 @@ export function weldPresetsFor(bp: Blueprint, weldId: string): typeof WELD_PRESE
   return WELD_PRESETS.map((p) => ({ ...p, limits: weldLimits(t, p.quality) }));
 }
 
-/** A weld point's quality: its tension limit over a Standard weld's for the thinner wall it joins. */
-const qualityOf = (j: JointInput, thinner: number): number => (j.limits?.tension ?? WELD_K.tension * thinner) / (WELD_K.tension * thinner);
 
 /** The strongest weld this ship may use (WELD_UNLOCK): Light below 8 parts, Standard from 8, Heavy from 15. */
 export const maxWeld = (bp: Blueprint): number => maxWeldQuality(bp.components.length);
