@@ -773,7 +773,7 @@ describe("engines with chambers (design rules §5; Chloe, 16 November 2026)", as
     expect(component(mastodonPreset(scn), "eng-l").rocket).toBeUndefined();
     // The chamber properties, and what follows from them.
     const keys = params(regular, "main").map((p) => p.key);
-    expect(keys).toEqual(expect.arrayContaining(["chamberLength", "pressure", "areaRatio", "lstar", "wallMargin"]));
+    expect(keys).toEqual(expect.arrayContaining(["chamberLength", "pressure", "ceiling", "areaRatio", "lstar", "efficiency"]));
     expect(params(regular, "main").find((p) => p.key === "pressure")!.value).toBeGreaterThan(1000); // 7.78 kg/s through 0.8 m
   });
 

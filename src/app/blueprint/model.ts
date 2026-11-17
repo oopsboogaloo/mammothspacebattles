@@ -5,7 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, normalizePolygon, polygonArea, steerMixer } from "../../core/index.ts";
-import { BULLET, CONTAINERS, containerSpec, GUN, gunSpeed, MIXTURE, maxWall, POWER, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
+import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, POWER, PRESSURE, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
@@ -307,13 +307,18 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
     bp = moveComponent(bp, `back-${side}`, 0, cut);
     bp = moveComponent(bp, `front-${side}`, 0, -cut);
   }
-  for (const c of bp.components.filter((x) => x.kind === "engine")) bp = toRocket(bp, c.id, c.id === "main" ? { chamberLength: 0.2, throat: 0.8 } : { chamberLength: 0.1, throat: 0.5 });
+  for (const c of bp.components.filter((x) => x.kind === "engine")) bp = toRocket(bp, c.id, c.id === "main" ? { chamberLength: 0.2, throat: 0.8 } : { chamberLength: LIGHT_CHAMBER, throat: 0.5 });
   for (const c of bp.components) bp = reweld(bp, c.id);
   return bp;
 }
 
 /** THRUST 1's wing tanks, m tall (THRUST OG's are 1.0): room for the light thrusters' chambers. */
 const THRUST_TANK_HEIGHT = 0.8;
+/**
+ * THRUST 1's light thrusters' chambers, m long: 0.8 m wide over their 0.5 m throats, L* 0.304 m, just
+ * over the L* rule's 0.3 m, so they burn completely (Chloe's choice B, 17 November 2026; 0.1 m before).
+ */
+const LIGHT_CHAMBER = 0.19;
 
 /**
  * An engine of THRUST OG's kind (a head and two flared walls) rebuilt as a rocket with a chamber of
@@ -1181,19 +1186,65 @@ export interface Rocket {
  */
 const C_STAR = 206 / (1 + 1 / 1.33);
 
-/** A rocket's chamber length, and what its shape gives: chamber pressure, area ratio, L*, and its walls' margin. */
-function rocketParams(r: Rocket, rate: number): Param[] {
+/** A rocket's L*: its chamber's area over its throat's width, m (design rules §5). */
+export const lstarOf = (r: Rocket): number => (r.chamberWidth * r.chamberLength) / r.throat;
+
+/**
+ * The most a regular rocket's chamber may run at, N/m (design rules §5; Chloe, 17 November 2026):
+ * what its own walls hold, and what the weakest tank feeding it holds over the feed margin. `by`
+ * names whichever sets it.
+ */
+export function pressureCeiling(bp: Blueprint, compId: string): { ceiling: number; by: string } | null {
+  const c = component(bp, compId);
+  if (!c.rocket) return null;
+  const r = c.rocket;
+  let best = { ceiling: holdPressure(r.wall, Math.max(r.chamberWidth, r.chamberLength)), by: "its own walls" };
+  const heads = new Set(c.heads ?? [c.bodies[0]]);
+  const feeding = new Set(bp.ship.links.filter((l) => l.kind === "feed" && heads.has(l.to)).map((l) => (l as { from: string }).from));
+  for (const t of bp.components.filter((x) => x.kind === "tank" && x.bodies.some((id) => feeding.has(id)))) {
+    const vs = shapeVertices(body(bp, t.bodies[0]).shape);
+    const span = Math.max(...vs.map((a, i) => Math.hypot(vs[(i + 1) % vs.length].x - a.x, vs[(i + 1) % vs.length].y - a.y)));
+    const p = holdPressure(wallOf(t), span) / PRESSURE.feedMargin;
+    if (p < best.ceiling) best = { ceiling: p, by: t.label };
+  }
+  return best;
+}
+
+/** The most a regular rocket may burn, kg/s: its pressure ceiling through its throat. */
+export function maxRate(bp: Blueprint, compId: string): number {
+  const c = component(bp, compId);
+  const p = pressureCeiling(bp, compId);
+  return c.rocket && p ? (p.ceiling * c.rocket.throat) / C_STAR : Infinity;
+}
+
+/**
+ * Every regular rocket's flow held to its ceiling (the designer stops you there): after an edit that
+ * lowered one (thinner or longer tank walls, a narrower throat), its flow comes down to it. Returns
+ * the blueprint, and the engines whose flow it cut.
+ */
+export function capRates(bp: Blueprint): { bp: Blueprint; cut: string[] } {
+  const over = bp.components.filter((c) => c.rocket && (body(bp, c.bodies[0]).injector?.rate ?? 0) > maxRate(bp, c.id) * (1 + 1e-9));
+  if (!over.length) return { bp, cut: [] };
+  let out = bp;
+  for (const c of over) out = setParam(out, c.id, "rate", Math.floor(maxRate(out, c.id) * 1000) / 1000);
+  return { bp: out, cut: over.map((c) => c.label) };
+}
+
+/** A rocket's chamber length, and what its shape gives: chamber pressure and its ceiling, area ratio, L* and how completely it burns. */
+function rocketParams(bp: Blueprint, c: Component, rate: number): Param[] {
+  const r = c.rocket!;
   const exit = r.throat + 2 * r.nozzleLength * Math.tan(r.flare * DEG);
   const pressure = (rate * C_STAR) / r.throat;
-  // A chamber wall spanning its length under the pressure: p·L/2 at each end, against its welds' tension (k_T·t).
-  const margin = (weldLimits(r.wall).tension / ((pressure * r.chamberLength) / 2));
+  const cap = pressureCeiling(bp, c.id)!;
+  const lstar = lstarOf(r);
   const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "shape", readonly: true, note });
   return [
     { key: "chamberLength", label: "Chamber length", unit: "m", value: r.chamberLength, min: 0.05, max: 2, step: 0.05, decimals: 2, tab: "shape", note: "Room to burn: L* (below) is the chamber's area over the throat" },
     ro("pressure", "Chamber pressure", "N/m", pressure, 0, "Burn rate × c* ÷ throat: a narrower throat, a higher pressure"),
-    ro("areaRatio", "Area ratio", "×", exit / r.throat, 2, "Nozzle exit over throat: what a nozzle buys comes with the nozzle physics, next"),
-    ro("lstar", "L*", "m", (r.chamberWidth * r.chamberLength) / r.throat, 2, "Chamber area ÷ throat width"),
-    ro("wallMargin", "Chamber wall margin", "×", margin, 0, "Its welds' strength over the pressure's pull on them"),
+    ro("ceiling", "Pressure ceiling", "N/m", cap.ceiling, 0, `Set by ${cap.by}: thicker or shorter tank walls raise it. Now at ${Math.round((100 * pressure) / cap.ceiling)}%`),
+    ro("areaRatio", "Area ratio", "×", exit / r.throat, 2, "Nozzle exit over throat: a wider nozzle gets more from each kg"),
+    ro("lstar", "L*", "m", lstar, 2, `Chamber area ÷ throat width; below ${PRESSURE.lstar} m it doesn't all burn`),
+    ro("efficiency", "Burns", "%", 100 * burnEfficiency(lstar), 0, "Of its propellant's energy, from L*: a longer chamber burns it all"),
   ];
 }
 
@@ -1263,6 +1314,10 @@ export function buildRocket(bp: Blueprint, compId: string, r: Rocket): Blueprint
   if (h.injector) {
     const inj = { ...h.injector };
     delete inj.nozzle;
+    delete inj.efficiency;
+    // A chamber short of the L* rule doesn't burn it all (design rules §5).
+    const eff = burnEfficiency(lstarOf(r));
+    if (eff < 1) inj.efficiency = round(eff, 6);
     h.injector = r.flare >= 0 ? { ...inj, nozzle: { length: r.nozzleLength, flare: r.flare, walls: [`${h.id}-nz-a`, `${h.id}-nz-b`] } } : inj;
   }
   // Its gas: the injector a little into the chamber, and the interior it may hold, chamber to nozzle exit.
@@ -1404,8 +1459,8 @@ function partParams(bp: Blueprint, compId: string): Param[] {
       { key: "wall", label: "Wall thickness", unit: "m", value: g.wall, min: 0.02, max: 0.5, step: 0.01, decimals: 2, tab: "shape" },
       { key: "length", label: "Nozzle wall length", unit: "m", value: g.length, min: 0.1, max: 4, step: 0.05, decimals: 2, tab: "shape" },
       { key: "flare", label: "Nozzle flare", unit: "°", value: g.flare, min: -10, max: 45, step: 0.5, decimals: 1, tab: "shape" },
-      ...(c.rocket ? rocketParams(c.rocket, inj.rate ?? 0) : []),
-      { key: "rate", label: `Flow (burn rate)${each}`, unit: "kg/s", value: inj.rate ?? 0, min: 0.05, max: 20, step: 0.05, decimals: 3, tab: "fuel" },
+      ...(c.rocket ? rocketParams(bp, c, inj.rate ?? 0) : []),
+      { key: "rate", label: `Flow (burn rate)${each}`, unit: "kg/s", value: inj.rate ?? 0, min: 0.05, max: c.rocket ? Math.max(0.05, Math.floor(maxRate(bp, c.id) * 1000) / 1000) : 20, step: 0.05, decimals: 3, tab: "fuel", ...(c.rocket ? { note: "Up to its pressure ceiling (Shape)" } : {}) },
       { key: "economy", label: "Fuel efficiency", unit: "×", value: inj.economy ?? 1, min: 1, max: 200, step: 1, decimals: 0, tab: "fuel" },
       { key: "injWidth", label: "Injector width", unit: "m", value: inj.width ?? 0, min: 0.05, max: 4, step: 0.05, decimals: 2, tab: "fuel" },
       { key: "thrust", label: `Thrust (est.)${each}`, unit: "N", value: (inj.rate ?? 0) * exhaustSpeed(c), min: 0, max: 1e5, step: 1, decimals: 0, tab: "fuel", readonly: true, note: `flow × ${exhaustSpeed(c)} m/s; Measure gives the real figure` },
@@ -1472,6 +1527,8 @@ const clone = (bp: Blueprint): Blueprint => structuredClone(bp);
 /** Changes one property. A change to a part's outline rewelds it to whatever it then touches. */
 export function setParam(bp: Blueprint, compId: string, key: string, value: number): Blueprint {
   const c = component(bp, compId);
+  // A regular rocket burns no more than its pressure ceiling lets it (design rules §5).
+  if (key === "rate" && c.rocket) value = Math.min(value, maxRate(bp, compId));
   if (key === "angle") return rotateComponent(bp, compId, value);
   if (key === "wall" && containerKind(c)) {
     const out = clone(bp);

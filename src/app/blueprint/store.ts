@@ -2,7 +2,7 @@
 // and the view. Kept in the browser (localStorage) on every change.
 import { computed, signal } from "@preact/signals";
 import { scenarioFile } from "../scenarios.ts";
-import { loxodonPreset, mastodonPreset, partsTemplate, phiomiaPreset, stegodonPreset, thrustOgPreset, thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
+import { capRates, loxodonPreset, mastodonPreset, partsTemplate, phiomiaPreset, stegodonPreset, thrustOgPreset, thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
 import type { BodyInput, JointInput } from "../../core/index.ts";
 
 const KEY = "msb.blueprints.v1";
@@ -124,6 +124,13 @@ function store(bp: Blueprint): void {
   persist();
 }
 
+/** The designer stops each rocket at its pressure ceiling: an edit that lowered one brings its flow down, and says so. */
+function capped(bp: Blueprint): Blueprint {
+  const out = capRates(bp);
+  if (out.cut.length) say(`${out.cut.join(", ")}: flow cut to what ${out.cut.length > 1 ? "their" : "its"} tanks can feed (pressure ceiling).`);
+  return out.bp;
+}
+
 /**
  * Applies an edit to the open blueprint. A preset can't change: the first edit makes a copy and
  * the edit goes to that (§8), and the page says so.
@@ -137,7 +144,7 @@ export function edit(change: (bp: Blueprint) => Blueprint): void {
     baseline.value = copy;
     undoStack.value = [];
   }
-  const next = change(bp);
+  const next = capped(change(bp));
   next.rev = bp.rev + 1;
   undoStack.value = [...undoStack.value.slice(-199), bp];
   redoStack.value = [];
@@ -149,7 +156,7 @@ let gestureBase: Blueprint | null = null;
 export function live(change: (bp: Blueprint) => Blueprint): void {
   if (current.value.preset) return edit(change);
   gestureBase ??= current.value;
-  current.value = change(gestureBase);
+  current.value = capped(change(gestureBase));
 }
 export function endGesture(): void {
   if (!gestureBase) return;

@@ -755,7 +755,8 @@ export function runVessel(world: World, b: Body, shape: VesselShape, drawn: { ma
     // carries the throat's stagnation enthalpy, γ·u* + c*²/2, as heat plus motion.
     // Through a nozzle, the exit's speed λ·vₑ: faster, and the parcel cooler, from the same
     // stagnation enthalpy.
-    const vOut = flow ? cStar * flow.momentum : cStar * (1 + 1 / g);
+    // A chamber too short to burn it all (the L* rule) sends it out slower; the rest stays as heat.
+    const vOut = (flow ? cStar * flow.momentum : cStar * (1 + 1 / g)) * (inj.efficiency ?? 1);
     const vParcel = add(vPoint, scale(rotate(q, f.dir), vOut));
     const p = release(world, b, dm, dm * Math.max(0, g * uStar + 0.5 * cStar * cStar - 0.5 * vOut * vOut), point, vParcel, inj.radius);
     out.push(p);

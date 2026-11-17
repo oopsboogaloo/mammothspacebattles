@@ -177,3 +177,23 @@ export function powerSpec(kind: PowerKind, area: number): { mass: number; capaci
   }
   return { mass: round(area * POWER.generator.massPerArea, 6), output: round(area * POWER.generator.perArea, 6) };
 }
+
+// ---------- pressure and burning (design rules §5; Chloe, 17 November 2026) ----------
+
+/**
+ * Walls under pressure, and burning completely:
+ * - `k`: a wall t thick spanning L holds 2·k·t ÷ L, N/m (the thin-wall rule p = σ·t ÷ r, r = L/2 in
+ *   the plane). Set so THRUST 1's main engine runs at half what its tanks can feed.
+ * - `feedMargin`: a pressure-fed engine's chamber runs at most its weakest tank's hold over this (the
+ *   injector's and the pipes' losses). Chloe's choice, to try.
+ * - `lstar`, `lstarFloor`: below L* = chamber width × length ÷ throat of `lstar` m the propellant
+ *   leaves before it has all burned: efficiency √(L* ÷ lstar), down to `lstarFloor`. Set at THRUST 1's
+ *   main engine (Chloe's choice B: smaller, lighter engines pay a little).
+ */
+export const PRESSURE = { k: 25_700, feedMargin: 1.5, lstar: 0.3, lstarFloor: 0.7 } as const;
+
+/** The pressure a wall t thick spanning L holds, N/m. */
+export const holdPressure = (t: number, span: number): number => (span > 0 ? (2 * PRESSURE.k * t) / span : Infinity);
+
+/** How completely a chamber burns, from its L*: 1 at or above the rule's L*, less below it. */
+export const burnEfficiency = (lstar: number): number => Math.max(PRESSURE.lstarFloor, Math.min(1, Math.sqrt(Math.max(0, lstar) / PRESSURE.lstar)));

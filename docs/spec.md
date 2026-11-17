@@ -421,6 +421,7 @@ Thrust must come from gas pushing on engine geometry. No component applies a dir
   - releases its exhaust across the exit, at the exit's momentum λ·vₑ, with the rest of its stagnation enthalpy as heat;
   - has its plug across the exit rather than the throat. The plume's pressure on it gives the exit's pressure term pₑAₑ, which the parcels deliver. (Released at the full effective speed λ·vₑ + pₑAₑ/ṁ, the plume's pressure counted that term twice: 10–20% over theory.)
   - loads each nozzle wall's welds with the pressure along it (outward and forward), and the head with the forward part back;
+  - an injector may also declare its `efficiency` (0–1, the designer's L* rule): its jet leaves at that fraction of the speed, the rest staying as heat;
   - measured alone, each of the designer's rockets is within −4% to +8% of the theory. The old throat jet ran 23–41% over the throat-only theory for the same engines, more for narrow throats.
 - **Far field:** `bounds.farField` removes exhaust that has flown farther than that from every body, and the ledger records it at the boundary.
 

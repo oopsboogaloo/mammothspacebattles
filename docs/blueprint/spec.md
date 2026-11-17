@@ -746,10 +746,42 @@ exactly as before** (THRUST OG measures 36.10 m/s² forward either way).
   | Loxodon forward / turn | 14.0 m/s² / 4.6 rad/s² | 13.7 / 4.5 |
   | Mastodon (double engines) | 37.9 m/s² | 37.9 (unchanged) |
 
-- Not done yet (design rules §5): the L* rule, the pressure-fed tanks' limit, and the readouts
-  (thrust, Isp, wall margins) in Properties.
+- The L* rule and the pressure ceilings followed (§28).
 
 Tests: PRP-012 (`tests/core/nozzle.test.ts`, `tests/app/nozzle.test.ts`).
+
+## 28. Pressure ceilings and the L* rule (17 November 2026, Chloe)
+
+The trade-offs for a powerful engine (design rules §5 and §8, decisions 7 and 8). Thrust is about
+chamber pressure × throat width × the nozzle's factor, so more thrust takes a bigger throat (a
+bigger, heavier engine), a better nozzle, or more pressure. Pressure now has a price:
+
+- **Walls hold pressure:** 2 × 25,700 N/m × thickness ÷ span (the thin-wall rule). A long, thin-walled
+  tank holds the least.
+- **A pressure-fed engine** runs its chamber at most at its weakest feeding tank's hold ÷ 1.5, and at
+  most at what its own walls hold. The **burn rate stops at that ceiling** (its slider's top), and an
+  edit that lowers the ceiling (thinner or longer tank walls, a narrower throat) brings the flow
+  down and says so.
+- **Properties** shows each rocket's pressure ceiling, what sets it and how much of it it uses, its L*,
+  and how completely it burns.
+- **The L* rule:** below an L* of 0.30 m a chamber burns √(L* ÷ 0.30) of its propellant's energy,
+  never under 70% (`injector.efficiency`; the rest stays as heat). Measured, a 0.1 m main chamber on
+  THRUST 1 (L* 0.15, 71%) gives the main engine about 79% of its push: some of the heat still
+  pushes as the plume's pressure. THRUST 1's light thrusters' chambers are now 0.19 m (L* 0.304).
+
+| Ship | Ceiling (set by) | Its engines now | Most flow |
+|---|---|---|---|
+| THRUST 1 | 2,284 N/m (wing tanks) | main 50%, light 15% | main 15.5 kg/s (7.8), light 9.7 (1.45) |
+| Stegodon | 2,856 (its tank) | 56% | 6.1 (3.4) |
+| Phiomia | 4,895 (its tank) | 3% | 10.4 (0.3) |
+| Loxodon | 1,577 (top tanks, 0.05 m walls) | 12% | 3.35 (0.4) |
+
+- At its ceiling THRUST 1's main engine doubles its push: the ship goes from 36.1 to 61.7 m/s²
+  forward. To triple it, the wing tanks need 0.15 m walls: about 23% less fuel and 43% more dry
+  mass.
+- THRUST 1 flies as before: 36.1 m/s² forward, 9.7 rad/s² turning, 58.8 kg.
+
+Tests: BPD-052 (`tests/app/pressure.test.ts`).
 
 ## Sources
 
