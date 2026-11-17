@@ -883,6 +883,24 @@ Tests: BPD-053, DMG-009 (`tests/app/droptest.test.ts`).
 
 Tests: BPD-054 (`tests/app/weldmass.test.ts`).
 
+## 31. Weld sizes by ship size (17 November 2026, Chloe)
+
+"There should be a rule that there is a minimum number of components before medium, and higher still
+before heavy welds can be added."
+
+- **By the ship's number of parts** (`WELD_UNLOCK`): under 8, Light welds only; from 8, Standard;
+  from 15, Heavy.
+- **The weld panel** shows the sizes the ship can't use yet greyed out, with what they need ("Needs a
+  ship of 8 parts or more (this one has 6)").
+- **Stepping down** (`capWelds`): an edit that leaves a weld stronger than the ship may now use (parts
+  removed, a weld set by its limits) brings it down to the strongest size allowed, and the designer
+  says so. Welds on OG parts are left as they are.
+- **The presets:** the Phiomia (6 parts) and the Loxodon (7) are Light; the Stegodon (14) is Light by
+  choice (§30); the Mastodon (14) and THRUST 1 (17) are Standard. The Loxodon, now Light, still
+  loses nothing when dropped: it lands on its nozzles.
+
+Tests: BPD-055 (`tests/app/weldsize.test.ts`).
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):

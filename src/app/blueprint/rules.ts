@@ -24,6 +24,13 @@ export const WALL_DENSITY = 0.75 / 0.11;
  */
 export const weldPointMass = (thinner: number, quality = 1): number => (WALL_DENSITY * (quality * thinner) ** 2) / 2;
 
+/**
+ * Welds a ship may use, by its size (Chloe, 17 November 2026): Standard welds from 8 parts, Heavy
+ * from 15; below 8, Light only. Returns the strongest weld quality a ship of `parts` parts may have.
+ */
+export const WELD_UNLOCK = { standard: 8, heavy: 15 } as const;
+export const maxWeldQuality = (parts: number): number => (parts >= WELD_UNLOCK.heavy ? 2 : parts >= WELD_UNLOCK.standard ? 1 : 0.5);
+
 export function weldLimits(thinner: number, quality = 1): { tension: number; compression: number; shear: number; torque: number } {
   const r = (x: number) => Math.round(x * thinner * quality * 1e6) / 1e6;
   return { tension: r(WELD_K.tension), compression: r(WELD_K.compression), shear: r(WELD_K.shear), torque: r(WELD_K.torque) };

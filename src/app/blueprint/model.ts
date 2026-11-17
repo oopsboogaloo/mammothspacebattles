@@ -5,7 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, normalizePolygon, polygonArea, steerMixer } from "../../core/index.ts";
-import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, POWER, PRESSURE, powerSpec, WALL, WALL_DENSITY, WELD_K, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
+import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, POWER, PRESSURE, powerSpec, WALL, maxWeldQuality, WALL_DENSITY, WELD_K, WELD_UNLOCK, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
@@ -816,6 +816,8 @@ export function loxodonPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
     row("eng-l", [{ control: "forward", weight: 1, ease: { control: "left", amount: LOXODON_EASE } }, { control: "right", weight: LOXODON_TURN }]),
     row("eng-r", [{ control: "forward", weight: 1, ease: { control: "right", amount: LOXODON_EASE } }, { control: "left", weight: LOXODON_TURN }]),
   ];
+  // Seven parts: Light welds only (WELD_UNLOCK).
+  bp = lightWelds(bp);
   return bp;
 }
 
@@ -1710,6 +1712,42 @@ export function weldPresetsFor(bp: Blueprint, weldId: string): typeof WELD_PRESE
   const w = welds(bp).find((x) => x.id === weldId);
   const t = w ? Math.min(wallOf(component(bp, w.a)), wallOf(component(bp, w.b))) : WALL.default;
   return WELD_PRESETS.map((p) => ({ ...p, limits: weldLimits(t, p.quality) }));
+}
+
+/** A weld point's quality: its tension limit over a Standard weld's for the thinner wall it joins. */
+const qualityOf = (j: JointInput, thinner: number): number => (j.limits?.tension ?? WELD_K.tension * thinner) / (WELD_K.tension * thinner);
+
+/** The strongest weld this ship may use (WELD_UNLOCK): Light below 8 parts, Standard from 8, Heavy from 15. */
+export const maxWeld = (bp: Blueprint): number => maxWeldQuality(bp.components.length);
+
+/** Whether a weld preset is open to this ship, and if not, what it needs. */
+export function weldPresetOpen(bp: Blueprint, quality: number): { open: boolean; why?: string } {
+  if (quality <= maxWeld(bp) + 1e-9) return { open: true };
+  const need = quality > 1 ? WELD_UNLOCK.heavy : WELD_UNLOCK.standard;
+  return { open: false, why: `Needs a ship of ${need} parts or more (this one has ${bp.components.length})` };
+}
+
+/**
+ * Every weld between parts held to what the ship may use (WELD_UNLOCK): one stronger than that steps
+ * down to the strongest preset allowed. Welds on OG parts are left as they are. Returns the
+ * blueprint, and the welds it stepped down.
+ */
+export function capWelds(bp: Blueprint): { bp: Blueprint; cut: string[] } {
+  const max = maxWeld(bp);
+  const over = welds(bp).filter((w) => {
+    const a = component(bp, w.a);
+    const b = component(bp, w.b);
+    if (a.part?.endsWith("_og") || b.part?.endsWith("_og")) return false;
+    const t = Math.min(wallOf(a), wallOf(b));
+    return w.joints.some((j) => qualityOf(j, t) > max + 1e-9);
+  });
+  if (!over.length) return { bp, cut: [] };
+  let out = bp;
+  for (const w of over) {
+    const p = weldPresetsFor(out, w.id).filter((x) => x.quality <= max + 1e-9).pop()!;
+    out = setWeld(out, w.id, p.limits, p.yield);
+  }
+  return { bp: out, cut: over.map((w) => `${component(bp, w.a).label} ↔ ${component(bp, w.b).label}`) };
 }
 
 /** Every weld between parts at Light: half the strength, a quarter of the weight (Chloe, 17 November 2026, for the light ships). */

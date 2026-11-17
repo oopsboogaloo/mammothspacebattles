@@ -317,6 +317,9 @@ Each step ships as its own PR with its measured figures against THRUST 1 today.
    material, 6.8 kg/m² × (quality × t)² ÷ 2: Standard 0.034 kg at 0.1 m walls, Light a quarter,
    Heavy four times, for half or twice the strength. Only welds between parts weigh; welds on OG
    parts are free. The Phiomia and the Stegodon use Light welds.
+10. **Weld sizes by ship size** (17 November 2026): under 8 parts a ship may use Light welds only;
+    Standard from 8, Heavy from 15. A weld stronger than the ship may use steps down, and the
+    designer says so.
    - So a tank must hold the pressure of the chambers it feeds.
    - That rule comes in with the rockets (step 3), as the tank-wall check in §5.3.
    - The order of work's step 4 keeps only separate H₂/O₂ tanks and pumped engines.
