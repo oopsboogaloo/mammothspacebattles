@@ -783,6 +783,57 @@ bigger, heavier engine), a better nozzle, or more pressure. Pressure now has a p
 
 Tests: BPD-052 (`tests/app/pressure.test.ts`).
 
+## 29. The drop test and what it found (17 November 2026, Chloe)
+
+Chloe: THRUST OG's damage is "incredibly good". Dropped on Thrust's first level, one engine part takes
+a hit, the engine fires and the part falls off: enough to make flying annoying without crippling the
+craft. THRUST 1 just bounces, it looks too bendy, and the light presets are nearly indestructible.
+
+**The drop test** (`dropTest`, `src/app/blueprint/droptest.ts`; `pnpm drop` prints the table) lets each
+preset fall on Thrust's first level with no input, as it falls in the game and 8 m/s harder:
+
+| Ship | Landing | Energy lost (J) | Through contacts | Biggest hit (J) | Integrity lost | Welds broken | Most flex before a break |
+|---|---|---|---|---|---|---|---|
+| THRUST OG | 12.8 m/s | (its engine fires after) | 3,772 | 445 | 0.16 | 4: battery–main, battery–hull, main nozzle wall b, generator–battery | 0.4° |
+| THRUST 1 | 12.7 m/s | 2,696 | 394 (15%) | 38 | 0 | 0 | 23.6° (main nozzle wall) |
+| MASTODON | 13.0 m/s | 2,749 | 1,058 (38%) | 236 | 0.03 | 4 (tank–magazine) | 0.6° |
+| STEGODON | 12.5 m/s | 2,564 | 406 (16%) | 27 | 0 | 0 | 47.6° (tail engine) |
+| PHIOMIA | 13.3 m/s | 1,035 | 478 (46%) | 123 | 0 | 0 | 14.4° (nozzle wall) |
+| LOXODON | 13.2 m/s | 1,021 | 316 (31%) | 51 | 0 | 0 | 3.0° |
+
+A part is damaged only by a hit over its threshold (150 J for hull and engine parts) in one step, and
+a weld only breaks when its load passes its limits.
+
+**What it found:**
+
+1. **The damage rule only sees contacts.** THRUST 1 loses about 2,700 J landing, but only 15% passes
+   through its contacts with the ground; the rest is taken up inside the ship, by the welds as its
+   parts bend. No hit reaches 150 J. THRUST OG takes its landing through its contacts (445 J on its
+   nozzle wall) and breaks.
+2. **The rockets are the cause.** Rebuilding only THRUST OG's main engine as a rocket drops its contact
+   energy from 3,692 to 358 J and nothing breaks. Without the star welds it is a little better (28–35%),
+   but not much.
+3. **Parts bend while their welds are barely loaded.** THRUST 1's main nozzle wall turns 23° over about
+   30 steps on landing, its welds at 2–18% of their limits, and stays bent (about 9.5°) while the ship
+   rests on it: the contact's position correction wins over the weld's. THRUST OG's nozzle wall stays
+   true (0.4°) until its weld overloads, then snaps.
+4. **THRUST OG's damage is a property of the solver as it is.** With more solver iterations (10 is the
+   game's), THRUST OG loses 10 welds (40 iterations) or 13 (160), and THRUST 1 starts breaking. So the
+   OG ship's feel depends on today's solver: any change to it must keep THRUST OG's drop as it is
+   (BPD-053 pins it).
+5. **Light ships are tough for free.** The damage threshold (150 J a part) and weld limits (22,950 N at
+   0.1 m walls) don't depend on a ship's mass, but a landing's energy does; a weld costs nothing.
+6. **Tried and dropped:** each chamber wall and throat piece as one piece (5 bodies an engine, not 7):
+   no change (354 J, 27°). Heavier chamber pieces: hits over 150 J again, but contacts chattered.
+   Single-point welds, lighter nozzle walls: no better. Welded parts turning with their group: no change.
+
+**Where this leaves it:** the lever is how welds hold against contacts in the solver, which every
+ship shares. Next: try weld stiffness that only the designer's welds declare (so THRUST OG and the
+games are untouched), measured with this test; then weld size and mass, and thresholds that go with a
+part's mass, for the light ships.
+
+Tests: BPD-053 (`tests/app/droptest.test.ts`).
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):
