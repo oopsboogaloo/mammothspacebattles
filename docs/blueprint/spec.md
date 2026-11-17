@@ -795,18 +795,20 @@ preset fall on Thrust's first level with no input, as it falls in the game and 8
 | Ship | Landing | Energy lost (J) | Through contacts | Biggest hit (J) | Integrity lost | Welds broken | Most flex before a break |
 |---|---|---|---|---|---|---|---|
 | THRUST OG | 12.8 m/s | (its engine fires after) | 3,772 | 445 | 0.16 | 4: battery–main, battery–hull, main nozzle wall b, generator–battery | 0.4° |
-| THRUST 1 | 12.7 m/s | 2,696 | 394 (15%) | 38 | 0 | 0 | 23.6° (main nozzle wall) |
-| MASTODON | 13.0 m/s | 2,749 | 1,058 (38%) | 236 | 0.03 | 4 (tank–magazine) | 0.6° |
-| STEGODON | 12.5 m/s | 2,564 | 406 (16%) | 27 | 0 | 0 | 47.6° (tail engine) |
-| PHIOMIA | 13.3 m/s | 1,035 | 478 (46%) | 123 | 0 | 0 | 14.4° (nozzle wall) |
-| LOXODON | 13.2 m/s | 1,021 | 316 (31%) | 51 | 0 | 0 | 3.0° |
+| THRUST 1 | 12.7 m/s | 4,843 | 394 (8%) | 69 | 0 | 0 | 23.6° (main nozzle wall) |
+| MASTODON | 13.0 m/s | 4,810 | 1,058 (22%) | 236 | 0.03 | 4 (tank–magazine) | 0.6° |
+| STEGODON | 12.5 m/s | 3,703 | 406 (11%) | 27 | 0 | 0 | 47.6° (tail engine) |
+| PHIOMIA | 13.3 m/s | 1,103 | 478 (43%) | 123 | 0 | 0 | 14.4° (nozzle wall) |
+| LOXODON | 13.2 m/s | 1,071 | 316 (29%) | 60 | 0 | 0 | 3.0° |
 
+Energy is with each part's whole mass (fuel, shells and chamber gas too); a hit is half a pair's
+contact energy for the step, as the damage rule takes it.
 A part is damaged only by a hit over its threshold (150 J for hull and engine parts) in one step, and
 a weld only breaks when its load passes its limits.
 
 **What it found:**
 
-1. **The damage rule only sees contacts.** THRUST 1 loses about 2,700 J landing, but only 15% passes
+1. **The damage rule only sees contacts.** THRUST 1 loses about 4,800 J landing, but only 8% passes
    through its contacts with the ground; the rest is taken up inside the ship, by the welds as its
    parts bend. No hit reaches 150 J. THRUST OG takes its landing through its contacts (445 J on its
    nozzle wall) and breaks.

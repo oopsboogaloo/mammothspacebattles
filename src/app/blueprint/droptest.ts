@@ -8,7 +8,7 @@
 // - what it loses: integrity, parts destroyed, welds broken;
 // - how far its parts bend against the cockpit before anything breaks.
 // THRUST OG is the benchmark: it loses its main engine's right nozzle wall and its battery's welds.
-import { getProfile, initialWorld, massProps, parseScenario, stepInPlace, type World } from "../../core/index.ts";
+import { bodyMass, getProfile, initialWorld, massProps, parseScenario, stepInPlace, type World } from "../../core/index.ts";
 import { withBlueprint } from "../playtest.ts";
 import type { Blueprint } from "./model.ts";
 
@@ -19,7 +19,7 @@ export interface DropResult {
   energyLost: number;
   /** Of it, what its contacts with anything not its own took, J: what the damage rule sees. */
   contactEnergy: number;
-  /** The biggest share of one contact's energy one of its parts took in one step, J. */
+  /** The biggest hit one of its parts took in one step, J: half its pair's contact energy, as the damage rule takes it. */
   biggestHit: number;
   /** Integrity lost, summed over its parts; parts destroyed; welds broken (ids, without the game's prefix). */
   integrityLost: number;
@@ -46,8 +46,12 @@ export function dropTest(bp: Blueprint, level: Record<string, unknown>, extra = 
   const hull = () => w.bodies.find((b) => b.id === "p1-hull");
   const turn = (b: { angle: number }) => b.angle - (hull()?.angle ?? 0);
   const start = new Map(ship().map((b) => [b.id, turn(b)]));
+  // With each part's whole mass as the physics has it: its fuel, shells and chamber gas too.
   const mechanical = () =>
-    ship().reduce((s, b) => s + 0.5 * b.mass * (b.velocity.x ** 2 + b.velocity.y ** 2) + 0.5 * massProps(b.shape, b.mass).inertia * b.angularVelocity ** 2 - b.mass * w.gravity.y * b.position.y, 0);
+    ship().reduce((s, b) => {
+      const m = bodyMass(b);
+      return s + 0.5 * m * (b.velocity.x ** 2 + b.velocity.y ** 2) + 0.5 * massProps(b.shape, m).inertia * b.angularVelocity ** 2 - m * w.gravity.y * b.position.y;
+    }, 0);
   const out: DropResult = { impactSpeed: 0, energyLost: 0, contactEnergy: 0, biggestHit: 0, integrityLost: 0, destroyed: 0, welds: [], flex: 0, flexPart: "" };
   let landed = -1;
   let before = 0;
@@ -63,10 +67,13 @@ export function dropTest(bp: Blueprint, level: Record<string, unknown>, extra = 
       out.impactSpeed = v;
       before = m;
     }
+    // As the damage rule takes them: each pair's contact points summed for the step, half to each body.
+    const pairs = new Map<string, number>();
     for (const c of hits) {
       out.contactEnergy += c.energyLost;
-      out.biggestHit = Math.max(out.biggestHit, c.energyLost / 2);
+      pairs.set(`${c.a}\u0000${c.b}`, (pairs.get(`${c.a}\u0000${c.b}`) ?? 0) + c.energyLost);
     }
+    for (const e of pairs.values()) out.biggestHit = Math.max(out.biggestHit, e / 2);
     if (w.events.length < seen) seen = 0;
     for (const e of w.events.slice(seen)) {
       const d = e.data as { id?: string; a?: string; b?: string; loss?: number };
