@@ -2,7 +2,7 @@
 // designs, not the players' path. The designer saves the blueprint and opens a game's page with
 // `?blueprint=1`; every level that game loads then carries the blueprint's ship in place of its own,
 // wired by the blueprint's mixer, and the game's menus offer the way back.
-import { centredShip, type Blueprint } from "./blueprint/model.ts";
+import { physicsShip, type Blueprint } from "./blueprint/model.ts";
 
 export const PLAYTEST_KEY = "msb.playtest.v1";
 export type PlaytestGame = "thrust" | "asteroids" | "lander";
@@ -46,7 +46,7 @@ export function withBlueprint(raw: Record<string, unknown>, bp: Blueprint): Reco
   if (!g) return raw;
   const cockpit = bp.components.find((c) => c.kind === "cockpit")?.bodies[0] ?? bp.ship.bodies[0]?.id;
   if (!cockpit) return raw;
-  const ship = centredShip(bp.ship);
+  const ship = physicsShip(bp);
   const at = ship.bodies.find((b) => b.id === cockpit)!.position;
   const centre = { x: at.x, y: at.y };
   for (const b of ship.bodies) b.position = { x: b.position.x - centre.x, y: b.position.y - centre.y };

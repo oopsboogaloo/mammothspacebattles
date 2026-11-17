@@ -3,7 +3,7 @@
 // empty space, no gravity, the sandbox profile, the control held from rest; acceleration between
 // 0.5 s and 1.5 s (when the chambers are up), turn between 0.5 s and 1.0 s. No DOM: a worker runs it.
 import { assemblyTotals, getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../../core/index.ts";
-import { centredShip, type Blueprint } from "./model.ts";
+import { physicsShip, type Blueprint } from "./model.ts";
 
 export const HZ = 240;
 const T0 = 0.5;
@@ -32,7 +32,7 @@ export function shipControls(bp: Blueprint): Record<string, unknown> {
 
 /** The world a measurement runs in: the blueprint's ship alone, at rest, with its wiring. */
 export function measureWorld(bp: Blueprint): World {
-  const ship = centredShip(bp.ship);
+  const ship = physicsShip(bp);
   for (const b of ship.bodies) {
     b.velocity = { x: 0, y: 0 };
     b.angularVelocity = 0;

@@ -520,6 +520,7 @@ function validateJoint(v: V, j: unknown, path: string): void {
   if (j.limits !== undefined) validateLimits(v, j.limits, `${path}.limits`);
   if (j.integrity !== undefined) num(v, j.integrity, `${path}.integrity`, { positive: true, max: 1 });
   if (j.yield !== undefined && num(v, j.yield, `${path}.yield`, { min: 0 }) && (j.yield as number) >= 1) err(v, `${path}.yield`, "must be below 1");
+  if (j.stiff !== undefined && typeof j.stiff !== "boolean") err(v, `${path}.stiff`, "must be true or false");
   if (j.turn !== undefined) {
     if (!isObj(j.turn)) return err(v, `${path}.turn`, "must be {rate, min, max, target}");
     num(v, j.turn.rate, `${path}.turn.rate`, { positive: true });

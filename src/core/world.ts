@@ -318,6 +318,12 @@ export interface Joint {
   /** A hidden seam of a larger asteroid fragment (AST-007): the limits it takes once revealed. */
   hidden?: JointLimits;
   /**
+   * A stiff weld (DMG-009; the designer's welds): solved again after the contacts, so an impact on
+   * one part moves its whole assembly at once instead of bending the part and soaking the impact up
+   * in the welds, where damage never sees it. Absent (every game's own welds): solved as ever.
+   */
+  stiff?: boolean;
+  /**
    * Where it starts to bend (DMG-008): a load beyond this share of its whole limits costs integrity,
    * down to 1 − (share − yield) ÷ (1 − yield), so it is left weaker and breaks sooner. The worst
    * load sets it: bending doesn't heal. Absent: it holds whole until it breaks.
@@ -327,7 +333,7 @@ export interface Joint {
   turn?: JointTurn;
 }
 
-export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity" | "hidden" | "yield" | "turn">> & { limits?: Partial<JointLimits> };
+export type JointInput = Pick<Joint, "id" | "a" | "b" | "anchorA" | "anchorB"> & Partial<Pick<Joint, "axis" | "referenceAngle" | "integrity" | "hidden" | "yield" | "turn" | "stiff">> & { limits?: Partial<JointLimits> };
 
 /** Zero-mass connections (ASM-006): feed links move a resource between stores; control links carry a channel to a component. */
 export type Link = (
@@ -589,6 +595,7 @@ export function addJoint(world: World, input: JointInput): void {
     ...(input.hidden ? { hidden: { ...input.hidden } } : {}),
     ...(input.yield !== undefined ? { yield: input.yield } : {}),
     ...(input.turn ? { turn: { ...input.turn } } : {}),
+    ...(input.stiff ? { stiff: true } : {}),
   };
   world.joints = [...world.joints, joint].sort((p, q) => compareIds(p.id, q.id));
 }

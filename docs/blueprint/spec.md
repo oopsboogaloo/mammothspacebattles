@@ -829,12 +829,28 @@ a weld only breaks when its load passes its limits.
    no change (354 J, 27°). Heavier chamber pieces: hits over 150 J again, but contacts chattered.
    Single-point welds, lighter nozzle walls: no better. Welded parts turning with their group: no change.
 
-**Where this leaves it:** the lever is how welds hold against contacts in the solver, which every
-ship shares. Next: try weld stiffness that only the designer's welds declare (so THRUST OG and the
-games are untouched), measured with this test; then weld size and mass, and thresholds that go with a
-part's mass, for the light ships.
+**The cause, found and fixed (DMG-009):** the solver's last act on velocities each step is the
+contacts' restitution. A part that strikes something is stopped there on its own, after its welds
+were solved; the welds then drag the rest of the ship to a stop over the next steps, bending the part
+and taking the impact where damage never sees it. Solving the same welds again after the restitution
+everywhere made THRUST 1 land like THRUST OG, but changed the games (six of their tests). So it is a
+weld's choice: **stiff welds** are solved again after the contacts; every weld the designer makes is
+stiff when it goes into the physics (`physicsShip`), except welds on OG parts. Worlds without stiff
+welds solve exactly as before: every game test passes, and THRUST OG's drop is to the digit what it was.
 
-Tests: BPD-053 (`tests/app/droptest.test.ts`).
+| Ship (game landing) | Before | With stiff welds |
+|---|---|---|
+| THRUST OG | 4 welds, 0.16 integrity, 0.4° | the same |
+| THRUST 1 | nothing; 8% through contacts; bends 24° | battery's welds tear, its engine fires and kicks it up (as THRUST OG's does); 0.51 integrity; bends 1° |
+| MASTODON | 4 welds | 7 welds |
+| STEGODON | nothing; its tail bends 48° | nothing; 39° |
+| PHIOMIA | nothing; 14° | nothing; 20° |
+| LOXODON | nothing | nothing |
+
+**Still to do:** the light ships are still tough for free (finding 5): weld size and mass, and
+thresholds that go with a part's mass.
+
+Tests: BPD-053, DMG-009 (`tests/app/droptest.test.ts`).
 
 ## Sources
 

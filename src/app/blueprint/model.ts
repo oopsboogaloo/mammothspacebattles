@@ -603,6 +603,19 @@ const STEGODON_TAIL_FLOW = 0.5;
  * about any other point, such as a form's bounding box or the Mastodon's cockpit, started with its
  * welds out of place, and the first step jolted the parts into line.)
  */
+/**
+ * The blueprint's ship as the physics takes it (centredShip), its welds stiff (DMG-009): the
+ * designer's welds hold their parts true through an impact, so a hit reaches the damage rule as a
+ * hit (the drop test, BPD-053). A weld touching an OG part keeps its game behaviour: THRUST OG lands
+ * as it always has.
+ */
+export function physicsShip(bp: Blueprint): Ship {
+  const og = new Set(bp.components.filter((c) => c.part?.endsWith("_og")).flatMap((c) => c.bodies));
+  const out = centredShip(bp.ship);
+  out.joints = out.joints.map((j) => (og.has(j.a) || og.has(j.b) ? j : { ...j, stiff: true }));
+  return out;
+}
+
 export function centredShip(ship: Ship): Ship {
   const out = structuredClone(ship);
   const shift = new Map<string, Vec2>();
