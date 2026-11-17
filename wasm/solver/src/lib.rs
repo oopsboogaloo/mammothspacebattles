@@ -40,7 +40,7 @@ const INERTIA: usize = 11;
 
 /// Per weld: inputs (body slots, anchors, axis, limits, integrity, reference angle) and outputs
 /// (impulse, whether held at a limit, and then its demand).
-const JS: usize = 21;
+const JS: usize = 22;
 const JA: usize = 0;
 const JB: usize = 1;
 const AAX: usize = 2;
@@ -62,6 +62,9 @@ const OCAP: usize = 17;
 const ODX: usize = 18;
 const ODY: usize = 19;
 const ODA: usize = 20;
+/// 1 for a stiff weld (the designer's): solved again after the contacts' restitution, so it holds
+/// its parts true through an impact instead of letting the contact stop one part alone.
+const STIFF: usize = 21;
 
 /// Per contact: body slots, normal, friction, restitution, point count, first point, and where b's
 /// copy is from b when the pair meets across a wrapped world's edge (0, 0 otherwise).
@@ -136,6 +139,7 @@ struct Weld {
     px: f64,
     py: f64,
     l: f64,
+    stiff: bool,
 }
 
 struct State {
@@ -457,7 +461,15 @@ fn slide(b: &mut [f64], s: &mut Weld, dx: f64, dy: f64, lo: f64, hi: f64, acc: &
 /// one-direction solves. Taking back a capped weld's excess after the solve instead could create
 /// kinetic energy, because the other welds had been solved against the full impulse.
 fn solve_welds(b: &mut [f64], welds: &mut [Weld], acc: &mut Acc) {
+    solve_welds_where(b, welds, acc, false);
+}
+
+/// One pass over the welds, or over the stiff ones only.
+fn solve_welds_where(b: &mut [f64], welds: &mut [Weld], acc: &mut Acc, stiff_only: bool) {
     for s in welds.iter_mut() {
+        if stiff_only && !s.stiff {
+            continue;
+        }
         let w_rel = b[s.b * BS + W] - b[s.a * BS + W];
         let l = clamp(s.l - w_rel * s.angular_mass, -s.torque, s.torque);
         weld_angular(b, s, l - s.l, acc);
@@ -539,6 +551,7 @@ fn prepare_welds(b: &[f64], j: &[f64], welds: &mut [Weld], dt: f64) {
             px: 0.0,
             py: 0.0,
             l: 0.0,
+            stiff: j[o + STIFF] != 0.0,
         };
     }
 }
@@ -622,6 +635,15 @@ fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc:
             }
             apply_contact(b, pts, a, bb, po, nx, ny, new_n - pts[po + NI], ca);
             pts[po + NI] = new_n;
+        }
+    }
+    // Stiff welds (the designer's) have the last word: the restitution above stops a part that
+    // struck something on its own, and without this its welds take the rest of the ship's motion
+    // over the next steps, bending it and soaking up the impact where damage never sees it (the
+    // drop test, BPD-053). Worlds without stiff welds solve exactly as before.
+    if welds.iter().any(|s| s.stiff) {
+        for _ in 0..iterations {
+            solve_welds_where(b, welds, ja, true);
         }
     }
 }

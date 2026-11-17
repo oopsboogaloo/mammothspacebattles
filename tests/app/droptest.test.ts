@@ -20,12 +20,12 @@ describe("the drop test (BPD-053)", () => {
     expect(r.flex).toBeLessThan(1); // rigid until it snaps
   }, 120_000);
 
-  it("BPD-053 the drop test measures where a landing's energy goes, the same every time (THRUST 1 today: almost all of it into its welds)", () => {
+  it("BPD-053 DMG-009 THRUST 1 lands as THRUST OG does: its welds stiff, it stays true until something snaps, loses its battery's welds, and its engine fires; the same every time", () => {
     const a = dropTest(thrustPreset(level), level);
     expect(dropTest(thrustPreset(level), level)).toEqual(a);
-    expect(a.energyLost).toBeGreaterThan(0);
-    expect(a.contactEnergy).toBeGreaterThan(0);
-    // Recorded, not a target: THRUST 1 takes about 8% of its landing through its contacts and bends 24°.
-    expect(a.contactEnergy / a.energyLost).toBeLessThan(0.5);
+    expect(a.welds.slice(0, 2).sort()).toEqual(["w-main-battery-0", "w-main-battery-1"]);
+    expect(a.integrityLost).toBeGreaterThan(0.2);
+    expect(a.destroyed).toBe(0);
+    expect(a.flex).toBeLessThan(2); // it was 24° before its welds were stiff
   }, 120_000);
 });

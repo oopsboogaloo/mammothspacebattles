@@ -29,7 +29,7 @@ export type WasmExports = Exports;
 
 // Strides and offsets: the same as wasm/solver/src/lib.rs.
 const BS = 12;
-const JS = 21;
+const JS = 22;
 const CS = 10;
 const PS = 16;
 
@@ -158,6 +158,7 @@ function fillWelds(J: Float64Array, byId: ReadonlyMap<string, JointBody>): void 
     J[o + 11] = j.limits.torque;
     J[o + 12] = j.integrity;
     J[o + 13] = j.referenceAngle;
+    J[o + 21] = j.stiff ? 1 : 0;
   }
 }
 
