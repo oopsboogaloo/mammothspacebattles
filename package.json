@@ -22,7 +22,8 @@
     "req:report": "node scripts/req-trace.ts",
     "sim": "node src/cli/sim.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm req:check",
-    "bench": "node scripts/bench.ts"
+    "bench": "node scripts/bench.ts",
+    "drop": "node scripts/drop-test.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
