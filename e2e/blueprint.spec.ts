@@ -18,7 +18,7 @@ test("BPD-017 the sandbox's start screen links to the designer, which opens on T
   await openFresh(page);
   const scrolls = await page.evaluate(() => [document.documentElement.scrollHeight > innerHeight, document.documentElement.scrollWidth > innerWidth]);
   expect(scrolls).toEqual([false, false]);
-  await expect(page.getByTestId("performance")).toContainText("58.8 kg"); // THRUST 1: smaller wing tanks for its engines' chambers
+  await expect(page.getByTestId("performance")).toContainText("60.3 kg"); // THRUST 1: smaller wing tanks for its engines' chambers, and its welds weigh 1.4 kg
 });
 
 test("BPD-018 select an engine and type a new nozzle length: a preset is copied, the walls change, and undo puts them back", async ({ page }) => {

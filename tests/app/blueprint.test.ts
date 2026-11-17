@@ -1,7 +1,7 @@
 // The blueprint designer's model (docs/blueprint/spec.md; src/app/blueprint/model.ts).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { addComponent, body, component, engineGeom, flipComponent, freeSpot, instantiate, jointPoint, overlaps, params, place, removeComponent, reweld, setParam, stats, thrustOgPreset, thrustPreset, welds, weldingOf, worldVertices, response } from "../../src/app/blueprint/model.ts";
+import { addComponent, weldMasses, body, component, engineGeom, flipComponent, freeSpot, instantiate, jointPoint, overlaps, params, place, removeComponent, reweld, setParam, stats, thrustOgPreset, thrustPreset, welds, weldingOf, worldVertices, response } from "../../src/app/blueprint/model.ts";
 import { mixerValues, steerValues } from "../../src/core/index.ts";
 
 const scn = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
@@ -37,11 +37,14 @@ describe("blueprint model", () => {
     expect(["mag-l", "mag-r"].map((id) => body(regular, id).ammo?.count)).toEqual([60, 60]);
     expect(body(regular, "mag-l").ammo!.shell).toEqual(body(bp, "gun").magazine!.shell);
     expect(regular.ship.links.filter((l) => l.kind === "ammo").map((l) => [l.kind === "ammo" && l.from, l.to])).toEqual([["mag-l", "gun"], ["mag-r", "gun"]]);
-    // The same mass but for its smaller wing tanks (room for its engines' chambers); its centre
-    // lower, the 20 kg of shells being in the magazines, not the nose.
+    // The same mass but for its smaller wing tanks (room for its engines' chambers) and its welds,
+    // which weigh something (THRUST OG's don't); its centre lower, the 20 kg of shells being in the
+    // magazines, not the nose.
     const [o, r] = [stats(bp), stats(regular)];
     const tanks = (b: typeof bp) => ["tank-l", "tank-r"].reduce((sum, id) => sum + body(b, id).mass + body(b, id).contents!.reduce((a, c) => a + c.mass, 0), 0);
-    expect(r.mass).toBeCloseTo(o.mass - tanks(bp) + tanks(regular), 9);
+    const weld = [...weldMasses(regular).values()].reduce((a, m) => a + m, 0);
+    expect([...weldMasses(bp).values()]).toEqual([]);
+    expect(r.mass).toBeCloseTo(o.mass - tanks(bp) + tanks(regular) + weld, 9);
     expect(r.com.y).toBeLessThan(o.com.y - 0.2);
     expect(Math.abs(r.com.x)).toBeLessThan(1e-9);
     // A regular magazine added later feeds the railgun too; removed, its line goes with it.

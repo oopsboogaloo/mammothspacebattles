@@ -5,7 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, normalizePolygon, polygonArea, steerMixer } from "../../core/index.ts";
-import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, POWER, PRESSURE, powerSpec, WALL, weldLimits, type ContainerKind, type PowerKind } from "./rules.ts";
+import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, POWER, PRESSURE, powerSpec, WALL, WALL_DENSITY, WELD_K, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
@@ -191,6 +191,30 @@ export function welds(bp: Blueprint): Weld[] {
   }
   return [...out.values()];
 }
+
+/**
+ * What the welds between parts weigh, kg, split half to each of the two bodies a weld point joins
+ * (weldPointMass, from its strength and the thinner wall). Free: welds inside a part (counted in
+ * its mass) and welds on an OG part (THRUST OG keeps its mass).
+ */
+export function weldMasses(bp: Blueprint): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const w of welds(bp)) {
+    const a = component(bp, w.a);
+    const b = component(bp, w.b);
+    if (a.part?.endsWith("_og") || b.part?.endsWith("_og")) continue;
+    const t = Math.min(wallOf(a), wallOf(b));
+    for (const j of w.joints) {
+      const m = weldMass(j, t);
+      out.set(j.a, (out.get(j.a) ?? 0) + m / 2);
+      out.set(j.b, (out.get(j.b) ?? 0) + m / 2);
+    }
+  }
+  return out;
+}
+
+/** One weld point's mass, kg, from its tension limit (its quality) and the thinner wall it joins. */
+export const weldMass = (j: JointInput, thinner: number): number => weldPointMass(thinner, (j.limits?.tension ?? WELD_K.tension * thinner) / (WELD_K.tension * thinner));
 
 /** Where a joint is, in the ship's frame (its anchor on a). */
 export function jointPoint(bp: Blueprint, j: JointInput): Vec2 {
@@ -587,6 +611,8 @@ export function stegodonPreset(scenario: Parameters<typeof thrustShip>[0]): Blue
     row("gun-l", [{ control: "action-a", weight: 1 }]),
     row("gun-r", [{ control: "action-a", weight: 1 }]),
   ];
+  // Light welds (Chloe, 17 November 2026): a lighter gunship, lighter and more fragile for it.
+  bp = lightWelds(bp);
   return bp;
 }
 
@@ -612,6 +638,9 @@ const STEGODON_TAIL_FLOW = 0.5;
 export function physicsShip(bp: Blueprint): Ship {
   const og = new Set(bp.components.filter((c) => c.part?.endsWith("_og")).flatMap((c) => c.bodies));
   const out = centredShip(bp.ship);
+  // The welds between parts weigh something (weldMasses): half of each point on each part it joins.
+  const weld = weldMasses(bp);
+  out.bodies = out.bodies.map((b) => (weld.has(b.id) ? { ...b, mass: round(b.mass + weld.get(b.id)!, 9) } : b));
   out.joints = out.joints.map((j) => (og.has(j.a) || og.has(j.b) ? j : { ...j, stiff: true }));
   return out;
 }
@@ -706,6 +735,8 @@ export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
     row("eng-l", [{ control: "forward", weight: 1, ease: { control: "right", amount: 1 } }, { control: "left", weight: 1 }]),
     row("eng-r", [{ control: "forward", weight: 1, ease: { control: "left", amount: 1 } }, { control: "right", weight: 1 }]),
   ];
+  // Light welds (Chloe, 17 November 2026): the simplest ship needn't be the toughest.
+  bp = lightWelds(bp);
   return bp;
 }
 
@@ -1096,8 +1127,9 @@ export function stats(bp: Blueprint): Stats {
   let mx = 0;
   let my = 0;
   let propellant = 0;
+  const weld = weldMasses(bp);
   const parts = bp.ship.bodies.map((b) => {
-    const mass = bodyMass(b as Parameters<typeof bodyMass>[0]);
+    const mass = bodyMass(b as Parameters<typeof bodyMass>[0]) + (weld.get(b.id) ?? 0);
     m += mass;
     mx += mass * b.position.x;
     my += mass * b.position.y;
@@ -1261,8 +1293,6 @@ function rocketParams(bp: Blueprint, c: Component, rate: number): Param[] {
   ];
 }
 
-/** A wall's mass per m² of it, kg (Thrust's nozzle walls: 0.75 kg for 1.1 × 0.1 m). */
-const WALL_DENSITY = 0.75 / 0.11;
 
 /**
  * Builds (or rebuilds) a regular engine's walls from its head and its shape, the head's back face
@@ -1680,6 +1710,13 @@ export function weldPresetsFor(bp: Blueprint, weldId: string): typeof WELD_PRESE
   const w = welds(bp).find((x) => x.id === weldId);
   const t = w ? Math.min(wallOf(component(bp, w.a)), wallOf(component(bp, w.b))) : WALL.default;
   return WELD_PRESETS.map((p) => ({ ...p, limits: weldLimits(t, p.quality) }));
+}
+
+/** Every weld between parts at Light: half the strength, a quarter of the weight (Chloe, 17 November 2026, for the light ships). */
+function lightWelds(bp: Blueprint): Blueprint {
+  let out = bp;
+  for (const w of welds(bp)) out = setWeld(out, w.id, weldPresetsFor(out, w.id)[0].limits, WELD_PRESETS[0].yield);
+  return out;
 }
 
 interface Edge {
