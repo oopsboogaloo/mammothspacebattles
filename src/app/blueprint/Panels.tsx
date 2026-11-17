@@ -10,7 +10,7 @@ import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
-import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, weldPresetsFor, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, weldMass, wallOf, weldPresetsFor, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
 import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, parts, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
@@ -463,6 +463,8 @@ function WeldProps({ id }: { id: string }) {
   const a = component(bp, w.a);
   const b = component(bp, w.b);
   const pts = w.joints.length;
+  const og = !!(a.part?.endsWith("_og") || b.part?.endsWith("_og"));
+  const weldKg = w.joints.reduce((sum, jj) => sum + weldMass(jj, Math.min(wallOf(a), wallOf(b))), 0);
   const flown = loadsFor(bp)?.[id] ?? null;
   const weakest = (["tension", "shear", "torque"] as const).reduce((p, k) => (lim[k] / (k === "torque" ? 0.5 : 1) < lim[p] / (p === "torque" ? 0.5 : 1) ? k : p), "tension" as "tension" | "shear" | "torque");
   const field = (key: keyof typeof lim, label: string, unit: string) => (
@@ -495,6 +497,7 @@ function WeldProps({ id }: { id: string }) {
         {presets.map((p) => (
           <button key={p.name} class={preset?.name === p.name ? "on" : ""} onClick={() => edit((bb) => setWeld(bb, id, p.limits, p.yield))}>
             {p.name}
+            {!og && <small> {(pts * weldMass({ ...j, limits: p.limits }, Math.min(wallOf(a), wallOf(b)))).toFixed(3)} kg</small>}
           </button>
         ))}
         <button class={preset ? "" : "on"} disabled>
@@ -516,6 +519,12 @@ function WeldProps({ id }: { id: string }) {
         <div>
           <small>POINTS</small>
           <b>{pts}</b>
+        </div>
+        <div>
+          <small>WEIGHS</small>
+          <b data-testid="weld-mass" title={og ? "A weld on an OG part is free, as in Thrust" : "A fillet bead of the walls' own material: Light 0.25×, Heavy 4× a Standard weld's mass, for half or twice its strength"}>
+            {og ? "— (OG)" : `${weldKg.toFixed(3)} kg`}
+          </b>
         </div>
         <div>
           <small>LAST TRY-OUT</small>

@@ -13,6 +13,17 @@ export const WALL = { default: 0.1, min: 0.02, max: 0.3 } as const;
  */
 export const WELD_K = { tension: 229_500, compression: 459_000, shear: 160_500, torque: 55_200 } as const;
 
+/** A wall's mass per m² of it, kg (Thrust's nozzle walls: 0.75 kg for 1.1 × 0.1 m). */
+export const WALL_DENSITY = 0.75 / 0.11;
+
+/**
+ * A weld point's mass, kg (Chloe, 17 November 2026: welds shouldn't be free): a fillet bead of the
+ * walls' own material, a right triangle with legs quality × the thinner wall, at the walls' density.
+ * Its strength grows with its quality (weldLimits), its metal with the square: a Light point (0.5)
+ * on 0.1 m walls is 0.0085 kg, Standard 0.034 kg, Heavy (2) 0.136 kg.
+ */
+export const weldPointMass = (thinner: number, quality = 1): number => (WALL_DENSITY * (quality * thinner) ** 2) / 2;
+
 export function weldLimits(thinner: number, quality = 1): { tension: number; compression: number; shear: number; torque: number } {
   const r = (x: number) => Math.round(x * thinner * quality * 1e6) / 1e6;
   return { tension: r(WELD_K.tension), compression: r(WELD_K.compression), shear: r(WELD_K.shear), torque: r(WELD_K.torque) };

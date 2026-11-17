@@ -847,10 +847,41 @@ welds solve exactly as before: every game test passes, and THRUST OG's drop is t
 | PHIOMIA | nothing; 14° | nothing; 20° |
 | LOXODON | nothing | nothing |
 
-**Still to do:** the light ships are still tough for free (finding 5): weld size and mass, and
-thresholds that go with a part's mass.
+**Then:** welds weigh something (§30), and the light ships' welds are Light.
 
 Tests: BPD-053, DMG-009 (`tests/app/droptest.test.ts`).
+
+## 30. Welds weigh something (17 November 2026, Chloe)
+
+"Welds shouldn't be free": the light ships were near-indestructible because a Standard weld held a
+12 kg ship as firmly as a 60 kg one, at no cost.
+
+- **A weld point is a fillet bead of the walls' own material** (`weldPointMass`): a right triangle
+  with legs quality × the thinner wall, at the walls' 6.8 kg/m². Strength grows with the weld's
+  quality, its metal with the square:
+
+  | Weld (0.1 m walls) | Strength | Mass a point |
+  |---|---|---|
+  | Light | ×0.5 | 0.0085 kg |
+  | Standard | ×1 | 0.034 kg |
+  | Heavy | ×2 | 0.136 kg |
+
+- **Only the welds between parts weigh** (`weldMasses`): half of each point on each part it joins, in
+  the ship's mass (Performance, Measure) and in the physics. Welds inside a part are in its mass, and
+  welds on OG parts are free: THRUST OG weighs 61.2 kg as ever.
+- **The weld's panel** shows what it weighs, and what each strength would.
+- **The Phiomia and the Stegodon have Light welds** between their parts (Chloe's choice).
+
+| Ship | Mass (welds) | Dropped on Thrust's first level |
+|---|---|---|
+| THRUST OG | 61.20 kg (free) | as ever: 4 welds |
+| THRUST 1 | 60.26 kg (1.43) | its battery's welds tear, its engine fires |
+| MASTODON | 60.42 kg (1.30) | 7 welds |
+| STEGODON | 44.36 kg (0.29, Light) | 5 welds: its tank, taper and centre magazine come away, and the tail with them |
+| PHIOMIA | 12.68 kg (0.05, Light) | 2 welds: its tank comes off the cockpit, and everything above it |
+| LOXODON | 12.59 kg (0.44) | nothing (it lands on its nozzles) |
+
+Tests: BPD-054 (`tests/app/weldmass.test.ts`).
 
 ## Sources
 

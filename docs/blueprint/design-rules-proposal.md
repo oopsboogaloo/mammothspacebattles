@@ -313,6 +313,10 @@ Each step ships as its own PR with its measured figures against THRUST 1 today.
    own walls hold. Its most flow is ceiling × throat ÷ c\*, so its most thrust grows with its
    throat. **The designer stops you at the ceiling**; an edit that lowers it brings the flow down.
    The tank pressure rule of §5 (2·k_T) is replaced by this.
+9. **Welds weigh something** (17 November 2026): a weld point is a fillet bead of the walls' own
+   material, 6.8 kg/m² × (quality × t)² ÷ 2: Standard 0.034 kg at 0.1 m walls, Light a quarter,
+   Heavy four times, for half or twice the strength. Only welds between parts weigh; welds on OG
+   parts are free. The Phiomia and the Stegodon use Light welds.
    - So a tank must hold the pressure of the chambers it feeds.
    - That rule comes in with the rockets (step 3), as the tank-wall check in §5.3.
    - The order of work's step 4 keeps only separate H₂/O₂ tanks and pumped engines.
