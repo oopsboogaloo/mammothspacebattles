@@ -1257,6 +1257,14 @@ export function buildRocket(bp: Blueprint, compId: string, r: Rocket): Blueprint
   out.ship.joints.push(...joints);
   c.bodies = [h.id, ...made.map((b) => b.id)];
   c.rocket = { ...r };
+  // Its nozzle works (PRP-012): the exhaust leaves at the exit. Only these rockets declare one; the
+  // OG engines and the double engine keep the throat's jet. A nozzle that narrows (a negative flare)
+  // has its narrowest point at the exit, not the throat: 1D theory doesn't hold, so it keeps the throat's jet too.
+  if (h.injector) {
+    const inj = { ...h.injector };
+    delete inj.nozzle;
+    h.injector = r.flare >= 0 ? { ...inj, nozzle: { length: r.nozzleLength, flare: r.flare, walls: [`${h.id}-nz-a`, `${h.id}-nz-b`] } } : inj;
+  }
   // Its gas: the injector a little into the chamber, and the interior it may hold, chamber to nozzle exit.
   const inj = h.injector!;
   inj.outlet = { x: 0, y: round(top - Math.min(0.05, r.chamberLength / 2)) };
@@ -2028,6 +2036,7 @@ export function instantiate(bp: Blueprint, tpl: Blueprint, compId: string, label
     b.id = rename(bid);
     // Each head its own channel: an engine's is its id; a double engine's second head's, that head's.
     if (b.injector) b.injector.channel = b.id;
+    if (b.injector?.nozzle) b.injector.nozzle = { ...b.injector.nozzle, walls: b.injector.nozzle.walls.map(rename) };
     if (b.magazine?.railgun) b.magazine.railgun.channel = id;
     if (b.tractor) delete b.tractor; // a cockpit's beam belongs with the projector and winch it was built with
     if (b.shield) b.shield = { ...b.shield, channel: id, from: [], blocks: [] };

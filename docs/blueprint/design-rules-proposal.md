@@ -276,7 +276,7 @@ So the ship looks much as it does, and its damage model is kept.
    - in the physics: battery, generators, and draws for the shield, railgun, beam and tether;
    - in the designer: the rules, readouts and Try it gauges;
    - shield fuel use measured against today's.
-3. **Rockets** *(the chambered geometry built, `spec.md` §23; the nozzle physics still to do)***:**
+3. **Rockets** *(the chambered geometry built, `spec.md` §23; the nozzle physics built, §27; the L\* rule, the pressure-fed limit and the readouts still to do)***:**
    - in the physics: `nozzleFlow` (pure, tested against textbook values), then opt-in exhaust at the
      exit and wall loads;
    - then the rocket part, THRUST 1's new engines, and L\*₀ calibrated;

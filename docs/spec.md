@@ -399,6 +399,7 @@ Thrust must come from gas pushing on engine geometry. No component applies a dir
 - **PRP-009** `[M · M4 · S]` If a feed link is broken or a reactant runs out, then no new reaction gas shall be produced from that feed.
 - **PRP-010** `[S · M4 · B]` A reference single-engine ship shall sustain thrust in real time within the parcel budget of GAS-008.
 - **PRP-011** `[S · M4 · S]` While an engine's own walls enclose its chamber up to the throat, with nothing else inside, the system shall hold the gas there as one well-mixed volume. It shall let the gas out through the throat as a choked jet of parcels, push on the chamber's walls with its pressure, and keep mass, momentum and energy exact. When the chamber stops being enclosed, its gas shall become parcels where the chamber was.
+- **PRP-012** `[S · M4 · S]` An engine that declares a nozzle (`injector.nozzle`: its length, its walls' half-angle and the two walls) shall, while its chamber is held as one volume and both walls are welded on, release its exhaust at the nozzle's exit with the 1D isentropic exit flow's momentum, so a nozzle adds thrust as the textbook thrust coefficient says, within 10%. The nozzle's pressure shall load its walls' welds. An engine without one, or whose nozzle has lost a wall, shall let its jet out at the throat as before. Mass, momentum and energy stay exact. (Added 16 November 2026; only the designer's regular rockets declare one.)
 
 *Model as built (M4).*
 - **Tanks** are stores. Propellant in a store counts toward its body's mass, and carries thermal energy (at 300 K) and chemical energy in the ledger.
@@ -416,6 +417,11 @@ Thrust must come from gas pushing on engine geometry. No component applies a dir
   - **Not held:** a gun's breech, because its gas has to push the shell. RS-08 and RS-16 declare no interior and still fill their chambers with parcels.
   - **Cost:** the gas in a chamber was more than half of an engine scene's parcels, and the densest. Gunship 2 with both engines firing went from 47 to 8 ms a step, and LAND from 11 to 3.
 - **Joints feel the gas.** The impulse a weld must pass on, because gas pushes its assembly as one rigid body, is added to its load one step later.
+- **Nozzles (PRP-012, added 16 November 2026).** `src/core/nozzle.ts` gives the 1D isentropic flow from the throat to the exit, in vacuum: the exit Mach number from the area ratio (widths, in the plane), the exit's temperature and pressure, and the divergence loss sin α ÷ α for a flat nozzle (NASA Glenn, rocket thrust summary; Sutton & Biblarz). An engine that declares a nozzle, with both its walls still on:
+  - releases its exhaust across the exit, at the exit's momentum λ·vₑ, with the rest of its stagnation enthalpy as heat;
+  - has its plug across the exit rather than the throat. The plume's pressure on it gives the exit's pressure term pₑAₑ, which the parcels deliver. (Released at the full effective speed λ·vₑ + pₑAₑ/ṁ, the plume's pressure counted that term twice: 10–20% over theory.)
+  - loads each nozzle wall's welds with the pressure along it (outward and forward), and the head with the forward part back;
+  - measured alone, each of the designer's rockets is within −4% to +8% of the theory. The old throat jet ran 23–41% over the throat-only theory for the same engines, more for narrow throats.
 - **Far field:** `bounds.farField` removes exhaust that has flown farther than that from every body, and the ledger records it at the boundary.
 
 ### 9.5b Flight trials (M4b)

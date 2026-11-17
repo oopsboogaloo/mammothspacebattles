@@ -63,10 +63,15 @@ test("BPD-020 Try it flies the blueprint at once, its controls wired, and Esc co
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { controls: Record<string, number> } } | null } }).__msb.sandbox()?.world.controls ?? {}))
     .toMatchObject({ main: 1, bl: 1, fr: 0.5 });
-  await page.waitForTimeout(500);
-  const hull = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { gravity: { x: number; y: number }; bodies: { id: string; velocity: { x: number; y: number } }[] } } } }).__msb.sandbox().world);
-  expect(hull.gravity).toEqual({ x: 0, y: 0 });
-  expect(Math.hypot(hull.bodies.find((b) => b.id === "hull")!.velocity.x, hull.bodies.find((b) => b.id === "hull")!.velocity.y)).toBeGreaterThan(1);
+  const world = () => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { gravity: { x: number; y: number }; bodies: { id: string; velocity: { x: number; y: number } }[] } } } }).__msb.sandbox().world);
+  expect((await world()).gravity).toEqual({ x: 0, y: 0 });
+  // It gets moving: by the simulation's clock, not the wall clock (a slow runner steps fewer times a second).
+  await expect
+    .poll(async () => {
+      const hull = (await world()).bodies.find((b) => b.id === "hull")!;
+      return Math.hypot(hull.velocity.x, hull.velocity.y);
+    }, { timeout: 15_000 })
+    .toBeGreaterThan(1);
   await page.keyboard.up("ArrowUp");
   await page.keyboard.up("KeyE");
   await page.keyboard.press("Escape");
