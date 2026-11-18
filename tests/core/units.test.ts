@@ -3,7 +3,7 @@
 // parcel and event must be the same bit for bit once divided by its factor.
 import { basename } from "node:path";
 import { describe, expect, it } from "vitest";
-import { readJson, scenarioFiles } from "../helpers.ts";
+import { readFile, readJson, scenarioFiles } from "../helpers.ts";
 import { proof, proofMigrated } from "../unitsProof.ts";
 import { parseScenario, runScenario } from "../../src/core/index.ts";
 import { migrateUnits, toCoreUnits } from "../../src/core/migrateUnits.ts";
@@ -17,7 +17,7 @@ describe("the units proof: lengths ×4, masses ×1024 run as the core's own, bit
     const name = basename(file, ".json");
     if (ONLY && !ONLY.includes(name)) continue;
     it(`UNITS-001 ${name}`, () => {
-      const r = proof(readJson(file), Number(process.env.UNITS_STEPS ?? 480));
+      const r = proof(readFile(file), Number(process.env.UNITS_STEPS ?? 480));
       expect(r.untagged).toEqual([]);
       expect(r.diff).toBe("");
     }, 600_000);

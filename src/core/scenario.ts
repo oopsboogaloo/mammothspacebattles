@@ -1302,6 +1302,12 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {},
   // Schema 2 is in the game's units, unless it says otherwise.
   const scn = { ...(data as unknown as Scenario), values: resolved };
   if ((data.schema as number) >= 2 && !scn.world.units) scn.world = { ...scn.world, units: { ...GAME_UNITS } };
+  // Units 1 and 1 are the core's own: no units.
+  if (scn.world.units && scn.world.units.length === 1 && scn.world.units.mass === 1) {
+    const { units: _core, ...world } = scn.world;
+    void _core;
+    scn.world = world;
+  }
   return scn;
 }
 

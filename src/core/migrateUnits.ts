@@ -146,3 +146,10 @@ export function toCoreUnits(raw: Record<string, unknown>): Record<string, unknow
   if (raw.schema !== 2) return raw;
   return { ...migrateUnits(raw, { length: 1 / GAME_UNITS.length, mass: 1 / GAME_UNITS.mass }), schema: 1 };
 }
+
+/** The units a scenario file is in: schema 1 the core's (undefined); schema 2 its own, else the game's. */
+export function unitsOf(raw: Record<string, unknown>): Units | undefined {
+  if (raw.schema !== 2) return undefined;
+  const u = (raw.world as { units?: Units } | undefined)?.units ?? GAME_UNITS;
+  return u.length === 1 && u.mass === 1 ? undefined : u;
+}

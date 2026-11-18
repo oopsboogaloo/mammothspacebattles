@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BodyInput } from "../src/core/index.ts";
+import { toCoreUnits } from "../src/core/migrateUnits.ts";
 
 export const ROOT = new URL("..", import.meta.url).pathname;
 
@@ -12,7 +13,25 @@ export function scenarioFiles(): string[] {
     .map((f) => join(dir, f));
 }
 
+/**
+ * A JSON file. A scenario file (schema 2, the game's units) comes back in the core's units, marked as
+ * such, so the tests of the core's behaviour check the same figures as before the units changed
+ * (docs/units-rescale-plan.md: UNITS-001 proves the two run the same). `readFile` reads it as it is.
+ */
 export function readJson(file: string): unknown {
+  const raw = readFile(file);
+  if (!raw || typeof raw !== "object" || (raw as { schema?: unknown }).schema !== 2) return raw;
+  return inCoreUnits(raw as Record<string, unknown>);
+}
+
+/** A scenario in the game's units (schema 2) as the same in the core's: schema 2, units 1 and 1. */
+export function inCoreUnits(raw: Record<string, unknown>): Record<string, unknown> {
+  const core = toCoreUnits(raw) as { world: Record<string, unknown> };
+  return { ...core, schema: 2, world: { ...core.world, units: { length: 1, mass: 1 } } };
+}
+
+/** A JSON file as it is. */
+export function readFile(file: string): unknown {
   return JSON.parse(readFileSync(file, "utf8"));
 }
 

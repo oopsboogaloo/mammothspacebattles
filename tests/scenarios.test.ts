@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { basename } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getProfile, parseScenario, runScenario, type Command, type Scenario } from "../src/core/index.ts";
-import { disc, readJson, scenarioFiles } from "./helpers.ts";
+import { disc, readFile as readJson, scenarioFiles } from "./helpers.ts";
 
 const files = scenarioFiles();
 
