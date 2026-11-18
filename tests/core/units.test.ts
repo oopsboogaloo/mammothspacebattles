@@ -6,7 +6,14 @@ import { describe, expect, it } from "vitest";
 import { readJson, scenarioFiles } from "../helpers.ts";
 import { proof } from "../unitsProof.ts";
 import { withBlueprint } from "../../src/app/playtest.ts";
-import { loxodonPreset, mastodonPreset, phiomiaPreset, stegodonPreset, thrustOgPreset, thrustPreset } from "../../src/app/blueprint/model.ts";
+import {
+  loxodonPreset,
+  mastodonPreset,
+  phiomiaPreset,
+  stegodonPreset,
+  thrustOgPreset,
+  thrustPreset,
+} from "../../src/app/blueprint/model.ts";
 
 const ONLY = process.env.UNITS_ONLY?.split(",");
 
@@ -23,12 +30,24 @@ describe("the units proof: lengths ×4, masses ×1024 run as the core's own, bit
 });
 
 describe("the units proof for the designer's presets, flown in Thrust's first level", () => {
-  const level = readJson("scenarios/thrust-1.json") as Parameters<typeof thrustPreset>[0];
-  for (const make of [thrustOgPreset, thrustPreset, mastodonPreset, stegodonPreset, phiomiaPreset, loxodonPreset]) {
+  const level = readJson("scenarios/thrust-1.json") as Parameters<
+    typeof thrustPreset
+  >[0];
+  for (const make of [
+    thrustOgPreset,
+    thrustPreset,
+    mastodonPreset,
+    stegodonPreset,
+    phiomiaPreset,
+    loxodonPreset,
+  ]) {
     const bp = make(level);
     if (ONLY && !ONLY.includes(bp.name)) continue;
     it(`UNITS-002 ${bp.name}`, () => {
-      const r = proof(withBlueprint(level, bp), Number(process.env.UNITS_STEPS ?? 480));
+      const r = proof(
+        withBlueprint(level, bp),
+        Number(process.env.UNITS_STEPS ?? 480),
+      );
       expect(r.untagged).toEqual([]);
       expect(r.diff).toBe("");
     }, 600_000);

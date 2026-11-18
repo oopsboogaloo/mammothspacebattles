@@ -198,27 +198,142 @@ const FIELDS: Record<string, Dim> = {
 };
 
 /** Keys never scaled wherever they sit. */
-const NONE = new Set(["schema", "seed", "angle", "angularVelocity", "restitution", "friction", "integrity", "step", "steps", "zoom", "omega", "economy", "yield", "count", "reload", "lives", "respawn", "grace", "delay", "every", "first", "skill", "spin", "time", "wait", "reveal", "seams", "pieces", "gold", "compounds", "multiplier", "maxTilt", "fragments", "blast", "damping", "arc", "capture", "rate", "hold", "shots", "capacity", "level", "extraLife", "most", "fromLevel", "pace", "clearPause", "shellLife", "temperature", "value", "flare", "efficiency", "goldDensity", "seamStrength", "compoundSize", "kills", "weight", "amount", "limit", "frontTurn", "cut", "early", "late", "slope", "aim", "life", "min", "max", "target", "shock", "countdown", "perLeak", "blastLeaks", "below", "more", "small", "gap", "flight", "combat", "base", "perLevel", "skillMax", "everyMin", "firstMin", "spread", "interval", "load", "watch", "pause", "ships", "clearBonus", "bonus", "index", "fraction", "last", "heat"]);
+const NONE = new Set([
+  "schema",
+  "seed",
+  "angle",
+  "angularVelocity",
+  "restitution",
+  "friction",
+  "integrity",
+  "step",
+  "steps",
+  "zoom",
+  "omega",
+  "economy",
+  "yield",
+  "count",
+  "reload",
+  "lives",
+  "respawn",
+  "grace",
+  "delay",
+  "every",
+  "first",
+  "skill",
+  "spin",
+  "time",
+  "wait",
+  "reveal",
+  "seams",
+  "pieces",
+  "gold",
+  "compounds",
+  "multiplier",
+  "maxTilt",
+  "fragments",
+  "blast",
+  "damping",
+  "arc",
+  "capture",
+  "rate",
+  "hold",
+  "shots",
+  "capacity",
+  "level",
+  "extraLife",
+  "most",
+  "fromLevel",
+  "pace",
+  "clearPause",
+  "shellLife",
+  "temperature",
+  "value",
+  "flare",
+  "efficiency",
+  "goldDensity",
+  "seamStrength",
+  "compoundSize",
+  "kills",
+  "weight",
+  "amount",
+  "limit",
+  "frontTurn",
+  "cut",
+  "early",
+  "late",
+  "slope",
+  "aim",
+  "life",
+  "min",
+  "max",
+  "target",
+  "shock",
+  "countdown",
+  "perLeak",
+  "blastLeaks",
+  "below",
+  "more",
+  "small",
+  "gap",
+  "flight",
+  "combat",
+  "base",
+  "perLevel",
+  "skillMax",
+  "everyMin",
+  "firstMin",
+  "spread",
+  "interval",
+  "load",
+  "watch",
+  "pause",
+  "ships",
+  "clearBonus",
+  "bonus",
+  "index",
+  "fraction",
+  "last",
+  "heat",
+]);
 
 /** Objects whose numbers are all dimensionless: mass fractions by species. */
 const NONE_INSIDE = new Set(["mixture", "composition"]);
 
-const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
+const isObj = (x: unknown): x is Record<string, unknown> =>
+  !!x && typeof x === "object" && !Array.isArray(x);
 
-function scale(value: unknown, parent: string, units: Units, path: string, unknown: Set<string>): unknown {
-  if (Array.isArray(value)) return value.map((v) => scale(v, parent + "[]", units, path + "[]", unknown));
+function scale(
+  value: unknown,
+  parent: string,
+  units: Units,
+  path: string,
+  unknown: Set<string>,
+): unknown {
+  if (Array.isArray(value))
+    return value.map((v) =>
+      scale(v, parent + "[]", units, path + "[]", unknown),
+    );
   if (!isObj(value)) return value;
   const out: Record<string, unknown> = {};
   const vec = VECTORS[parent];
   for (const [k, v] of Object.entries(value)) {
     if (typeof v === "number") {
-      const d = vec && (k === "x" || k === "y") ? vec : (FIELDS[`${parent}.${k}`] ?? FIELDS[k]);
+      const d =
+        vec && (k === "x" || k === "y")
+          ? vec
+          : (FIELDS[`${parent}.${k}`] ?? FIELDS[k]);
       if (d) out[k] = v * factor(units, d);
       else {
-        if (!NONE.has(k) && !NONE_INSIDE.has(parent)) unknown.add(`${parent}.${k}`);
+        if (!NONE.has(k) && !NONE_INSIDE.has(parent))
+          unknown.add(`${parent}.${k}`);
         out[k] = v;
       }
-    } else if (Array.isArray(v) && v.length && v.every((x) => typeof x === "number")) {
+    } else if (
+      Array.isArray(v) &&
+      v.length &&
+      v.every((x) => typeof x === "number")
+    ) {
       // A range or list of numbers (rocks.speed: [least, most]).
       const d = FIELDS[`${parent}.${k}`];
       out[k] = d ? v.map((x: number) => x * factor(units, d)) : v;
@@ -232,10 +347,29 @@ function scale(value: unknown, parent: string, units: Units, path: string, unkno
  * `scn` in `units` (of its own, which must be the core's: a scenario already scaled is refused).
  * Returns the scenario and the numbers it found no dimension for (left as they were).
  */
-export function scaleScenario(scn: Scenario, units: Units): { scenario: Scenario; untagged: string[] } {
-  if (scn.world.units) throw new Error("scaleScenario: the scenario is already in other units");
+export function scaleScenario(
+  scn: Scenario,
+  units: Units,
+): { scenario: Scenario; untagged: string[] } {
+  if (scn.world.units)
+    throw new Error("scaleScenario: the scenario is already in other units");
   const untagged = new Set<string>();
-  const world = scale(scn.world, "world", units, "$.world", untagged) as Scenario["world"];
-  const timeline = scale(scn.timeline, "timeline", units, "$.timeline", untagged) as Scenario["timeline"];
-  return { scenario: { ...scn, world: { ...world, units: { ...units } }, timeline }, untagged: [...untagged].sort() };
+  const world = scale(
+    scn.world,
+    "world",
+    units,
+    "$.world",
+    untagged,
+  ) as Scenario["world"];
+  const timeline = scale(
+    scn.timeline,
+    "timeline",
+    units,
+    "$.timeline",
+    untagged,
+  ) as Scenario["timeline"];
+  return {
+    scenario: { ...scn, world: { ...world, units: { ...units } }, timeline },
+    untagged: [...untagged].sort(),
+  };
 }

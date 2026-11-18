@@ -57,7 +57,6 @@ export const D = {
   hitDraw: [1, 0, -1], // J per N·s
 } as const satisfies Record<string, Dim>;
 
-
 const profiles = new WeakMap<Profile, Map<string, Profile>>();
 
 /** A profile in `units`: its tolerances and limits scaled (cached, so a world's profile stays one object). */
@@ -82,7 +81,12 @@ export function scaledProfile(p: Profile, units: Units | undefined): Profile {
       energy: p.tol.energy * f(D.energy),
       penetration: p.tol.penetration * f(D.length),
     },
-    limit: { ...p.limit, maxSpeed: p.limit.maxSpeed * f(D.speed), minThickness: p.limit.minThickness * f(D.length), minFragment: p.limit.minFragment * f(D.length) },
+    limit: {
+      ...p.limit,
+      maxSpeed: p.limit.maxSpeed * f(D.speed),
+      minThickness: p.limit.minThickness * f(D.length),
+      minFragment: p.limit.minFragment * f(D.length),
+    },
   };
   byUnits.set(key, out);
   return out;

@@ -60,6 +60,17 @@ Every factor is an even power of two, so square roots of scaled quantities stay 
 
 Nothing anyone can see changes in stage 1.
 
+**Stage 1 done (18 November 2026).** UNITS-001 and UNITS-002 (`tests/core/units.test.ts`): all 61
+scenarios and the six presets run bit for bit the same at lengths ×4 and masses ×1024, over 5 s of
+scripted input on every control (`node scripts/units-report.ts`). What it took, each found by the
+proof: the contact solver's restitution cut-off and largest correction (Rust); the profile's
+tolerances and limits; the gas's dynamic scale (÷16 for lengths ×4: it already divides every molar
+mass, so temperatures stay); the world's default bounds; injector, tractor, collector, turret and
+weld defaults; the terrain's crust, rims and micrometre rounding; the AI pilots' distances and
+speeds; leaks, blasts, shields, power, the engines' body grid, the wisps' grid; and the games'
+rules (landing, Thrust, the arcade, Moon Mammoth, ropes, the plant, dust). Explosive heats are taken
+before the gas scale, so they are not converted.
+
 ## Stage 2: change the units
 
 5. Record a baseline of every scenario with the build before the change.
