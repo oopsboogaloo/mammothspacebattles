@@ -180,7 +180,7 @@ describe("turrets", () => {
       const bodies = structuredClone(t.bodies);
       const joints = structuredClone(t.joints);
       edit(bodies, joints);
-      return { schema: 1, name: "t", title: "t", description: "", profile: "sandbox", seed: 1, world: { bodies, joints, links: t.links }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] };
+      return { schema: 2, name: "t", title: "t", description: "", profile: "sandbox", seed: 1, world: { units: { length: 1, mass: 1 }, bodies, joints, links: t.links }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] };
     };
     const part = (bodies: Record<string, unknown>[], id: string) => bodies.find((b) => b.id === id)!;
     expect(() => parseScenario(scn(() => {}))).not.toThrow();

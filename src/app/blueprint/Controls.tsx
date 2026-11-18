@@ -12,6 +12,7 @@ import { measurementOf } from "./measureClient.ts";
 import { MeasureButton } from "./Panels.tsx";
 import { current, edit, endGesture, live, mode, selection } from "./store.ts";
 import { KIND_COLOUR } from "./View.tsx";
+import { shown as show } from "./shown.ts";
 
 /** The controls held to test the wiring on the blueprint (keys in Controls mode, or ● held). */
 export const testHeld = signal<Record<string, number>>({});
@@ -471,7 +472,11 @@ export function ResponseBox() {
 }
 
 /** One decimal, without a minus on a value that rounds to zero. */
-const fix1 = (x: number) => (Math.abs(x) < 0.05 ? "0.0" : x.toFixed(1));
+// Accelerations, shown in the game's units (shown.ts).
+const fix1 = (a: number) => {
+  const x = show(a, "m/s²");
+  return Math.abs(x) < 0.05 ? "0.0" : x.toFixed(1);
+};
 
 /** The right panel in Controls mode: the selected part's wiring. */
 export function WiringPanel() {

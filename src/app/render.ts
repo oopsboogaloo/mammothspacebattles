@@ -5,6 +5,8 @@ import { toScreen, toWorld, type Camera, type Viewport } from "./camera.ts";
 import { sourceOf } from "./smooth.ts";
 
 import { drawMoon } from "./moonRender.ts";
+// Sizes drawn in metres are the core units' figures times LEN (the game's units: ./units.ts).
+import { LEN, MOMENTUM, ZOOM } from "./units.ts";
 export type OverlayId = "velocity" | "com" | "contacts" | "forces" | "joints" | "links" | "damage" | "pilots" | "grid";
 
 export const OVERLAYS: { id: OverlayId; label: string; key?: string; legend: string }[] = [
@@ -154,7 +156,7 @@ export function flameColour(T: number): { colour: string; alpha: number; glow: b
 
 const PLUME_BUCKETS = 32;
 /** A tail wisp's blob across as it leaves the gas, m (it grows from there). */
-const WISP_SIZE = 0.8;
+const WISP_SIZE = 0.8 * LEN;
 const PLUME_DOWN = 4; // the plume is drawn at a quarter of the resolution, then blurred up
 const SPRITE = 32;
 /** Temperature of plume bucket k, log-spaced from 150 K to 3,000 K. */
@@ -238,7 +240,7 @@ function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: V
   for (let i = 0; i < np; i++) buckets.push(bucketOf(temperatureAt(gas, i, scale)));
   // Each blob covers the space its parcel has: the area per parcel around it, from a count on a coarse
   // grid (its cell and the 8 around it). Gas that has spread out gets bigger, fainter blobs.
-  const cell = 0.4;
+  const cell = 0.4 * LEN;
   const count = new Map<number, number>();
   const key = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576);
   const cells: (readonly [number, number])[] = [];
@@ -248,7 +250,7 @@ function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: V
     let n = 0;
     for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) n += count.get(key(cx + dx, cy + dy)) ?? 0;
     const spacing = Math.sqrt((9 * cell * cell) / n);
-    return Math.min(1.6, Math.max(3 * gas.radius[i], 1.05 * spacing));
+    return Math.min(1.6 * LEN, Math.max(3 * gas.radius[i], 1.05 * spacing));
   });
   for (const glow of [false, true]) {
     b.globalCompositeOperation = glow ? "lighter" : "source-over";
@@ -268,7 +270,7 @@ function drawPlume(ctx: CanvasRenderingContext2D, world: World, c: Camera, vp: V
       const y = s.y / PLUME_DOWN;
       if (x < -R || y < -R || x > w + R || y > h + R) continue;
       // Thinner where it has spread: the same gas over a larger area.
-      b.globalAlpha = (vapour ? STEAM_ALPHA : f.alpha) * Math.min(1, Math.max(0.35, (0.5 / Math.max(size[i], 0.5)) ** 0.5));
+      b.globalAlpha = (vapour ? STEAM_ALPHA : f.alpha) * Math.min(1, Math.max(0.35, ((0.5 * LEN) / Math.max(size[i], 0.5 * LEN)) ** 0.5));
       b.drawImage(vapour ? steamSprite() : sp[k], x - R, y - R, 2 * R, 2 * R);
     }
     // The tail (GAS-011): gas gone from the gas model cools, grows and fades out.
@@ -697,7 +699,7 @@ const STAR_LAYERS = [
 ];
 const STAR_TILE = 256; // px
 const STARS_PER_TILE = 5;
-const STAR_PX_PER_M = 10;
+const STAR_PX_PER_M = 10 * ZOOM;
 export function starHash(a: number, b: number, c: number): number {
   // Each input is mixed in turn and the whole stirred twice. A weaker mix left a star's x and y
   // moving together, which drew the stars along diagonal lines.
@@ -777,7 +779,7 @@ function machineOn(world: World, id: string): boolean {
 }
 
 function drawPowerLines(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
-  ctx.lineWidth = Math.max(2, 0.45 * c.zoom);
+  ctx.lineWidth = Math.max(2, 0.45 * LEN * c.zoom);
   // A powered turret's cables (WPN-013): lit while what they leave from is on.
   for (const l of world.thrust?.spec.view?.cables ?? []) {
     if (l.points.length < 2) continue;
@@ -816,10 +818,10 @@ function drawMachineMarks(ctx: Ctx, world: World, c: Camera, vp: Viewport, b: Bo
   const at = (x: number, y: number) => toScreen(c, vp, add(b.position, rotate(q, { x, y })));
   const box = b.shape.kind === "box" ? b.shape : null;
   if (b.generator && box) {
-    const top = at(0, box.height / 2 + 0.25);
+    const top = at(0, box.height / 2 + 0.25 * LEN);
     ctx.fillStyle = generatorOnline(world, b) ? NODE_ON : NODE_OFF;
     ctx.beginPath();
-    ctx.arc(top.x, top.y, Math.max(2, 0.28 * c.zoom), 0, Math.PI * 2);
+    ctx.arc(top.x, top.y, Math.max(2, 0.28 * LEN * c.zoom), 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = COLORS.bodyStroke;
     ctx.lineWidth = 1.25;
@@ -830,7 +832,7 @@ function drawMachineMarks(ctx: Ctx, world: World, c: Camera, vp: Viewport, b: Bo
       for (let k = 0; k < 4; k++) {
         const y = -box.height / 2 + (box.height * (k + 0.75)) / 4.5;
         const p0 = at((side * box.width) / 2, y);
-        const p1 = at(side * (box.width / 2 + 0.3), y);
+        const p1 = at(side * (box.width / 2 + 0.3 * LEN), y);
         ctx.moveTo(p0.x, p0.y);
         ctx.lineTo(p1.x, p1.y);
       }
@@ -838,8 +840,8 @@ function drawMachineMarks(ctx: Ctx, world: World, c: Camera, vp: Viewport, b: Bo
   }
   if (b.charge && box) {
     const share = Math.max(0, Math.min(1, b.charge.shots / b.charge.capacity));
-    const w = 0.3;
-    const h = box.height - 0.5;
+    const w = 0.3 * LEN;
+    const h = box.height - 0.5 * LEN;
     const corners = (y0: number, y1: number) => [at(-w / 2, y0), at(w / 2, y0), at(w / 2, y1), at(-w / 2, y1)];
     const path = (pts: { x: number; y: number }[]) => {
       ctx.beginPath();
@@ -897,8 +899,9 @@ function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport, lite = fals
     const L = Math.hypot(d.x, d.y);
     if (L < 1e-6) continue;
     const n = { x: -d.y / L, y: d.x / L };
-    const k = Math.max(6, Math.round(L / 2));
-    const layers = [[Math.max(4, 0.5 * c.zoom), "rgba(140, 200, 255, 0.35)", 0.7, 0], [Math.max(1.5, 0.12 * c.zoom), "#eaf6ff", 0.7, 0], [Math.max(1, 0.08 * c.zoom), "#b9dcff", 0.45, 7]] as const;
+    const k = Math.max(6, Math.round(L / (2 * LEN)));
+    const z = LEN * c.zoom;
+    const layers = [[Math.max(4, 0.5 * z), "rgba(140, 200, 255, 0.35)", 0.7 * LEN, 0], [Math.max(1.5, 0.12 * z), "#eaf6ff", 0.7 * LEN, 0], [Math.max(1, 0.08 * z), "#b9dcff", 0.45 * LEN, 7]] as const;
     // Lite (a slow device): the bright core only.
     for (const [width, colour, amp, salt] of lite ? [layers[1]] : layers) {
       ctx.strokeStyle = colour;
@@ -921,7 +924,7 @@ function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport, lite = fals
     const ship = world.bodies.filter((b) => b.id.startsWith(prefix) && !b.id.includes("-shell-") && !b.id.endsWith("-field"));
     if (!ship.length) return;
     // Jagged sparks between neighbouring parts, and round each, redrawn every step.
-    for (const [width, colour, salt] of [[Math.max(3, 0.3 * c.zoom), "rgba(140, 200, 255, 0.35)", 0], [Math.max(1, 0.08 * c.zoom), "#eaf6ff", 3]] as const) {
+    for (const [width, colour, salt] of [[Math.max(3, 0.3 * LEN * c.zoom), "rgba(140, 200, 255, 0.35)", 0], [Math.max(1, 0.08 * LEN * c.zoom), "#eaf6ff", 3]] as const) {
       ctx.strokeStyle = colour;
       ctx.lineWidth = width;
       ctx.beginPath();
@@ -930,12 +933,12 @@ function drawShocks(ctx: Ctx, world: World, c: Camera, vp: Viewport, lite = fals
         const b = ship[(k * 7 + 3 + world.tick) % ship.length].position;
         const d = { x: b.x - a.x, y: b.y - a.y };
         const L = Math.hypot(d.x, d.y);
-        if (L < 0.2 || L > 4) continue;
+        if (L < 0.2 * LEN || L > 4 * LEN) continue;
         const n = { x: -d.y / L, y: d.x / L };
-        const m = Math.max(3, Math.round(L / 0.4));
+        const m = Math.max(3, Math.round(L / (0.4 * LEN)));
         for (let i = 0; i <= m; i++) {
           const f = i / m;
-          const off = i === 0 || i === m ? 0 : 0.35 * jitter(world.tick + salt + k * 13, i);
+          const off = i === 0 || i === m ? 0 : 0.35 * LEN * jitter(world.tick + salt + k * 13, i);
           const q = toScreen(c, vp, { x: a.x + d.x * f + n.x * off, y: a.y + d.y * f + n.y * off });
           if (i === 0) ctx.moveTo(q.x, q.y);
           else ctx.lineTo(q.x, q.y);
@@ -1079,7 +1082,7 @@ function rockLayer(ctx: Ctx & Partial<Pick<CanvasRenderingContext2D, "globalComp
 const isGround = (b: Body) => b.fixed || !!b.gravity;
 
 /** How far the ground's fill reaches past its surface, m: well past any view, so nothing under it shows. */
-const GROUND_DEPTH = 3000;
+const GROUND_DEPTH = 3000 * LEN;
 const GROUND_FILL = "#05070d";
 
 function drawGroundLine(ctx: Ctx, world: World, c: Camera, vp: Viewport): void {
@@ -1623,14 +1626,14 @@ function drawFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: Render
         const at = toScreen(cam, vp, b.position);
         ctx.fillStyle = b.id.startsWith("p") ? "#fff" : "#ff6b6b"; // an enemy's shell (a gunship's, a turret's) is red
         ctx.beginPath();
-        ctx.arc(at.x, at.y, Math.max(2, 0.12 * cam.zoom), 0, Math.PI * 2);
+        ctx.arc(at.x, at.y, Math.max(2, 0.12 * LEN * cam.zoom), 0, Math.PI * 2);
         ctx.fill();
         continue;
       }
       // The pod glows (MTH-053): a soft ring round it.
       if (pod) {
         const at = toScreen(cam, vp, b.position);
-        const r = (b.shape.kind === "disc" ? b.shape.radius : 1) * cam.zoom;
+        const r = (b.shape.kind === "disc" ? b.shape.radius : LEN) * cam.zoom;
         ctx.strokeStyle = POD_STROKE;
         for (const [k, alpha] of [[1.9, 0.12], [1.5, 0.25]] as const) {
           ctx.globalAlpha = alpha;
@@ -1747,7 +1750,7 @@ function drawFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: Render
       ctx.arc(s.x, s.y, 3.5, 0, Math.PI * 2);
       ctx.fill();
       // 40 px per N·s, capped, so both gentle and violent contacts read.
-      const len = Math.min(80, 6 + ct.normalImpulse * 40);
+      const len = Math.min(80, 6 + (ct.normalImpulse / MOMENTUM) * 40);
       const e = { x: s.x + ct.normal.x * len, y: s.y - ct.normal.y * len };
       ctx.strokeStyle = COLORS.contact;
       ctx.lineWidth = 2;
@@ -1955,7 +1958,7 @@ function drawDamage(ctx: Ctx, world: World, c: Camera, vp: Viewport, bars: boole
     if (b.breach && b.integrity < 1) {
       const q = sinCos(b.angle);
       const at = toScreen(c, vp, add(b.position, rotate(q, b.breach.point)));
-      const out = toScreen(c, vp, add(b.position, rotate(q, add(b.breach.point, { x: b.breach.normal.x * 0.15, y: b.breach.normal.y * 0.15 }))));
+      const out = toScreen(c, vp, add(b.position, rotate(q, add(b.breach.point, { x: b.breach.normal.x * 0.15 * LEN, y: b.breach.normal.y * 0.15 * LEN }))));
       ctx.strokeStyle = COLORS.contact;
       ctx.lineWidth = 3;
       ctx.beginPath();

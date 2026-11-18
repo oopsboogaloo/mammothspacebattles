@@ -5,8 +5,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { computeTotals, getProfile, hashValue, initialWorld, moonAim, moonRope, parseScenario, ropeLength, ScenarioError, stepInPlace, type Command, type World } from "../../src/core/index.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const raw = (name = "moon-test-2") => JSON.parse(readFileSync(new URL(`../../scenarios/${name}.json`, import.meta.url), "utf8"));
+const raw = (name = "moon-test-2") => inCoreUnits(JSON.parse(readFileSync(new URL(`../../scenarios/${name}.json`, import.meta.url), "utf8")));
 const sandbox = getProfile("sandbox");
 const set = (channel: string, value: number): Command => ({ type: "control.set", channel, value });
 const R = 40;

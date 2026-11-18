@@ -4,8 +4,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { dropTest } from "../../src/app/blueprint/droptest.ts";
 import { thrustOgPreset, thrustPreset } from "../../src/app/blueprint/model.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const level = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
+const level = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8")));
 
 describe("the drop test (BPD-053)", () => {
   it("BPD-053 THRUST OG dropped on Thrust's first level loses what it always has: its battery's welds and its main engine's right nozzle wall, and takes the landing through its contacts", () => {

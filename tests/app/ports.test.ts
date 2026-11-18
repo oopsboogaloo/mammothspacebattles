@@ -64,13 +64,14 @@ describe("ports and attaching", () => {
 });
 
 describe("ports along long faces and engine channels (M4b)", () => {
-  it("SBX-024 a 3 m wing has ports at −1, 0 and +1 m on each long face; short faces keep one", async () => {
+  // The sandbox is in the game's units (lengths ×4): its ports are spaced 4 m apart.
+  it("SBX-024 a 12 m wing has ports at −4, 0 and +4 m on each long face; short faces keep one", async () => {
     const { ports } = await import("../../src/app/ports.ts");
-    const ps = ports({ kind: "box", width: 3, height: 0.2 });
+    const ps = ports({ kind: "box", width: 12, height: 0.8 });
     const bottom = ps.filter((p) => p.normal.y < -0.5).map((p) => Math.round(p.local.x * 1e6) / 1e6).sort((a, b) => a - b);
-    expect(bottom).toEqual([-1, 0, 1]);
+    expect(bottom).toEqual([-4, 0, 4]);
     expect(ps.filter((p) => p.normal.x > 0.5)).toHaveLength(1); // the 0.2 m end
-    expect(ports({ kind: "box", width: 2, height: 1 }).filter((p) => p.normal.y > 0.5)).toHaveLength(1); // ±1 would sit on the corners
+    expect(ports({ kind: "box", width: 8, height: 4 }).filter((p) => p.normal.y > 0.5)).toHaveLength(1); // ±4 would sit on the corners
     expect(ps.map((p) => p.index)).toEqual(ps.map((_, i) => i));
   });
 
@@ -90,8 +91,8 @@ describe("ports along long faces and engine channels (M4b)", () => {
     const ps = ports({ kind: "box", width: 1000, height: 1 }).filter((p) => p.normal.y < -0.5);
     expect(ps).toHaveLength(9);
     const xs = ps.map((p) => p.local.x).sort((a, b) => a - b);
-    expect(xs[0]).toBeCloseTo(-499.75, 6);
-    expect(xs[8]).toBeCloseTo(499.75, 6);
+    expect(xs[0]).toBeCloseTo(-499, 6);
+    expect(xs[8]).toBeCloseTo(499, 6);
   });
 
   it("SBX-025 copies of engines (prefab spawns, duplicates) get fresh channels, distinct per original channel", async () => {

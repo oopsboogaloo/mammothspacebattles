@@ -1,10 +1,14 @@
 // Mammoth Thrust: what its page works out from the screen and the world (no drawing here).
 import { nearestOffset, plantCoolant, type Vec2, type World } from "../core/index.ts";
+import { LEN, ZOOM } from "./units.ts";
 
-/** How much of the level the view shows from top to bottom, m: enough for the ship and a pod on its 12 m tether, with the ground round them. */
-export const VIEW_HEIGHT = 90;
+/**
+ * How much of the level the view shows from top to bottom, m: enough for the ship and a pod on its
+ * 12 m tether (48 m in the game's units: ./units.ts), with the ground round them.
+ */
+export const VIEW_HEIGHT = 90 * LEN;
 /** The view's zoom, px a metre, for a screen: `VIEW_HEIGHT` m tall, within what keeps the ship readable. */
-export const zoomFor = (height: number): number => Math.min(12, Math.max(3.5, height / VIEW_HEIGHT));
+export const zoomFor = (height: number): number => Math.min(12 * ZOOM, Math.max(3.5 * ZOOM, height / VIEW_HEIGHT));
 
 /** The levels, in order: the scenario files `thrust-{n}`. */
 export const LEVELS = 8;

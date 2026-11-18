@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
 import { landShip, type Leak } from "./landShip.ts";
+import { migrateUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;
@@ -82,8 +83,9 @@ function line(x0: number, x1: number, step: number, f: (x: number) => number, pa
 // ---------- Scenarios ----------
 
 function write(file: string, scn: Json) {
-  writeFileSync(join(root, "scenarios", `${file}.json`), JSON.stringify(scn, null, 2) + "\n");
-  parseScenario(scn); // fails loudly if the scenario is malformed
+  // Built in the core's units; written in the game's (schema 2, docs/units-rescale-plan.md).
+  writeFileSync(join(root, "scenarios", `${file}.json`), JSON.stringify(migrateUnits(scn), null, 2) + "\n");
+  parseScenario(scn, {}, { coreUnits: true }); // fails loudly if the scenario is malformed
   console.log(`wrote scenarios/${file}.json`);
 }
 

@@ -19,10 +19,15 @@ import type { MoonSpec } from "./moon.ts";
 import { PROFILES, getProfile, type Profile } from "./profile.ts";
 import type { ShipTemplate } from "./spawn.ts";
 import { polygonProblem } from "./shapes.ts";
-import { scaledProfile, type Units } from "./units.ts";
+import { GAME_UNITS, scaledProfile, type Units } from "./units.ts";
+import { migrateUnits } from "./migrateUnits.ts";
 import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type Frame, type GasFill, type JointInput, type LinkInput, type Vec2, type World } from "./world.ts";
 
-export const SCENARIO_SCHEMA = 1;
+/**
+ * 2: the game's units, lengths ×4 and masses ×1024 (18 November 2026, docs/units-rescale-plan.md).
+ * A schema 1 file, in the core's own units, is migrated on load (migrateUnits.ts).
+ */
+export const SCENARIO_SCHEMA = 2;
 
 export interface Probe {
   id: string;
@@ -99,8 +104,17 @@ export class ScenarioError extends Error {
 
 export type Migration = (raw: Record<string, unknown>) => Record<string, unknown>;
 
-/** Migrations keyed by the schema version they upgrade FROM. None exist yet: v1 is the first schema. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = {};
+/** Migrations keyed by the schema version they upgrade FROM. */
+export const MIGRATIONS: Readonly<Record<number, Migration>> = {
+  // A file that is malformed is left for validation to report: what can't be placed isn't converted.
+  1: (raw) => {
+    try {
+      return migrateUnits(raw, GAME_UNITS, { strict: false });
+    } catch {
+      return { ...raw, schema: 2 };
+    }
+  },
+};
 
 export function migrateScenario(raw: unknown, migrations: Readonly<Record<number, Migration>> = MIGRATIONS): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
@@ -1098,8 +1112,12 @@ function validateParameters(v: V, raw: unknown): Parameter[] {
  * Migrates, substitutes parameters and validates untrusted input.
  * `values` overrides parameter defaults. Throws ScenarioError listing every problem.
  */
-export function parseScenario(raw: unknown, values: Record<string, number> = {}): Scenario {
-  const migrated = migrateScenario(raw);
+/**
+ * Parses and validates a scenario file. A schema 1 file is migrated to the game's units first, unless
+ * `coreUnits`: then it is taken as it is, in the core's own units (the units proof's other side).
+ */
+export function parseScenario(raw: unknown, values: Record<string, number> = {}, opts: { coreUnits?: boolean } = {}): Scenario {
+  const migrated = opts.coreUnits ? raw : migrateScenario(raw);
   const v: V = { errors: [] };
   if (!isObj(migrated)) throw new ScenarioError([{ path: "$", message: "must be a JSON object" }]);
 
@@ -1290,7 +1308,16 @@ export function parseScenario(raw: unknown, values: Record<string, number> = {})
   }
 
   if (v.errors.length) throw new ScenarioError(v.errors);
-  return { ...(data as unknown as Scenario), values: resolved };
+  // Schema 2 is in the game's units, unless it says otherwise.
+  const scn = { ...(data as unknown as Scenario), values: resolved };
+  if ((data.schema as number) >= 2 && !scn.world.units) scn.world = { ...scn.world, units: { ...GAME_UNITS } };
+  // Units 1 and 1 are the core's own: no units.
+  if (scn.world.units && scn.world.units.length === 1 && scn.world.units.mass === 1) {
+    const { units: _core, ...world } = scn.world;
+    void _core;
+    scn.world = world;
+  }
+  return scn;
 }
 
 /** The scenario as a file: parameter placeholders are not re-inserted, values are dropped. */

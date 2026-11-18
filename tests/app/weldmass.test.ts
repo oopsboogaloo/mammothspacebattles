@@ -5,8 +5,9 @@ import { dropTest } from "../../src/app/blueprint/droptest.ts";
 import { measureWorld } from "../../src/app/blueprint/measure.ts";
 import { body, component, phiomiaPreset, stats, stegodonPreset, thrustOgPreset, thrustPreset, weldMasses, welds, WELD_PRESETS, type Blueprint } from "../../src/app/blueprint/model.ts";
 import { WELD_K, weldLimits, weldPointMass } from "../../src/app/blueprint/rules.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const level = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
+const level = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8")));
 const total = (bp: Blueprint) => [...weldMasses(bp).values()].reduce((a, m) => a + m, 0);
 
 describe("weld mass (BPD-054)", () => {

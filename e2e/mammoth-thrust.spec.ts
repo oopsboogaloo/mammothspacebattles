@@ -31,7 +31,8 @@ const overPod = (page: Page) =>
     const n = m.thrust()!.n;
     const hull = w.bodies.find((b) => b.id === `p${n}-hull`)!;
     const pod = w.bodies.find((b) => b.id === "pod")!;
-    const d = { x: pod.position.x - hull.position.x, y: pod.position.y + 9 - hull.position.y };
+    // 9 m above it as the level was set; the levels are in the game's units (lengths ×4).
+    const d = { x: pod.position.x - hull.position.x, y: pod.position.y + 9 * 4 - hull.position.y };
     return m.edit(w.bodies.filter((b) => b.id.startsWith(`p${n}-`)).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
   });
 
@@ -73,7 +74,7 @@ test("MTH-001 MTH-002 Mammoth Thrust on its own page: the title over a still map
 test("MTH-052 the view follows the ship, 90 m of the level from top to bottom", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await start(page);
-  await expect.poll(() => hook(page, (m) => m.camera().zoom)).toBe(8);
+  await expect.poll(() => hook(page, (m) => m.camera().zoom)).toBe(2); // 8 px a metre before the units changed
   await page.keyboard.down("ArrowUp");
   await expect
     .poll(async () => {
@@ -82,7 +83,7 @@ test("MTH-052 the view follows the ship, 90 m of the level from top to bottom", 
         return [m.camera(), h.position.y, h.velocity.y] as const;
       });
       // Within what the ship moves between the world's last step and the frame drawn.
-      return Math.abs(c.y - y) < 2 + Math.abs(v) * 0.2;
+      return Math.abs(c.y - y) < 8 + Math.abs(v) * 0.2;
     })
     .toBe(true);
   await page.keyboard.up("ArrowUp");
@@ -175,7 +176,7 @@ test("MTH-021 MTH-024 MTH-109 MTH-110 the tractor takes the pod on the tether; c
   await expect(page.getByTestId("mth-won")).toContainText("Level 1 complete");
   await expect(page.getByTestId("mth-won")).toContainText("+2000");
   const score = await hook(page, (m) => m.thrust()!.score);
-  expect(score).toBeGreaterThan(2500); // 2000 for the pod, and most of the 8.1 kg of fuel the ship carries (MTH-094)
+  expect(score).toBeGreaterThan(2500); // 2000 for the pod, and most of the 8.3 t of fuel the ship carries (MTH-094)
   // The world rests while the level's result is up.
   const t0 = await hook(page, (m) => m.sandbox().world.time);
   await page.waitForTimeout(400);
@@ -194,7 +195,7 @@ test("MTH-042 holding the beam over a fuel tank draws its fuel into the ship, an
   expect(await quiet(page)).toBe(true);
   const held = () => hook(page, (m) => (m.sandbox().world.bodies.find((b) => b.id === "fuel-1")?.contents ?? []).reduce((k, c) => k + c.mass, 0));
   const full = await held();
-  expect(full).toBeGreaterThan(8);
+  expect(full).toBeGreaterThan(8 * 1024);
   await expect(page.getByTestId("mth-refuel")).toHaveCount(0);
   // The ship 30 m over the tank, at rest: it falls slowly enough to draw for a while.
   expect(
@@ -202,7 +203,7 @@ test("MTH-042 holding the beam over a fuel tank draws its fuel into the ship, an
       const w = m.sandbox().world;
       const hull = w.bodies.find((b) => b.id === "p1-hull")!;
       const tank = w.bodies.find((b) => b.id === "fuel-1")!;
-      const d = { x: tank.position.x - hull.position.x, y: tank.position.y + 30 - hull.position.y };
+      const d = { x: tank.position.x - hull.position.x, y: tank.position.y + 30 * 4 - hull.position.y };
       return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
     }),
   ).toBe(true);
@@ -233,13 +234,13 @@ test("MTH-052 the view doesn't jump when the tether takes the pod: it eases towa
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON THE TETHER", { timeout: 15_000 });
   await page.keyboard.up("z");
   // It ends up leaning toward the pod...
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __lean: number[] }).__lean.at(-1)!), { timeout: 15_000 }).toBeGreaterThan(2);
-  // ...and got there with no frame moving it far (a jump was about 3 m at once).
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __lean: number[] }).__lean.at(-1)!), { timeout: 15_000 }).toBeGreaterThan(2 * 4);
+  // ...and got there with no frame moving it far (a jump was about 12 m at once).
   const steps = await page.evaluate(() => {
     const v = (window as unknown as { __lean: number[] }).__lean;
     return Math.max(...v.slice(1).map((x, i) => Math.abs(x - v[i])));
   });
-  expect(steps).toBeLessThan(1.5);
+  expect(steps).toBeLessThan(1.5 * 4);
 });
 
 test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires bolts; they show in flight", async ({ page }) => {
@@ -252,7 +253,7 @@ test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires
     hook(page, (m) => {
       const w = m.sandbox().world;
       const hull = w.bodies.find((b) => b.id === "p1-hull")!;
-      const d = { x: -10 - hull.position.x, y: 40 - hull.position.y };
+      const d = { x: -10 * 4 - hull.position.x, y: 40 * 4 - hull.position.y };
       return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-") && !b.id.includes("-shell-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
     });
   await expect
@@ -277,20 +278,20 @@ test("MTH-060 a ship destroyed on the ground leaves a crater there, and the view
   await hook(page, (m) => {
     const w = m.sandbox().world;
     const hull = w.bodies.find((b) => b.id === "p1-hull")!;
-    const d = 12.6 - hull.position.y;
+    const d = 12.6 * 4 - hull.position.y;
     return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x, y: b.position.y + d }, velocity: { x: 0, y: 0 } } })));
   });
   // The view has followed the ship down before it is destroyed (it stays where it last saw a ship).
-  await expect.poll(() => hook(page, (m) => Math.abs(m.camera().y - 12.6))).toBeLessThan(3);
+  await expect.poll(() => hook(page, (m) => Math.abs(m.camera().y - 12.6 * 4))).toBeLessThan(12);
   await page.getByTestId("mth-destruct").click();
   await page.getByTestId("mth-destruct").click();
   await expect.poll(() => hook(page, (m) => m.sandbox().world.terrain.holes.length), { timeout: 30_000 }).toBeGreaterThanOrEqual(1);
   const holes = await hook(page, (m) => m.sandbox().world.terrain.holes);
-  for (const h of holes) expect(h.r).toBeCloseTo(3.6, 6);
+  for (const h of holes) expect(h.r).toBeCloseTo(3.6 * 4, 6);
   // The cockpit is gone, and the view is still where it was: on the crater, not back at the start 60 m up.
   await expect.poll(() => hook(page, (m) => m.thrust()?.phase)).toBe("between");
   expect(await hook(page, (m) => m.sandbox().world.bodies.some((b) => b.id === "p1-hull"))).toBe(false);
-  expect(Math.abs((await hook(page, (m) => m.camera().y)) - 12)).toBeLessThan(6);
+  expect(Math.abs((await hook(page, (m) => m.camera().y)) - 12 * 4)).toBeLessThan(24);
 });
 
 test("MTH-026 a ship that reaches the top without the pod is put back at the start, and told so; no life is lost", async ({ page }) => {
@@ -513,7 +514,7 @@ test("MTH-093 a new ship beaming in after one lost deep in level 4's cave is in 
   await hook(page, (m) => {
     const w = m.sandbox().world;
     const hull = w.bodies.find((b) => b.id === "p1-hull")!;
-    const d = { x: 20 - hull.position.x, y: -125 - hull.position.y };
+    const d = { x: 20 * 4 - hull.position.x, y: -125 * 4 - hull.position.y };
     return m.edit(w.bodies.filter((b) => b.id.startsWith("p1-")).map((b) => ({ type: "body.set", id: b.id, patch: { position: { x: b.position.x + d.x, y: b.position.y + d.y }, velocity: { x: 0, y: 0 } } })));
   });
   await page.waitForTimeout(300);

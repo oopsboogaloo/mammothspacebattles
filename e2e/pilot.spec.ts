@@ -21,9 +21,10 @@ test("AIP-001 AIP-008 the AI ship hovers over the base, then flies off right on 
   for (let i = 0; i < 168; i++) await page.getByTestId("step10").click(); // to 7 s: hover, then the 6 m/s leg
   await waitForTick(page, 1680);
   const later = await read();
-  expect(later.intent).toContain("hold velocity 6.0");
-  expect(later.x).toBeGreaterThan(start.x + 5);
-  expect(later.y).toBeGreaterThan(start.y - 3); // it didn't fall
+  // The game's units (lengths ×4): its 6 m/s leg is 24 m/s.
+  expect(later.intent).toContain("hold velocity 24.0");
+  expect(later.x).toBeGreaterThan(start.x + 20);
+  expect(later.y).toBeGreaterThan(start.y - 12); // it didn't fall
   expect(later.violations).toBe(0);
   await shot(page, info, "ai-flight");
 });

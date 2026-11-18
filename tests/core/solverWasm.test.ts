@@ -4,9 +4,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { getProfile, hashValue, initialWorld, parseScenario, sinCos, stepInPlace, timelineByStep, wasmSinCos } from "../../src/core/index.ts";
+import { inCoreUnits } from "../helpers.ts";
 
 function load(name: string) {
-  const scn = parseScenario(JSON.parse(readFileSync(new URL(`../../scenarios/${name}`, import.meta.url), "utf8")));
+  const scn = parseScenario(inCoreUnits(JSON.parse(readFileSync(new URL(`../../scenarios/${name}`, import.meta.url), "utf8"))));
   return { profile: getProfile(scn.profile), byStep: timelineByStep(scn), world: initialWorld(scn) };
 }
 

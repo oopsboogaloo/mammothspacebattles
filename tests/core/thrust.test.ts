@@ -4,9 +4,10 @@ import { describe, expect, it } from "vitest";
 import { TERRAIN_OPS, powered, addBody, computeTotals, plantCoolant, runPlant, transmitterTips, createWorld, cutCrater, getProfile, hashValue, initialWorld, parseScenario, ScenarioError, stepInPlace, THRUST_SCORES, thrustFuel, generatorOnline, turretOnline, turretWorks, type Command, type World } from "../../src/core/index.ts";
 import { narrowest } from "../../scripts/terrain.ts";
 import { bearingsOnto } from "../../scripts/aim.ts";
+import { inCoreUnits } from "../helpers.ts";
 
 /** A level's scenario; "test" is the first level 1, kept for the tests of the ship, the tether and the first turret. */
-const raw = (n: number | "test") => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
+const raw = (n: number | "test") => inCoreUnits(JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8")));
 const sandbox = getProfile("sandbox");
 const set = (channel: string, value: number): Command => ({ type: "control.set", channel, value });
 

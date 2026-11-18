@@ -17,11 +17,11 @@ function ship(opts: { battery?: number; generator?: number; shells?: number; sho
   const weld = (a: string, b: string, x: number) => [-0.3, 0.3].map((y, i) => ({ id: `w-${a}-${b}-${i}`, a, b, anchorA: { x: x, y }, anchorB: { x: -x, y } }));
   return initialWorld(
     parseScenario({
-      schema: 1,
+      schema: 2,
       name: "power",
       profile: "sandbox",
       seed: 1,
-      world: { gravity: { x: 0, y: 0 }, bodies: parts, joints: [...weld("bat", "gen", 0.5), ...weld("gen", "tank", 0.5), ...weld("tank", "gun", 0.5)], links: [{ id: "ctl", kind: "control", channel: "fire", to: "gun" }] },
+      world: { units: { length: 1, mass: 1 }, gravity: { x: 0, y: 0 }, bodies: parts, joints: [...weld("bat", "gen", 0.5), ...weld("gen", "tank", 0.5), ...weld("tank", "gun", 0.5)], links: [{ id: "ctl", kind: "control", channel: "fire", to: "gun" }] },
       timeline: [],
       end: { steps: 1 },
       probes: [],

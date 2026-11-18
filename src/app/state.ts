@@ -9,6 +9,9 @@ import { loadPrefs, savePrefs } from "./prefs.ts";
 import type { Prefab } from "./ports.ts";
 import { withFreshChannels } from "./parts.ts";
 import type { OverlayId } from "./render.ts";
+import { DENSITY, LEN, ZOOM } from "./units.ts";
+import { scaleShip } from "../core/scaleScenario.ts";
+import { GAME_UNITS } from "../core/units.ts";
 
 export type ToolId = "select" | "move" | "spawn" | "attach" | "impulse" | "link" | "gas" | "probe" | "ruler";
 
@@ -64,8 +67,8 @@ export const spawnKind = signal<PartChoice>("disc");
 export const gasOptions = signal<{ mode: "fill" | "clear"; temperature: number; density: number; spacing: number; species: string }>({
   mode: "fill",
   temperature: 300,
-  density: 0.125, // kg/m²: 0.5 kg in a 2 m box, as in SC-02
-  spacing: 0.1, // m between parcels
+  density: 0.125 * DENSITY, // kg/m²: 0.5 kg in a 2 m box, as in SC-02 (the core's units; ×64 in the game's)
+  spacing: 0.1 * LEN, // m between parcels
   species: "air",
 });
 /** How parcels are coloured (SBX-035). */
@@ -76,8 +79,23 @@ export const gasStyle = signal<"plume" | "dots">("plume");
 export const bindings = signal<Record<string, string>>(prefs.bindings ?? {});
 /** Key waiting to be captured for a channel, while the user presses "Bind key". */
 export const bindingFor = signal<string | null>(null);
-export const prefabs = signal<Prefab[]>(prefs.prefabs ?? []);
-export const camera = signal<Camera>({ x: 0, y: 0, zoom: 60 });
+// Prefabs saved before the units changed (no `units`) are in the core's: brought into the game's.
+export const prefabs = signal<Prefab[]>((prefs.prefabs ?? []).map(prefabInGame));
+
+/**
+ * A saved prefab in the game's units. Saved from a running world, it may carry state the table has no
+ * dimension for: that is left as it is (a timer, a count). One that still can't be converted is
+ * kept as it was rather than stop the page loading.
+ */
+function prefabInGame(p: Prefab): Prefab {
+  if (p.units === "game") return p;
+  try {
+    return { ...p, ...scaleShip({ bodies: p.bodies, joints: p.joints }, GAME_UNITS, { strict: false }), units: "game" };
+  } catch {
+    return p;
+  }
+}
+export const camera = signal<Camera>({ x: 0, y: 0, zoom: 60 * ZOOM });
 export const viewport = signal<Viewport>({ width: 800, height: 500 });
 export const follow = signal(false);
 /**

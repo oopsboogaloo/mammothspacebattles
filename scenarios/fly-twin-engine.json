@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "fly-twin-engine",
   "title": "Fly: twin-engine ship",
   "description": "Fly it yourself. The RS-16 ship with a bigger tank: hold left and right together to climb, hold one to turn (the left engine alone turns the nose right). Nothing is scripted. On a touch screen use the buttons on the view; on a keyboard, Q fires left and E fires right. Let go to coast: nothing turns a coasting ship.",
@@ -11,12 +11,12 @@
         "id": "chamber-left-l",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": -1.45,
+          "x": -5.8,
           "y": 0
         },
         "velocity": {
@@ -32,12 +32,12 @@
         "id": "chamber-left-r",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": 0.55,
+          "x": 2.2,
           "y": 0
         },
         "velocity": {
@@ -53,12 +53,12 @@
         "id": "chamber-right-l",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": -0.55,
+          "x": -2.2,
           "y": 0
         },
         "velocity": {
@@ -74,12 +74,12 @@
         "id": "chamber-right-r",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": 1.45,
+          "x": 5.8,
           "y": 0
         },
         "velocity": {
@@ -95,13 +95,13 @@
         "id": "engine-l",
         "shape": {
           "kind": "box",
-          "width": 1.0,
-          "height": 0.2
+          "width": 4,
+          "height": 0.8
         },
-        "mass": 1.0,
+        "mass": 1024,
         "position": {
-          "x": -1.0,
-          "y": 0.5
+          "x": -4,
+          "y": 2
         },
         "velocity": {
           "x": 0,
@@ -115,33 +115,33 @@
           {
             "resource": "h2",
             "mass": 0,
-            "capacity": 0.01
+            "capacity": 10.24
           },
           {
             "resource": "o2",
             "mass": 0,
-            "capacity": 0.08
+            "capacity": 81.92
           }
         ],
         "injector": {
           "channel": "left",
-          "rate": 0.5,
+          "rate": 512,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
           },
           "outlet": {
             "x": 0,
-            "y": -0.15
+            "y": -0.6
           },
           "direction": {
             "x": 0,
             "y": -1
           },
-          "width": 0.6,
-          "speed": 10,
-          "parcelMass": 0.001,
-          "radius": 0.035,
+          "width": 2.4,
+          "speed": 40,
+          "parcelMass": 1.024,
+          "radius": 0.14,
           "igniter": true
         }
       },
@@ -149,13 +149,13 @@
         "id": "engine-r",
         "shape": {
           "kind": "box",
-          "width": 1.0,
-          "height": 0.2
+          "width": 4,
+          "height": 0.8
         },
-        "mass": 1.0,
+        "mass": 1024,
         "position": {
-          "x": 1.0,
-          "y": 0.5
+          "x": 4,
+          "y": 2
         },
         "velocity": {
           "x": 0,
@@ -169,33 +169,33 @@
           {
             "resource": "h2",
             "mass": 0,
-            "capacity": 0.01
+            "capacity": 10.24
           },
           {
             "resource": "o2",
             "mass": 0,
-            "capacity": 0.08
+            "capacity": 81.92
           }
         ],
         "injector": {
           "channel": "right",
-          "rate": 0.5,
+          "rate": 512,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
           },
           "outlet": {
             "x": 0,
-            "y": -0.15
+            "y": -0.6
           },
           "direction": {
             "x": 0,
             "y": -1
           },
-          "width": 0.6,
-          "speed": 10,
-          "parcelMass": 0.001,
-          "radius": 0.035,
+          "width": 2.4,
+          "speed": 40,
+          "parcelMass": 1.024,
+          "radius": 0.14,
           "igniter": true
         }
       },
@@ -203,13 +203,13 @@
         "id": "hull",
         "shape": {
           "kind": "box",
-          "width": 1.2,
-          "height": 1.0
+          "width": 4.8,
+          "height": 4
         },
-        "mass": 8.0,
+        "mass": 8192,
         "position": {
           "x": 0,
-          "y": 1.8
+          "y": 7.2
         },
         "velocity": {
           "x": 0,
@@ -226,27 +226,27 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": 0.175,
-              "y": 0.3
+              "x": 0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": 0.3
+              "x": 0.38,
+              "y": 1.2
             },
             {
-              "x": -0.175,
-              "y": -0.3
+              "x": -0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": -0.3
+              "x": -0.38,
+              "y": -1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -1.325,
-          "y": -0.8
+          "x": -5.3,
+          "y": -3.2
         },
         "velocity": {
           "x": 0,
@@ -263,27 +263,27 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": 0.175,
-              "y": 0.3
+              "x": 0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": 0.3
+              "x": 0.38,
+              "y": 1.2
             },
             {
-              "x": -0.175,
-              "y": -0.3
+              "x": -0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": -0.3
+              "x": -0.38,
+              "y": -1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 0.675,
-          "y": -0.8
+          "x": 2.7,
+          "y": -3.2
         },
         "velocity": {
           "x": 0,
@@ -300,27 +300,27 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": -0.175,
-              "y": 0.3
+              "x": -0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": -0.3
+              "x": 0.38,
+              "y": -1.2
             },
             {
-              "x": 0.175,
-              "y": -0.3
+              "x": 0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": 0.3
+              "x": -0.38,
+              "y": 1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -0.675,
-          "y": -0.8
+          "x": -2.7,
+          "y": -3.2
         },
         "velocity": {
           "x": 0,
@@ -337,27 +337,27 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": -0.175,
-              "y": 0.3
+              "x": -0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": -0.3
+              "x": 0.38,
+              "y": -1.2
             },
             {
-              "x": 0.175,
-              "y": -0.3
+              "x": 0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": 0.3
+              "x": -0.38,
+              "y": 1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 1.325,
-          "y": -0.8
+          "x": 5.3,
+          "y": -3.2
         },
         "velocity": {
           "x": 0,
@@ -372,13 +372,13 @@
         "id": "tank",
         "shape": {
           "kind": "box",
-          "width": 1.0,
-          "height": 0.5
+          "width": 4,
+          "height": 2
         },
-        "mass": 2.0,
+        "mass": 2048,
         "position": {
           "x": 0,
-          "y": 1.05
+          "y": 4.2
         },
         "velocity": {
           "x": 0,
@@ -391,13 +391,13 @@
         "contents": [
           {
             "resource": "h2",
-            "mass": 0.6,
-            "capacity": 0.6
+            "mass": 614.4,
+            "capacity": 614.4
           },
           {
             "resource": "o2",
-            "mass": 4.8,
-            "capacity": 4.8
+            "mass": 4915.2,
+            "capacity": 4915.2
           }
         ]
       },
@@ -405,13 +405,13 @@
         "id": "throat-left-l",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -1.325,
-          "y": -0.45
+          "x": -5.3,
+          "y": -1.8
         },
         "velocity": {
           "x": 0,
@@ -426,13 +426,13 @@
         "id": "throat-left-r",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 0.675,
-          "y": -0.45
+          "x": 2.7,
+          "y": -1.8
         },
         "velocity": {
           "x": 0,
@@ -447,13 +447,13 @@
         "id": "throat-right-l",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -0.675,
-          "y": -0.45
+          "x": -2.7,
+          "y": -1.8
         },
         "velocity": {
           "x": 0,
@@ -468,13 +468,13 @@
         "id": "throat-right-r",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 1.325,
-          "y": -0.45
+          "x": 5.3,
+          "y": -1.8
         },
         "velocity": {
           "x": 0,
@@ -489,13 +489,13 @@
         "id": "wing",
         "shape": {
           "kind": "box",
-          "width": 3.0,
-          "height": 0.2
+          "width": 12,
+          "height": 0.8
         },
-        "mass": 2.0,
+        "mass": 2048,
         "position": {
           "x": 0,
-          "y": 0.7
+          "y": 2.8
         },
         "velocity": {
           "x": 0,
@@ -513,18 +513,18 @@
         "a": "engine-l",
         "b": "chamber-left-l",
         "anchorA": {
-          "x": -0.45,
-          "y": -0.1
+          "x": -1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -532,18 +532,18 @@
         "a": "engine-l",
         "b": "chamber-right-l",
         "anchorA": {
-          "x": 0.45,
-          "y": -0.1
+          "x": 1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -551,18 +551,18 @@
         "a": "chamber-left-l",
         "b": "throat-left-l",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": -0.125,
-          "y": 0.05
+          "x": -0.5,
+          "y": 0.2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -570,18 +570,18 @@
         "a": "chamber-right-l",
         "b": "throat-right-l",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": 0.125,
-          "y": 0.05
+          "x": 0.5,
+          "y": 0.2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -589,18 +589,18 @@
         "a": "throat-left-l",
         "b": "nozzle-left-l",
         "anchorA": {
-          "x": 0.135,
-          "y": -0.05
+          "x": 0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": 0.135,
-          "y": 0.3
+          "x": 0.54,
+          "y": 1.2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -608,18 +608,18 @@
         "a": "throat-right-l",
         "b": "nozzle-right-l",
         "anchorA": {
-          "x": -0.135,
-          "y": -0.05
+          "x": -0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": -0.135,
-          "y": 0.3
+          "x": -0.54,
+          "y": 1.2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -627,18 +627,18 @@
         "a": "engine-r",
         "b": "chamber-left-r",
         "anchorA": {
-          "x": -0.45,
-          "y": -0.1
+          "x": -1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -646,18 +646,18 @@
         "a": "engine-r",
         "b": "chamber-right-r",
         "anchorA": {
-          "x": 0.45,
-          "y": -0.1
+          "x": 1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -665,18 +665,18 @@
         "a": "chamber-left-r",
         "b": "throat-left-r",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": -0.125,
-          "y": 0.05
+          "x": -0.5,
+          "y": 0.2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -684,18 +684,18 @@
         "a": "chamber-right-r",
         "b": "throat-right-r",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": 0.125,
-          "y": 0.05
+          "x": 0.5,
+          "y": 0.2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -703,18 +703,18 @@
         "a": "throat-left-r",
         "b": "nozzle-left-r",
         "anchorA": {
-          "x": 0.135,
-          "y": -0.05
+          "x": 0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": 0.135,
-          "y": 0.3
+          "x": 0.54,
+          "y": 1.2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -722,18 +722,18 @@
         "a": "throat-right-r",
         "b": "nozzle-right-r",
         "anchorA": {
-          "x": -0.135,
-          "y": -0.05
+          "x": -0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": -0.135,
-          "y": 0.3
+          "x": -0.54,
+          "y": 1.2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -741,18 +741,18 @@
         "a": "wing",
         "b": "engine-l",
         "anchorA": {
-          "x": -1.0,
-          "y": -0.1
+          "x": -4,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.1
+          "x": 0,
+          "y": 0.4
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -760,18 +760,18 @@
         "a": "wing",
         "b": "engine-r",
         "anchorA": {
-          "x": 1.0,
-          "y": -0.1
+          "x": 4,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.1
+          "x": 0,
+          "y": 0.4
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -780,17 +780,17 @@
         "b": "tank",
         "anchorA": {
           "x": 0,
-          "y": 0.1
+          "y": 0.4
         },
         "anchorB": {
           "x": 0,
-          "y": -0.25
+          "y": -1
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       },
       {
@@ -799,17 +799,17 @@
         "b": "hull",
         "anchorA": {
           "x": 0,
-          "y": 0.25
+          "y": 1
         },
         "anchorB": {
           "x": 0,
-          "y": -0.5
+          "y": -2
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       }
     ],
@@ -820,7 +820,7 @@
         "from": "tank",
         "to": "engine-l",
         "resource": "h2",
-        "rate": 0.2
+        "rate": 204.8
       },
       {
         "id": "feed-o2-l",
@@ -828,7 +828,7 @@
         "from": "tank",
         "to": "engine-l",
         "resource": "o2",
-        "rate": 1.6
+        "rate": 1638.4
       },
       {
         "id": "feed-h2-r",
@@ -836,7 +836,7 @@
         "from": "tank",
         "to": "engine-r",
         "resource": "h2",
-        "rate": 0.2
+        "rate": 204.8
       },
       {
         "id": "feed-o2-r",
@@ -844,7 +844,7 @@
         "from": "tank",
         "to": "engine-r",
         "resource": "o2",
-        "rate": 1.6
+        "rate": 1638.4
       },
       {
         "id": "ctl-left",
@@ -861,14 +861,14 @@
     ],
     "bounds": {
       "min": {
-        "x": -1000,
-        "y": -1000
+        "x": -4000,
+        "y": -4000
       },
       "max": {
-        "x": 1000,
-        "y": 1000
+        "x": 4000,
+        "y": 4000
       },
-      "farField": 15
+      "farField": 60
     }
   },
   "timeline": [],
@@ -907,16 +907,16 @@
       "probe": "vy",
       "from": 0,
       "to": "end",
-      "min": -1e-09,
-      "max": 1e-09
+      "min": -4e-9,
+      "max": 4e-9
     },
     {
       "kind": "rangeOver",
       "probe": "spin",
       "from": 0,
       "to": "end",
-      "min": -1e-09,
-      "max": 1e-09
+      "min": -1e-9,
+      "max": 1e-9
     },
     {
       "kind": "event",
@@ -935,8 +935,8 @@
     ],
     "camera": {
       "x": 0,
-      "y": 0.8,
-      "zoom": 45
+      "y": 3.2,
+      "zoom": 11.25
     },
     "follow": "hull",
     "keys": {

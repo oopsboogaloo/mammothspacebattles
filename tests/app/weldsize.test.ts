@@ -4,8 +4,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { capWelds, component, loxodonPreset, mastodonPreset, maxWeld, phiomiaPreset, removeComponent, setWeld, stegodonPreset, thrustOgPreset, thrustPreset, weldPresetOpen, weldPresetsFor, welds, type Blueprint } from "../../src/app/blueprint/model.ts";
 import { maxWeldQuality, WELD_K, WELD_UNLOCK } from "../../src/app/blueprint/rules.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const level = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
+const level = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8")));
 const qualities = (bp: Blueprint) =>
   welds(bp)
     .filter((w) => !component(bp, w.a).part?.endsWith("_og") && !component(bp, w.b).part?.endsWith("_og"))

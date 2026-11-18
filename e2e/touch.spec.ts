@@ -43,16 +43,16 @@ async function buildSingle(page: Page) {
   await page.getByTestId("pick-empty").click();
   await page.getByTestId("tool-spawn").click();
   await page.getByTestId("spawn-hull").click();
-  await tapWorld(page, 0, 2);
+  await tapWorld(page, 0, 8);
   await page.getByTestId("tool-attach").click();
   await page.getByTestId("spawn-tank").click();
-  await tapWorld(page, 0, 1.45);
+  await tapWorld(page, 0, 5.8);
   await page.getByTestId("spawn-engine").click();
-  await tapWorld(page, 0, 0.95);
+  await tapWorld(page, 0, 3.8);
   await page.getByTestId("tool-link").click();
-  await dragWorld(page, [0, 1.25], [0, 0.9]);
+  await dragWorld(page, [0, 5], [0, 3.6]);
   await page.getByTestId("tool-select").click();
-  await tapWorld(page, 0, 0.9);
+  await tapWorld(page, 0, 3.6);
 }
 
 for (const [name, viewport] of [
@@ -98,21 +98,21 @@ for (const [name, viewport] of [
       await page.getByTestId("pick-empty").click();
       await page.getByTestId("tool-spawn").click();
       await page.getByTestId("spawn-hull").click();
-      await tapWorld(page, 0, 2);
+      await tapWorld(page, 0, 8);
       await page.getByTestId("tool-attach").click();
       await page.getByTestId("spawn-tank").click();
-      await tapWorld(page, 0, 1.45);
+      await tapWorld(page, 0, 5.8);
       await page.getByTestId("spawn-plank").click();
-      await tapWorld(page, 0, 0.95);
+      await tapWorld(page, 0, 3.8);
       await page.getByTestId("spawn-engine").click();
-      await tapWorld(page, -1, 0.75);
-      await tapWorld(page, 1, 0.75);
+      await tapWorld(page, -4, 3);
+      await tapWorld(page, 4, 3);
       await page.getByTestId("tool-link").click();
-      await dragWorld(page, [0, 1.25], [-1, 0.7]);
-      await dragWorld(page, [0, 1.25], [1, 0.7]);
+      await dragWorld(page, [0, 5], [-4, 2.8]);
+      await dragWorld(page, [0, 5], [4, 2.8]);
       await page.getByTestId("tool-select").click();
-      for (const x of [-1, 1]) {
-        await tapWorld(page, x, 0.7);
+      for (const x of [-4, 4]) {
+        await tapWorld(page, x, 2.8);
         await page.getByRole("button", { name: "Inspector", exact: true }).click();
         await page.getByRole("dialog", { name: "Inspector" }).getByTestId("add-control").click();
         await page.getByRole("button", { name: "Close", exact: true }).click();

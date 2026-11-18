@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { addComponent, weldMasses, body, component, engineGeom, flipComponent, freeSpot, instantiate, jointPoint, overlaps, params, place, removeComponent, reweld, setParam, stats, thrustOgPreset, thrustPreset, welds, weldingOf, worldVertices, response } from "../../src/app/blueprint/model.ts";
 import { mixerValues, steerValues } from "../../src/core/index.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const scn = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
+const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8")));
 /** THRUST OG: the game's ship as it is (the gold standard the tests below hold it to). */
 const bp = thrustOgPreset(scn);
 /** THRUST 1: the same ship from the regular parts. */

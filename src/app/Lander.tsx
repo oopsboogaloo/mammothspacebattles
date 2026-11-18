@@ -14,6 +14,7 @@ import { sim, View } from "./View.tsx";
 import { ABANDON, canonicalStringify, LANDER_DESTRUCT } from "../core/index.ts";
 import { levelPreview } from "./levelPreview.ts";
 import { usePad, type PadGame } from "./gamepad.ts";
+import { LEN, ZOOM } from "./units.ts";
 
 /** The scenarios, in order; those without a file yet are shown as coming soon. */
 export const LANDER_SCENARIOS: { key: string; title: string; blurb: string }[] = [
@@ -423,9 +424,9 @@ function Play() {
       const ahead = shown.time - w.time;
       const x = hull.position.x + hull.velocity.x * ahead;
       const y = hull.position.y + hull.velocity.y * ahead;
-      const alt = Math.min(150, Math.max(0, w.challenge?.status.altitude ?? 50));
+      const alt = Math.min(150 * LEN, Math.max(0, w.challenge?.status.altitude ?? 50 * LEN));
       const vp = viewport.value;
-      const zoom = Math.min(18, Math.max(3, vp.height / (1.5 * alt + 45)));
+      const zoom = Math.min(18 * ZOOM, Math.max(3 * ZOOM, vp.height / (1.5 * alt + 45 * LEN)));
       const c = camera.value;
       const z = c.zoom + (zoom - c.zoom) * 0.04;
       // The ship sits above the middle, so the ground below it is in view. The view never turns,
@@ -447,7 +448,7 @@ function Play() {
   // At rest, the player may give the ship up (it is then stranded): once it has stayed at rest for
   // ABANDON_AFTER s of game time, so the button doesn't flick up at the top of a hop or as the ship
   // settles after touching down.
-  const still = game?.state.phase === "flying" && status?.phase === "flying" && Math.hypot(status.vx, status.vy) < 0.3;
+  const still = game?.state.phase === "flying" && status?.phase === "flying" && Math.hypot(status.vx, status.vy) < 0.3 * LEN;
   if (!still) restSince.current = null;
   else if (restSince.current === null) restSince.current = sb.world.time;
   const resting = still && restSince.current !== null && sb.world.time - restSince.current >= ABANDON_AFTER;
@@ -475,7 +476,7 @@ function Play() {
         </div>
         <div class="lander-fuel" title="Fuel">
           <div class={`bar${fuelShare < 0.15 ? " low" : ""}`} style={{ width: `${(100 * fuelShare).toFixed(1)}%` }} />
-          <span>FUEL {status ? status.fuel.toFixed(2) : "–"} kg</span>
+          <span>FUEL {status ? (status.fuel / 1000).toFixed(2) : "–"} t</span>
         </div>
         <div class="lander-stats">
           <span data-testid="lander-score">
@@ -659,7 +660,7 @@ function HowToPlay() {
         <h3>Landing</h3>
         <p>
           You've landed when the ship comes to rest on an open pad, on its legs (within the level's tilt limit, 10–15°) and in one piece. There is no speed limit, but the legs feel the impact: about
-          2 m/s does no harm, 3 m/s bends them and 4.5 m/s snaps one off. A ship that breaks apart has crashed.
+          8 m/s does no harm, 12 m/s bends them and 18 m/s snaps one off. A ship that breaks apart has crashed.
         </p>
         <p>
           Score: 200, plus up to 100 for fuel left, times the pad's multiplier, less the share of the ship that's damaged (the DAMAGE readout).
@@ -726,7 +727,7 @@ function Physics() {
       <section>
         <h3>Gravity</h3>
         <p>
-          The surface levels have the Moon's gravity, 1.6 m/s². Each asteroid pulls towards its centre (softened inside the rock). Binary's two rocks also pull on each other, in proportion to their
+          The surface levels have the Moon's gravity in the game's units, 6.4 m/s². Each asteroid pulls towards its centre (softened inside the rock). Binary's two rocks also pull on each other, in proportion to their
           masses, so they orbit their common centre.
         </p>
       </section>

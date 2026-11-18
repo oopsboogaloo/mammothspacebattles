@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "rs11-armour-ram",
   "title": "Ram an armoured and a bare tank",
   "description": "RS-11. Two 40 kg rams at the chosen speed hit two identical 10 kg tanks of oxygen. The lower tank has an 8 kg armour plate welded to its face. Each hit loses kinetic energy as heat, and half of it goes to each body. A tank takes damage above 20 J and is destroyed by 100 J more. Armour takes damage only above 100 J and needs 4000 J more, and the ram touches the armour, not the tank behind it. A destroyed tank leaves the world in a burst of dust (DMG-007); a damaged one leaks its oxygen through the dent (DMG-004).",
@@ -10,10 +10,10 @@
       "id": "v",
       "label": "Ram speed",
       "unit": "m/s",
-      "min": 1,
-      "max": 20,
-      "step": 0.5,
-      "default": 10
+      "min": 4,
+      "max": 80,
+      "step": 2,
+      "default": 40
     }
   ],
   "world": {
@@ -22,12 +22,12 @@
         "id": "ram-a",
         "shape": {
           "kind": "disc",
-          "radius": 0.35
+          "radius": 1.4
         },
-        "mass": 40,
+        "mass": 40960,
         "position": {
-          "x": -2,
-          "y": 1.2
+          "x": -8,
+          "y": 4.8
         },
         "velocity": {
           "x": {
@@ -42,13 +42,13 @@
         "id": "tank-a",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 4,
+        "mass": 4096,
         "position": {
           "x": 0,
-          "y": 1.2
+          "y": 4.8
         },
         "velocity": {
           "x": 0,
@@ -58,14 +58,14 @@
         "angularVelocity": 0,
         "material": {
           "name": "tank",
-          "threshold": 20,
-          "toughness": 100
+          "threshold": 327680,
+          "toughness": 1638400
         },
         "contents": [
           {
             "resource": "o2",
-            "mass": 6,
-            "capacity": 8
+            "mass": 6144,
+            "capacity": 8192
           }
         ]
       },
@@ -73,12 +73,12 @@
         "id": "ram-b",
         "shape": {
           "kind": "disc",
-          "radius": 0.35
+          "radius": 1.4
         },
-        "mass": 40,
+        "mass": 40960,
         "position": {
-          "x": -2.2,
-          "y": -1.2
+          "x": -8.8,
+          "y": -4.8
         },
         "velocity": {
           "x": {
@@ -93,13 +93,13 @@
         "id": "armour",
         "shape": {
           "kind": "box",
-          "width": 0.2,
-          "height": 1.2
+          "width": 0.8,
+          "height": 4.8
         },
-        "mass": 8,
+        "mass": 8192,
         "position": {
-          "x": -0.6,
-          "y": -1.2
+          "x": -2.4,
+          "y": -4.8
         },
         "velocity": {
           "x": 0,
@@ -109,21 +109,21 @@
         "angularVelocity": 0,
         "material": {
           "name": "armour",
-          "threshold": 100,
-          "toughness": 4000
+          "threshold": 1638400,
+          "toughness": 65536000
         }
       },
       {
         "id": "tank-b",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 4,
+        "mass": 4096,
         "position": {
           "x": 0,
-          "y": -1.2
+          "y": -4.8
         },
         "velocity": {
           "x": 0,
@@ -133,14 +133,14 @@
         "angularVelocity": 0,
         "material": {
           "name": "tank",
-          "threshold": 20,
-          "toughness": 100
+          "threshold": 327680,
+          "toughness": 1638400
         },
         "contents": [
           {
             "resource": "o2",
-            "mass": 6,
-            "capacity": 8
+            "mass": 6144,
+            "capacity": 8192
           }
         ]
       }
@@ -151,18 +151,18 @@
         "a": "armour",
         "b": "tank-b",
         "anchorA": {
-          "x": 0.1,
+          "x": 0.4,
           "y": 0
         },
         "anchorB": {
-          "x": -0.5,
+          "x": -2,
           "y": 0
         },
         "limits": {
-          "tension": 1000000.0,
-          "compression": 1000000.0,
-          "shear": 1000000.0,
-          "torque": 1000000.0
+          "tension": 4096000000,
+          "compression": 4096000000,
+          "shear": 4096000000,
+          "torque": 16384000000
         }
       }
     ]
@@ -204,7 +204,7 @@
       "kind": "valueAt",
       "probe": "shieldedO2",
       "step": "end",
-      "equals": 6,
+      "equals": 6144,
       "tol": 0
     },
     {
@@ -232,7 +232,7 @@
     {
       "kind": "ledgerResidual",
       "quantity": "energy",
-      "maxAbs": 1e-06
+      "maxAbs": 0.016384
     },
     {
       "kind": "event",
@@ -247,9 +247,9 @@
       "damage"
     ],
     "camera": {
-      "x": 1.5,
-      "y": -0.6,
-      "zoom": 55
+      "x": 6,
+      "y": -2.4,
+      "zoom": 13.75
     },
     "graphs": [
       "plate"

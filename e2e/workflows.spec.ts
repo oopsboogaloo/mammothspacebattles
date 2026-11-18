@@ -9,8 +9,8 @@ test("UXV-001 W1 open the sandbox and run a reference scenario in ≤ 3 actions"
   await b.click(page.getByTestId("pick-sc01-elastic-collision"));
   await b.press("Space");
   await waitForTick(page, 500);
-  await expect(page.getByTestId("graph-value-vax")).toContainText("-2.5000");
-  await expect(page.getByTestId("graph-value-vbx")).toContainText("0.50000");
+  await expect(page.getByTestId("graph-value-vax")).toContainText("-10.000");
+  await expect(page.getByTestId("graph-value-vbx")).toContainText("2.0000");
   b.done();
   await shot(page, info, "w1-sc01-running");
 });
@@ -20,8 +20,8 @@ test("UXV-001 W2 spawn two bodies, set a velocity, collide them and read the imp
   const b = new Budget(page, 8);
   await b.click(page.getByTestId("pick-empty"));
   await b.press("s");
-  await b.clickWorld(2, 0); // a disc at rest
-  await b.dragWorld([-2, 0], [-1, 0]); // a disc moving right at 2 m/s
+  await b.clickWorld(8, 0); // a disc at rest
+  await b.dragWorld([-8, 0], [-4, 0]); // a disc moving right at 2 m/s
   await b.press("Space");
   await expect(page.getByTestId("event").first()).toContainText("Collision", { timeout: 10_000 });
   await expect(page.getByTestId("event").first()).toContainText("N·s");
@@ -35,12 +35,12 @@ test("UXV-001 W5 add a probe, graph it, and measure with the ruler in ≤ 5 acti
   await openStarter(page, "rs02-off-centre-impact");
   const b = new Budget(page, 5);
   await b.press("p");
-  await b.clickWorld(0.3, 0);
+  await b.clickWorld(1.2, 0);
   await b.click(page.getByTestId("probe-spin"));
   await expect(page.getByTestId("graph-rod.spin")).toBeVisible();
   await b.press("r");
-  await b.dragWorld([-0.9, 0], [0.9, 0]);
-  await expect(page.getByTestId("ruler-readout")).toContainText("1.80 m");
+  await b.dragWorld([-3.6, 0], [3.6, 0]);
+  await expect(page.getByTestId("ruler-readout")).toContainText("7.20 m");
   b.done();
 });
 
@@ -50,7 +50,7 @@ test("UXV-001 W6 SCN-005 SCN-006 save the experiment, reload it, and get the sam
   await page.getByTestId("step10").click();
   await page.keyboard.press("i");
   const { dragWorld } = await import("./helpers.ts");
-  await dragWorld(page, [-2.9, 0.2], [-2.9, 0.8]);
+  await dragWorld(page, [-11.6, 0.8], [-11.6, 3.2]);
   await page.getByTestId("step10").click();
   const before = await hash(page);
   const tick = (await world(page)).tick;
@@ -98,8 +98,8 @@ test("SBX-012 dragging a body while running pulls it with a spring and records t
   await page.keyboard.press("Space");
   // Hold the drag until the run has stepped with it: a quick drag can end before a slow browser
   // (WebKit) has run a single step.
-  const a = await toPage(page, 3, 0);
-  const to = await toPage(page, 3, 3);
+  const a = await toPage(page, 12, 0);
+  const to = await toPage(page, 12, 12);
   await page.mouse.move(a.x, a.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 20 });

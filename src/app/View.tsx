@@ -27,11 +27,14 @@ import { panBy, toScreen, toWorld, zoomAt } from "./camera.ts";
 import { SimClient } from "./simClient.ts";
 import { fmt } from "./format.ts";
 import { assemblyIds, attachCommands, attachPrefabCommands, nearestPort, place, ports, prefabCommands, usedPorts, worldPort, type Placement } from "./ports.ts";
-import { ENGINE, engineFor, HULL, TANK, withFreshChannels } from "./parts.ts";
+import { ENGINE, engineFor, HULL_CORE, TANK_CORE, withFreshChannels } from "./parts.ts";
+import { scaleShip } from "../core/scaleScenario.ts";
+import { GAME_UNITS } from "../core/units.ts";
 import { FramePacer } from "./framePacer.ts";
 import { COLORS, FLAME, GLOW_FROM, OVERLAYS, renderFrame, SPECIES_LIST, T_MAX, T_MIN, T_RAMP, temperatureFraction, type PortMarker, type Preview, type RulerView } from "./render.ts";
 import { extrapolate, nextShownTime, shown, sourceOf } from "./smooth.ts";
 import { diag } from "./diag.ts";
+import { FLOW, LEN } from "./units.ts";
 import {
   achieved,
   bump,
@@ -66,7 +69,13 @@ import {
   type SpawnKind,
 } from "./state.ts";
 
+/** A body spawned in the sandbox: its shape and mass as they were set (the core's units), in the game's. */
 export function spawnBody(kind: SpawnKind, id: string, at: Vec2, velocity: Vec2): BodyInput {
+  const made = spawnCore(kind, id, { x: 0, y: 0 }, { x: 0, y: 0 });
+  return { ...scaleShip({ bodies: [made] }, GAME_UNITS).bodies[0], position: at, velocity: made.fixed ? { x: 0, y: 0 } : velocity };
+}
+
+function spawnCore(kind: SpawnKind, id: string, at: Vec2, velocity: Vec2): BodyInput {
   const base = { id, position: at, velocity, angle: 0, angularVelocity: 0 };
   switch (kind) {
     case "disc":
@@ -87,9 +96,9 @@ export function spawnBody(kind: SpawnKind, id: string, at: Vec2, velocity: Vec2)
     case "wall":
       return { ...base, velocity: { x: 0, y: 0 }, shape: { kind: "box", width: 4, height: 0.4 }, mass: 1, fixed: true };
     case "hull":
-      return { ...structuredClone(HULL), ...base };
+      return { ...structuredClone(HULL_CORE), ...base };
     case "tank":
-      return { ...structuredClone(TANK), ...base };
+      return { ...structuredClone(TANK_CORE), ...base };
   }
 }
 
@@ -429,7 +438,7 @@ export function View() {
       setAttachText(null);
       return null;
     }
-    const near = nearestPort(sb.world, p, Math.max(0.6, 24 / camera.value.zoom), exclude);
+    const near = nearestPort(sb.world, p, Math.max(0.6 * LEN, 24 / camera.value.zoom), exclude);
     if (!near) {
       preview.current = null;
       setAttachText("Point at a body: the nearest port lights up");
@@ -779,10 +788,10 @@ export function View() {
           showToast(`${from.id} already feeds ${to.id} with ${resources.join(" and ")}.`);
           return;
         }
-        // Rate: enough for the receiving injector's full flow (with margin), else 1 kg/s.
+        // Rate: enough for the receiving injector's full flow (with margin), else 1 kg/s (the core's units: FLOW in the game's).
         const inj = to.injector;
         edit(
-          fresh.map((resource) => ({ type: "link.add" as const, link: { id: freshId("feed"), kind: "feed" as const, from: from.id, to: to.id, resource, rate: inj ? 2 * inj.rate * (inj.mixture[resource] ?? 0) || 1 : 1 } })),
+          fresh.map((resource) => ({ type: "link.add" as const, link: { id: freshId("feed"), kind: "feed" as const, from: from.id, to: to.id, resource, rate: inj ? 2 * inj.rate * (inj.mixture[resource] ?? 0) || FLOW : FLOW } })),
           `Link ${from.id} → ${to.id} (${fresh.join(", ")})`,
         );
         return;

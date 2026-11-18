@@ -3,6 +3,8 @@
 // `?blueprint=1`; every level that game loads then carries the blueprint's ship in place of its own,
 // wired by the blueprint's mixer, and the game's menus offer the way back.
 import { physicsShip, type Blueprint } from "./blueprint/model.ts";
+import { scaleShip } from "../core/scaleScenario.ts";
+import { unitsOf } from "../core/migrateUnits.ts";
 
 export const PLAYTEST_KEY = "msb.playtest.v1";
 export type PlaytestGame = "thrust" | "asteroids" | "lander";
@@ -46,7 +48,9 @@ export function withBlueprint(raw: Record<string, unknown>, bp: Blueprint): Reco
   if (!g) return raw;
   const cockpit = bp.components.find((c) => c.kind === "cockpit")?.bodies[0] ?? bp.ship.bodies[0]?.id;
   if (!cockpit) return raw;
-  const ship = physicsShip(bp);
+  // A blueprint is in the core's units (the designer's); the level may be in the game's.
+  const units = unitsOf(raw);
+  const ship = units ? scaleShip(physicsShip(bp), units) : physicsShip(bp);
   const at = ship.bodies.find((b) => b.id === cockpit)!.position;
   const centre = { x: at.x, y: at.y };
   for (const b of ship.bodies) b.position = { x: b.position.x - centre.x, y: b.position.y - centre.y };

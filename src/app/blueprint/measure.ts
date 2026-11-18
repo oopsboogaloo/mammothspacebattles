@@ -48,7 +48,7 @@ export function measureWorld(bp: Blueprint): World {
       end: { steps: 1 },
       probes: [],
       assertions: [],
-    }),
+    }, {}, { coreUnits: true }),
   );
 }
 

@@ -17,6 +17,8 @@ export interface Units {
 export type Dim = readonly [l: number, m: number, t: number];
 
 export const BASE_UNITS: Units = { length: 1, mass: 1 };
+/** The game's units in the core's (Chloe, 18 November 2026): lengths ×4, masses ×1024. */
+export const GAME_UNITS: Units = { length: 4, mass: 1024 };
 
 const powInt = (x: number, n: number): number => {
   let r = 1;
@@ -26,8 +28,7 @@ const powInt = (x: number, n: number): number => {
 };
 
 /** What a quantity of dimension `d` is multiplied by in `units`. */
-export const factor = (units: Units | undefined, d: Dim): number =>
-  units ? powInt(units.length, d[0]) * powInt(units.mass, d[1]) : 1;
+export const factor = (units: Units | undefined, d: Dim): number => (units ? powInt(units.length, d[0]) * powInt(units.mass, d[1]) : 1);
 
 // The dimensions used most.
 export const D = {
@@ -58,10 +59,12 @@ export const D = {
 } as const satisfies Record<string, Dim>;
 
 const profiles = new WeakMap<Profile, Map<string, Profile>>();
+/** Profiles already in a world's units: never scaled twice. */
+const scaled = new WeakSet<Profile>();
 
 /** A profile in `units`: its tolerances and limits scaled (cached, so a world's profile stays one object). */
 export function scaledProfile(p: Profile, units: Units | undefined): Profile {
-  if (!units || (units.length === 1 && units.mass === 1)) return p;
+  if (!units || (units.length === 1 && units.mass === 1) || scaled.has(p)) return p;
   const key = `${units.length}|${units.mass}`;
   let byUnits = profiles.get(p);
   if (!byUnits) profiles.set(p, (byUnits = new Map()));
@@ -89,5 +92,6 @@ export function scaledProfile(p: Profile, units: Units | undefined): Profile {
     },
   };
   byUnits.set(key, out);
+  scaled.add(out);
   return out;
 }

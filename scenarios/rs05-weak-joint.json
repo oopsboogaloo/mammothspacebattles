@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "rs05-weak-joint",
   "title": "Weak joint pulled apart",
   "description": "RS-05. Two 1 kg boxes welded face to face with a weak joint (20 N tension limit). An impulse on the right box pulls them apart: the joint breaks, carrying only its limit, and the two parts fly off separately with total momentum conserved.",
@@ -9,20 +9,20 @@
     {
       "id": "J",
       "label": "Impulse",
-      "unit": "N\u00b7s",
-      "min": 0.5,
-      "max": 10,
-      "step": 0.5,
-      "default": 2
+      "unit": "N·s",
+      "min": 2048,
+      "max": 40960,
+      "step": 2048,
+      "default": 8192
     },
     {
       "id": "limit",
       "label": "Tension limit",
       "unit": "N",
-      "min": 5,
-      "max": 100,
-      "step": 5,
-      "default": 20
+      "min": 20480,
+      "max": 409600,
+      "step": 20480,
+      "default": 81920
     }
   ],
   "world": {
@@ -31,12 +31,12 @@
         "id": "left",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 1,
+        "mass": 1024,
         "position": {
-          "x": -0.5,
+          "x": -2,
           "y": 0
         },
         "velocity": {
@@ -50,12 +50,12 @@
         "id": "right",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 1,
+        "mass": 1024,
         "position": {
-          "x": 0.5,
+          "x": 2,
           "y": 0
         },
         "velocity": {
@@ -72,11 +72,11 @@
         "a": "left",
         "b": "right",
         "anchorA": {
-          "x": 0.5,
+          "x": 2,
           "y": 0
         },
         "anchorB": {
-          "x": -0.5,
+          "x": -2,
           "y": 0
         },
         "limits": {
@@ -101,7 +101,7 @@
             "y": 0
           },
           "point": {
-            "x": 0.5,
+            "x": 2,
             "y": 0
           }
         }
@@ -151,33 +151,33 @@
     {
       "kind": "formula",
       "at": "end",
-      "left": "px",
-      "right": "J",
-      "tol": 1e-09
+      "left": "(px / 4096)",
+      "right": "(J / 4096)",
+      "tol": 1e-9
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "vl",
-      "right": "limit / 240",
-      "tol": 1e-06
+      "left": "(vl / 4)",
+      "right": "(limit / 4096) / 240",
+      "tol": 0.000001
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "vr",
-      "right": "J - limit / 240",
-      "tol": 1e-06
+      "left": "(vr / 4)",
+      "right": "(J / 4096) - (limit / 4096) / 240",
+      "tol": 0.000001
     },
     {
       "kind": "ledgerResidual",
       "quantity": "momentum",
-      "maxAbs": 1e-09
+      "maxAbs": 0.000004096
     },
     {
       "kind": "ledgerResidual",
       "quantity": "angularMomentum",
-      "maxAbs": 1e-09
+      "maxAbs": 0.000016384
     },
     {
       "kind": "event",
@@ -186,7 +186,7 @@
     }
   ],
   "ui": {
-    "lookFor": "Press play. At t = 0.25 s an impulse hits the right box. The joint can only pull with 20 N for one step (\u2248 0.083 N\u00b7s), so it breaks and the boxes separate: the left one gets just that impulse, the right one keeps the rest. Raise the tension limit above 240 N and they stay together.",
+    "lookFor": "Press play. At t = 0.25 s an impulse hits the right box. The joint can only pull with 20 N for one step (≈ 0.083 N·s), so it breaks and the boxes separate: the left one gets just that impulse, the right one keeps the rest. Raise the tension limit above 240 N and they stay together.",
     "overlays": [
       "velocity",
       "joints"
@@ -197,9 +197,9 @@
       "px"
     ],
     "camera": {
-      "x": 0.5,
+      "x": 2,
       "y": 0,
-      "zoom": 90
+      "zoom": 22.5
     }
   }
 }

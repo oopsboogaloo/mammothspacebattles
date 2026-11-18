@@ -7,6 +7,7 @@ import { current, edit, endGesture, live, mode, overlays, placing, preview, say,
 import { testHeld } from "./Controls.tsx";
 import { loadsFor } from "./tryLoads.ts";
 import { response } from "./model.ts";
+import { shown as show } from "./shown.ts";
 
 export const KIND_COLOUR: Record<Kind, string> = {
   cockpit: "#a9b4ff",
@@ -454,17 +455,17 @@ function Selected({ bp, id, sx, sy, dims, zoom }: { bp: Blueprint; id: string; s
       const g = engineGeom(bp, c);
       dimEls = (
         <g>
-          {label(x1 + 8, (y0 + y1) / 2, `walls ${g.length.toFixed(2)} m · ${g.flare.toFixed(1)}°`)}
-          {label(x0, y1 + 18, `chamber ${g.headWidth.toFixed(2)} · throat ${g.throat.toFixed(2)} m`)}
+          {label(x1 + 8, (y0 + y1) / 2, `walls ${show(g.length, "m").toFixed(2)} m · ${g.flare.toFixed(1)}°`)}
+          {label(x0, y1 + 18, `chamber ${show(g.headWidth, "m").toFixed(2)} · throat ${show(g.throat, "m").toFixed(2)} m`)}
         </g>
       );
     } else {
       dimEls = (
         <g>
           <line x1={x0 + pad} x2={x1 - pad} y1={y1 + 10} y2={y1 + 10} class="dim" />
-          {label((x0 + x1) / 2 - 18, y1 + 26, `${(box.maxX - box.minX).toFixed(2)} m`)}
+          {label((x0 + x1) / 2 - 18, y1 + 26, `${show(box.maxX - box.minX, "m").toFixed(2)} m`)}
           <line x1={x1 + 10} x2={x1 + 10} y1={y0 + pad} y2={y1 - pad} class="dim" />
-          {label(x1 + 16, (y0 + y1) / 2 + 4, `${(box.maxY - box.minY).toFixed(2)} m`)}
+          {label(x1 + 16, (y0 + y1) / 2 + 4, `${show(box.maxY - box.minY, "m").toFixed(2)} m`)}
         </g>
       );
     }
@@ -573,8 +574,9 @@ function ComMarker({ x, y }: { x: number; y: number }) {
   );
 }
 
-function ScaleBar({ zoom, h }: { zoom: number; h: number }) {
-  // A bar of 1, 2 or 5 m (or tenths) about 150 px long.
+function ScaleBar({ zoom: z, h }: { zoom: number; h: number }) {
+  // A bar of 1, 2 or 5 m (or tenths) about 150 px long, in the game's metres (shown.ts).
+  const zoom = z / show(1, "m");
   const target = 150 / zoom;
   const p = 10 ** Math.floor(Math.log10(target));
   const len = [1, 2, 5, 10].map((k) => k * p).find((m) => m >= target * 0.7) ?? p;

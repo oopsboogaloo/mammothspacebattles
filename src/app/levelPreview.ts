@@ -3,6 +3,7 @@
 // pads and the start. Made from the scenario itself, so it stays right as the levels change.
 import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from "../core/index.ts";
 import { renderFrame, type Ctx } from "./render.ts";
+import { LEN } from "./units.ts";
 
 export const PREVIEW = { width: 640, height: 360 };
 
@@ -25,8 +26,8 @@ export function previewCamera(world: World, vp: { width: number; height: number 
   const minY = Math.min(...pts.map((p) => p.y));
   const maxY = Math.max(...pts.map((p) => p.y));
   // A margin all round, and a little more below for the ground under the pads.
-  const w = (maxX - minX) * 1.15 + 20;
-  const h = (maxY - minY) * 1.25 + 30;
+  const w = (maxX - minX) * 1.15 + 20 * LEN;
+  const h = (maxY - minY) * 1.25 + 30 * LEN;
   return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 - h * 0.05, zoom: Math.min(vp.width / w, vp.height / h) };
 }
 

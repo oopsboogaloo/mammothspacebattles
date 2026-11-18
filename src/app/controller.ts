@@ -7,6 +7,7 @@ import {
   applyCommands,
   getProfile,
   initialWorld,
+  migrateScenario,
   parseScenario,
   resolveProbe,
   stepInPlace,
@@ -189,7 +190,9 @@ export class Sandbox {
   /** Throws ScenarioError if the input is invalid (UX-006); nothing is changed then. */
   constructor(raw: unknown, values: Record<string, number> = {}) {
     this.scenario = parseScenario(raw, values);
-    this.raw = structuredClone(raw) as Record<string, unknown>;
+    // Kept as the current schema (an older file migrated: the game's units), so the edits exported
+    // with it are in the same units as it (docs/units-rescale-plan.md).
+    this.raw = structuredClone(migrateScenario(raw)) as Record<string, unknown>;
     this.profile = getProfile(this.scenario.profile);
     this.timeline = timelineByStep(this.scenario);
     this.series = [

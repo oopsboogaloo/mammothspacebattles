@@ -2,9 +2,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { addBody, computeTotals, getProfile, addParcel, initialWorld, parcelsOf, parseScenario, stepInPlace, type Command, type World } from "../../src/core/index.ts";
+import { inCoreUnits } from "../helpers.ts";
 
 // The test level (the first level 1, scripts/thrust.ts): flat ground under the start.
-const raw = () => JSON.parse(readFileSync(new URL("../../scenarios/thrust-test.json", import.meta.url), "utf8"));
+const raw = () => inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/thrust-test.json", import.meta.url), "utf8")));
 const sandbox = getProfile("sandbox");
 const set = (channel: string, value: number): Command => ({ type: "control.set", channel, value });
 const FIELD = "p1-shield-field";

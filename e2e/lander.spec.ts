@@ -11,12 +11,12 @@ test("LND-001 LND-002 LND-030 Mammoth Lander: title, mission select, and a fligh
   for (const k of ["easy", "medium", "hard", "cave", "cave-2", "emergency", "orbital", "binary", "heavy-orbital"]) await expect(page.getByTestId(`lander-pick-lander-${k}`)).toBeEnabled();
   await page.getByTestId("lander-pick-lander-easy").click();
   const hud = page.getByTestId("lander-hud");
-  await expect(hud).toContainText("FUEL 8.10 kg");
+  await expect(hud).toContainText("FUEL 8.29 t");
   await expect(page.getByTestId("lander-lives")).toContainText("3");
   // Holding a thrust button burns fuel.
   const left = page.getByTestId("thrust-left");
   await left.dispatchEvent("pointerdown", { pointerId: 1 });
-  await expect(hud).not.toContainText("FUEL 8.10 kg", { timeout: 10_000 });
+  await expect(hud).not.toContainText("FUEL 8.29 t", { timeout: 10_000 });
   await left.dispatchEvent("pointerup", { pointerId: 1 });
   // No sandbox panels in the game.
   await expect(page.getByTestId("sandbox")).toHaveCount(0);
@@ -39,9 +39,9 @@ test("LND-060 the game's own page: the same game, with no way back to the sandbo
   // It flies, from the keyboard too: holding E fires the right engine and burns fuel.
   await page.getByTestId("lander-pick-lander-easy").click();
   const hud = page.getByTestId("lander-hud");
-  await expect(hud).toContainText("FUEL 8.10 kg");
+  await expect(hud).toContainText("FUEL 8.29 t");
   await page.keyboard.down("e");
-  await expect(hud).not.toContainText("FUEL 8.10 kg", { timeout: 10_000 });
+  await expect(hud).not.toContainText("FUEL 8.29 t", { timeout: 10_000 });
   await page.keyboard.up("e");
   await expect(page.getByTestId("sandbox")).toHaveCount(0);
   // P pauses.

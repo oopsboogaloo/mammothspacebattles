@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario, scenarioToJson } from "../src/core/index.ts";
+import { migrateUnits, toCoreUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;
@@ -31,7 +32,7 @@ const SHIPS: ShipSpec[] = [
 
 function resolved(file: string): Json {
   const raw = JSON.parse(readFileSync(join(root, "scenarios", `${file}.json`), "utf8"));
-  return scenarioToJson(parseScenario(raw));
+  return scenarioToJson(parseScenario(toCoreUnits(raw), {}, { coreUnits: true }));
 }
 
 const bodies: Json[] = [];
@@ -159,6 +160,7 @@ const scenario = {
   },
 };
 // Check it parses before writing.
-parseScenario(scenario);
-writeFileSync(join(root, "scenarios", "reference-battle.json"), JSON.stringify(scenario, null, 2) + "\n");
+parseScenario(scenario, {}, { coreUnits: true });
+// Built in the core's units; written in the game's (schema 2, docs/units-rescale-plan.md).
+writeFileSync(join(root, "scenarios", "reference-battle.json"), JSON.stringify(migrateUnits(scenario), null, 2) + "\n");
 console.log(`reference-battle.json: ${bodies.length} bodies, ${joints.length} joints, ${links.length} links, ${asteroids.length} asteroids`);

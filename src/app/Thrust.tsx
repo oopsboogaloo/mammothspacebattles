@@ -14,6 +14,7 @@ import { usePad, type PadAnalog, type PadGame, type PadState } from "./gamepad.t
 import { asteroidsSide, sendControl, SwapSides, Thrust, useNoZoom, zoomed } from "./Lander.tsx";
 import { coolantStatus, easeLean, LEVELS, lookParts, POD_LABEL, shipStatus, wrapShift, zoomFor } from "./thrustHud.ts";
 import { THRUST_DESTRUCT } from "../core/index.ts";
+import { LEN } from "./units.ts";
 
 export const thrustScreen = signal<"title" | "play">("title");
 
@@ -111,7 +112,7 @@ function useTitleCamera(): void {
       if (!b || !vp.width || !vp.height) return;
       const zoom = vp.width / (b.max.x - b.min.x);
       const x = (b.min.x + b.max.x) / 2;
-      const y = 20 + (0.12 * vp.height) / zoom;
+      const y = 20 * LEN + (0.12 * vp.height) / zoom;
       const c = camera.value;
       if (c.x !== x || c.y !== y || c.zoom !== zoom) camera.value = { x, y, zoom };
     };

@@ -21,7 +21,7 @@ function world(walls: boolean): World {
   const ids = new Set(bodies.map((b) => b.id));
   const joints = ship.joints.filter((j) => ids.has(j.a) && ids.has(j.b));
   const links = ship.links.filter((l) => ids.has(l.to) && (!l.from || ids.has(l.from)));
-  return initialWorld(parseScenario({ schema: 1, name: "nozzle-walls", profile: "sandbox", seed: 1, world: { gravity: { x: 0, y: 0 }, bodies, joints, links }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] }));
+  return initialWorld(parseScenario({ schema: 1, name: "nozzle-walls", profile: "sandbox", seed: 1, world: { gravity: { x: 0, y: 0 }, bodies, joints, links }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] }, {}, { coreUnits: true }));
 }
 
 const set = (channel: string, value: number): Command => ({ type: "control.set", channel, value });

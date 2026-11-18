@@ -6,11 +6,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario, scenarioToJson } from "../src/core/index.ts";
+import { migrateUnits, toCoreUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;
 type Vec = { x: number; y: number };
-const resolved = (file: string) => scenarioToJson(parseScenario(JSON.parse(readFileSync(join(root, "scenarios", `${file}.json`), "utf8"))));
+const resolved = (file: string) => scenarioToJson(parseScenario(toCoreUnits(JSON.parse(readFileSync(join(root, "scenarios", `${file}.json`), "utf8"))), {}, { coreUnits: true }));
 
 // The welded assembly round `rootId`: its bodies, the welds between them, and the links within it.
 function assembly(w: { bodies: Json[]; joints?: Json[]; links?: Json[] }, rootId: string) {
@@ -100,6 +101,7 @@ const scenario = {
     spawn: template,
   },
 };
-parseScenario(scenario);
-writeFileSync(join(root, "scenarios", "stress-test.json"), JSON.stringify(scenario, null, 2) + "\n");
+parseScenario(scenario, {}, { coreUnits: true });
+// Built in the core's units; written in the game's (schema 2, docs/units-rescale-plan.md).
+writeFileSync(join(root, "scenarios", "stress-test.json"), JSON.stringify(migrateUnits(scenario), null, 2) + "\n");
 console.log(`stress-test.json: you ${you.bodies.length} bodies; template ${template.bodies.length} bodies, ${template.joints.length} joints, ${template.links.length} links`);

@@ -10,6 +10,7 @@ import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
 import { narrowest, type Vec } from "./terrain.ts";
 import { capacitor, electricTurret, generator, pipe, turret, type ElectricTuning, type TurretTuning } from "./turretParts.ts";
 import { antenna, building, powerPlant, type PlantTuning } from "./plantParts.ts";
+import { migrateUnits, toCoreUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;
@@ -286,7 +287,7 @@ interface Level {
  * 1.43 m above its foot (its legs).
  */
 function gunshipTemplate() {
-  const a = JSON.parse(readFileSync(join(root, "scenarios", "asteroids.json"), "utf8")) as { world: { arcade: { gunship: { template: Record<string, unknown>; hull: string } } } };
+  const a = toCoreUnits(JSON.parse(readFileSync(join(root, "scenarios", "asteroids.json"), "utf8"))) as unknown as { world: { arcade: { gunship: { template: Record<string, unknown>; hull: string } } } };
   return { template: a.world.arcade.gunship.template, hull: a.world.arcade.gunship.hull, foot: 1.43 };
 }
 
@@ -424,20 +425,21 @@ function write(l0: Level) {
     assertions: [],
     ui: { keys: { q: "left", e: "right", w: "fire", s: "reverse", z: "tractor" }, overlays: [], labels: false }, // the page adds Space, the arrows, Shifts and the right-hand keys
   };
-  parseScenario(scenario); // fails loudly if the scenario is malformed
+  parseScenario(scenario, {}, { coreUnits: true }); // fails loudly if the scenario is malformed
   // Turrets never fire within 10° of a bearing whose bolt would land on the power plant (WPN-014;
   // Chloe, 14 November 2026: they were shredding it). The bolts fly in arcs, so each bearing's
   // flight is followed on the world as it starts (scripts/aim.ts).
   if (plant) {
-    const w = initialWorld(parseScenario(scenario));
+    const w = initialWorld(parseScenario(scenario, {}, { coreUnits: true }));
     for (const b of scenario.world.bodies as Json[]) {
       if (!b.turret) continue;
       const avoid = bearingsOnto(w, w.bodies.find((x) => x.id === b.id)!, plant.parts, { margin: REACTOR_MARGIN, step: Math.PI / 720 });
       if (avoid.length) b.turret = { ...(b.turret as Json), avoid };
     }
-    parseScenario(scenario);
+    parseScenario(scenario, {}, { coreUnits: true });
   }
-  writeFileSync(join(root, "scenarios", `${name}.json`), JSON.stringify(scenario, null, 2) + "\n");
+  // Built in the core's units; written in the game's (schema 2, docs/units-rescale-plan.md).
+  writeFileSync(join(root, "scenarios", `${name}.json`), JSON.stringify(migrateUnits(scenario), null, 2) + "\n");
   console.log(`wrote scenarios/${name}.json`);
 }
 

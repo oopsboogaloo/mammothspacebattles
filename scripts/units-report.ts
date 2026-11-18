@@ -13,9 +13,7 @@ for (const f of readdirSync("scenarios")
   try {
     const t = Date.now();
     const r = proof(JSON.parse(readFileSync(`scenarios/${f}`, "utf8")), steps);
-    console.log(
-      `${r.diff ? "FAIL" : "ok  "} ${name} (${r.steps} steps, ${Date.now() - t} ms) ${r.diff}${r.untagged.length ? " | untagged: " + r.untagged.join(" ") : ""}`,
-    );
+    console.log(`${r.diff ? "FAIL" : "ok  "} ${name} (${r.steps} steps, ${Date.now() - t} ms) ${r.diff}${r.untagged.length ? " | untagged: " + r.untagged.join(" ") : ""}`);
   } catch (e) {
     console.log(`ERR  ${name}: ${(e as Error).message.split("\n")[0]}`);
   }

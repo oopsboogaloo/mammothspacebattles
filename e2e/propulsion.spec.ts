@@ -19,24 +19,24 @@ test("UXV-001 W3 SBX-020 build a ship (hull, tank, engine), link feed and contro
   // Hull.
   await b.press("s");
   await b.click(page.getByTestId("spawn-hull"));
-  await b.clickWorld(0, 2);
+  await b.clickWorld(0, 8);
   // Tank under the hull, engine under the tank (Attach welds each to the port it points at).
   await b.press("a");
   await b.click(page.getByTestId("spawn-tank"));
   // Point just below the hull's bottom face (a click on the hull itself would drag the hull).
-  await moveWorld(page, 0, 1.45);
+  await moveWorld(page, 0, 5.8);
   await expect(page.getByTestId("attach-readout")).toContainText("Valid: hull-1");
-  await b.clickWorld(0, 1.45);
+  await b.clickWorld(0, 5.8);
   await b.click(page.getByTestId("spawn-engine"));
-  await moveWorld(page, 0, 0.95);
+  await moveWorld(page, 0, 3.8);
   await expect(page.getByTestId("attach-readout")).toContainText("Valid: tank-");
-  await b.clickWorld(0, 0.95);
+  await b.clickWorld(0, 3.8);
   // Feed links: one drag links both propellants.
   await b.press("l");
-  await b.dragWorld([0, 1.25], [0, 0.9]);
+  await b.dragWorld([0, 5], [0, 3.6]);
   // Control link and key on the engine.
   await b.press("Escape");
-  await b.clickWorld(0, 0.9);
+  await b.clickWorld(0, 3.6);
   await expect(page.getByTestId("injector-status")).toContainText('No control link for channel "main"');
   await b.click(page.getByTestId("add-control"));
   await expect(page.getByTestId("injector-status")).toContainText("Idle: main = 0");
@@ -88,35 +88,36 @@ test("UXV-001 W9 SBX-024 SBX-025 build a twin-engine ship on a wing, give each e
   await b.click(page.getByTestId("pick-empty"));
   await b.press("s");
   await b.click(page.getByTestId("spawn-hull"));
-  await b.clickWorld(0, 2);
+  await b.clickWorld(0, 8);
   await b.press("a");
   await b.click(page.getByTestId("spawn-tank"));
-  await moveWorld(page, 0, 1.45);
+  await moveWorld(page, 0, 5.8);
   await expect(page.getByTestId("attach-readout")).toContainText("Valid: hull-1");
-  await b.clickWorld(0, 1.45);
-  // A 3 m plank under the tank is the wing; its underside has ports at −1, 0 and +1 m.
+  await b.clickWorld(0, 5.8);
+  // A 12 m plank (3 m before the units changed) under the tank is the wing; its underside has ports at −4, 0 and +4 m.
   await b.click(page.getByTestId("spawn-plank"));
-  await moveWorld(page, 0, 0.95);
+  await moveWorld(page, 0, 3.8);
   await expect(page.getByTestId("attach-readout")).toContainText("Valid: tank-");
-  await b.clickWorld(0, 0.95);
+  await b.clickWorld(0, 3.8);
   await b.click(page.getByTestId("spawn-engine"));
-  for (const x of [-1, 1]) {
-    await moveWorld(page, x, 0.75);
+  // The game's units (lengths ×4): the ports at −4 and +4 m.
+  for (const x of [-4, 4]) {
+    await moveWorld(page, x, 3);
     await expect(page.getByTestId("attach-readout")).toContainText("Valid: plank-");
-    await b.clickWorld(x, 0.75);
+    await b.clickWorld(x, 3);
   }
   // Feed both engines from the tank.
   await b.press("l");
-  await b.dragWorld([0, 1.25], [-1, 0.7]);
-  await b.dragWorld([0, 1.25], [1, 0.7]);
+  await b.dragWorld([0, 5], [-4, 2.8]);
+  await b.dragWorld([0, 5], [4, 2.8]);
   // Each engine has its own channel: give each a control link and a key.
   await b.press("Escape");
   const keys: [number, string, string][] = [
-    [-1, "main", "q"],
-    [1, "main-2", "e"],
+    [-4, "main", "q"],
+    [4, "main-2", "e"],
   ];
   for (const [x, channel, key] of keys) {
-    await b.clickWorld(x, 0.7);
+    await b.clickWorld(x, 2.8);
     await expect(page.getByTestId("injector-status")).toContainText(`No control link for channel "${channel}"`);
     await b.click(page.getByTestId("add-control"));
     await b.click(page.getByTestId(`bind-${channel}`));

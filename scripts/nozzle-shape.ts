@@ -76,7 +76,7 @@ function run(s: ReturnType<typeof ship> | null, jetOnly: boolean) {
   const bodies = s ? s.bodies : base.bodies.filter((b) => !String(b.id).includes("-wall-"));
   const ids = new Set(bodies.map((b) => b.id));
   const parts = s ?? { bodies, joints: base.joints.filter((j) => ids.has(j.a) && ids.has(j.b)), links: base.links.filter((l) => ids.has(l.to) && (!l.from || ids.has(l.from))) };
-  const w0: World = initialWorld(parseScenario({ schema: 1, name: "nozzle-shape", profile: "sandbox", seed: 1, world: { gravity: { x: 0, y: 0 }, ...parts }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] }));
+  const w0: World = initialWorld(parseScenario({ schema: 1, name: "nozzle-shape", profile: "sandbox", seed: 1, world: { gravity: { x: 0, y: 0 }, ...parts }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] }, {}, { coreUnits: true }));
   // Catch each parcel as an injector adds it: addParcel writes it, then raises the count by one.
   let released = 0; // N·s along the ship's axis, from 0.5 s
   let counting = false;

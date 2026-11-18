@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "sc02-gas-in-a-box",
   "title": "SC-02 Gas in a box",
   "description": "RS-06. A free 10 kg box, 2 m inside, holds 0.5 kg of air at 300 K. Filled evenly, the box stays still and the gas stays spread out. Filled into the left half only, the gas rushes across and the box rocks, but box plus gas momentum stays zero. Try deleting a wall while it runs.",
@@ -18,10 +18,10 @@
       "id": "gasMass",
       "label": "Gas mass",
       "unit": "kg",
-      "min": 0.05,
-      "max": 5,
-      "step": 0.05,
-      "default": 0.5
+      "min": 51.2,
+      "max": 5120,
+      "step": 51.2,
+      "default": 512
     },
     {
       "id": "T",
@@ -36,10 +36,10 @@
       "id": "boxMass",
       "label": "Box mass",
       "unit": "kg",
-      "min": 1,
-      "max": 100,
-      "step": 1,
-      "default": 10
+      "min": 1024,
+      "max": 102400,
+      "step": 1024,
+      "default": 10240
     },
     {
       "id": "fill",
@@ -57,15 +57,15 @@
         "id": "bottom",
         "shape": {
           "kind": "box",
-          "width": 2.2,
-          "height": 0.1
+          "width": 8.8,
+          "height": 0.4
         },
         "mass": {
-          "$expr": "boxMass * 0.22 / (0.84)"
+          "$expr": "((boxMass / 1024) * 0.22 / (0.84)) * 1024"
         },
         "position": {
           "x": 0,
-          "y": -1.05
+          "y": -4.2
         },
         "velocity": {
           "x": 0,
@@ -80,14 +80,14 @@
         "id": "left",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 2.0
+          "width": 0.4,
+          "height": 8
         },
         "mass": {
-          "$expr": "boxMass * 0.2 / (0.84)"
+          "$expr": "((boxMass / 1024) * 0.2 / (0.84)) * 1024"
         },
         "position": {
-          "x": -1.05,
+          "x": -4.2,
           "y": 0
         },
         "velocity": {
@@ -103,14 +103,14 @@
         "id": "right",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 2.0
+          "width": 0.4,
+          "height": 8
         },
         "mass": {
-          "$expr": "boxMass * 0.2 / (0.84)"
+          "$expr": "((boxMass / 1024) * 0.2 / (0.84)) * 1024"
         },
         "position": {
-          "x": 1.05,
+          "x": 4.2,
           "y": 0
         },
         "velocity": {
@@ -126,15 +126,15 @@
         "id": "top",
         "shape": {
           "kind": "box",
-          "width": 2.2,
-          "height": 0.1
+          "width": 8.8,
+          "height": 0.4
         },
         "mass": {
-          "$expr": "boxMass * 0.22 / (0.84)"
+          "$expr": "((boxMass / 1024) * 0.22 / (0.84)) * 1024"
         },
         "position": {
           "x": 0,
-          "y": 1.05
+          "y": 4.2
         },
         "velocity": {
           "x": 0,
@@ -153,17 +153,17 @@
         "b": "top",
         "anchorA": {
           "x": 0,
-          "y": 1
+          "y": 4
         },
         "anchorB": {
-          "x": -1.05,
-          "y": -0.05
+          "x": -4.2,
+          "y": -0.2
         },
         "limits": {
-          "tension": 1000000000.0,
-          "compression": 1000000000.0,
-          "shear": 1000000000.0,
-          "torque": 1000000000.0
+          "tension": 4096000000000,
+          "compression": 4096000000000,
+          "shear": 4096000000000,
+          "torque": 16384000000000
         }
       },
       {
@@ -172,17 +172,17 @@
         "b": "bottom",
         "anchorA": {
           "x": 0,
-          "y": -1
+          "y": -4
         },
         "anchorB": {
-          "x": -1.05,
-          "y": 0.05
+          "x": -4.2,
+          "y": 0.2
         },
         "limits": {
-          "tension": 1000000000.0,
-          "compression": 1000000000.0,
-          "shear": 1000000000.0,
-          "torque": 1000000000.0
+          "tension": 4096000000000,
+          "compression": 4096000000000,
+          "shear": 4096000000000,
+          "torque": 16384000000000
         }
       },
       {
@@ -191,17 +191,17 @@
         "b": "top",
         "anchorA": {
           "x": 0,
-          "y": 1
+          "y": 4
         },
         "anchorB": {
-          "x": 1.05,
-          "y": -0.05
+          "x": 4.2,
+          "y": -0.2
         },
         "limits": {
-          "tension": 1000000000.0,
-          "compression": 1000000000.0,
-          "shear": 1000000000.0,
-          "torque": 1000000000.0
+          "tension": 4096000000000,
+          "compression": 4096000000000,
+          "shear": 4096000000000,
+          "torque": 16384000000000
         }
       },
       {
@@ -210,31 +210,31 @@
         "b": "bottom",
         "anchorA": {
           "x": 0,
-          "y": -1
+          "y": -4
         },
         "anchorB": {
-          "x": 1.05,
-          "y": 0.05
+          "x": 4.2,
+          "y": 0.2
         },
         "limits": {
-          "tension": 1000000000.0,
-          "compression": 1000000000.0,
-          "shear": 1000000000.0,
-          "torque": 1000000000.0
+          "tension": 4096000000000,
+          "compression": 4096000000000,
+          "shear": 4096000000000,
+          "torque": 16384000000000
         }
       }
     ],
     "gas": [
       {
         "min": {
-          "x": -1,
-          "y": -1
+          "x": -4,
+          "y": -4
         },
         "max": {
           "x": {
-            "$expr": "-1 + 2 * fill"
+            "$expr": "(-1 + 2 * fill) * 4"
           },
-          "y": 1
+          "y": 4
         },
         "count": {
           "$param": "count"
@@ -248,7 +248,7 @@
         "composition": {
           "air": 1
         },
-        "jitter": 5,
+        "jitter": 20,
         "symmetric": true
       }
     ]
@@ -317,36 +317,36 @@
       "probe": "boxVx",
       "from": 0,
       "to": "end",
-      "min": -0.0003,
-      "max": 0.0003
+      "min": -0.0012,
+      "max": 0.0012
     },
     {
       "kind": "rangeOver",
       "probe": "boxVy",
       "from": 0,
       "to": "end",
-      "min": -0.0003,
-      "max": 0.0003
+      "min": -0.0012,
+      "max": 0.0012
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "boxPx + gasPx",
+      "left": "(boxPx / 4096) + (gasPx / 4096)",
       "right": "0",
-      "tol": 1e-09
+      "tol": 1e-9
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "boxPy + gasPy",
+      "left": "(boxPy / 4096) + (gasPy / 4096)",
       "right": "0",
-      "tol": 1e-09
+      "tol": 1e-9
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "(wall@end - wall@120) / ((240 - 120) / 240 * 8)",
-      "right": "0.4 * thermal@end / 4",
+      "left": "((wall@end / 4096) - (wall@120 / 4096)) / ((240 - 120) / 240 * 8)",
+      "right": "0.4 * (thermal@end / 16384) / 4",
       "tol": 0.05,
       "relative": true
     },
@@ -355,23 +355,23 @@
       "probe": "spread",
       "from": 0,
       "to": "end",
-      "min": 0.8,
-      "max": 0.83
+      "min": 3.2,
+      "max": 3.32
     },
     {
       "kind": "ledgerResidual",
       "quantity": "momentum",
-      "maxAbs": 1e-09
+      "maxAbs": 0.000004096
     },
     {
       "kind": "ledgerResidual",
       "quantity": "angularMomentum",
-      "maxAbs": 1e-09
+      "maxAbs": 0.000016384
     },
     {
       "kind": "ledgerResidual",
       "quantity": "energy",
-      "maxAbs": 1e-06
+      "maxAbs": 0.016384
     },
     {
       "kind": "event",
@@ -392,7 +392,7 @@
     "camera": {
       "x": 0,
       "y": 0,
-      "zoom": 130
+      "zoom": 32.5
     }
   }
 }

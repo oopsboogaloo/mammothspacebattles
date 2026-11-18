@@ -13,11 +13,15 @@ import { shipControls } from "./measure.ts";
 import { powerOf } from "../../core/index.ts";
 import { usePad, type PadAnalog, type PadGame, type PadState } from "../gamepad.ts";
 import { wrapShift } from "../thrustHud.ts";
+import { LEN } from "../units.ts";
 
 /** The field: 120 × 75 m, wrapping (twice the first try-outs' 60 × 37.5). */
 const HALF = { x: 60, y: 37.5 };
-/** How much of it the view shows at once, m: the view follows the ship round the field. */
-const VIEW = { x: 60, y: 37.5 };
+/**
+ * How much of it the view shows at once, m: the view follows the ship round the field. The field is
+ * built in the core's units (schema 1) and runs in the game's (×4: ../units.ts), as is the view.
+ */
+const VIEW = { x: 60 * LEN, y: 37.5 * LEN };
 
 /** The rock: Flight test asteroids' rock A, without its gravity (no gravity here). */
 const ROCK = {

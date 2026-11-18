@@ -11,8 +11,11 @@ import { applyCommands, getProfile, initialWorld, parseScenario, type MoonAction
 
 const world = (name = "moon-test"): World => initialWorld(parseScenario(JSON.parse(readFileSync(new URL(`../../scenarios/${name}.json`, import.meta.url), "utf8"))));
 const mam = (w: World) => w.bodies.find((b) => b.id === "mammoth")!;
-const R = 40;
-const place = (w: World, s: number, above = 1) => (mam(w).position = { x: (R + above) * Math.sin(s / R), y: (R + above) * Math.cos(s / R) });
+// The moon's radius, 40 m as the level was set: 160 m in the game's units (lengths ×4). Places along
+// it and heights over it are written in the first, scaled here.
+const L = 4;
+const R = 40 * L;
+const place = (w: World, s: number, above = 1) => (mam(w).position = { x: (R + above * L) * Math.sin((s * L) / R), y: (R + above * L) * Math.cos((s * L) / R) });
 
 describe("Moon Mammoth's sprite sheet", () => {
   it("MMN-061 every action has a row inside the sheet, and its frames fit across it", () => {
@@ -66,9 +69,9 @@ describe("Moon Mammoth's view", () => {
   it("MMN-060 the view's turn is the mammoth's place round the moon; the title turns by itself", () => {
     const w = world();
     place(w, 30);
-    expect(moonTurn(w, 0)).toBeCloseTo(30 / R, 6);
+    expect(moonTurn(w, 0)).toBeCloseTo((30 * L) / R, 6);
     place(w, -50);
-    expect(moonTurn(w, 0)).toBeCloseTo(-50 / R, 6);
+    expect(moonTurn(w, 0)).toBeCloseTo((-50 * L) / R, 6);
     moonView.title = true;
     expect(moonTurn(w, 20000)).toBeGreaterThan(moonTurn(w, 0));
     moonView.title = false;
@@ -80,9 +83,9 @@ describe("Moon Mammoth's view", () => {
     const before = cameraFor(w, 0, vp, null, 0.016)!;
     place(w, 30, 4);
     const jump = cameraFor(w, 0, vp, before.cam, 0.016)!;
-    expect(jump.cam.radius - before.cam.radius).toBeLessThan(0.3);
+    expect(jump.cam.radius - before.cam.radius).toBeLessThan(0.3 * L);
     place(w, 30, 20);
-    expect(cameraFor(w, 0, vp, before.cam, 0.016)!.cam.radius).toBeCloseTo(R + 20, 6);
+    expect(cameraFor(w, 0, vp, before.cam, 0.016)!.cam.radius).toBeCloseTo(R + 20 * L, 6);
   });
 
   it("MMN-060 a narrow screen shows as much to the sides: the zoom is by the smaller of height and width", () => {
@@ -125,24 +128,24 @@ describe("Moon Mammoth's aim", () => {
     applyCommands(w, [{ type: "control.set", channel: "aim", value: 0 }], getProfile("sandbox"));
     w.moon!.state.aim = 0;
     const tools = w.moon!.spec.tools!;
-    const dots = aimPath(w, tools.rifle.speed, 26, 1.3);
+    const dots = aimPath(w, tools.rifle.speed, 26 * L, 1.3 * L);
     expect(dots.length).toBe(20);
     const m = w.bodies.find((b) => b.id === "mammoth")!.position;
     // Aimed level to the right from the top of the moon: +x, and a little lower with each dot than a straight line would be.
-    expect(dots[0].x - m.x).toBeGreaterThanOrEqual(1.3);
-    expect(dots[0].x - m.x).toBeLessThan(1.5);
-    expect(Math.abs(dots[0].y - m.y)).toBeLessThan(0.01);
+    expect(dots[0].x - m.x).toBeGreaterThanOrEqual(1.3 * L);
+    expect(dots[0].x - m.x).toBeLessThan(1.5 * L);
+    expect(Math.abs(dots[0].y - m.y)).toBeLessThan(0.01 * L);
     const drop = (k: number) => m.y - dots[k].y;
     expect(drop(19)).toBeGreaterThan(drop(9));
     expect(drop(9)).toBeGreaterThan(drop(1));
     // 26 m at 400 m/s under about 100 m/s²: a fifth of a metre. Slight.
-    expect(drop(19)).toBeGreaterThan(0.1);
-    expect(drop(19)).toBeLessThan(0.5);
+    expect(drop(19)).toBeGreaterThan(0.1 * L);
+    expect(drop(19)).toBeLessThan(0.5 * L);
     // The slower hook's path bends more over the same distance.
-    const hook = aimPath(w, tools.hook.speed, 13, 13);
+    const hook = aimPath(w, tools.hook.speed, 13 * L, 13 * L);
     expect(m.y - hook[0].y).toBeGreaterThan(drop(9));
     // No tools, no line.
-    expect(aimPath(world(), 400, 26, 1.3)).toEqual([]);
+    expect(aimPath(world(), 400 * L, 26 * L, 1.3 * L)).toEqual([]);
   });
 
   it("the title offers levels 1 and 2", () => {

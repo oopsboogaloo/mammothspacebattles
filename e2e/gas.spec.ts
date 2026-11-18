@@ -34,12 +34,13 @@ test("GAS-001 the Gas tool fills a dragged rectangle and clears it again", async
   await expect(page.getByTestId("gas-palette")).toBeVisible();
   await page.getByTestId("field-gas-temperature").fill("600");
   await page.getByTestId("field-gas-temperature").press("Enter");
-  await dragWorld(page, [-1, -1], [1, 1]);
+  // The sandbox is in the game's units (lengths ×4): a 2 m box as it was set, 8 m.
+  await dragWorld(page, [-4, -4], [4, 4]);
   await expect(page.getByTestId("toast")).toContainText("Added 400 parcels");
   let w = await gasWorld(page);
   expect(w.gas.count).toBe(400);
   await page.getByTestId("gas-mode-clear").click();
-  await dragWorld(page, [2, -2], [0, 2]); // the right half (the panel covers the left of the view)
+  await dragWorld(page, [8, -8], [0, 8]); // the right half (the panel covers the left of the view)
   w = await gasWorld(page);
   expect(w.gas.count).toBe(200);
   // Undo brings the cleared half back.
