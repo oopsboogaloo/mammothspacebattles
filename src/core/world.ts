@@ -6,8 +6,8 @@
 import { landerCommands, landerStartJudge, startLander, updateLander, type LanderGame, type LanderSpec } from "./lander.ts";
 import { revealCompounds } from "./asteroid.ts";
 import { normalizePilot, runPilots, type Pilot, type PilotGoal, type PilotInput } from "./pilot.ts";
-import { applyCollectors, collectCaptured, normalizeCollector, type Collector, type CollectorInput } from "./collector.ts";
-import { applyTractors, normalizeTractor, type Tractor, type TractorInput } from "./tractor.ts";
+import { applyCollectors, collectCaptured, COLLECTOR_DEFAULTS, normalizeCollector, type Collector, type CollectorInput } from "./collector.ts";
+import { applyTractors, normalizeTractor, TRACTOR_DEFAULTS, type Tractor, type TractorInput } from "./tractor.ts";
 import { addDelta, computeTotals, diff, emptyLedger, SOURCES, zeroDelta, type Delta, type Ledger, type Source, type Totals } from "./ledger.ts";
 import { bodiesById, bodyMass, type Store } from "./bodies.ts";
 import { assemblyOf, assemblyRoots, evaluateJoints, recordGasLoads } from "./joints.ts";
@@ -28,7 +28,7 @@ import { takeStrikes } from "./plant.ts";
 import { runTerrain, startTerrain, type Terrain, type TerrainOps, type TerrainSpec } from "./terrain.ts";
 import { runShields, type Shield } from "./shield.ts";
 import { runPower, type Power } from "./power.ts";
-import { normalizeTurret, runTurrets, turnJoints, type Charge, type Generator, type JointTurn, type Turret, type TurretInput } from "./turret.ts";
+import { normalizeTurret, runTurrets, TURRET_DEFAULTS, turnJoints, type Charge, type Generator, type JointTurn, type Turret, type TurretInput } from "./turret.ts";
 import { SMOOTHING, addParcel, dropParcels, parcelAt, flyFree, freeFlightMask, burn, clearOf, emptyGas, temperatureOf, igniteAndBurn, makeFill, mixture, SPECIES, stepGasClustered, STORE_TEMPERATURE, storeEnergy, wallBodies, type Bounds, type ClosedRegion, type GasFill, type GasAccount, type GasState, type Parcel, type WallBody } from "./gas.ts";
 import type { Profile } from "./profile.ts";
 import { boundingRadiusOf, massProps, normalizePolygon, type Shape } from "./shapes.ts";
@@ -37,6 +37,7 @@ import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive
 import { spawnWisps, stepWisps, type Wisp } from "./wisps.ts";
 import { removeDestroyed, stepDust, type Dust } from "./dust.ts";
 import { fireRailguns, type Railgun } from "./railgun.ts";
+import { D, factor, type Dim, type Units } from "./units.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -400,6 +401,8 @@ export interface Frame {
 
 export interface World {
   schema: number;
+  /** The world's units, if not the core's own (units.ts): every constant the core uses scales with them. */
+  units?: Units;
   tick: number;
   time: number; // s
   rng: RngState;
@@ -490,14 +493,33 @@ export type Command =
   /** Test hook: changes a velocity WITHOUT telling the ledger, to exercise violation reporting. */
   | { type: "debug.kick"; id: string; dv: Vec2 };
 
-export function normalizeBody(input: BodyInput): Body {
+/**
+ * A body as the world holds it: what `input` leaves out takes its default, in the world's `units`
+ * (units.ts) where the default has a dimension.
+ */
+export function normalizeBody(input: BodyInput, units?: Units): Body {
   const { injector, magazine, tractor, collector, pilot, turret, ...rest } = structuredClone(input);
   const body: Body = { ...BODY_DEFAULTS, integrity: 1, ...rest };
-  if (turret) body.turret = normalizeTurret(turret);
-  if (tractor) body.tractor = normalizeTractor(tractor);
-  if (collector) body.collector = normalizeCollector(collector);
+  const u = (d: Dim) => factor(units, d);
+  if (turret) body.turret = normalizeTurret(units ? { range: TURRET_DEFAULTS.range * u(D.length), ...turret } : turret);
+  if (tractor) {
+    const t = TRACTOR_DEFAULTS;
+    body.tractor = normalizeTractor(
+      units
+        ? { range: t.range * u(D.length), force: t.force * u(D.force), ...tractor, tether: { length: t.tether.length * u(D.length), stiffness: t.tether.stiffness * u(D.pressure), maxTension: t.tether.maxTension * u(D.force), ...tractor.tether } }
+        : tractor,
+    );
+  }
+  if (collector) {
+    const c = COLLECTOR_DEFAULTS;
+    body.collector = normalizeCollector(units ? { range: c.range * u(D.length), maxExtent: c.maxExtent * u(D.length), stiffness: c.stiffness * u(D.pressure), reel: c.reel * u(D.speed), capture: c.capture * u(D.length), maxTension: c.maxTension * u(D.force), ...collector } : collector);
+  }
   if (pilot) body.pilot = normalizePilot(pilot);
-  if (injector) body.injector = { ...INJECTOR_DEFAULTS, ...injector };
+  if (injector) {
+    const d = INJECTOR_DEFAULTS;
+    const scaled = units ? { rate: d.rate * u(D.massRate), outlet: scale(d.outlet, u(D.length)), width: d.width * u(D.length), speed: d.speed * u(D.speed), parcelMass: d.parcelMass * u(D.mass), radius: d.radius * u(D.length) } : {};
+    body.injector = { ...d, ...scaled, ...injector };
+  }
   // A full reload time has passed at the start, so the first shell loads at once.
   if (magazine) body.magazine = { timer: magazine.reload, loaded: 0, ...magazine };
   // A battery starts full (PWR-001).
@@ -519,7 +541,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame; mix?: Mixer; shipRules?: ShipRules } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame; mix?: Mixer; shipRules?: ShipRules; units?: Units } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -529,7 +551,7 @@ export function createWorld(
     time: 0,
     rng: createRng(seed),
     gravity: { ...gravity },
-    bounds: structuredClone(extra.bounds ?? DEFAULT_BOUNDS),
+    bounds: structuredClone(extra.bounds ?? (extra.units ? { min: scale(DEFAULT_BOUNDS.min, extra.units.length), max: scale(DEFAULT_BOUNDS.max, extra.units.length) } : DEFAULT_BOUNDS)),
     bodies: [],
     gas: profile?.gasParcelRate ? { ...emptyGas(gasScale), parcelRate: profile.gasParcelRate } : emptyGas(gasScale),
     joints: [],
@@ -542,6 +564,7 @@ export function createWorld(
     pendingUser: zeroDelta(),
     pendingDebug: [],
   };
+  if (extra.units && (extra.units.length !== 1 || extra.units.mass !== 1)) world.units = { ...extra.units };
   if (extra.frame) world.frame = { centre: { ...extra.frame.centre }, omega: extra.frame.omega };
   if (extra.mix) world.mix = structuredClone(extra.mix);
   if (extra.shipRules) world.shipRules = structuredClone(extra.shipRules);
@@ -570,7 +593,7 @@ export function compareIds(a: string, b: string): number {
 
 export function addBody(world: World, input: BodyInput): void {
   if (world.bodies.some((b) => b.id === input.id)) throw new Error(`Duplicate body id "${input.id}"`);
-  world.bodies.push(normalizeBody(input));
+  world.bodies.push(normalizeBody(input, world.units));
   world.bodies.sort((a, b) => compareIds(a.id, b.id));
 }
 
@@ -586,9 +609,9 @@ export function addJoint(world: World, input: JointInput): void {
     b: input.b,
     anchorA: { ...input.anchorA },
     anchorB: { ...input.anchorB },
-    axis: input.axis ? scale(input.axis, 1 / length(input.axis)) : al > 1e-9 ? scale(input.anchorA, 1 / al) : { x: 1, y: 0 },
+    axis: input.axis ? scale(input.axis, 1 / length(input.axis)) : al > 1e-9 * (world.units?.length ?? 1) ? scale(input.anchorA, 1 / al) : { x: 1, y: 0 },
     referenceAngle: input.referenceAngle ?? b.angle - a.angle,
-    limits: { ...JOINT_DEFAULT_LIMITS, ...input.limits },
+    limits: { ...(world.units ? { tension: JOINT_DEFAULT_LIMITS.tension * factor(world.units, D.force), compression: JOINT_DEFAULT_LIMITS.compression * factor(world.units, D.force), shear: JOINT_DEFAULT_LIMITS.shear * factor(world.units, D.force), torque: JOINT_DEFAULT_LIMITS.torque * factor(world.units, D.energy) } : JOINT_DEFAULT_LIMITS), ...input.limits },
     impulse: { x: 0, y: 0, angular: 0 },
     integrity: input.integrity ?? 1,
     load: { tension: 0, compression: 0, shear: 0, torque: 0, fraction: 0 },
@@ -1177,8 +1200,9 @@ function runVents(world: World, dt: number, limit: number): void {
     const roots = v.from ? assemblyRoots(world) : null;
     if (roots && roots.get(src.id) !== roots.get(b.id)) continue;
     const q = sinCos(b.angle);
-    const parcel = v.parcel ?? LEAK_PARCEL;
-    const radius = v.radius ?? LEAK_RADIUS;
+    const l = world.units?.length ?? 1;
+    const parcel = v.parcel ?? LEAK_PARCEL * (world.units?.mass ?? 1);
+    const radius = v.radius ?? LEAK_RADIUS * l;
     for (const hole of v.holes) {
       if (hole.count === 0 && hole.credit === 0) pushEvent(world, { tick: world.tick, type: "vent", data: { id: b.id } });
       // A hole's size scales its rate: a hole made bigger vents faster.
@@ -1193,13 +1217,13 @@ function runVents(world: World, dt: number, limit: number): void {
         }
         const parts: [string, number][] = gasses.map((s) => [s.resource, s.mass / total]);
         const n = rotate(q, hole.normal);
-        const speed = hole.speed ?? LEAK_SPEED;
-        const ahead = radius + 0.01 + ((hole.credit - parcel) / rate) * speed;
+        const speed = hole.speed ?? LEAK_SPEED * l;
+        const ahead = radius + 0.01 * l + ((hole.credit - parcel) / rate) * speed;
         const point = add(b.position, add(rotate(q, hole.point), scale(n, ahead)));
         const near = world.bodies.filter((o) => {
           const dx = point.x - o.position.x;
           const dy = point.y - o.position.y;
-          const reach = boundingRadiusOf(o.shape) + radius + 1e-6;
+          const reach = boundingRadiusOf(o.shape) + radius + 1e-6 * l;
           return dx * dx + dy * dy <= reach * reach;
         });
         if (!clearOf(wallBodies(near))(point.x, point.y, radius)) break;
@@ -1217,43 +1241,47 @@ function runVents(world: World, dt: number, limit: number): void {
 function runLeaks(world: World, dt: number, profile?: Profile): void {
   const limit = profile?.limit.gasParcels ?? Infinity;
   runVents(world, dt, limit);
+  // The leak's sizes, in the world's units (units.ts).
+  const l = world.units?.length ?? 1;
+  const leakParcel = LEAK_PARCEL * (world.units?.mass ?? 1);
+  const leakRadius = LEAK_RADIUS * l;
   for (const b of world.bodies) {
-    const rate = leakRate(b);
+    const rate = leakRate(b, world.units);
     if (!(rate > 0)) continue;
     if (!b.breach) b.breach = defaultBreach(b);
     const br = b.breach;
     if (br.count === 0 && br.credit === 0) pushEvent(world, { tick: world.tick, type: "leak", data: { id: b.id } });
     br.credit += rate * dt;
-    while (br.credit >= LEAK_PARCEL && world.gas.count < limit) {
+    while (br.credit >= leakParcel && world.gas.count < limit) {
       const gasses = (b.contents ?? []).filter((s) => SPECIES[s.resource] && s.mass > 0);
       const total = gasses.reduce((t, s) => t + s.mass, 0);
-      if (total < LEAK_PARCEL) break;
+      if (total < leakParcel) break;
       const parts: [string, number][] = gasses.map((s) => [s.resource, s.mass / total]);
       const q = sinCos(b.angle);
       const n = rotate(q, br.normal);
       // Across the breach in mirrored pairs (as injectors do), and staggered along the jet by when in
       // the step each parcel's mass would have left, so parcels never start on top of each other.
-      const spread = (br.count % 2 === 0 ? 1 : -1) * (((Math.floor(br.count / 2) * GOLDEN) % 1) * 0.5) * BREACH_WIDTH * (1 - b.integrity);
-      const speed = br.speed ?? LEAK_SPEED;
-      const ahead = LEAK_RADIUS + 0.01 + ((br.credit - LEAK_PARCEL) / rate) * speed;
+      const spread = (br.count % 2 === 0 ? 1 : -1) * (((Math.floor(br.count / 2) * GOLDEN) % 1) * 0.5) * BREACH_WIDTH * l * (1 - b.integrity);
+      const speed = br.speed ?? LEAK_SPEED * l;
+      const ahead = leakRadius + 0.01 * l + ((br.credit - leakParcel) / rate) * speed;
       const point = add(b.position, add(rotate(q, br.point), add(scale(n, ahead), scale({ x: -n.y, y: n.x }, spread))));
       // Nothing leaks into another body: a breach pressed against something stays shut until it moves off.
       // Only bodies that reach within the clearance can block it (a wreck-strewn world has hundreds).
       const near = world.bodies.filter((o) => {
         const dx = point.x - o.position.x;
         const dy = point.y - o.position.y;
-        const reach = boundingRadiusOf(o.shape) + LEAK_RADIUS + 1e-6;
+        const reach = boundingRadiusOf(o.shape) + leakRadius + 1e-6 * l;
         return dx * dx + dy * dy <= reach * reach;
       });
-      if (!clearOf(wallBodies(near))(point.x, point.y, LEAK_RADIUS)) break;
+      if (!clearOf(wallBodies(near))(point.x, point.y, leakRadius)) break;
       const r = sub(point, b.position);
       const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
-      const p = emitParcel(world, b, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, speed)), LEAK_RADIUS);
+      const p = emitParcel(world, b, parts, leakParcel, leakParcel, point, add(vPoint, scale(n, speed)), leakRadius);
       addParcel(world.gas, p);
-      br.credit -= LEAK_PARCEL;
+      br.credit -= leakParcel;
       br.count += 1;
     }
-    br.credit = Math.min(br.credit, LEAK_PARCEL);
+    br.credit = Math.min(br.credit, leakParcel);
   }
 }
 
@@ -1274,12 +1302,12 @@ function runMagazines(world: World, dt: number): void {
     const angle = b.angle + mag.angle;
     const id = `${b.id}-shell-${mag.loaded + 1}`;
     // The shell as it will be: a polygon is moved to its centroid, so check the bore where it really lands.
-    const shell = normalizeBody({ ...structuredClone(mag.shell), id, position: add(b.position, rotate(q, mag.at)), velocity: { x: 0, y: 0 }, angle, angularVelocity: b.angularVelocity });
+    const shell = normalizeBody({ ...structuredClone(mag.shell), id, position: add(b.position, rotate(q, mag.at)), velocity: { x: 0, y: 0 }, angle, angularVelocity: b.angularVelocity }, world.units);
     // An explosive shell remembers its gun, and arms once it has left it.
     if (shell.explosive) shell.explosive = { ...shell.explosive, from: b.id, armed: false };
     // Loading into an occupied bore would push bodies apart violently: wait until it is clear.
     const placedShell = { shape: shell.shape, position: shell.position, rot: sinCos(angle) };
-    if (world.bodies.some((o) => { const m = collide(placedShell, { shape: o.shape, position: o.position, rot: sinCos(o.angle) }, 0, 0); return m !== null && m.points.some((p) => p.separation < -1e-3); })) continue;
+    if (world.bodies.some((o) => { const m = collide(placedShell, { shape: o.shape, position: o.position, rot: sinCos(o.angle) }, 0, 0); return m !== null && m.points.some((p) => p.separation < -1e-3 * (world.units?.length ?? 1)); })) continue;
     const r = sub(shell.position, b.position);
     shell.velocity = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
     const m0 = bodyMass(b);
@@ -1304,7 +1332,7 @@ function deployStop(world: World, b: Body, stop: NonNullable<Magazine["stop"]>):
   if (world.bodies.some((x) => x.id === id) || !(b.mass > stop.mass)) return;
   const q = sinCos(b.angle);
   const r = rotate(q, stop.at);
-  const body = normalizeBody({ id, shape: structuredClone(stop.shape), mass: stop.mass, position: add(b.position, r), velocity: { x: 0, y: 0 }, angle: b.angle + (stop.angle ?? 0), angularVelocity: b.angularVelocity, restitution: 0, friction: 0.3 });
+  const body = normalizeBody({ id, shape: structuredClone(stop.shape), mass: stop.mass, position: add(b.position, r), velocity: { x: 0, y: 0 }, angle: b.angle + (stop.angle ?? 0), angularVelocity: b.angularVelocity, restitution: 0, friction: 0.3 }, world.units);
   // As a shell loads: the body keeps the momentum the stop doesn't take.
   const m0 = bodyMass(b);
   body.velocity = add(b.velocity, { x: -b.angularVelocity * (body.position.y - b.position.y), y: b.angularVelocity * (body.position.x - b.position.x) });

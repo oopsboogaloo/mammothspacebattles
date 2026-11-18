@@ -12,6 +12,7 @@ import { bodyMass } from "./bodies.ts";
 import { add, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { massProps } from "./shapes.ts";
 import type { Body, BodyInput, JointInput, World } from "./world.ts";
+import { D, factor } from "./units.ts";
 
 export interface Shield {
   /** The control channel that holds it up. */
@@ -73,7 +74,8 @@ const STRONG = 1e12;
 
 /** The fuel in a generator's tanks that are still on its ship, kg. */
 function fuelOf(world: World, gen: Body, roots: ReadonlyMap<string, string>): Body[] {
-  return gen.shield!.from.map((id) => world.bodies.find((b) => b.id === id)).filter((b): b is Body => !!b && roots.get(b.id) === roots.get(gen.id) && (b.contents ?? []).some((c) => c.mass > DRY));
+  const dry = DRY * (world.units?.mass ?? 1);
+  return gen.shield!.from.map((id) => world.bodies.find((b) => b.id === id)).filter((b): b is Body => !!b && roots.get(b.id) === roots.get(gen.id) && (b.contents ?? []).some((c) => c.mass > dry));
 }
 
 /** Takes `kg` of fuel from the tanks, in proportion to what each store holds. Returns what it took. */
@@ -116,7 +118,7 @@ function spring(world: World, field: Body, host: Body, s: Shield, roots: Readonl
   const h = 2 * sp.damping * Math.sqrt(sp.stiffness * M) + sp.stiffness * dt;
   const k = -dt / (1 + dt * h * invMu);
   const J = { x: k * (sp.stiffness * d.x + h * v.x), y: k * (sp.stiffness * d.y + h * v.y) };
-  if (Math.abs(J.x) + Math.abs(J.y) < 1e-12) return false;
+  if (Math.abs(J.x) + Math.abs(J.y) < 1e-12 * factor(world.units, D.momentum)) return false;
   field.velocity = add(field.velocity, scale(J, 1 / mf));
   if (sp.spread) {
     // On every part by its mass: the ship as a whole is pushed, no part against another.
@@ -157,21 +159,22 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
       }
       const id = fieldId(gen.id);
       let field = world.bodies.find((b) => b.id === id);
+      const seed = SEED * (world.units?.length ?? 1);
       if (!field) {
-        s.r = SEED;
+        s.r = seed;
         const off = rotate(sinCos(host.angle), s.at);
         // Moving as that point of the ship moves.
         const velocity = add(host.velocity, { x: -host.angularVelocity * off.y, y: host.angularVelocity * off.x });
         const own = world.bodies.filter((b) => roots.get(b.id) === roots.get(host.id)).map((b) => b.id);
-        ops.addBody(world, { id, shape: { kind: "disc", radius: SEED }, mass: s.mass, position: add(host.position, off), velocity, angle: host.angle, angularVelocity: host.angularVelocity, restitution: 0.8, friction: 0.2, ...(s.spring ? { passes: own } : {}) });
+        ops.addBody(world, { id, shape: { kind: "disc", radius: seed }, mass: s.mass, position: add(host.position, off), velocity, angle: host.angle, angularVelocity: host.angularVelocity, restitution: 0.8, friction: 0.2, ...(s.spring ? { passes: own } : {}) });
         // Rigid, it is welded to the ship (and so passes through it as one of its parts); elastic,
         // it is its own body, passing through the ship's parts, held by the spring below.
-        if (!s.spring) ops.addJoint(world, { id: weldId(gen.id), a: host.id, b: id, anchorA: { ...s.at }, anchorB: { x: 0, y: 0 }, limits: { tension: STRONG, compression: STRONG, shear: STRONG, torque: STRONG } });
+        if (!s.spring) ops.addJoint(world, { id: weldId(gen.id), a: host.id, b: id, anchorA: { ...s.at }, anchorB: { x: 0, y: 0 }, limits: { tension: STRONG * factor(world.units, D.force), compression: STRONG * factor(world.units, D.force), shear: STRONG * factor(world.units, D.force), torque: STRONG * factor(world.units, D.energy) } });
         field = world.bodies.find((b) => b.id === id)!;
         world.events.push({ tick: world.tick, type: "shield.up", data: { id: gen.id } });
         changed = true;
       } else {
-        s.r = Math.min(s.radius, (s.r ?? SEED) + s.grow * dt);
+        s.r = Math.min(s.radius, (s.r ?? seed) + s.grow * dt);
         if (field.shape.kind === "disc" && field.shape.radius !== s.r) {
           field.shape = { kind: "disc", radius: s.r };
           changed = true;

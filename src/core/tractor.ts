@@ -264,10 +264,10 @@ function siphon(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs:
   for (const r of rbs) {
     if (!r.body.siphon || roots.get(r.body.id) === own) continue;
     const held = (r.body.contents ?? []).reduce((m, s) => m + s.mass, 0);
-    if (!(held > 1e-9)) continue;
+    if (!(held > 1e-9 * (world.units?.mass ?? 1))) continue;
     const d = sub(nearCopy(world, origin, r.body.position), origin);
     const dist = length(d);
-    if (dist > t.range || dist < 1e-6 || dot(d, axis) < dist * half) continue;
+    if (dist > t.range || dist < 1e-6 * (world.units?.length ?? 1) || dot(d, axis) < dist * half) continue;
     if (!best || dist < best.dist) best = { r, dist, held };
   }
   if (!best) return;
@@ -314,7 +314,7 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
     if (t.siphon && r.body.siphon) continue;
     const d = sub(nearCopy(world, origin, r.body.position), origin);
     const dist = length(d);
-    if (dist > t.range || dist < 1e-6 || dot(d, axis) < dist * half) continue;
+    if (dist > t.range || dist < 1e-6 * (world.units?.length ?? 1) || dot(d, axis) < dist * half) continue;
     const root = roots.get(r.body.id)!;
     const list = inBeam.get(root) ?? [];
     list.push(r);
@@ -359,7 +359,7 @@ function beam(world: World, ship: RB, roots: ReadonlyMap<string, string>, rbs: R
       const g = groupOf(rbs, roots, root);
       const toward = sub(origin, nearCopy(world, origin, g.com));
       const L = length(toward);
-      const closing = L > 1e-9 ? dot(sub(groupVelocity(g), shipV), toward) / L : 0;
+      const closing = L > 1e-9 * (world.units?.length ?? 1) ? dot(sub(groupVelocity(g), shipV), toward) / L : 0;
       const k = t.maxSpeed > 0 ? Math.max(0, Math.min(1, 1 - closing / t.maxSpeed)) : 0;
       const room = Math.max(0, t.maxSpeed - closing) * ((g.mass * shipGroup.mass) / (g.mass + shipGroup.mass));
       pull = Math.min(k * pull, room);
@@ -402,7 +402,7 @@ function tether(world: World, ship: RB, cargo: RB, roots: ReadonlyMap<string, st
   const c = groupOf(rbs, roots, roots.get(cargo.body.id)!);
   const d = sub(nearCopy(world, a.com, c.com), a.com);
   const dist = length(d);
-  if (dist < 1e-9) return;
+  if (dist < 1e-9 * (world.units?.length ?? 1)) return;
   const n = scale(d, 1 / dist);
   // Through both centres of mass: each end's effective mass is its whole mass.
   const invMu = 1 / a.mass + 1 / c.mass;

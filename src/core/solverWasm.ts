@@ -18,8 +18,8 @@ interface Exports {
   points_ptr(): number;
   acc_ptr(): number;
   sin_cos_into_acc(x: number): void;
-  solve_velocities(nb: number, nj: number, nc: number, iterations: number, dt: number, tolEnergy: number): void;
-  correct_positions(nb: number, nj: number, nc: number, slop: number): void;
+  solve_velocities(nb: number, nj: number, nc: number, iterations: number, dt: number, tolEnergy: number, length: number): void;
+  correct_positions(nb: number, nj: number, nc: number, slop: number, length: number): void;
   gas_reserve_parcels(n: number): void;
   gas_reserve_walls(nw: number, nv: number, nu: number): void;
   gas_ptr(which: number): number;
@@ -202,7 +202,7 @@ export function solveVelocitiesWasm(
   fillWelds(J, byId);
   fillContacts(C, P, contacts);
 
-  wasmModule().solve_velocities(rbs.length, welds.length, contacts.length, iterations, dt, tolEnergy);
+  wasmModule().solve_velocities(rbs.length, welds.length, contacts.length, iterations, dt, tolEnergy, world.units?.length ?? 1);
 
   for (let i = 0; i < rbs.length; i++) {
     const body = rbs[i].body;
@@ -264,7 +264,7 @@ export function correctPositionsWasm(world: World, rbs: readonly RB[], contacts:
   fillWelds(J, byId);
   fillContacts(C, P, contacts);
 
-  wasmModule().correct_positions(rbs.length, welds.length, contacts.length, slop);
+  wasmModule().correct_positions(rbs.length, welds.length, contacts.length, slop, world.units?.length ?? 1);
 
   for (let i = 0; i < rbs.length; i++) {
     const body = rbs[i].body;

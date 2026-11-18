@@ -122,7 +122,7 @@ function respawn(world: World, d: Duel, id: string, near: Vec2, from: Vec2): voi
   // there would meet the new ship): first square to it, then round, the line itself last.
   const dist = d.goal.respawn ?? 90;
   const away = sub(from, near);
-  const dir = length(away) > 1e-6 ? scale(away, 1 / length(away)) : { x: 0, y: 1 };
+  const dir = length(away) > 1e-6 * (world.units?.length ?? 1) ? scale(away, 1 / length(away)) : { x: 0, y: 1 };
   const clear = (p: Vec2) => world.bodies.every((b) => length(sub(b.position, p)) > t.radius + massProps(b.shape, 1).boundingRadius + 3);
   const bearings = [2, -2, 3, -3, 1, -1, 4, 0].map((k) => (k * Math.PI) / 4);
   let at = add(near, scale(rotate(sinCos(bearings[0]), dir), dist));

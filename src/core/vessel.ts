@@ -473,14 +473,16 @@ export interface BodyIndex {
 const INDEX_CELL = 2; // m
 const INDEX_MAX_CELLS = 64; // a body over more cells than this goes in `big`
 const cellKey = (cx: number, cy: number) => (cx + 32768) * 65536 + (cy + 32768);
-const cellOf = (v: number) => Math.max(-32767, Math.min(32767, Math.floor(v / INDEX_CELL)));
+/** The index's cell of a coordinate; `cell` is INDEX_CELL in the world's units. */
+const cellOf = (v: number, cell: number) => Math.max(-32767, Math.min(32767, Math.floor(v / cell)));
+const indexCell = (world: World): number => INDEX_CELL * (world.units?.length ?? 1);
 
 /** Files body i into `grid`, or into `big` if it covers too many cells. */
-function fileBody(grid: Map<number, number[]>, big: number[], o: Body, i: number, ro: number): void {
-  const x0 = cellOf(o.position.x - ro);
-  const x1 = cellOf(o.position.x + ro);
-  const y0 = cellOf(o.position.y - ro);
-  const y1 = cellOf(o.position.y + ro);
+function fileBody(grid: Map<number, number[]>, big: number[], o: Body, i: number, ro: number, cell: number): void {
+  const x0 = cellOf(o.position.x - ro, cell);
+  const x1 = cellOf(o.position.x + ro, cell);
+  const y0 = cellOf(o.position.y - ro, cell);
+  const y1 = cellOf(o.position.y + ro, cell);
   if ((x1 - x0 + 1) * (y1 - y0 + 1) > INDEX_MAX_CELLS) {
     big.push(i);
     return;
@@ -534,7 +536,7 @@ function fixedIndex(world: World): FixedIndex {
     f.y.push(o.position.y);
     f.shape.push(o.shape);
     f.r.set(i, ro);
-    fileBody(f.grid, f.big, o, i, ro);
+    fileBody(f.grid, f.big, o, i, ro, indexCell(world));
   });
   fixedIndexes.set(bodies, f);
   return f;
@@ -552,7 +554,7 @@ export function bodyIndex(world: World): BodyIndex {
     if (o.fixed) continue;
     const ro = reach(o.shape);
     r[i] = ro;
-    fileBody(grid, big, o, i, ro);
+    fileBody(grid, big, o, i, ro, indexCell(world));
   }
   return { grid, fixed: fixed.grid, big, r, stamp: new Int32Array(n), query: 0 };
 }
@@ -592,10 +594,10 @@ export function holdingShape(world: World, b: Body, roots: ReadonlyMap<string, s
     }
     return false;
   };
-  const x0 = cellOf(b.position.x - R);
-  const x1 = cellOf(b.position.x + R);
-  const y0 = cellOf(b.position.y - R);
-  const y1 = cellOf(b.position.y + R);
+  const x0 = cellOf(b.position.x - R, indexCell(world));
+  const x1 = cellOf(b.position.x + R, indexCell(world));
+  const y0 = cellOf(b.position.y - R, indexCell(world));
+  const y1 = cellOf(b.position.y + R, indexCell(world));
   for (let cx = x0; cx <= x1; cx++)
     for (let cy = y0; cy <= y1; cy++) {
       const k = cellKey(cx, cy);

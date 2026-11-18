@@ -27,6 +27,7 @@ import { assemblyOf, assemblyRoots } from "./joints.ts";
 import { massProps } from "./shapes.ts";
 import { railgunReady } from "./railgun.ts";
 import { nearestOffset, type Body, type World } from "./world.ts";
+import { D, factor } from "./units.ts";
 
 export type PilotGoal =
   | { kind: "heading"; angle: number }
@@ -195,14 +196,14 @@ export function learnShip(world: World, body: Body, keep?: ThrustChannel[]): Thr
       const dl = length(d0);
       const dir = toBody(scale(d0, -1 / (dl || 1)));
       const at = toBody(sub(add(e.position, rotate(qe, inj.outlet)), body.position));
-      const f = inj.rate * DESIGN_EXHAUST_SPEED;
+      const f = inj.rate * DESIGN_EXHAUST_SPEED * (world.units?.length ?? 1);
       F = add(F, scale(dir, f));
       T += cross(at, scale(dir, f));
       est += f;
     }
     const dir = scale(F, 1 / (length(F) || 1));
     // A point on the line of action with the same torque: F × r gives the moment arm.
-    const point = length(F) > 1e-9 ? scale({ x: -dir.y, y: dir.x }, -T / length(F)) : { x: 0, y: 0 };
+    const point = length(F) > 1e-9 * factor(world.units, D.force) ? scale({ x: -dir.y, y: dir.x }, -T / length(F)) : { x: 0, y: 0 };
     const old = keep?.find((k) => k.channel === ch);
     out.push({ channel: ch, direction: dir, point, design: est, gain: old ? old.gain : est });
   }
@@ -236,7 +237,7 @@ function loadedRounds(world: World): Set<string> {
     if (!mag || mag.loaded < 1) continue;
     const id = `${g.id}-shell-${mag.loaded}`;
     const sh = world.bodies.find((b) => b.id === id);
-    if (sh && length(sub(sh.position, g.position)) < length(mag.at) + 2) out.add(id);
+    if (sh && length(sub(sh.position, g.position)) < length(mag.at) + 2 * (world.units?.length ?? 1)) out.add(id);
   }
   return out;
 }
@@ -280,7 +281,7 @@ function obstacles(world: World, own: Set<string>, image: Image): Obstacle[] {
     let c = { x: 0, y: 0 };
     let v = { x: 0, y: 0 };
     for (const b of bs) {
-      const mb = b.fixed ? 1 : bodyMass(b);
+      const mb = b.fixed ? (world.units?.mass ?? 1) : bodyMass(b);
       m += mb;
       c = add(c, scale(b.position, mb));
       v = add(v, scale(b.fixed ? { x: 0, y: 0 } : b.velocity, mb));
@@ -299,7 +300,7 @@ function obstacles(world: World, own: Set<string>, image: Image): Obstacle[] {
  * and holds its closing speed to what it could still stop from (braking at `brake` after a half
  * turn of `flip` seconds). Returns the new velocity and the centres of what it is avoiding.
  */
-function avoid(v: Vec2, pos: Vec2, own: number, obs: Obstacle[], ahead: number, margin: number, brake: number, flip: number): { v: Vec2; avoiding: Vec2[] } {
+function avoid(v: Vec2, pos: Vec2, own: number, obs: Obstacle[], ahead: number, margin: number, brake: number, flip: number, l: number): { v: Vec2; avoiding: Vec2[] } {
   let out = v;
   const avoiding: Vec2[] = [];
   for (const o of obs) {
@@ -309,13 +310,13 @@ function avoid(v: Vec2, pos: Vec2, own: number, obs: Obstacle[], ahead: number, 
     if (dist - clear > length(sub(v, o.velocity)) * ahead + clear) continue; // far out of reach
     const w = sub(out, o.velocity); // our motion relative to it
     const ww = dot(w, w);
-    const t = ww > 1e-9 ? Math.min(ahead, Math.max(0, dot(r, w) / ww)) : 0;
+    const t = ww > 1e-9 * l * l ? Math.min(ahead, Math.max(0, dot(r, w) / ww)) : 0;
     const closest = sub(scale(w, t), r); // from it to us, at the closest approach
     const miss = length(closest);
     if (miss >= clear) continue;
     avoiding.push(o.centre);
     // Away from it, sideways to the motion: the closest-approach direction, or across the motion if dead on.
-    const away = miss > 1e-6 ? scale(closest, 1 / miss) : length(w) > 1e-9 ? scale({ x: -w.y, y: w.x }, 1 / length(w)) : scale(r, -1 / (dist || 1));
+    const away = miss > 1e-6 * l ? scale(closest, 1 / miss) : length(w) > 1e-9 * l ? scale({ x: -w.y, y: w.x }, 1 / length(w)) : scale(r, -1 / (dist || 1));
     const urgency = (2 * (clear - miss)) / Math.max(0.5, t);
     out = add(out, scale(away, urgency));
     // And never close on it faster than it could still stop in the room left: the turn, then the burn.
@@ -384,7 +385,7 @@ function gunOf(world: World, members: Body[], channels: string[]): { body: Body;
   const b = members.find((x) => x.magazine && fireChannel(x) && x.integrity > 0 && channels.includes(fireChannel(x)!));
   if (!b) return null;
   const at = b.magazine!.at;
-  const bore = length(at) > 1e-9 ? scale(at, 1 / length(at)) : { x: 0, y: 1 };
+  const bore = length(at) > 1e-9 * (world.units?.length ?? 1) ? scale(at, 1 / length(at)) : { x: 0, y: 1 };
   return { body: b, channel: fireChannel(b)!, bore };
 }
 
@@ -393,7 +394,7 @@ function gunOf(world: World, members: Body[], channels: string[]): { body: Body;
  * the ship's own velocity, so in the ship's frame the target moves at its velocity less ours. `lead`
  * (0–1, from combat skill) is how much of that motion it allows for. Returns a unit direction.
  */
-export function aimAt(from: Vec2, ownV: Vec2, target: Vec2, targetV: Vec2, muzzle: number, lead: number): Vec2 {
+export function aimAt(from: Vec2, ownV: Vec2, target: Vec2, targetV: Vec2, muzzle: number, lead: number, l = 1): Vec2 {
   const r = sub(target, from);
   const w = scale(sub(targetV, ownV), lead);
   const a = dot(w, w) - muzzle * muzzle;
@@ -401,7 +402,7 @@ export function aimAt(from: Vec2, ownV: Vec2, target: Vec2, targetV: Vec2, muzzl
   const c = dot(r, r);
   let t = length(r) / muzzle;
   const disc = b * b - 4 * a * c;
-  if (Math.abs(a) > 1e-9 && disc >= 0) {
+  if (Math.abs(a) > 1e-9 * l * l && disc >= 0) {
     const sq = Math.sqrt(disc);
     const ts = [(-b - sq) / (2 * a), (-b + sq) / (2 * a)].filter((x) => x > 0);
     if (ts.length) t = Math.min(...ts);
@@ -421,13 +422,13 @@ function wobble(tick: number, id: string): number {
  * Whether a straight line of fire is clear of everything but the target: no rock or other ship in
  * the way. Debris lighter than `light` (bits knocked off, loose shells) is shot through.
  */
-function clearShot(from: Vec2, dir: Vec2, range: number, obs: Obstacle[], target: string, light: number): boolean {
+function clearShot(from: Vec2, dir: Vec2, range: number, obs: Obstacle[], target: string, light: number, l: number): boolean {
   for (const o of obs) {
     if (o.root === target || o.mass < light) continue;
     const r = sub(o.centre, from);
     const t = dot(r, dir);
     if (t < 0 || t > range) continue;
-    if (length(sub(r, scale(dir, t))) < o.radius + 0.5) return false;
+    if (length(sub(r, scale(dir, t))) < o.radius + 0.5 * l) return false;
   }
   return true;
 }
@@ -452,6 +453,9 @@ export function runPilots(world: World, dt: number): void {
     // The interval counts 1/240 s (as scenario steps do), whatever the step rate.
     p.next = world.tick + Math.max(1, Math.floor((p.interval * INTERVAL_TICK) / dt + 1e-9));
     const ship = shipState(world, body);
+    // The world's length and mass units (units.ts): the distances and speeds below are the core's.
+    const L = world.units?.length ?? 1;
+    const ML = factor(world.units, D.force);
     const ids = new Set(ship.members.map((b) => b.id));
     // Relearn when the ship's parts change (a part lost, a new one welded on).
     const parts = ship.members.map((b) => b.id).join(",");
@@ -479,13 +483,13 @@ export function runPilots(world: World, dt: number): void {
       const et = tObs - tPred;
       // Normalised LMS on each active channel's gain, in force units (torque over an arm of 1 m).
       let norm = 1e-9;
-      for (const c of chans) norm += (p.lagged[c.channel] ?? 0) ** 2 * (1 + cross(c.point, c.direction) ** 2);
+      for (const c of chans) norm += (p.lagged[c.channel] ?? 0) ** 2 * (1 + (cross(c.point, c.direction) / L) ** 2);
       for (const c of chans) {
         const u = p.lagged[c.channel] ?? 0;
         if (u < 0.05) continue;
         const d = rotate(q, c.direction);
         const arm = cross(c.point, c.direction);
-        c.gain += (LEARN * u * (dot(ef, d) + et * arm)) / norm;
+        c.gain += (LEARN * u * (dot(ef, d) + (et * arm) / (L * L))) / norm;
         c.gain = Math.min(20 * c.design, Math.max(0.2 * c.design, c.gain));
       }
     }
@@ -496,7 +500,7 @@ export function runPilots(world: World, dt: number): void {
     const axisBody = (() => {
       let a = { x: 0, y: 0 };
       for (const c of chans) a = add(a, scale(c.direction, c.gain));
-      return length(a) > 1e-9 ? scale(a, 1 / length(a)) : { x: 0, y: 1 };
+      return length(a) > 1e-9 * ML ? scale(a, 1 / length(a)) : { x: 0, y: 1 };
     })();
     const axis = rotate(q, axisBody); // where the engines push, in the world
     let force = { x: 0, y: 0 };
@@ -510,7 +514,7 @@ export function runPilots(world: World, dt: number): void {
     const cs = Math.min(1, Math.max(0, p.skill.combat));
     const ownR = Math.max(...ship.members.map((b) => length(sub(b.position, ship.centre)) + massProps(b.shape, 1).boundingRadius));
     const gun = gunOf(world, ship.members, pilotChannels(world, body));
-    p.combat ??= { muzzle: 40, pulse: 0, shots: 0 };
+    p.combat ??= { muzzle: 40 * L, pulse: 0, shots: 0 };
     const cb = p.combat;
     // A railgun's launch speed is in its design; a gas cannon's is learned from its shots.
     if (gun?.body.magazine?.railgun && !cb.shots) cb.muzzle = gun.body.magazine.railgun.speed;
@@ -518,7 +522,7 @@ export function runPilots(world: World, dt: number): void {
     if (cb.shot) {
       const sh = world.bodies.find((b) => b.id === cb.shot);
       if (!sh) cb.shot = undefined;
-      else if (gun && length(nearestOffset(world, gun.body.position, sh.position)) > 6) {
+      else if (gun && length(nearestOffset(world, gun.body.position, sh.position)) > 6 * L) {
         cb.muzzle = 0.5 * cb.muzzle + 0.5 * length(sub(sh.velocity, ship.velocity));
         cb.shot = undefined;
       }
@@ -532,7 +536,7 @@ export function runPilots(world: World, dt: number): void {
     let seekingAt: Vec2 | null = null;
     if (mode === "hunting" || mode === "cautious" || mode === "evading" || mode === "clearing") {
       const side = p.side ?? "enemy";
-      const seen = shipsAround(world, ids, image).filter((x) => length(sub(x.centre, ship.centre)) <= (p.detect ?? 150));
+      const seen = shipsAround(world, ids, image).filter((x) => length(sub(x.centre, ship.centre)) <= (p.detect ?? 150 * L));
       const foes = seen.filter((x) => x.side !== side || (mode === "hunting" && p.mad)); // a mad pilot may turn on its own side
       const nearest = (xs: Ship[]) => xs.reduce<Ship | null>((m, x) => (!m || length(sub(x.centre, ship.centre)) < length(sub(m.centre, ship.centre)) ? x : m), null);
       // Cautious: a foreign shell whose path passes within 4 ship widths of it, or a hit, starts a minute's rage.
@@ -544,7 +548,7 @@ export function runPilots(world: World, dt: number): void {
           if (!b.id.includes("-shell-") || b.id.startsWith(mine) || own.has(b.id) || loaded.has(b.id)) continue;
           const r = nearestOffset(world, ship.centre, b.position);
           const w = sub(b.velocity, ship.velocity);
-          if (length(w) < 5) continue; // a loaded shell, not one in flight
+          if (length(w) < 5 * L) continue; // a loaded shell, not one in flight
           const t = Math.max(0, Math.min(3, -dot(r, w) / dot(w, w)));
           const hit = world.contacts.some((c) => (c.a === b.id && own.has(c.b)) || (c.b === b.id && own.has(c.a)));
           if (hit || length(add(r, scale(w, t))) < 4 * 2 * ownR) {
@@ -587,31 +591,31 @@ export function runPilots(world: World, dt: number): void {
         // Attack: close to a stand-off distance, matching its motion, then turn and fire.
         cb.target = target.id;
         // A rock is 12 m across its radius and drifts at up to 6 m/s: Clearing stands further off.
-        const standoff = (mode === "clearing" ? 50 : 35) + 20 * (1 - cs);
+        const standoff = ((mode === "clearing" ? 50 : 35) + 20 * (1 - cs)) * L;
         const d = sub(target.centre, ship.centre);
         const dist = length(d);
         const relV = length(sub(ship.velocity, target.velocity));
         // A rock is big and comes on: Clearing backs off to its distance again when the rock closes
         // on it, where a hunter holds its ground to shoot.
-        const tooNear = mode === "clearing" && dist < standoff - 10;
-        if (dist < standoff + 20 && relV < 3 && !tooNear) cb.attacking = true;
-        else if (dist > standoff + 40 || relV > 6 || tooNear) cb.attacking = false;
+        const tooNear = mode === "clearing" && dist < standoff - 10 * L;
+        if (dist < standoff + 20 * L && relV < 3 * L && !tooNear) cb.attacking = true;
+        else if (dist > standoff + 40 * L || relV > 6 * L || tooNear) cb.attacking = false;
         p.plan.enemy = target.centre;
         if (cb.attacking && gun) {
           const muzzleAt = add(gun.body.position, rotate(sinCos(gun.body.angle), gun.body.magazine!.at));
-          let dir = aimAt(muzzleAt, ship.velocity, target.centre, target.velocity, cb.muzzle, 0.3 + 0.7 * cs);
+          let dir = aimAt(muzzleAt, ship.velocity, target.centre, target.velocity, cb.muzzle, 0.3 + 0.7 * cs, L);
           // Aim error that grows as combat skill falls: up to about 4°, steady for a second at a time.
           const e = 0.07 * (1 - cs) * wobble(Math.floor(world.time + 1e-9), body.id);
           const qe = sinCos(e);
           dir = rotate(qe, dir);
           aim = dir;
-          p.plan.aim = add(muzzleAt, scale(dir, Math.min(dist, 120)));
+          p.plan.aim = add(muzzleAt, scale(dir, Math.min(dist, 120 * L)));
           // Fire control (AIP-012): aimed well enough, in range, a shell in the bore, the line clear.
           const boreWorld = rotate(sinCos(gun.body.angle), gun.bore);
           const tol = 0.01 + 0.06 * (1 - cs);
           const loaded = gun.body.magazine!.railgun ? railgunReady(gun.body) : loadedRounds(world).has(`${gun.body.id}-shell-${gun.body.magazine!.loaded}`);
-          const inRange = dist < 100;
-          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids, image), target.root, 0.2 * ship.mass);
+          const inRange = dist < 100 * L;
+          const clear = clearShot(muzzleAt, dir, dist, obstacles(world, ids, image), target.root, 0.2 * ship.mass, L);
           fire = loaded && inRange && clear && dot(boreWorld, dir) > sinCos(tol).c;
           label = `${angry ? "fighting back" : "attacking"} ${target.id}${fire ? ", firing" : !loaded ? ", reloading" : !clear ? ", no clear shot" : ""}`;
           if (fire && cb.pulse <= 0) {
@@ -621,7 +625,7 @@ export function runPilots(world: World, dt: number): void {
           }
           goal = { kind: "velocity", velocity: target.velocity }; // hold its distance while aiming
         } else {
-          const away = dist > 1e-6 ? scale(d, -1 / dist) : { x: 0, y: -1 };
+          const away = dist > 1e-6 * L ? scale(d, -1 / dist) : { x: 0, y: -1 };
           goal = { kind: "station", body: target.id, offset: scale(away, standoff) };
           label = `${angry ? "turning on" : "closing on"} ${target.id}`;
         }
@@ -637,19 +641,19 @@ export function runPilots(world: World, dt: number): void {
           p.plan.target = image(collect.position);
         }
         const threat = collect ? null : nearest(foes);
-        const tooClose = threat && length(sub(threat.centre, ship.centre)) < 60 && dot(sub(threat.velocity, ship.velocity), sub(ship.centre, threat.centre)) > 0;
-        if (mode === "evading" && threat && (tooClose || (p.fleeing && length(sub(threat.centre, ship.centre)) < 100))) {
+        const tooClose = threat && length(sub(threat.centre, ship.centre)) < 60 * L && dot(sub(threat.velocity, ship.velocity), sub(ship.centre, threat.centre)) > 0;
+        if (mode === "evading" && threat && (tooClose || (p.fleeing && length(sub(threat.centre, ship.centre)) < 100 * L))) {
           // Evading: run, straight away from it, until there is room again.
           p.fleeing = true;
           const away = sub(ship.centre, threat.centre);
-          goal = { kind: "point", target: add(ship.centre, scale(away, 60 / (length(away) || 1))), stop: false, speed: 6 + 8 * s };
+          goal = { kind: "point", target: add(ship.centre, scale(away, (60 * L) / (length(away) || 1))), stop: false, speed: (6 + 8 * s) * L };
           label = `evading ${threat.id}`;
           p.plan.enemy = threat.centre;
         } else if (mode === "cautious" && !angry && nearest(foes.filter((x) => x.side === "player"))) {
           // Cautious: the player is near; stop and watch it.
           const pl = nearest(foes.filter((x) => x.side === "player"))!;
           const watch = sub(pl.centre, ship.centre);
-          if (length(ship.velocity) > 1) goal = { kind: "velocity", velocity: { x: 0, y: 0 } };
+          if (length(ship.velocity) > L) goal = { kind: "velocity", velocity: { x: 0, y: 0 } };
           else if (gun) aim = scale(watch, 1 / (length(watch) || 1));
           label = `watching ${pl.id}`;
           p.plan.enemy = pl.centre;
@@ -666,7 +670,7 @@ export function runPilots(world: World, dt: number): void {
       const i = Math.min(goal.index ?? 0, goal.waypoints.length - 1);
       const last = i === goal.waypoints.length - 1 && !goal.loop;
       const at = image(goal.waypoints[i]);
-      const tolR = 2 + 2 * (1 - s);
+      const tolR = (2 + 2 * (1 - s)) * L;
       if (length(sub(at, ship.centre)) < tolR * 2 && !last) goal.index = (i + 1) % goal.waypoints.length;
       p.plan.route = goal.waypoints;
       label = `route: waypoint ${(goal.index ?? i) + 1} of ${goal.waypoints.length}`;
@@ -676,13 +680,13 @@ export function runPilots(world: World, dt: number): void {
       const most = chans.reduce((m, c) => m + c.gain, 0);
       // How hard it plans to brake: half its share of the thrust (the velocity loop near the mark
       // doesn't ask for all of it), less gravity; and how long a half turn takes.
-      const aBrake = Math.max(0.3, (0.5 * authority * most) / ship.mass - length(g));
+      const aBrake = Math.max(0.3 * L, (0.5 * authority * most) / ship.mass - length(g));
       const tFlip = Math.PI / (0.8 + 1.2 * s) + 0.3;
       let target: Vec2;
       let carry = { x: 0, y: 0 };
       let stop = true;
-      let cruise = 4 + 8 * s;
-      let tolP = 1 + 2 * (1 - s);
+      let cruise = (4 + 8 * s) * L;
+      let tolP = (1 + 2 * (1 - s)) * L;
       if (goal.kind === "station") {
         const st = goal;
         const host = world.bodies.find((b) => b.id === st.body);
@@ -704,13 +708,13 @@ export function runPilots(world: World, dt: number): void {
       // Keeping station, it closes gently (speed in proportion to the gap), so as not to overshoot a moving mark.
       let speed = goal.kind === "station" ? Math.min(cruise, vStop, 0.3 * dist) : stop ? Math.min(cruise, vStop) : cruise;
       // Flying into gold (hundreds of kilograms of it): the last stretch at walking pace.
-      if (seekingAt) speed = Math.min(speed, 1.2 + 0.15 * Math.max(0, dist - 10));
+      if (seekingAt) speed = Math.min(speed, 1.2 * L + 0.15 * Math.max(0, dist - 10 * L));
       // Holding at a mark, small drifts matter: every turn to hold the heading also pushes the ship.
       if (goal.kind === "point" && stop && dist < 2 * tolP) holdTight = true;
-      let vWant = dist > 1e-6 ? add(carry, scale(d, speed / dist)) : carry;
+      let vWant = dist > 1e-6 * L ? add(carry, scale(d, speed / dist)) : carry;
       // Closing on a stop faster than planned: ask for that excess again, so it brakes hard along
       // the line (the velocity loop alone eases off as it nears the mark, and overshoots).
-      if (goal.kind === "point" && stop && dist > 1e-6) {
+      if (goal.kind === "point" && stop && dist > 1e-6 * L) {
         const closing = dot(sub(ship.velocity, carry), scale(d, 1 / dist));
         if (closing > speed) vWant = sub(vWant, scale(d, (closing - speed) / dist));
       }
@@ -720,8 +724,8 @@ export function runPilots(world: World, dt: number): void {
     // Steer round whatever is in the way (AIP-010).
     if (goal.kind === "velocity" && p.goal.kind !== "velocity") {
       const mostT = chans.reduce((m, c) => m + c.gain, 0);
-      const brake = Math.max(0.3, (authority * mostT) / ship.mass - length(g));
-      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids, image).filter((o) => o.root !== seeking && !(seekingAt && length(sub(o.centre, seekingAt)) < o.radius + SEEK_CLEAR)), 3 + 4 * s, 5 - 2 * s, brake, Math.PI / (0.8 + 1.2 * s) + 0.3);
+      const brake = Math.max(0.3 * L, (authority * mostT) / ship.mass - length(g));
+      const steered = avoid(goal.velocity, ship.centre, ownR, obstacles(world, ids, image).filter((o) => o.root !== seeking && !(seekingAt && length(sub(o.centre, seekingAt)) < o.radius + SEEK_CLEAR * L)), 3 + 4 * s, (5 - 2 * s) * L, brake, Math.PI / (0.8 + 1.2 * s) + 0.3, L);
       if (steered.avoiding.length) label += ", steering round";
       p.plan.avoiding = steered.avoiding;
       goal = { kind: "velocity", velocity: steered.v };
@@ -738,7 +742,7 @@ export function runPilots(world: World, dt: number): void {
       // An error along the thrust axis is fixed by throttle alone, and always is. One across it,
       // or one that needs braking, means turning the ship: small ones are let be (a tolerance
       // that shrinks with skill), with hysteresis, or every overshoot would set it turning.
-      const tol = (0.15 + 0.35 * (1 - s)) * (holdTight ? 0.5 : 1);
+      const tol = (0.15 + 0.35 * (1 - s)) * (holdTight ? 0.5 : 1) * L;
       const eAlong = dot(raw, axis);
       const turn = add(sub(raw, scale(axis, eAlong)), scale(axis, Math.min(0, eAlong)));
       if (length(turn) < tol) p.settled = true;
@@ -748,7 +752,7 @@ export function runPilots(world: World, dt: number): void {
       // misjudged engine) is worked off by throttle. Under gravity only: in open space it just overshoots. Signed, so an overshoot winds it back down;
       // never negative, since it can only add throttle; and only near the wanted velocity, or it
       // would wind up while accelerating toward it.
-      if (length(raw) < 1 && length(g) > 0.05) p.trim = Math.min(2, Math.max(0, (p.trim ?? 0) + (eAlong < 0 ? 4 : 1) * eAlong * p.interval * INTERVAL_TICK)); // unwinds fast on overshoot
+      if (length(raw) < L && length(g) > 0.05 * L) p.trim = Math.min(2 * L, Math.max(0, (p.trim ?? 0) + (eAlong < 0 ? 4 : 1) * eAlong * p.interval * INTERVAL_TICK)); // unwinds fast on overshoot
       const a = add(scale(e, k), scale(axis, 0.3 * k * (p.trim ?? 0)));
       force = scale(sub(a, g), ship.mass); // what the engines must supply, gravity included
       // Point the thrust axis along the force only when there is a force worth pointing for: a
@@ -787,8 +791,8 @@ export function runPilots(world: World, dt: number): void {
 
     // Allocate: rows are body-frame force x, y, and torque; torque weighted most.
     const A = [chans.map((c) => c.gain * c.direction.x), chans.map((c) => c.gain * c.direction.y), chans.map((c) => c.gain * cross(c.point, c.direction))];
-    const scaleT = Math.max(1, ...chans.map((c) => Math.abs(c.gain * cross(c.point, c.direction))));
-    const scaleF = Math.max(1, ...chans.map((c) => c.gain));
+    const scaleT = Math.max(ML * L, ...chans.map((c) => Math.abs(c.gain * cross(c.point, c.direction))));
+    const scaleF = Math.max(ML, ...chans.map((c) => c.gain));
     const u = allocate(A, [fBody.x, fBody.y, torque * authority], [1 / (scaleF * scaleF), 1 / (scaleF * scaleF), 25 / (scaleT * scaleT)], chans.length);
     const decay = 1 - expD(-(p.interval * INTERVAL_TICK) / ENGINE_LAG);
     chans.forEach((c, i) => {

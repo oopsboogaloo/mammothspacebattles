@@ -127,7 +127,7 @@ export function applyCollectors(world: World, rbs: RB[], dt: number): { impulse:
       c.captured = c.cargo;
       continue;
     }
-    if (dist < 1e-9) continue;
+    if (dist < 1e-9 * (world.units?.length ?? 1)) continue;
     const n = scale(d, 1 / dist);
     const g = groupOf(rbs, roots, roots.get(cargo.body.id)!);
     const invMu = invMassAlong(g, cargo.body.position, n);

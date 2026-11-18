@@ -42,8 +42,10 @@ function hash01(id: string, k: number): number {
 /** The dust a body leaves: more for a bigger body, scattered over its outline, bursting outward. */
 export function burst(world: World, b: Body): void {
   const props = massProps(b.shape, 1);
-  const R = Math.max(0.1, props.boundingRadius);
-  const n = Math.max(10, Math.min(80, Math.round(30 * Math.sqrt(props.area))));
+  // In the world's units (units.ts): sizes, spread and speeds are the core's, times its length.
+  const l = world.units?.length ?? 1;
+  const R = Math.max(0.1 * l, props.boundingRadius);
+  const n = Math.max(10, Math.min(80, Math.round(30 * (Math.sqrt(props.area) / l))));
   const kind: DustKind = b.mineral === "gold" ? "gold" : b.material?.name === "rock" || b.compound || !b.material ? "rock" : "metal";
   const list = (world.dust ??= []);
   for (let k = 0; k < n; k++) {
@@ -54,8 +56,8 @@ export function burst(world: World, b: Body): void {
     const at = add(b.position, scale(dir, r));
     // The body's motion at that point, plus a burst outward of 0.5–3 m/s.
     const spin = { x: -b.angularVelocity * (at.y - b.position.y), y: b.angularVelocity * (at.x - b.position.x) };
-    const out = 0.5 + 2.5 * hash01(b.id, 4 * k + 2);
-    list.push({ position: at, velocity: add(add(b.velocity, spin), scale(dir, out)), age: 0, life: 20 + 10 * hash01(b.id, 4 * k + 3), size: 0.04 + 0.08 * hash01(b.id, 4 * k + 5), kind });
+    const out = (0.5 + 2.5 * hash01(b.id, 4 * k + 2)) * l;
+    list.push({ position: at, velocity: add(add(b.velocity, spin), scale(dir, out)), age: 0, life: 20 + 10 * hash01(b.id, 4 * k + 3), size: (0.04 + 0.08 * hash01(b.id, 4 * k + 5)) * l, kind });
   }
   if (list.length > DUST_LIMIT) list.splice(0, list.length - DUST_LIMIT);
 }

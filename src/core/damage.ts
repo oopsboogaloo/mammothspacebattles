@@ -19,6 +19,7 @@
 // and its joints and links break. A joint or link at 0 breaks. Damage only reads the world's
 // contacts; it never pushes on anything, so the ledger is unchanged.
 
+import { D, factor, type Units } from "./units.ts";
 import { bodiesById } from "./bodies.ts";
 import { add, invRotate, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { SPECIES } from "./gas.ts";
@@ -89,10 +90,10 @@ export function gasStores(b: Body): { mass: number; capacity: number } {
 }
 
 /** How fast a body leaks now, kg/s (DMG-004). */
-export function leakRate(b: Body): number {
+export function leakRate(b: Body, units?: Units): number {
   if (b.integrity >= 1 || b.fixed) return 0;
   const g = gasStores(b);
-  return g.capacity > 0 && g.mass > 0 ? LEAK_RATE * (1 - b.integrity) * (g.mass / g.capacity) : 0;
+  return g.capacity > 0 && g.mass > 0 ? LEAK_RATE * (units?.mass ?? 1) * (1 - b.integrity) * (g.mass / g.capacity) : 0;
 }
 
 /** A breach for a body damaged without a hit (set by hand): the top of its outline. */
@@ -121,13 +122,14 @@ const anchorAt = (b: Body, local: Vec2): Vec2 => add(b.position, rotate(sinCos(b
 export function applyDamage(world: World): void {
   // Energy and an impulse-weighted point per pair, in contact order (deterministic).
   const pairs = new Map<string, { a: string; b: string; energy: number; x: number; y: number; w: number; shift?: Vec2 }>();
+  const least = 1e-12 * factor(world.units, D.momentum);
   for (const c of world.contacts) {
     if (!(c.energyLost > 0)) continue;
     const k = `${c.a}\u0000${c.b}`;
     let p = pairs.get(k);
     if (!p) pairs.set(k, (p = { a: c.a, b: c.b, energy: 0, x: 0, y: 0, w: 0, shift: c.shift }));
     p.energy += c.energyLost;
-    const w = Math.max(c.normalImpulse, 1e-12);
+    const w = Math.max(c.normalImpulse, least);
     p.x += w * c.point.x;
     p.y += w * c.point.y;
     p.w += w;
@@ -162,7 +164,7 @@ export function damageBody(world: World, body: Body, energy: number, at: Vec2): 
     const q = sinCos(body.angle);
     const local = invRotate(q, sub(at, body.position));
     const d = length(local);
-    body.breach = { point: local, normal: d > 1e-9 ? scale(local, 1 / d) : { x: 0, y: 1 }, credit: 0, count: 0 };
+    body.breach = { point: local, normal: d > 1e-9 * (world.units?.length ?? 1) ? scale(local, 1 / d) : { x: 0, y: 1 }, credit: 0, count: 0 };
   }
   world.events.push({ tick: world.tick, type: "damage", data: { id, loss, integrity: body.integrity, energy } });
   const r = radius(body);

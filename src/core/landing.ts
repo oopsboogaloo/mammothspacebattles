@@ -233,7 +233,7 @@ export function judgeLanding(world: World, c: Challenge, fromTick: number): Land
   }
   const onPad = s.padAt !== undefined && world.time - s.padAt <= BOUNCE_TIME + 1e-9;
   const speed = Math.sqrt(t.vx * t.vx + t.vy * t.vy);
-  if (!(onPad && speed < REST_SPEED && Math.abs(t.spin) < REST_SPIN)) {
+  if (!(onPad && speed < REST_SPEED * (world.units?.length ?? 1) && Math.abs(t.spin) < REST_SPIN)) {
     s.restSince = undefined;
     return null;
   }
@@ -286,7 +286,7 @@ function judgePhysical(world: World, c: Challenge, t: ReturnType<typeof landingT
   }
   const speed = Math.sqrt(t.vx * t.vx + t.vy * t.vy);
   const touching = world.contacts.some((k) => t.members.has(k.a) !== t.members.has(k.b));
-  if (!(touching && speed < REST_SPEED && Math.abs(t.spin) < REST_SPIN)) {
+  if (!(touching && speed < REST_SPEED * (world.units?.length ?? 1) && Math.abs(t.spin) < REST_SPIN)) {
     s.restSince = undefined;
     return null;
   }
@@ -304,6 +304,6 @@ function judgePhysical(world: World, c: Challenge, t: ReturnType<typeof landingT
     return "landed";
   }
   // Resting off a pad (or tipped on one): the player may take off again, while there is fuel.
-  if (!(s.fuel > 1e-6)) return end("stranded", onPad ? "Tipped over on the pad, out of fuel." : "Out of fuel, off the pads.");
+  if (!(s.fuel > 1e-6 * (world.units?.mass ?? 1))) return end("stranded", onPad ? "Tipped over on the pad, out of fuel." : "Out of fuel, off the pads.");
   return null;
 }

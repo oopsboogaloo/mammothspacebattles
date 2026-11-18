@@ -100,6 +100,13 @@ All tolerances (`tol.*`) and limits (`limit.*`) come from the active simulation 
   *Rationale:* ECMAScript only specifies these results as "implementation-approximated", and they do differ between platforms.
 - **DET-004** `[M · M0 · D]` The iteration order of every collection that affects results shall be defined (e.g. by stable entity ID), never by object-key or hash order.
 
+### 5.2b Units
+
+The game's units are being rescaled (Chloe, 18 November 2026; `docs/units-rescale-plan.md`): lengths ×4 and masses ×1024, time unchanged, so its ships fit a mammoth and weigh tonnes, and play exactly as before.
+
+- **UNITS-001** `[M · M10 · D]` A world may be built in other units than the core's own (`world.units: {length, mass}`). Every constant the core uses that has a dimension shall scale with them, so that every scenario, converted to lengths ×4 and masses ×1024 (`scaleScenario`), runs bit for bit as in the core's units once each quantity is divided by its factor: every body's position, velocity, angle, spin, mass and integrity, every engine chamber, contact, weld and gas parcel, and every event, after every step, with scripted input on every control. (Added 18 November 2026.)
+- **UNITS-002** `[M · M10 · D]` The same shall hold for each of the designer's presets flown in Mammoth Thrust's first level: THRUST OG, THRUST 1, Mastodon, Stegodon, Phiomia and Loxodon. (Added 18 November 2026.)
+
 ### 5.3 Ledger and diagnostics
 
 - **LED-001** `[M · M1 · P]` After every step, the system shall record total mass, linear momentum, angular momentum about the world origin, and total energy split into kinetic, gravitational potential, thermal and chemical.

@@ -204,7 +204,7 @@ export function generatorOnline(world: World, gen: Body, byId: ReadonlyMap<strin
     }
   };
   walk(gen.id);
-  return fuel >= FED;
+  return fuel >= FED * (world.units?.mass ?? 1);
 }
 
 export function turretWorks(world: World, carriage: Body, lk: TurretLookup = turretLookup(world)): boolean {
@@ -284,7 +284,7 @@ export function runTurrets(world: World, dt: number): number {
     const target = t.target !== undefined ? byId.get(t.target) : undefined;
     const to = target ? sub(target.position, gun.position) : { x: 0, y: 0 };
     const dist = length(to);
-    t.sees = !!target && dist <= t.range && dist > 1e-6 && clearLine(world, gun.position, target.position);
+    t.sees = !!target && dist <= t.range && dist > 1e-6 * (world.units?.length ?? 1) && clearLine(world, gun.position, target.position);
     if (!t.sees) continue; // the gun stops where it is
 
     const pick = (): void => {

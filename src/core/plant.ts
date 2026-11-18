@@ -116,10 +116,10 @@ export function startPlant(spec: PlantSpec): PlantState {
 }
 
 /** A new leak of size 1 on a dome at a world point on (or near) its surface, pointing out from its centre. */
-function addLeak(dome: Body, at: Vec2, speed: number | undefined): number {
+function addLeak(dome: Body, at: Vec2, speed: number | undefined, l: number): number {
   const local = invRotate(sinCos(dome.angle), sub(at, dome.position));
   const d = length(local);
-  const hole: Breach = { point: local, normal: d > 1e-9 ? { x: local.x / d, y: local.y / d } : { x: 0, y: 1 }, credit: 0, count: 0, size: 1, ...(speed ? { speed } : {}) };
+  const hole: Breach = { point: local, normal: d > 1e-9 * l ? { x: local.x / d, y: local.y / d } : { x: 0, y: 1 }, credit: 0, count: 0, size: 1, ...(speed ? { speed } : {}) };
   dome.vents!.holes.push(hole);
   return dome.vents!.holes.length - 1;
 }
@@ -225,7 +225,7 @@ export function takeStrikes(world: World, spec: PlantSpec, s: PlantState): void 
     let p = pairs.get(k);
     if (!p) pairs.set(k, (p = { dome, by, energy: 0, x: 0, y: 0, w: 0 }));
     p.energy += c.energyLost;
-    const w = Math.max(c.normalImpulse, 1e-12);
+    const w = Math.max(c.normalImpulse, 1e-12 * (world.units?.length ?? 1) * (world.units?.mass ?? 1));
     p.x += w * c.point.x;
     p.y += w * c.point.y;
     p.w += w;
@@ -273,7 +273,7 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       const touch = world.contacts.find((c) => (c.a === a && c.b === b) || (c.a === b && c.b === a));
       const shellBody = world.bodies.find((x) => x.id === shell);
       const at = touch?.point ?? shellBody?.position ?? dome.position;
-      s.leak = { dome: dome.id, index: addLeak(dome, at, spec.leakSpeed) };
+      s.leak = { dome: dome.id, index: addLeak(dome, at, spec.leakSpeed, (world.units?.length ?? 1)) };
       s.domeHits = (s.domeHits ?? 0) + 1;
       s.holes += 1;
       changed = true;
@@ -299,11 +299,11 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
         if (d >= reach) continue;
         const n = Math.max(1, Math.round((spec.blastLeaks ?? 3) * (1 - d / reach)));
         // Spread along the side facing the blast, a metre apart.
-        const toward = d > 1e-9 ? { x: (near.x - at.x) / d, y: (near.y - at.y) / d } : { x: 0, y: -1 };
+        const toward = d > 1e-9 * (world.units?.length ?? 1) ? { x: (near.x - at.x) / d, y: (near.y - at.y) / d } : { x: 0, y: -1 };
         const across = { x: -toward.y, y: toward.x };
         for (let k = 0; k < n; k++) {
-          const off = (k - (n - 1) / 2) * 1;
-          addLeak(dome, nearestOnOutline(dome, add(near, { x: across.x * off, y: across.y * off })), spec.leakSpeed);
+          const off = (k - (n - 1) / 2) * (world.units?.length ?? 1);
+          addLeak(dome, nearestOnOutline(dome, add(near, { x: across.x * off, y: across.y * off })), spec.leakSpeed, (world.units?.length ?? 1));
           s.holes += 1;
         }
         struck = true;
@@ -325,7 +325,7 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
       if (share <= imp.threshold || knocks.some((k) => k.by === p.by && k.dome === p.dome)) continue;
       const dome = world.bodies.find((b) => b.id === p.dome);
       if (!dome?.vents) continue;
-      const index = addLeak(dome, p.at, spec.leakSpeed);
+      const index = addLeak(dome, p.at, spec.leakSpeed, (world.units?.length ?? 1));
       const hole = dome.vents.holes[index];
       hole.size = Math.min(3, 1 + Math.floor((share - imp.threshold) / imp.perSize));
       s.holes += 1;
@@ -356,7 +356,8 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
   }
 
   // Coolant gone: critical, then the explosion.
-  const parcel = Math.max(EMPTY, ...spec.domes.map((id) => world.bodies.find((x) => x.id === id)?.vents?.parcel ?? EMPTY));
+  const empty = EMPTY * (world.units?.mass ?? 1);
+  const parcel = Math.max(empty, ...spec.domes.map((id) => world.bodies.find((x) => x.id === id)?.vents?.parcel ?? empty));
   if (s.critical === undefined && !s.blown && plantCoolant(world, spec) < parcel) {
     s.critical = now + spec.countdown;
     world.events.push({ tick: world.tick, type: "plant.critical", data: { at: s.critical } });

@@ -15,6 +15,7 @@ import { burst } from "./dust.ts";
 import { cross, length, sinCos, sub, type Vec2 } from "./math.ts";
 import { localVertices } from "./shapes.ts";
 import type { Body, BodyInput, JointInput, World } from "./world.ts";
+import type { Units } from "./units.ts";
 
 /** How the ground adds to the world: the world's own ways, handed in by the step. */
 export interface TerrainOps {
@@ -71,6 +72,8 @@ export interface Terrain {
    * where the open space goes on round to the other side, not rock, so they get no crust.
    */
   edges?: { min: Vec2; max: Vec2 };
+  /** The world's units (units.ts), if not the core's: the lengths below are the core's, times its length. */
+  units?: Units;
 }
 
 export const TERRAIN_DEFAULTS = { blast: 0.6, bullet: 0.5, least: 0.5, most: 8, limit: 250, small: 150 };
@@ -90,7 +93,11 @@ const SHORTEST = 1e-3;
 
 type Seg = [Vec2, Vec2];
 
-const round = (n: number) => Math.round(n * 1e6) / 1e6 + 0;
+/** To the micrometre (of the core's units: `u` is the world's length unit). */
+const round = (n: number, u: number) => (Math.round((n / u) * 1e6) / 1e6) * u + 0;
+/** The terrain's length and mass units. */
+const lu = (t: Terrain): number => t.units?.length ?? 1;
+const mu = (t: Terrain): number => t.units?.mass ?? 1;
 const lerp = (a: Vec2, b: Vec2, t: number): Vec2 => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
 
 /** The outline with every stretch longer than `longest` cut into equal pieces. */
@@ -115,11 +122,11 @@ function rim(h: Crater): Vec2[] {
 }
 
 /** Whether p is strictly inside a clockwise convex polygon. */
-function insideRim(vs: Vec2[], p: Vec2): boolean {
+function insideRim(vs: Vec2[], p: Vec2, u: number): boolean {
   for (let i = 0; i < vs.length; i++) {
     const a = vs[i];
     const b = vs[(i + 1) % vs.length];
-    if (cross(sub(b, a), sub(p, a)) > -1e-9) return false;
+    if (cross(sub(b, a), sub(p, a)) > -1e-9 * u * u) return false;
   }
   return true;
 }
@@ -162,7 +169,7 @@ function crossing(p: Vec2, q: Vec2, a: Vec2, b: Vec2): number {
 }
 
 /** How far it is from p along unit vector u to the nearest of the segments, or Infinity. */
-function reach(p: Vec2, u: Vec2, segs: Seg[]): number {
+function reach(p: Vec2, u: Vec2, segs: Seg[], l: number): number {
   let best = Infinity;
   for (const [a, b] of segs) {
     const e = sub(b, a);
@@ -171,7 +178,7 @@ function reach(p: Vec2, u: Vec2, segs: Seg[]): number {
     const w = sub(a, p);
     const t = cross(w, e) / den;
     const k = cross(w, u) / den;
-    if (t > 1e-6 && k >= 0 && k <= 1) best = Math.min(best, t);
+    if (t > 1e-6 * l && k >= 0 && k <= 1) best = Math.min(best, t);
   }
   return best;
 }
@@ -209,12 +216,12 @@ function near(t: Terrain, at: Vec2, within: number): Near {
  */
 const bouncy = (b: BodyInput, restitution?: number): BodyInput => (restitution === undefined ? b : ({ ...b, restitution } as BodyInput));
 
-function crust(id: string, a: Vec2, b: Vec2, walls: Seg[], deepest: number, from?: Vec2, restitution?: number): BodyInput | null {
+function crust(id: string, a: Vec2, b: Vec2, walls: Seg[], deepest: number, units: { l: number; m: number }, from?: Vec2, restitution?: number): BodyInput | null {
   const L = length(sub(b, a));
-  if (L < SHORTEST) return null;
+  if (L < SHORTEST * units.l) return null;
   const u = { x: -(b.y - a.y) / L, y: (b.x - a.x) / L };
   let depth = deepest;
-  for (let k = 0; k <= 8; k++) depth = Math.min(depth, 0.98 * reach(lerp(a, b, k / 8), u, walls));
+  for (let k = 0; k <= 8; k++) depth = Math.min(depth, 0.98 * reach(lerp(a, b, k / 8), u, walls, units.l));
   // Rays miss what lies between them (a small crater under a long stretch). So also: every wall
   // that passes over this stretch, clear of it, limits the depth by its nearest point.
   const t = { x: (b.x - a.x) / L, y: (b.y - a.y) / L };
@@ -235,9 +242,9 @@ function crust(id: string, a: Vec2, b: Vec2, walls: Seg[], deepest: number, from
       [s0, s1] = [lo, hi];
     }
     // (One that touches this stretch, at an end where the two meet, is left to the rays.)
-    if (h0 > 1e-3 && h1 > 1e-3) depth = Math.min(depth, 0.98 * Math.min(h0, h1));
+    if (h0 > 1e-3 * units.l && h1 > 1e-3 * units.l) depth = Math.min(depth, 0.98 * Math.min(h0, h1));
   }
-  depth = Math.max(depth, THINNEST);
+  depth = Math.max(depth, THINNEST * units.l);
   // Round a crater the crust fans out from its centre, so the pieces along its rim meet side to
   // side and leave no gaps at the rim's corners. Along the outline it goes straight in.
   const out = (p: Vec2): Vec2 => {
@@ -246,8 +253,8 @@ function crust(id: string, a: Vec2, b: Vec2, walls: Seg[], deepest: number, from
     const n = length(d);
     return { x: p.x + (d.x / n) * depth, y: p.y + (d.y / n) * depth };
   };
-  const vertices = [a, b, out(b), out(a)].map((v) => ({ x: round(v.x), y: round(v.y) }));
-  return bouncy({ id, fixed: true, mass: 1, friction: 0.9, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape: { kind: "polygon", vertices } } as BodyInput, restitution);
+  const vertices = [a, b, out(b), out(a)].map((v) => ({ x: round(v.x, units.l), y: round(v.y, units.l) }));
+  return bouncy({ id, fixed: true, mass: units.m, friction: 0.9, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0, shape: { kind: "polygon", vertices } } as BodyInput, restitution);
 }
 
 /**
@@ -270,40 +277,42 @@ function pieces(a: Vec2, b: Vec2, cutters: Seg[], keep: (mid: Vec2) => boolean):
 }
 
 /** Whether stretch a→b lies along one of a wrapped world's edges. */
-function onEdge(e: { min: Vec2; max: Vec2 }, a: Vec2, b: Vec2): boolean {
-  const at = (u: number, v: number, k: number) => Math.abs(u - k) < 1e-6 && Math.abs(v - k) < 1e-6;
+function onEdge(e: { min: Vec2; max: Vec2 }, a: Vec2, b: Vec2, l: number): boolean {
+  const at = (u: number, v: number, k: number) => Math.abs(u - k) < 1e-6 * l && Math.abs(v - k) < 1e-6 * l;
   return at(a.x, b.x, e.min.x) || at(a.x, b.x, e.max.x) || at(a.y, b.y, e.min.y) || at(a.y, b.y, e.max.y);
 }
 
 /** The crust along stretch i of the outline: what is left of it outside every crater. */
 function outlineCrust(t: Terrain, i: number): BodyInput[] {
   const [a, b] = segments(t)[i];
-  if (t.edges && onEdge(t.edges, a, b)) return [];
+  const l = lu(t);
+  if (t.edges && onEdge(t.edges, a, b, l)) return [];
   const mid = lerp(a, b, 0.5);
-  const n = near(t, mid, length(sub(b, a)) / 2 + CRUST + 1);
+  const n = near(t, mid, length(sub(b, a)) / 2 + CRUST * l + l);
   const own = (s: Seg) => s[0] === a && s[1] === b;
   const rims = n.holes.flatMap(({ vs }) => vs.map((v, e): Seg => [v, vs[(e + 1) % vs.length]]));
-  const kept = pieces(a, b, rims, (p) => !n.holes.some(({ vs }) => insideRim(vs, p)));
+  const kept = pieces(a, b, rims, (p) => !n.holes.some(({ vs }) => insideRim(vs, p, l)));
   const walls = n.walls.filter((s) => !own(s));
-  return kept.map(([p, q], k) => crust(`${t.prefix}s${i}-${k}`, p, q, walls, CRUST, undefined, t.restitution)).filter((x): x is BodyInput => !!x);
+  return kept.map(([p, q], k) => crust(`${t.prefix}s${i}-${k}`, p, q, walls, CRUST * l, { l, m: mu(t) }, undefined, t.restitution)).filter((x): x is BodyInput => !!x);
 }
 
 /** The crust round crater c: the parts of its rim that lie in rock, outside the open space and every other crater. */
 function craterCrust(t: Terrain, c: number): BodyInput[] {
   const h = t.holes[c];
-  const n = near(t, h, h.r + RIM_CRUST + 1);
+  const l = lu(t);
+  const n = near(t, h, h.r + RIM_CRUST * l + l);
   const vs = n.holes.find((o) => o.index === c)!.vs;
   const others = n.holes.filter((o) => o.index !== c);
-  const outline: Seg[] = segments(t).filter(([p, q]) => distance(h, p, q) <= h.r + 1e-6);
+  const outline: Seg[] = segments(t).filter(([p, q]) => distance(h, p, q) <= h.r + 1e-6 * l);
   const cutters: Seg[] = [...outline, ...others.flatMap(({ vs: o }) => o.map((v, e): Seg => [v, o[(e + 1) % o.length]]))];
   const out: BodyInput[] = [];
   for (let e = 0; e < vs.length; e++) {
     const a = vs[e];
     const b = vs[(e + 1) % vs.length];
-    const kept = pieces(a, b, cutters, (p) => !insideOpen(t, p) && !others.some(({ vs: o }) => insideRim(o, p)));
+    const kept = pieces(a, b, cutters, (p) => !insideOpen(t, p) && !others.some(({ vs: o }) => insideRim(o, p, l)));
     const walls = n.walls.filter((s) => !(s[0] === a && s[1] === b) && !vs.includes(s[0]));
     kept.forEach(([p, q], k) => {
-      const body = crust(`${t.prefix}c${c}-${e}-${k}`, p, q, walls, RIM_CRUST, h, t.restitution);
+      const body = crust(`${t.prefix}c${c}-${e}-${k}`, p, q, walls, RIM_CRUST * l, { l, m: mu(t) }, h, t.restitution);
       if (body) out.push(body);
     });
   }
@@ -320,14 +329,18 @@ function takeOut(world: World, gone: (b: Body) => boolean): void {
 
 /** The ground at the start: the crust along the whole outline. */
 export function startTerrain(world: World, spec: TerrainSpec, ops: TerrainOps): Terrain {
+  const l = world.units?.length ?? 1;
+  const longest = LONGEST * l;
+  const defaults = { ...TERRAIN_DEFAULTS, bullet: TERRAIN_DEFAULTS.bullet * l, least: TERRAIN_DEFAULTS.least * l, most: TERRAIN_DEFAULTS.most * l };
   const t: Terrain = {
-    outline: cut(spec.outline, LONGEST).map((p) => ({ x: p.x, y: p.y })),
-    ...(spec.islands?.length ? { islands: spec.islands.map((loop) => cut(loop, LONGEST).map((p) => ({ x: p.x, y: p.y }))) } : {}),
+    outline: cut(spec.outline, longest).map((p) => ({ x: p.x, y: p.y })),
+    ...(spec.islands?.length ? { islands: spec.islands.map((loop) => cut(loop, longest).map((p) => ({ x: p.x, y: p.y }))) } : {}),
     prefix: spec.prefix ?? "rock-",
-    ...(spec.craters ? { craters: { ...TERRAIN_DEFAULTS, ...spec.craters } } : {}),
+    ...(spec.craters ? { craters: { ...defaults, ...spec.craters } } : {}),
     holes: [],
     ...(spec.restitution !== undefined ? { restitution: spec.restitution } : {}),
     ...(world.bounds.wrap ? { edges: { min: { ...world.bounds.min }, max: { ...world.bounds.max } } } : {}),
+    ...(world.units ? { units: { ...world.units } } : {}),
   };
   const n = segments(t).length;
   for (let i = 0; i < n; i++) for (const b of outlineCrust(t, i)) ops.addBody(world, b);
@@ -344,21 +357,22 @@ export function cutCrater(world: World, at: Vec2, r: number, ops: TerrainOps, be
   const addBody = ops.addBody;
   const t = world.terrain;
   if (!t?.craters || !(r > 0) || t.holes.length >= t.craters.limit) return false;
-  if (r < SMALL && t.holes.filter((h) => h.r < SMALL).length >= t.craters.small) return false;
+  const l = lu(t);
+  if (r < SMALL * l && t.holes.filter((h) => h.r < SMALL * l).length >= t.craters.small) return false;
   if (t.holes.some((h) => length(sub(at, h)) + r <= 0.95 * h.r)) return false;
   const c = t.holes.length;
-  const h: Crater = { x: at.x, y: at.y, r, n: r < 1 ? 8 : r < 3 ? 12 : 16, turn: 0.37 * (c + 1) };
+  const h: Crater = { x: at.x, y: at.y, r, n: r < l ? 8 : r < 3 * l ? 12 : 16, turn: 0.37 * (c + 1) };
   t.holes = [...t.holes, h];
   const fresh = craterCrust(t, c);
   // Which of what is there now it touches: the outline's stretches, and the craters, near enough for
   // their boundary or their crust's depth to change.
-  const reach0 = r + CRUST + 1;
+  const reach0 = r + CRUST * l + l;
   const stretches: number[] = [];
   segments(t).forEach(([a, b], i) => {
     if (distance(h, a, b) <= reach0) stretches.push(i);
   });
   const craters: number[] = [];
-  for (let k = 0; k < c; k++) if (length(sub(h, t.holes[k])) <= r + RIM_CRUST + 1 + t.holes[k].r) craters.push(k);
+  for (let k = 0; k < c; k++) if (length(sub(h, t.holes[k])) <= r + RIM_CRUST * l + l + t.holes[k].r) craters.push(k);
   // In open space already (or wholly inside other craters): none of its rim is in rock.
   if (!fresh.length) {
     t.holes = t.holes.slice(0, c);
@@ -410,7 +424,7 @@ function gap(b: Body, c: Vec2): number {
  * falls. Those of a group are welded to the first of them.
  */
 function loosen(world: World, h: Crater, ops: TerrainOps, before?: () => void): void {
-  const cut = world.bodies.filter((b) => b.fixed && b.anchored && gap(b, h) <= h.r + FOOTING);
+  const cut = world.bodies.filter((b) => b.fixed && b.anchored && gap(b, h) <= h.r + FOOTING * (world.units?.length ?? 1));
   if (!cut.length) return;
   const groups = new Set(cut.map((b) => b.anchored!.group).filter((g): g is string => g !== undefined));
   const loose = world.bodies.filter((b) => b.fixed && b.anchored && (cut.includes(b) || (b.anchored.group !== undefined && groups.has(b.anchored.group))));

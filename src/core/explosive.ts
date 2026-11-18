@@ -88,23 +88,25 @@ export function releaseBlasts(world: World, dt: number): number {
   const blasts = world.blasts;
   if (!blasts?.length) return 0;
   world.blasts = [];
+  const l = world.units?.length ?? 1;
+  const pr = BLAST_PARCEL_RADIUS * l;
   for (const b of blasts) {
     const at = add(b.position, scale(b.velocity, dt));
     const q = sinCos(b.angle);
     const solid = (p: Vec2) => {
       const x = add(at, rotate(q, p));
-      return world.bodies.some((o) => length(sub(o.position, x)) < massProps(o.shape, 1).boundingRadius + BLAST_PARCEL_RADIUS && near(o, x, BLAST_PARCEL_RADIUS));
+      return world.bodies.some((o) => length(sub(o.position, x)) < massProps(o.shape, 1).boundingRadius + pr && near(o, x, pr));
     };
     const half = b.spots.length / 2;
     const free: Vec2[] = [];
     for (let k = 0; k < half; k++) if (!solid(b.spots[k]) && !solid(b.spots[k + half])) free.push(b.spots[k]);
     // At least one pair, a parcel's width either side of the centre.
-    const pts = free.length ? [...free, ...free.map((p) => scale(p, -1))] : [{ x: BLAST_PARCEL_RADIUS, y: 0 }, { x: -BLAST_PARCEL_RADIUS, y: 0 }];
+    const pts = free.length ? [...free, ...free.map((p) => scale(p, -1))] : [{ x: pr, y: 0 }, { x: -pr, y: 0 }];
     const pm = b.mass / pts.length;
     const u = Math.sqrt((2 * BLAST_SPREAD * Math.max(0, b.energy)) / b.mass);
     const parcels: Parcel[] = pts.map((p) => {
-      const d = length(p) > 1e-9 ? scale(rotate(q, p), 1 / length(p)) : { x: 1, y: 0 };
-      return { id: world.gas.nextId++, mass: pm, composition: { co2: 1 }, position: add(at, rotate(q, p)), velocity: add(b.velocity, scale(d, u)), thermal: 0, radius: BLAST_PARCEL_RADIUS };
+      const d = length(p) > 1e-9 * l ? scale(rotate(q, p), 1 / length(p)) : { x: 1, y: 0 };
+      return { id: world.gas.nextId++, mass: pm, composition: { co2: 1 }, position: add(at, rotate(q, p)), velocity: add(b.velocity, scale(d, u)), thermal: 0, radius: pr };
     });
     // Heat is what the held energy leaves after the parcels' motion (beyond the bulk motion it had).
     let ke = 0;
@@ -131,7 +133,7 @@ export function detonate(world: World, roots: ReadonlyMap<string, string> | null
     if (e.armed) continue;
     const gun = e.from ? byId.get(e.from) : undefined;
     const root = gun ? (roots?.get(gun.id) ?? gun.id) : undefined;
-    const near = root !== undefined && world.bodies.some((o) => o !== s && (roots?.get(o.id) ?? o.id) === root && length(nearestOffset(world, s.position, o.position)) < reach(o) + reach(s) + 0.2);
+    const near = root !== undefined && world.bodies.some((o) => o !== s && (roots?.get(o.id) ?? o.id) === root && length(nearestOffset(world, s.position, o.position)) < reach(o) + reach(s) + 0.2 * (world.units?.length ?? 1));
     if (!near) e.armed = true;
   }
   // Strikes this step: armed shells with a contact whose impulse would change their speed by more than `arm`.
@@ -149,7 +151,7 @@ export function detonate(world: World, roots: ReadonlyMap<string, string> | null
       if (own !== undefined && (roots?.get(other) ?? other) === own) continue;
       J = Math.max(J, c.normalImpulse);
     }
-    if (e.trigger || (e.whenDestroyed && s.integrity <= 0) || J > (e.arm ?? 5) * bodyMass(s)) struck.push(s);
+    if (e.trigger || (e.whenDestroyed && s.integrity <= 0) || J > (e.arm ?? 5 * (world.units?.length ?? 1)) * bodyMass(s)) struck.push(s);
   }
   for (const s of struck) burst(world, s, dt);
   if (struck.length) breakWreckage(world);
@@ -285,12 +287,12 @@ function burst(world: World, s: Body, dt: number): void {
     mass: gasMass,
     energy: before + E + heldEnergy - fragmentKE - 0.5 * ownGas * dot(s.velocity, s.velocity),
     angle: s.angle,
-    spots: corePoints(s, 2 * BLAST_PARCEL_RADIUS, 0.85),
+    spots: corePoints(s, 2 * BLAST_PARCEL_RADIUS * (world.units?.length ?? 1), 0.85),
   };
   (world.blasts ??= []).push(blast);
-  world.events.push({ tick: world.tick, type: "detonation", data: { id: s.id, energy: E, fragments: made.length, gas: gasMass, x: s.position.x, y: s.position.y, radius: e.radius ?? 2 } });
+  world.events.push({ tick: world.tick, type: "detonation", data: { id: s.id, energy: E, fragments: made.length, gas: gasMass, x: s.position.x, y: s.position.y, radius: e.radius ?? 2 * (world.units?.length ?? 1) } });
   // Blast damage: a share of E to each damageable body near enough.
-  const R = e.radius ?? 2;
+  const R = e.radius ?? 2 * (world.units?.length ?? 1);
   // A shield's field (SHD-004) stands between a blast outside it and what it covers.
   const fields = world.bodies.filter((g) => g.shield).flatMap((g) => world.bodies.filter((f) => f.id === fieldId(g.id) && f.shape.kind === "disc"));
   const covered = (b: Body) =>
@@ -308,7 +310,7 @@ function burst(world: World, s: Body, dt: number): void {
     const gap = Math.max(0, dist - r);
     if (gap >= R) continue;
     const view = Math.min(0.5, r / (Math.PI * Math.max(dist, r)));
-    const at = dist > 1e-9 ? add(b.position, scale(toBlast, Math.min(1, r / dist))) : b.position;
+    const at = dist > 1e-9 * (world.units?.length ?? 1) ? add(b.position, scale(toBlast, Math.min(1, r / dist))) : b.position;
     damageBody(world, b, E * view * (1 - gap / R) * (b.material.blast ?? 1), at);
   }
 }

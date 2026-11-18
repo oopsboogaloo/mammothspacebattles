@@ -12,6 +12,7 @@
 
 import { assemblyRoots } from "./joints.ts";
 import type { Body, World } from "./world.ts";
+import { D, factor } from "./units.ts";
 
 export interface Power {
   /** A battery: what it can hold, kJ, and what it holds (state; full at the start). */
@@ -30,7 +31,7 @@ const DRY = 1e-9;
 const isBattery = (b: Body) => (b.power?.capacity ?? 0) > 0 && b.integrity > 0;
 const isGenerator = (b: Body) => (b.power?.output ?? 0) > 0 && b.integrity > 0;
 /** A tank a generator can burn from: propellant in stores, not an engine's own. */
-const isTank = (b: Body) => !b.injector && (b.contents ?? []).some((c) => c.mass > DRY && (c.resource === "h2" || c.resource === "o2"));
+const isTank = (b: Body, dry: number) => !b.injector && (b.contents ?? []).some((c) => c.mass > dry && (c.resource === "h2" || c.resource === "o2"));
 
 /** The batteries and generators on the same assembly as a body, or null if that ship has no power system. */
 function systemOf(world: World, roots: ReadonlyMap<string, string>, id: string): { batteries: Body[]; generators: Body[] } | null {
@@ -58,7 +59,7 @@ export function takeEnergy(world: World, roots: ReadonlyMap<string, string> | nu
   const sys = systemOf(world, roots ?? assemblyRoots(world), id);
   if (!sys) return true;
   const total = sys.batteries.reduce((s, b) => s + (b.power!.stored ?? 0), 0);
-  if (total + 1e-9 < kJ) return false;
+  if (total + 1e-9 * factor(world.units, D.energy) < kJ) return false;
   for (const b of sys.batteries) {
     const p = b.power!;
     p.stored = Math.max(0, (p.stored ?? 0) - (kJ * (p.stored ?? 0)) / total);
@@ -100,6 +101,9 @@ export function runPower(world: World, dt: number): number {
   if (!gens.length) return 0;
   const roots = assemblyRoots(world);
   let burned = 0;
+  // The world's units (units.ts): too little to burn, kg, and to make, kJ.
+  const dry = DRY * (world.units?.mass ?? 1);
+  const tiny = 1e-12 * factor(world.units, D.energy);
   // By ship: its generators share the room in its batteries.
   const ships = new Map<string, Body[]>();
   for (const g of gens) {
@@ -113,14 +117,14 @@ export function runPower(world: World, dt: number): number {
     const room = batteries.reduce((s, b) => s + b.power!.capacity! - (b.power!.stored ?? 0), 0);
     const most = ship.reduce((s, g) => s + g.power!.output! * dt, 0);
     let make = Math.min(room, most);
-    if (!(make > 1e-12)) continue;
-    const tanks = world.bodies.filter((b) => roots.get(b.id) === root && isTank(b));
-    const stores = tanks.flatMap((t) => t.contents!.filter((c) => c.mass > DRY && (c.resource === "h2" || c.resource === "o2")));
+    if (!(make > tiny)) continue;
+    const tanks = world.bodies.filter((b) => roots.get(b.id) === root && isTank(b, dry));
+    const stores = tanks.flatMap((t) => t.contents!.filter((c) => c.mass > dry && (c.resource === "h2" || c.resource === "o2")));
     const fuel = stores.reduce((s, c) => s + c.mass, 0);
     // The kJ a kg makes: the generators' own figure (all the same on a ship built by the rules).
     const perKg = ship.reduce((s, g) => s + g.power!.perKg! * g.power!.output!, 0) / ship.reduce((s, g) => s + g.power!.output!, 0);
     make = Math.min(make, fuel * perKg);
-    if (!(make > 1e-12)) continue;
+    if (!(make > tiny)) continue;
     const kg = make / perKg;
     for (const c of stores) c.mass = Math.max(0, c.mass - (kg * c.mass) / fuel);
     burned += kg;

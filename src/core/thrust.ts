@@ -204,7 +204,7 @@ function addShip(world: World, game: ThrustGame, ops: ThrustOps, grace: number):
   state.cut = undefined;
   state.burning = undefined;
   state.stats.ships += 1;
-  state.beams.push({ at: world.tick, x: start.x, y: start.y, r: 4 });
+  state.beams.push({ at: world.tick, x: start.x, y: start.y, r: 4 * (world.units?.length ?? 1) });
   world.events.push({ tick: world.tick, type: "thrust.ship", data: { n: state.n, x: start.x, y: start.y, protected: grace > 0 } });
 }
 
@@ -255,7 +255,7 @@ function podState(world: World, game: ThrustGame): PodState {
   const tractorId = idOf(spec.tractor, state.n);
   const tractor = world.bodies.find((b) => b.id === tractorId)?.tractor;
   if (tractor?.mode === "tether" && tractor.cargo === spec.pod) return "tether";
-  return length(sub(pod.position, state.stand)) <= ON_STAND ? "stand" : "loose";
+  return length(sub(pod.position, state.stand)) <= ON_STAND * (world.units?.length ?? 1) ? "stand" : "loose";
 }
 
 /** A new game: ship 1 at the start. */
@@ -433,12 +433,12 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       // The charge stands for the fuel: what leaves with the fuel is booked through the boundary.
       if (tank.explosive && s.tankCharge[id] !== undefined) {
         const charge = s.tankCharge[id] * held;
-        if (!(held > 1e-6)) delete tank.explosive;
+        if (!(held > 1e-6 * (world.units?.mass ?? 1))) delete tank.explosive;
         else if (charge !== tank.explosive.charge) tank.explosive.charge = charge;
         else continue;
         changed = true;
       }
-      if (held > 1e-6) continue;
+      if (held > 1e-6 * (world.units?.mass ?? 1)) continue;
       if (s.tanksDrawn.includes(id) && !s.tanksEmptied.includes(id)) {
         s.tanksEmptied = [...s.tanksEmptied, id];
         s.score += spec.scores?.tank ?? THRUST_SCORES.tank;
@@ -487,7 +487,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
     // been set down with empty tanks).
     const hull = world.bodies.find((b) => b.id === hullId);
     const fuel = thrustFuel(world);
-    const still = !!hull && length(hull.velocity) < REST_SPEED && Math.abs(hull.angularVelocity) < REST_SPIN;
+    const still = !!hull && length(hull.velocity) < REST_SPEED * (world.units?.length ?? 1) && Math.abs(hull.angularVelocity) < REST_SPIN;
     if (hull && fuel.capacity > 0 && fuel.mass <= 1e-6 && still) s.stuckSince ??= now;
     else s.stuckSince = undefined;
     const stuck = s.stuckSince !== undefined && now - s.stuckSince >= REST_TIME;
@@ -517,15 +517,15 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
     if (hull && out) {
       if (pod === "tether") {
         const left = thrustFuel(world).mass;
-        s.bonus = { pod: spec.scores?.pod ?? THRUST_SCORES.pod, fuel: Math.round((spec.scores?.fuel ?? THRUST_SCORES.fuel) * left) };
+        s.bonus = { pod: spec.scores?.pod ?? THRUST_SCORES.pod, fuel: Math.round((spec.scores?.fuel ?? THRUST_SCORES.fuel / (world.units?.mass ?? 1)) * left) };
         // Out with the pod while the plant is critical: more (spec §3, Scoring).
         if (s.plant?.critical !== undefined && spec.plant) s.bonus.plant = spec.plant.bonus ?? PLANT_BONUS;
         s.score += s.bonus.pod + s.bonus.fuel + (s.bonus.plant ?? 0);
         s.phase = "won";
         // The ship and the pod beam out together, a star on each (Chloe, 15 November 2026).
         const podAt = world.bodies.find((b) => b.id === spec.pod)?.position;
-        s.beams.push({ at: world.tick, x: hull.position.x, y: hull.position.y, r: 4, out: true });
-        if (podAt) s.beams.push({ at: world.tick, x: podAt.x, y: podAt.y, r: 3, out: true, pod: true });
+        s.beams.push({ at: world.tick, x: hull.position.x, y: hull.position.y, r: 4 * (world.units?.length ?? 1), out: true });
+        if (podAt) s.beams.push({ at: world.tick, x: podAt.x, y: podAt.y, r: 3 * (world.units?.length ?? 1), out: true, pod: true });
         world.events.push({ tick: world.tick, type: "thrust.won", data: { score: s.score, pod: s.bonus.pod, fuel: s.bonus.fuel } });
         return changed;
       }
@@ -555,7 +555,7 @@ export function runThrust(world: World, dt: number, ops: ThrustOps): boolean {
       world.contacts = world.contacts.filter((c) => !ship.has(c.a) && !ship.has(c.b));
       s.stats.back += 1;
       s.backAt = now;
-      s.beams.push({ at: world.tick, x: from.x, y: from.y, r: 4, out: true }, { at: world.tick, x: start.x, y: start.y, r: 4 });
+      s.beams.push({ at: world.tick, x: from.x, y: from.y, r: 4 * (world.units?.length ?? 1), out: true }, { at: world.tick, x: start.x, y: start.y, r: 4 * (world.units?.length ?? 1) });
       world.events.push({ tick: world.tick, type: "thrust.back", data: { n: s.n } });
       changed = true;
     }
