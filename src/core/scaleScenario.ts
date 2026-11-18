@@ -53,6 +53,8 @@ const VECTORS: Record<string, Dim> = {
  * elements), then by key alone. Anything not listed is dimensionless (angles, ratios, counts,
  * times, steps, seeds): those are listed too where a key could be mistaken for one that scales.
  */
+// Heats (explosive.heat, burst.heat, J/kg) are left as they are: they are taken "before the gas
+// scale" (DEC-13), which the world's units already turn (units.ts scaledProfile).
 const FIELDS: Record<string, Dim> = {
   "bodies[].mass": D.mass,
   "body.mass": D.mass,
@@ -91,12 +93,10 @@ const FIELDS: Record<string, Dim> = {
   "railgun.speed": D.speed,
   "railgun.shot": D.energy,
   "explosive.charge": D.mass,
-  "explosive.heat": D.specificEnergy,
   "explosive.gas": D.mass,
   "explosive.radius": D.length,
   "explosive.arm": D.speed,
   "burst.charge": D.mass,
-  "burst.heat": D.specificEnergy,
   "burst.gas": D.mass,
   "limits.tension": D.force,
   "limits.compression": D.force,
@@ -197,7 +197,7 @@ const FIELDS: Record<string, Dim> = {
 };
 
 /** Keys never scaled wherever they sit. */
-const NONE = new Set(["schema", "seed", "angle", "angularVelocity", "restitution", "friction", "integrity", "step", "steps", "zoom", "omega", "economy", "yield", "count", "reload", "lives", "respawn", "grace", "delay", "every", "first", "skill", "spin", "time", "wait", "reveal", "seams", "pieces", "gold", "compounds", "multiplier", "maxTilt", "fragments", "blast", "damping", "arc", "capture", "rate", "hold", "shots", "capacity", "level", "extraLife", "most", "fromLevel", "pace", "clearPause", "shellLife", "temperature", "value", "flare", "efficiency", "goldDensity", "seamStrength", "compoundSize", "kills", "weight", "amount", "limit", "frontTurn", "cut", "early", "late", "slope", "aim", "life", "min", "max", "target", "shock", "countdown", "perLeak", "blastLeaks", "below", "more", "small", "gap", "flight", "combat", "base", "perLevel", "skillMax", "everyMin", "firstMin", "spread", "interval", "load", "watch", "pause", "ships", "clearBonus", "bonus", "index", "fraction", "last"]);
+const NONE = new Set(["schema", "seed", "angle", "angularVelocity", "restitution", "friction", "integrity", "step", "steps", "zoom", "omega", "economy", "yield", "count", "reload", "lives", "respawn", "grace", "delay", "every", "first", "skill", "spin", "time", "wait", "reveal", "seams", "pieces", "gold", "compounds", "multiplier", "maxTilt", "fragments", "blast", "damping", "arc", "capture", "rate", "hold", "shots", "capacity", "level", "extraLife", "most", "fromLevel", "pace", "clearPause", "shellLife", "temperature", "value", "flare", "efficiency", "goldDensity", "seamStrength", "compoundSize", "kills", "weight", "amount", "limit", "frontTurn", "cut", "early", "late", "slope", "aim", "life", "min", "max", "target", "shock", "countdown", "perLeak", "blastLeaks", "below", "more", "small", "gap", "flight", "combat", "base", "perLevel", "skillMax", "everyMin", "firstMin", "spread", "interval", "load", "watch", "pause", "ships", "clearBonus", "bonus", "index", "fraction", "last", "heat"]);
 
 /** Objects whose numbers are all dimensionless: mass fractions by species. */
 const NONE_INSIDE = new Set(["mixture", "composition"]);

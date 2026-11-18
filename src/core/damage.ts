@@ -19,6 +19,7 @@
 // and its joints and links break. A joint or link at 0 breaks. Damage only reads the world's
 // contacts; it never pushes on anything, so the ledger is unchanged.
 
+import type { Units } from "./units.ts";
 import { bodiesById } from "./bodies.ts";
 import { add, invRotate, length, rotate, scale, sinCos, sub, type Vec2 } from "./math.ts";
 import { SPECIES } from "./gas.ts";
@@ -89,10 +90,10 @@ export function gasStores(b: Body): { mass: number; capacity: number } {
 }
 
 /** How fast a body leaks now, kg/s (DMG-004). */
-export function leakRate(b: Body): number {
+export function leakRate(b: Body, units?: Units): number {
   if (b.integrity >= 1 || b.fixed) return 0;
   const g = gasStores(b);
-  return g.capacity > 0 && g.mass > 0 ? LEAK_RATE * (1 - b.integrity) * (g.mass / g.capacity) : 0;
+  return g.capacity > 0 && g.mass > 0 ? LEAK_RATE * (units?.mass ?? 1) * (1 - b.integrity) * (g.mass / g.capacity) : 0;
 }
 
 /** A breach for a body damaged without a hit (set by hand): the top of its outline. */

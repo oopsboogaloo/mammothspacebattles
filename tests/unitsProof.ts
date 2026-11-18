@@ -51,8 +51,43 @@ export function difference(a: World, b: World): string {
   return "";
 }
 
-/** Runs `scn` both ways for `steps` simulation steps; the first difference, or "". */
-export function proof(raw: unknown, steps?: number): { diff: string; untagged: string[]; steps: number } {
+/**
+ * Every control a player or the scenario could set: the games' steering mixes' controls, a
+ * blueprint mixer's, and every channel a link or a device answers (engines, guns, tractors,
+ * shields). Never the self-destruct.
+ */
+export function controlChannels(w: World): string[] {
+  const out = new Set<string>();
+  const mixes = [w.thrust?.spec.mix, w.arcade?.spec.mix];
+  for (const m of mixes) {
+    if (!m) continue;
+    if (Array.isArray(m)) for (const row of m) for (const a of row.any) for (const c of [...a.on, ...(a.off ?? [])]) out.add(c);
+    else for (const c of [m.forward, m.left, m.right, m.reverse]) out.add(c);
+  }
+  for (const row of w.mix?.rows ?? []) for (const line of row.lines) out.add(line.control);
+  for (const l of w.links) if (l.kind === "control") out.add(l.channel);
+  for (const b of w.bodies) for (const c of [b.injector?.channel, b.tractor?.channel, b.shield?.channel, b.magazine?.railgun?.channel]) if (c) out.add(c);
+  out.delete("destruct");
+  return [...out].sort();
+}
+
+/** The scripted input at step k: channel i is held on and off in turns of 37 + 23·i steps, so they overlap in every combination. */
+export function scripted(channels: string[], k: number): { type: "control.set"; channel: string; value: number }[] {
+  const out: { type: "control.set"; channel: string; value: number }[] = [];
+  channels.forEach((channel, i) => {
+    const period = 37 + 23 * i;
+    const on = Math.floor(k / period) % 2;
+    if (k === 0 || k % period === 0) out.push({ type: "control.set", channel, value: on });
+  });
+  return out;
+}
+
+/**
+ * Runs `scn` both ways for `steps` simulation steps (its own length if not given; past its end it
+ * goes on), with its timeline and, if `input`, the scripted input on every control; the first
+ * difference, or "".
+ */
+export function proof(raw: unknown, steps?: number, input = true): { diff: string; untagged: string[]; steps: number } {
   const scn = parseScenario(raw);
   const { scenario: big, untagged } = scaleScenario(scn, U);
   const a = initialWorld(scn);
@@ -61,12 +96,14 @@ export function proof(raw: unknown, steps?: number): { diff: string; untagged: s
   const pb = scenarioProfile(big);
   const ta = timelineByStep(scn);
   const tb = timelineByStep(big);
-  const n = Math.min(steps ?? Infinity, scenarioSteps(scn));
+  const n = steps ?? scenarioSteps(scn);
+  const channels = input ? controlChannels(a) : [];
   let diff = difference(a, b);
   if (diff) return { diff: `at start: ${diff}`, untagged, steps: 0 };
   for (let s = 0; s < n; s++) {
-    stepInPlace(a, ta.get(s) ?? [], pa);
-    stepInPlace(b, tb.get(s) ?? [], pb);
+    const keys = scripted(channels, s);
+    stepInPlace(a, [...(ta.get(s) ?? []), ...keys], pa);
+    stepInPlace(b, [...(tb.get(s) ?? []), ...keys], pb);
     diff = difference(a, b);
     if (diff) return { diff: `step ${s + 1}: ${diff}`, untagged, steps: s + 1 };
   }

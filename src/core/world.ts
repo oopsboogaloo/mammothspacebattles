@@ -1181,8 +1181,9 @@ function runVents(world: World, dt: number, limit: number): void {
     const roots = v.from ? assemblyRoots(world) : null;
     if (roots && roots.get(src.id) !== roots.get(b.id)) continue;
     const q = sinCos(b.angle);
-    const parcel = v.parcel ?? LEAK_PARCEL;
-    const radius = v.radius ?? LEAK_RADIUS;
+    const l = world.units?.length ?? 1;
+    const parcel = v.parcel ?? LEAK_PARCEL * (world.units?.mass ?? 1);
+    const radius = v.radius ?? LEAK_RADIUS * l;
     for (const hole of v.holes) {
       if (hole.count === 0 && hole.credit === 0) pushEvent(world, { tick: world.tick, type: "vent", data: { id: b.id } });
       // A hole's size scales its rate: a hole made bigger vents faster.
@@ -1197,13 +1198,13 @@ function runVents(world: World, dt: number, limit: number): void {
         }
         const parts: [string, number][] = gasses.map((s) => [s.resource, s.mass / total]);
         const n = rotate(q, hole.normal);
-        const speed = hole.speed ?? LEAK_SPEED;
-        const ahead = radius + 0.01 + ((hole.credit - parcel) / rate) * speed;
+        const speed = hole.speed ?? LEAK_SPEED * l;
+        const ahead = radius + 0.01 * l + ((hole.credit - parcel) / rate) * speed;
         const point = add(b.position, add(rotate(q, hole.point), scale(n, ahead)));
         const near = world.bodies.filter((o) => {
           const dx = point.x - o.position.x;
           const dy = point.y - o.position.y;
-          const reach = boundingRadiusOf(o.shape) + radius + 1e-6;
+          const reach = boundingRadiusOf(o.shape) + radius + 1e-6 * l;
           return dx * dx + dy * dy <= reach * reach;
         });
         if (!clearOf(wallBodies(near))(point.x, point.y, radius)) break;
@@ -1221,43 +1222,47 @@ function runVents(world: World, dt: number, limit: number): void {
 function runLeaks(world: World, dt: number, profile?: Profile): void {
   const limit = profile?.limit.gasParcels ?? Infinity;
   runVents(world, dt, limit);
+  // The leak's sizes, in the world's units (units.ts).
+  const l = world.units?.length ?? 1;
+  const leakParcel = LEAK_PARCEL * (world.units?.mass ?? 1);
+  const leakRadius = LEAK_RADIUS * l;
   for (const b of world.bodies) {
-    const rate = leakRate(b);
+    const rate = leakRate(b, world.units);
     if (!(rate > 0)) continue;
     if (!b.breach) b.breach = defaultBreach(b);
     const br = b.breach;
     if (br.count === 0 && br.credit === 0) pushEvent(world, { tick: world.tick, type: "leak", data: { id: b.id } });
     br.credit += rate * dt;
-    while (br.credit >= LEAK_PARCEL && world.gas.count < limit) {
+    while (br.credit >= leakParcel && world.gas.count < limit) {
       const gasses = (b.contents ?? []).filter((s) => SPECIES[s.resource] && s.mass > 0);
       const total = gasses.reduce((t, s) => t + s.mass, 0);
-      if (total < LEAK_PARCEL) break;
+      if (total < leakParcel) break;
       const parts: [string, number][] = gasses.map((s) => [s.resource, s.mass / total]);
       const q = sinCos(b.angle);
       const n = rotate(q, br.normal);
       // Across the breach in mirrored pairs (as injectors do), and staggered along the jet by when in
       // the step each parcel's mass would have left, so parcels never start on top of each other.
-      const spread = (br.count % 2 === 0 ? 1 : -1) * (((Math.floor(br.count / 2) * GOLDEN) % 1) * 0.5) * BREACH_WIDTH * (1 - b.integrity);
-      const speed = br.speed ?? LEAK_SPEED;
-      const ahead = LEAK_RADIUS + 0.01 + ((br.credit - LEAK_PARCEL) / rate) * speed;
+      const spread = (br.count % 2 === 0 ? 1 : -1) * (((Math.floor(br.count / 2) * GOLDEN) % 1) * 0.5) * BREACH_WIDTH * l * (1 - b.integrity);
+      const speed = br.speed ?? LEAK_SPEED * l;
+      const ahead = leakRadius + 0.01 * l + ((br.credit - leakParcel) / rate) * speed;
       const point = add(b.position, add(rotate(q, br.point), add(scale(n, ahead), scale({ x: -n.y, y: n.x }, spread))));
       // Nothing leaks into another body: a breach pressed against something stays shut until it moves off.
       // Only bodies that reach within the clearance can block it (a wreck-strewn world has hundreds).
       const near = world.bodies.filter((o) => {
         const dx = point.x - o.position.x;
         const dy = point.y - o.position.y;
-        const reach = boundingRadiusOf(o.shape) + LEAK_RADIUS + 1e-6;
+        const reach = boundingRadiusOf(o.shape) + leakRadius + 1e-6 * l;
         return dx * dx + dy * dy <= reach * reach;
       });
-      if (!clearOf(wallBodies(near))(point.x, point.y, LEAK_RADIUS)) break;
+      if (!clearOf(wallBodies(near))(point.x, point.y, leakRadius)) break;
       const r = sub(point, b.position);
       const vPoint = add(b.velocity, { x: -b.angularVelocity * r.y, y: b.angularVelocity * r.x });
-      const p = emitParcel(world, b, parts, LEAK_PARCEL, LEAK_PARCEL, point, add(vPoint, scale(n, speed)), LEAK_RADIUS);
+      const p = emitParcel(world, b, parts, leakParcel, leakParcel, point, add(vPoint, scale(n, speed)), leakRadius);
       addParcel(world.gas, p);
-      br.credit -= LEAK_PARCEL;
+      br.credit -= leakParcel;
       br.count += 1;
     }
-    br.credit = Math.min(br.credit, LEAK_PARCEL);
+    br.credit = Math.min(br.credit, leakParcel);
   }
 }
 
