@@ -47,14 +47,22 @@ generators adding as it fires), and its two generators (50 MW) make one shot abo
   deliberate measure. From full, with no hits, about 29 s with the generators running (20 s on the
   battery alone); each hit takes about 1 s off that.
 
-## Still to set (Chloe)
+## The tractor beam and tether (Chloe, 18 November 2026)
 
-The other draws were set against the sci-fi battery. On a 3.3 GJ battery:
+- **Beam: 60 MW.** The generators (50 MW) almost carry it: it runs the battery down by 10 MW, about
+  5½ minutes from full (54 s on the battery alone).
+- **Tether: 20 MW.** The generators carry it, with 30 MW to spare for the battery.
+- **Both: 80 MW**: about 1¾ minutes from a full battery.
 
-| Draw | Today | A full battery lasts |
+## Power budget, THRUST 1 (battery 3.24 GJ, generators 50 MW)
+
+| Using | Draw | Full battery lasts |
 |---|---|---|
-| Tractor beam | 164 MW | 20 s |
-| Tether | 82 MW | 40 s |
+| Tether | 20 MW | for ever (generators carry it) |
+| Beam | 60 MW | ~5½ min |
+| Beam + tether | 80 MW | ~1¾ min |
+| Shield (no hits) | 162 MW | ~29 s |
+| Railgun, flat out (8 shots/s) | ~576 MW | ~49 shots, ~6 s |
 
 ## Context: THRUST 1 today (game's units)
 
