@@ -19,6 +19,7 @@ import type { MoonSpec } from "./moon.ts";
 import { PROFILES, getProfile, type Profile } from "./profile.ts";
 import type { ShipTemplate } from "./spawn.ts";
 import { polygonProblem } from "./shapes.ts";
+import { scaledProfile, type Units } from "./units.ts";
 import { createWorld, stepInPlace, type BodyInput, type Bounds, type Command, type Frame, type GasFill, type JointInput, type LinkInput, type Vec2, type World } from "./world.ts";
 
 export const SCENARIO_SCHEMA = 1;
@@ -73,7 +74,7 @@ export interface Scenario {
   parameters?: Parameter[];
   /** Parameter values this instance was built with (defaults unless overridden). */
   values: Record<string, number>;
-  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame; mix?: Mixer; shipRules?: ShipRules };
+  world: { bodies: BodyInput[]; gravity?: Vec2; joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; asteroids?: AsteroidSpec[]; frame?: Frame; mix?: Mixer; shipRules?: ShipRules; units?: Units };
   timeline: { step: number; commands: Command[] }[];
   end: { steps: number };
   probes: Probe[];
@@ -1321,6 +1322,9 @@ export interface RunResult {
   passed: boolean;
 }
 
+/** The scenario's profile, in its world's units. */
+export const scenarioProfile = (scn: Scenario): Profile => scaledProfile(getProfile(scn.profile), scn.world.units);
+
 /** Builds the scenario's world at tick 0, with step-0 commands not yet applied. */
 export function initialWorld(scn: Scenario): World {
   // Generated asteroids (AST-002) become ordinary pieces and bonds.
@@ -1329,8 +1333,8 @@ export function initialWorld(scn: Scenario): World {
     scn.seed,
     [...scn.world.bodies, ...made.flatMap((a) => a.bodies)],
     scn.world.gravity,
-    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, moon: scn.world.moon, terrain: scn.world.terrain, frame: scn.world.frame, mix: scn.world.mix, shipRules: scn.world.shipRules },
-    getProfile(scn.profile),
+    { joints: [...(scn.world.joints ?? []), ...made.flatMap((a) => a.joints)], links: scn.world.links, gas: scn.world.gas, bounds: scn.world.bounds, challenge: scn.world.challenge, duel: scn.world.duel, lander: scn.world.lander, arcade: scn.world.arcade, thrust: scn.world.thrust, moon: scn.world.moon, terrain: scn.world.terrain, frame: scn.world.frame, mix: scn.world.mix, shipRules: scn.world.shipRules, units: scn.world.units },
+    scenarioProfile(scn),
   );
 }
 
@@ -1358,7 +1362,7 @@ export function timelineByStep(scn: Scenario): Map<number, Command[]> {
 export const scenarioSteps = (scn: Scenario): number => simStep(getProfile(scn.profile), scn.end.steps);
 
 export function runScenario(scn: Scenario, opts: { recordHashes?: boolean; steps?: number } = {}): RunResult {
-  const profile = getProfile(scn.profile);
+  const profile = scenarioProfile(scn);
   const world = initialWorld(scn);
   const byStep = timelineByStep(scn);
   // opts.steps counts simulation steps.

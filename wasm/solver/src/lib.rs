@@ -558,7 +558,7 @@ fn prepare_welds(b: &[f64], j: &[f64], welds: &mut [Weld], dt: f64) {
 
 /// One solve: contacts warm started from the previous step's impulses if `warm`, then the
 /// iterations (welds, then each contact's friction and non-penetration), then restitution.
-fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc: usize, iterations: u32, dt: f64, warm: bool, ca: &mut Acc, ja: &mut Acc) {
+fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc: usize, iterations: u32, dt: f64, warm: bool, ca: &mut Acc, ja: &mut Acc, length: f64) {
     if warm {
         for ci in 0..nc {
             let o = ci * CS;
@@ -614,7 +614,7 @@ fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc:
         let (p0, np) = (c[o + CP0] as usize, c[o + CNP] as usize);
         for p in p0..p0 + np {
             let po = p * PS;
-            if pts[po + VN0] > -RESTITUTION_THRESHOLD || pts[po + MNI] == 0.0 {
+            if pts[po + VN0] > -RESTITUTION_THRESHOLD * length || pts[po + MNI] == 0.0 {
                 continue;
             }
             let (rx, ry) = rel(b, a, bb, pts[po + RAX], pts[po + RAY], pts[po + RBX], pts[po + RBY]);
@@ -652,7 +652,8 @@ fn solve_pass(b: &mut [f64], c: &[f64], pts: &mut [f64], welds: &mut [Weld], nc:
 /// again from zero if warm starting gained energy, then each weld's impulse (its load) and whether
 /// the solver held it at a limit, so it breaks, with the impulse it would have needed: its demand.
 #[no_mangle]
-pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: u32, dt: f64, tol_energy: f64) {
+/// `length`: the world's length unit in the core's (units.ts); speeds and lengths below scale with it.
+pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: u32, dt: f64, tol_energy: f64, length: f64) {
     let s = st();
     let b = &mut s.bodies[..nb * BS];
     let c = &s.contacts[..nc * CS];
@@ -685,7 +686,7 @@ pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: 
 
     let mut ca = Acc::default();
     let mut ja = Acc::default();
-    solve_pass(b, c, pts, welds, nc, iterations, dt, true, &mut ca, &mut ja);
+    solve_pass(b, c, pts, welds, nc, iterations, dt, true, &mut ca, &mut ja, length);
     // Every weld and contact update lowers kinetic energy or leaves it, except reapplying contacts'
     // last impulses (warm starting). Iterations usually take that back, but not always: a ship
     // coming apart on a rock gained up to 13 J a step, its contacts adding far more than its welds
@@ -719,7 +720,7 @@ pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: 
             w.py = 0.0;
             w.l = 0.0;
         }
-        solve_pass(b, c, pts, welds, nc, iterations, dt, false, &mut ca, &mut ja);
+        solve_pass(b, c, pts, welds, nc, iterations, dt, false, &mut ca, &mut ja, length);
     }
 
     // Each weld's impulse, and whether the solver held it at a limit, with its demand.
@@ -752,7 +753,7 @@ pub extern "C" fn solve_velocities(nb: usize, nj: usize, nc: usize, iterations: 
 /// normals, four times. Reads and writes the bodies' positions and angles; the welds' a, b, anchors and
 /// reference angle; the contacts' bodies, normal and points' local anchors.
 #[no_mangle]
-pub extern "C" fn correct_positions(nb: usize, nj: usize, nc: usize, slop: f64) {
+pub extern "C" fn correct_positions(nb: usize, nj: usize, nc: usize, slop: f64, length: f64) {
     let s = st();
     let b = &mut s.bodies[..nb * BS];
     let j = &s.joints[..nj * JS];
@@ -817,7 +818,7 @@ pub extern "C" fn correct_positions(nb: usize, nj: usize, nc: usize, slop: f64) 
                 } else {
                     (pbx - pax) * nx + (pby - pay) * ny
                 };
-                let cc = jmax(-MAX_CORRECTION, jmin(0.0, BAUMGARTE * (sep + slop)));
+                let cc = jmax(-MAX_CORRECTION * length, jmin(0.0, BAUMGARTE * (sep + slop)));
                 if cc >= 0.0 {
                     continue;
                 }

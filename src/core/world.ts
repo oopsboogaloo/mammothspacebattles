@@ -37,6 +37,7 @@ import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive
 import { spawnWisps, stepWisps, type Wisp } from "./wisps.ts";
 import { removeDestroyed, stepDust, type Dust } from "./dust.ts";
 import { fireRailguns, type Railgun } from "./railgun.ts";
+import type { Units } from "./units.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -400,6 +401,8 @@ export interface Frame {
 
 export interface World {
   schema: number;
+  /** The world's units, if not the core's own (units.ts): every constant the core uses scales with them. */
+  units?: Units;
   tick: number;
   time: number; // s
   rng: RngState;
@@ -519,7 +522,7 @@ export function createWorld(
   seed: number,
   bodies: BodyInput[] = [],
   gravity: Vec2 = { x: 0, y: 0 },
-  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame; mix?: Mixer; shipRules?: ShipRules } = {},
+  extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame; mix?: Mixer; shipRules?: ShipRules; units?: Units } = {},
   profile?: Profile,
 ): World {
   const gasScale = profile?.gasScale ?? 1;
@@ -542,6 +545,7 @@ export function createWorld(
     pendingUser: zeroDelta(),
     pendingDebug: [],
   };
+  if (extra.units && (extra.units.length !== 1 || extra.units.mass !== 1)) world.units = { ...extra.units };
   if (extra.frame) world.frame = { centre: { ...extra.frame.centre }, omega: extra.frame.omega };
   if (extra.mix) world.mix = structuredClone(extra.mix);
   if (extra.shipRules) world.shipRules = structuredClone(extra.shipRules);
