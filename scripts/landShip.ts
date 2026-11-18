@@ -4,12 +4,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario, scenarioToJson } from "../src/core/index.ts";
+import { toCoreUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;
 type Vec = { x: number; y: number };
 
-const land = scenarioToJson(parseScenario(JSON.parse(readFileSync(join(root, "scenarios", "land-twin-engine.json"), "utf8")))) as Json & {
+const land = scenarioToJson(parseScenario(toCoreUnits(JSON.parse(readFileSync(join(root, "scenarios", "land-twin-engine.json"), "utf8"))), {}, { coreUnits: true })) as Json & {
   world: { bodies: Json[]; joints: Json[]; links: Json[] };
 };
 const shipIds = new Set<string>();

@@ -9,6 +9,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { initialWorld, parseScenario, polygonArea } from "../src/core/index.ts";
+import { migrateUnits, toCoreUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Vec = { x: number; y: number };
@@ -241,7 +242,7 @@ function build(level: Level): Json {
     ui: { overlays: [], labels: false },
   };
   // It must make a world.
-  initialWorld(parseScenario(structuredClone(scenario)));
+  initialWorld(parseScenario(structuredClone(scenario), {}, { coreUnits: true }));
   return scenario;
 }
 
@@ -378,6 +379,7 @@ const LEVEL_2: Level = {
 
 for (const level of [TEST, LEVEL_1, TEST_2, LEVEL_2]) {
   const file = join(root, "scenarios", `${level.name}.json`);
-  writeFileSync(file, `${JSON.stringify(build(level))}\n`);
+  // Built in the core's units; written in the game's (schema 2, docs/units-rescale-plan.md).
+  writeFileSync(file, `${JSON.stringify(migrateUnits(build(level)))}\n`);
   console.log(`wrote ${file}`);
 }

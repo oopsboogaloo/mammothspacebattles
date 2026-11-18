@@ -1,15 +1,8 @@
 // The units proof's comparison (docs/units-rescale-plan.md, stage 1): a scenario run in the core's
 // units and converted (lengths ×4, masses ×1024), side by side, compared after every step.
-import {
-  parseScenario,
-  scenarioProfile,
-  initialWorld,
-  timelineByStep,
-  scenarioSteps,
-  stepInPlace,
-  type World,
-} from "../src/core/index.ts";
+import { parseScenario, scenarioProfile, initialWorld, timelineByStep, scenarioSteps, stepInPlace, type Scenario, type World } from "../src/core/index.ts";
 import { scaleScenario } from "../src/core/scaleScenario.ts";
+import { migrateUnits } from "../src/core/migrateUnits.ts";
 import { D, factor, type Dim, type Units } from "../src/core/units.ts";
 
 export const U: Units = { length: 4, mass: 1024 };
@@ -18,8 +11,7 @@ export const U: Units = { length: 4, mass: 1024 };
 export function difference(a: World, b: World): string {
   const f = (d: Dim) => factor(U, d);
   const same = (x: number, y: number, d: Dim) => Object.is(x, y / f(d));
-  if (a.bodies.length !== b.bodies.length)
-    return `bodies: ${a.bodies.length} vs ${b.bodies.length}`;
+  if (a.bodies.length !== b.bodies.length) return `bodies: ${a.bodies.length} vs ${b.bodies.length}`;
   for (let i = 0; i < a.bodies.length; i++) {
     const p = a.bodies[i];
     const q = b.bodies[i];
@@ -34,8 +26,7 @@ export function difference(a: World, b: World): string {
       ["mass", p.mass, q.mass, D.mass],
       ["integrity", p.integrity, q.integrity, D.none],
     ];
-    for (const [k, x, y, d] of checks)
-      if (!same(x, y, d)) return `${p.id}.${k}: ${x} vs ${y / f(d)} (×${f(d)})`;
+    for (const [k, x, y, d] of checks) if (!same(x, y, d)) return `${p.id}.${k}: ${x} vs ${y / f(d)} (×${f(d)})`;
     const va = p.injector?.vessel;
     const vb = q.injector?.vessel;
     if (!!va !== !!vb) return `${p.id}.vessel: ${!!va} vs ${!!vb}`;
@@ -47,47 +38,29 @@ export function difference(a: World, b: World): string {
         ["credit", va.credit, vb.credit, D.mass],
         ["count", va.count, vb.count, D.none],
       ];
-      for (const [k, x, y, d] of vc)
-        if (!same(x, y, d)) return `${p.id}.vessel.${k}: ${x} vs ${y / f(d)}`;
+      for (const [k, x, y, d] of vc) if (!same(x, y, d)) return `${p.id}.vessel.${k}: ${x} vs ${y / f(d)}`;
     }
-    if (
-      p.injector &&
-      q.injector &&
-      !same(p.injector.credit, q.injector.credit, D.mass)
-    )
-      return `${p.id}.injector.credit: ${p.injector.credit} vs ${q.injector.credit / f(D.mass)}`;
+    if (p.injector && q.injector && !same(p.injector.credit, q.injector.credit, D.mass)) return `${p.id}.injector.credit: ${p.injector.credit} vs ${q.injector.credit / f(D.mass)}`;
   }
   const ca = Object.keys(a.controls).sort();
-  for (const k of ca)
-    if (!Object.is(a.controls[k], b.controls[k]))
-      return `controls.${k}: ${a.controls[k]} vs ${b.controls[k]}`;
-  if (a.contacts.length !== b.contacts.length)
-    return `contacts: ${a.contacts.length} vs ${b.contacts.length}`;
+  for (const k of ca) if (!Object.is(a.controls[k], b.controls[k])) return `controls.${k}: ${a.controls[k]} vs ${b.controls[k]}`;
+  if (a.contacts.length !== b.contacts.length) return `contacts: ${a.contacts.length} vs ${b.contacts.length}`;
   for (let i = 0; i < a.contacts.length; i++) {
     const c = a.contacts[i];
     const e = b.contacts[i];
-    if (c.a !== e.a || c.b !== e.b)
-      return `contact ${i}: ${c.a}/${c.b} vs ${e.a}/${e.b}`;
-    if (!same(c.normalImpulse, e.normalImpulse, D.momentum))
-      return `contact ${c.a}/${c.b} normalImpulse: ${c.normalImpulse} vs ${e.normalImpulse / f(D.momentum)}`;
-    if (!same(c.separation, e.separation, D.length))
-      return `contact ${c.a}/${c.b} separation: ${c.separation} vs ${e.separation / f(D.length)}`;
+    if (c.a !== e.a || c.b !== e.b) return `contact ${i}: ${c.a}/${c.b} vs ${e.a}/${e.b}`;
+    if (!same(c.normalImpulse, e.normalImpulse, D.momentum)) return `contact ${c.a}/${c.b} normalImpulse: ${c.normalImpulse} vs ${e.normalImpulse / f(D.momentum)}`;
+    if (!same(c.separation, e.separation, D.length)) return `contact ${c.a}/${c.b} separation: ${c.separation} vs ${e.separation / f(D.length)}`;
   }
-  if (a.joints.length !== b.joints.length)
-    return `joints: ${a.joints.length} vs ${b.joints.length}`;
+  if (a.joints.length !== b.joints.length) return `joints: ${a.joints.length} vs ${b.joints.length}`;
   for (let i = 0; i < a.joints.length; i++) {
-    if (a.joints[i].id !== b.joints[i].id)
-      return `joint ${i}: ${a.joints[i].id} vs ${b.joints[i].id}`;
-    if (!same(a.joints[i].integrity, b.joints[i].integrity, D.none))
-      return `${a.joints[i].id}.integrity: ${a.joints[i].integrity} vs ${b.joints[i].integrity}`;
+    if (a.joints[i].id !== b.joints[i].id) return `joint ${i}: ${a.joints[i].id} vs ${b.joints[i].id}`;
+    if (!same(a.joints[i].integrity, b.joints[i].integrity, D.none)) return `${a.joints[i].id}.integrity: ${a.joints[i].integrity} vs ${b.joints[i].integrity}`;
   }
   const g = a.gas;
   const h = b.gas;
   if (g.count !== h.count) return `gas parcels: ${g.count} vs ${h.count}`;
-  const gas: [
-    keyof typeof g & ("x" | "y" | "vx" | "vy" | "mass" | "thermal" | "radius"),
-    Dim,
-  ][] = [
+  const gas: [keyof typeof g & ("x" | "y" | "vx" | "vy" | "mass" | "thermal" | "radius"), Dim][] = [
     ["x", D.length],
     ["y", D.length],
     ["vx", D.speed],
@@ -96,18 +69,10 @@ export function difference(a: World, b: World): string {
     ["thermal", D.energy],
     ["radius", D.length],
   ];
-  for (let i = 0; i < g.count; i++)
-    for (const [k, d] of gas)
-      if (!same(g[k][i], h[k][i], d))
-        return `gas[${i}].${k}: ${g[k][i]} vs ${h[k][i] / f(d)}`;
-  if (a.events.length !== b.events.length)
-    return `events: ${a.events.map((e) => e.type).join(",")} vs ${b.events.map((e) => e.type).join(",")}`;
+  for (let i = 0; i < g.count; i++) for (const [k, d] of gas) if (!same(g[k][i], h[k][i], d)) return `gas[${i}].${k}: ${g[k][i]} vs ${h[k][i] / f(d)}`;
+  if (a.events.length !== b.events.length) return `events: ${a.events.map((e) => e.type).join(",")} vs ${b.events.map((e) => e.type).join(",")}`;
   for (let i = 0; i < a.events.length; i++)
-    if (
-      a.events[i].type !== b.events[i].type ||
-      a.events[i].tick !== b.events[i].tick
-    )
-      return `event ${i}: ${a.events[i].type}@${a.events[i].tick} vs ${b.events[i].type}@${b.events[i].tick}`;
+    if (a.events[i].type !== b.events[i].type || a.events[i].tick !== b.events[i].tick) return `event ${i}: ${a.events[i].type}@${a.events[i].tick} vs ${b.events[i].type}@${b.events[i].tick}`;
   return "";
 }
 
@@ -121,70 +86,66 @@ export function controlChannels(w: World): string[] {
   const mixes = [w.thrust?.spec.mix, w.arcade?.spec.mix];
   for (const m of mixes) {
     if (!m) continue;
-    if (Array.isArray(m))
-      for (const row of m)
-        for (const a of row.any)
-          for (const c of [...a.on, ...(a.off ?? [])]) out.add(c);
+    if (Array.isArray(m)) for (const row of m) for (const a of row.any) for (const c of [...a.on, ...(a.off ?? [])]) out.add(c);
     else for (const c of [m.forward, m.left, m.right, m.reverse]) out.add(c);
   }
-  for (const row of w.mix?.rows ?? [])
-    for (const line of row.lines) out.add(line.control);
+  for (const row of w.mix?.rows ?? []) for (const line of row.lines) out.add(line.control);
   for (const l of w.links) if (l.kind === "control") out.add(l.channel);
-  for (const b of w.bodies)
-    for (const c of [
-      b.injector?.channel,
-      b.tractor?.channel,
-      b.shield?.channel,
-      b.magazine?.railgun?.channel,
-    ])
-      if (c) out.add(c);
+  for (const b of w.bodies) for (const c of [b.injector?.channel, b.tractor?.channel, b.shield?.channel, b.magazine?.railgun?.channel]) if (c) out.add(c);
   out.delete("destruct");
   return [...out].sort();
 }
 
 /** The scripted input at step k: channel i is held on and off in turns of 37 + 23·i steps, so they overlap in every combination. */
-export function scripted(
-  channels: string[],
-  k: number,
-): { type: "control.set"; channel: string; value: number }[] {
+export function scripted(channels: string[], k: number): { type: "control.set"; channel: string; value: number }[] {
   const out: { type: "control.set"; channel: string; value: number }[] = [];
   channels.forEach((channel, i) => {
     const period = 37 + 23 * i;
     const on = Math.floor(k / period) % 2;
-    if (k === 0 || k % period === 0)
-      out.push({ type: "control.set", channel, value: on });
+    if (k === 0 || k % period === 0) out.push({ type: "control.set", channel, value: on });
   });
   return out;
 }
 
-/**
- * Runs `scn` both ways for `steps` simulation steps (its own length if not given; past its end it
- * goes on), with its timeline and, if `input`, the scripted input on every control; the first
- * difference, or "".
- */
-export function proof(
-  raw: unknown,
-  steps?: number,
-  input = true,
-): { diff: string; untagged: string[]; steps: number } {
-  const scn = parseScenario(raw);
-  const { scenario: big, untagged } = scaleScenario(scn, U);
-  const a = initialWorld(scn);
-  const b = initialWorld(big);
-  const pa = scenarioProfile(scn);
-  const pb = scenarioProfile(big);
-  const ta = timelineByStep(scn);
-  const tb = timelineByStep(big);
-  const n = steps ?? scenarioSteps(scn);
+/** Runs `core` (in the core's units) and `game` (the same in U) side by side; the first difference, or "". */
+export function proofPair(core: Scenario, game: Scenario, steps?: number, input = true): { diff: string; steps: number } {
+  const a = initialWorld(core);
+  const b = initialWorld(game);
+  const pa = scenarioProfile(core);
+  const pb = scenarioProfile(game);
+  const ta = timelineByStep(core);
+  const tb = timelineByStep(game);
+  const n = steps ?? scenarioSteps(core);
   const channels = input ? controlChannels(a) : [];
   let diff = difference(a, b);
-  if (diff) return { diff: `at start: ${diff}`, untagged, steps: 0 };
+  if (diff) return { diff: `at start: ${diff}`, steps: 0 };
   for (let s = 0; s < n; s++) {
     const keys = scripted(channels, s);
     stepInPlace(a, [...(ta.get(s) ?? []), ...keys], pa);
     stepInPlace(b, [...(tb.get(s) ?? []), ...keys], pb);
     diff = difference(a, b);
-    if (diff) return { diff: `step ${s + 1}: ${diff}`, untagged, steps: s + 1 };
+    if (diff) return { diff: `step ${s + 1}: ${diff}`, steps: s + 1 };
   }
-  return { diff: "", untagged, steps: n };
+  return { diff: "", steps: n };
+}
+
+/**
+ * Runs a scenario in the core's units and in U side by side (UNITS-001), for `steps` simulation steps
+ * (its own length if not given; past its end it goes on), with its timeline and, if `input`, the
+ * scripted input on every control. A scenario in U is converted back for the core's side; one in the
+ * core's units forward. The first difference, or "".
+ */
+export function proof(raw: unknown, steps?: number, input = true): { diff: string; untagged: string[]; steps: number } {
+  const scn = parseScenario(raw);
+  const inGame = !!scn.world.units;
+  const conv = scaleScenario(scn, inGame ? { length: 1 / U.length, mass: 1 / U.mass } : U);
+  const r = inGame ? proofPair(conv.scenario, scn, steps, input) : proofPair(scn, conv.scenario, steps, input);
+  return { ...r, untagged: conv.untagged };
+}
+
+/** A schema 1 scenario against its migration to the game's units (UNITS-003), as `proof`. */
+export function proofMigrated(raw: Record<string, unknown>, steps?: number, input = true): { diff: string; steps: number } {
+  const core = parseScenario(raw, {}, { coreUnits: true });
+  const game = parseScenario(migrateUnits(raw));
+  return proofPair(core, game, steps, input);
 }

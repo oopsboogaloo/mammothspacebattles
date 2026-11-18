@@ -175,6 +175,7 @@ const FIELDS: Record<string, Dim> = {
   "collector.reel": D.speed,
   "collector.maxTension": D.force,
   "turret.range": D.length,
+  "spawn.radius": D.length,
   "generator.burn": D.massRate,
   "shield.radius": D.length,
   "shield.grow": D.speed,
@@ -201,177 +202,79 @@ const FIELDS: Record<string, Dim> = {
 
 /** Keys never scaled wherever they sit. */
 const NONE = new Set([
-  "schema",
-  "seed",
-  "angle",
-  "angularVelocity",
-  "restitution",
-  "friction",
-  "integrity",
-  "step",
-  "steps",
-  "zoom",
-  "omega",
-  "economy",
-  "yield",
-  "count",
-  "reload",
-  "lives",
-  "respawn",
-  "grace",
-  "delay",
-  "every",
-  "first",
-  "skill",
-  "spin",
-  "time",
-  "wait",
-  "reveal",
-  "seams",
-  "pieces",
-  "gold",
-  "compounds",
-  "multiplier",
-  "maxTilt",
-  "fragments",
-  "blast",
-  "damping",
-  "arc",
-  "capture",
-  "rate",
-  "hold",
-  "shots",
-  "capacity",
-  "level",
-  "extraLife",
-  "most",
-  "fromLevel",
-  "pace",
-  "clearPause",
-  "shellLife",
-  "temperature",
-  "value",
-  "flare",
-  "efficiency",
-  "goldDensity",
-  "seamStrength",
-  "compoundSize",
-  "kills",
-  "weight",
-  "amount",
-  "limit",
-  "frontTurn",
-  "cut",
-  "early",
-  "late",
-  "slope",
-  "aim",
-  "life",
-  "min",
-  "max",
-  "target",
-  "shock",
-  "countdown",
-  "perLeak",
-  "blastLeaks",
-  "below",
-  "more",
-  "small",
-  "gap",
-  "flight",
-  "combat",
-  "base",
-  "perLevel",
-  "skillMax",
-  "everyMin",
-  "firstMin",
-  "spread",
-  "interval",
-  "load",
-  "watch",
-  "pause",
-  "ships",
-  "clearBonus",
-  "bonus",
-  "index",
-  "fraction",
-  "last",
-  "heat",
+  "schema", "seed", "angle", "angularVelocity", "restitution", "friction", "integrity", "step", "steps", "zoom", "omega", "economy", "yield", "count", "reload", "lives", "respawn", "grace", "delay", "every", "first", "skill", "spin", "time", "wait", "reveal", "seams", "pieces", "gold", "compounds", "multiplier", "maxTilt", "fragments", "blast", "damping", "arc", "capture", "rate", "hold", "shots", "capacity", "level", "extraLife", "most", "fromLevel", "pace", "clearPause", "shellLife", "temperature", "value", "flare", "efficiency", "goldDensity", "seamStrength", "compoundSize", "kills", "weight", "amount", "limit", "frontTurn", "cut", "early", "late", "slope", "aim", "life", "min", "max", "target", "shock", "countdown", "perLeak", "blastLeaks", "below", "more", "small", "gap", "flight", "combat", "base", "perLevel", "skillMax", "everyMin", "firstMin", "spread", "interval", "load", "watch", "pause", "ships", "clearBonus", "bonus", "index", "fraction", "last", "heat",
 ]);
 
 /** Objects whose numbers are all dimensionless: mass fractions by species. */
 const NONE_INSIDE = new Set(["mixture", "composition"]);
 
-const isObj = (x: unknown): x is Record<string, unknown> =>
-  !!x && typeof x === "object" && !Array.isArray(x);
+const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
 
-function scale(
+/** The dimension of a number at `key` in an object held at `parent`, or undefined if it has none listed. */
+export function dimAt(parent: string, key: string): Dim | undefined {
+  const vec = VECTORS[parent];
+  return vec && (key === "x" || key === "y") ? vec : (FIELDS[`${parent}.${key}`] ?? FIELDS[key]);
+}
+
+/** Whether a number at `key` in `parent` is known to be dimensionless. */
+export const dimensionless = (parent: string, key: string): boolean => NONE.has(key) || NONE_INSIDE.has(parent);
+
+/**
+ * Converts every number in `value` (held at `parent`) by its dimension: `num(n, d, path)` gives the
+ * new value of number n of dimension d (undefined: none listed). Numbers with no dimension listed
+ * and not known to be dimensionless are added to `unknown`. Objects for which `leaf` returns
+ * something (a parameter placeholder, say) are replaced by it.
+ */
+export function walk(
   value: unknown,
   parent: string,
-  units: Units,
-  path: string,
+  num: (n: number, d: Dim | undefined) => number,
   unknown: Set<string>,
+  leaf?: (v: Record<string, unknown>, d: Dim | undefined) => unknown,
 ): unknown {
-  if (Array.isArray(value))
-    return value.map((v) =>
-      scale(v, parent + "[]", units, path + "[]", unknown),
-    );
+  if (Array.isArray(value)) return value.map((v) => walk(v, parent + "[]", num, unknown, leaf));
   if (!isObj(value)) return value;
   const out: Record<string, unknown> = {};
-  const vec = VECTORS[parent];
   for (const [k, v] of Object.entries(value)) {
+    const d = dimAt(parent, k);
+    const known = !!d || dimensionless(parent, k);
+    let r: unknown;
     if (typeof v === "number") {
-      const d =
-        vec && (k === "x" || k === "y")
-          ? vec
-          : (FIELDS[`${parent}.${k}`] ?? FIELDS[k]);
-      if (d) out[k] = v * factor(units, d);
-      else {
-        if (!NONE.has(k) && !NONE_INSIDE.has(parent))
-          unknown.add(`${parent}.${k}`);
-        out[k] = v;
-      }
-    } else if (
-      Array.isArray(v) &&
-      v.length &&
-      v.every((x) => typeof x === "number")
-    ) {
+      if (!known) unknown.add(`${parent}.${k}`);
+      out[k] = num(v, d);
+    } else if (Array.isArray(v) && v.length && v.every((x) => typeof x === "number")) {
       // A range or list of numbers (rocks.speed: [least, most]).
-      const d = FIELDS[`${parent}.${k}`];
-      out[k] = d ? v.map((x: number) => x * factor(units, d)) : v;
-      if (!d && !NONE.has(k)) unknown.add(`${parent}.${k}[]`);
-    } else out[k] = scale(v, k, units, `${path}.${k}`, unknown);
+      if (!known) unknown.add(`${parent}.${k}[]`);
+      out[k] = v.map((x: number) => num(x, d));
+    } else if (leaf && isObj(v) && (r = leaf(v, d)) !== undefined) {
+      if (!known) unknown.add(`${parent}.${k}`);
+      out[k] = r;
+    } else out[k] = walk(v, k, num, unknown, leaf);
   }
   return out;
 }
 
+/** Units combined: `a` then `b` (a world in a's units, converted by b). Absent: the core's. */
+const compose = (a: Units | undefined, b: Units): Units | undefined => {
+  const u = { length: (a?.length ?? 1) * b.length, mass: (a?.mass ?? 1) * b.mass };
+  return u.length === 1 && u.mass === 1 ? undefined : u;
+};
+
 /**
- * `scn` in `units` (of its own, which must be the core's: a scenario already scaled is refused).
+ * `scn` converted by `by`: every number multiplied by its dimension's factor in `by`, and its world's
+ * units changed to match (a world in the game's units converted by ¼ and 1/1024 is in the core's).
  * Returns the scenario and the numbers it found no dimension for (left as they were).
  */
-export function scaleScenario(
-  scn: Scenario,
-  units: Units,
-): { scenario: Scenario; untagged: string[] } {
-  if (scn.world.units)
-    throw new Error("scaleScenario: the scenario is already in other units");
+export function scaleScenario(scn: Scenario, by: Units): { scenario: Scenario; untagged: string[] } {
   const untagged = new Set<string>();
-  const world = scale(
-    scn.world,
-    "world",
-    units,
-    "$.world",
-    untagged,
-  ) as Scenario["world"];
-  const timeline = scale(
-    scn.timeline,
-    "timeline",
-    units,
-    "$.timeline",
-    untagged,
-  ) as Scenario["timeline"];
+  const num = (n: number, d: Dim | undefined) => (d ? n * factor(by, d) : n);
+  const { units: _old, ...rest } = scn.world;
+  void _old;
+  const world = walk(rest, "world", num, untagged) as Scenario["world"];
+  const timeline = walk(scn.timeline, "timeline", num, untagged) as Scenario["timeline"];
+  const units = compose(scn.world.units, by);
   return {
-    scenario: { ...scn, world: { ...world, units: { ...units } }, timeline },
+    scenario: { ...scn, world: { ...world, ...(units ? { units } : {}) }, timeline },
     untagged: [...untagged].sort(),
   };
 }

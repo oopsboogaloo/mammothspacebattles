@@ -21,6 +21,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { assemblyTotals, getProfile, initialWorld, parseScenario, stepInPlace, vesselPressure, vesselShape, type World } from "../src/core/index.ts";
 import { mixture } from "../src/core/gas.ts";
+import { migrateUnits } from "../src/core/migrateUnits.ts";
 
 type Vec = { x: number; y: number };
 type Json = Record<string, unknown>;
@@ -198,7 +199,7 @@ function run(e: Engine, chamber: boolean, parcelsPerSecond: number): Run {
   const { rate, Wc, Lc, h } = dims(e);
   const parts = build(e, "e-", { x: 0, y: 0 }, chamber, rate / parcelsPerSecond, seconds);
   const scn = { schema: 1, name: "engine-validation", profile: "sandbox", seed: 1, world: worldOf([parts]), timeline: [], end: { steps: 1 }, probes: [], assertions: [] };
-  const w0: World = initialWorld(parseScenario(scn));
+  const w0: World = initialWorld(parseScenario(scn, {}, { coreUnits: true }));
   // Catch the parcels the engine lets out as they are added (before the gas step moves them).
   let catching = false;
   let vHead = 0;
@@ -430,7 +431,8 @@ else if (args.includes("--sweep")) {
 } else {
   const file = join(root, "scenarios", "eng-validation.json");
   const scn = scenario();
-  parseScenario(scn);
-  writeFileSync(file, JSON.stringify(scn, null, 2) + "\n");
+  parseScenario(scn, {}, { coreUnits: true });
+  // Built in the core's units; written in the game's (schema 2, docs/units-rescale-plan.md).
+  writeFileSync(file, JSON.stringify(migrateUnits(scn), null, 2) + "\n");
   console.log(`wrote ${file}`);
 }

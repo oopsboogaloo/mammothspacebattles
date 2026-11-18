@@ -17,6 +17,8 @@ export interface Units {
 export type Dim = readonly [l: number, m: number, t: number];
 
 export const BASE_UNITS: Units = { length: 1, mass: 1 };
+/** The game's units in the core's (Chloe, 18 November 2026): lengths ×4, masses ×1024. */
+export const GAME_UNITS: Units = { length: 4, mass: 1024 };
 
 const powInt = (x: number, n: number): number => {
   let r = 1;
@@ -26,8 +28,7 @@ const powInt = (x: number, n: number): number => {
 };
 
 /** What a quantity of dimension `d` is multiplied by in `units`. */
-export const factor = (units: Units | undefined, d: Dim): number =>
-  units ? powInt(units.length, d[0]) * powInt(units.mass, d[1]) : 1;
+export const factor = (units: Units | undefined, d: Dim): number => (units ? powInt(units.length, d[0]) * powInt(units.mass, d[1]) : 1);
 
 // The dimensions used most.
 export const D = {

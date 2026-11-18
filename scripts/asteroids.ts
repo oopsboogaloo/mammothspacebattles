@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
 import { asteroidShip, SHIP_MIX } from "./asteroidShip.ts";
+import { migrateUnits, toCoreUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 
@@ -76,7 +77,7 @@ const GUNSHIP_BLAST = 0.01;
  */
 const GUNSHIP_CHARGE = { charge: 0.05, heat: 1.2e7, fragments: 0, radius: 2 };
 function gunship() {
-  const stress = JSON.parse(readFileSync(join(root, "scenarios", "stress-test.json"), "utf8")) as { ui: { spawn: { bodies: Json[]; joints: Json[]; links: Json[] } } };
+  const stress = toCoreUnits(JSON.parse(readFileSync(join(root, "scenarios", "stress-test.json"), "utf8"))) as unknown as { ui: { spawn: { bodies: Json[]; joints: Json[]; links: Json[] } } };
   const t = JSON.parse(JSON.stringify(stress.ui.spawn).replaceAll("s{n}", "g{n}")) as { bodies: Json[]; joints: Json[]; links: Json[] };
   for (const b of t.bodies) {
     delete b.tractor;
@@ -170,6 +171,7 @@ const scenario = {
   ui: { keys: { q: "left", e: "right", w: "fire", s: "reverse" }, overlays: [], labels: false }, // the page adds Space, the arrows and Shifts
 };
 
-parseScenario(scenario); // fails loudly if the scenario is malformed
-writeFileSync(join(root, "scenarios", "asteroids.json"), JSON.stringify(scenario, null, 2) + "\n");
+parseScenario(scenario, {}, { coreUnits: true }); // fails loudly if the scenario is malformed
+// Built in the core's units; written in the game's (schema 2, docs/units-rescale-plan.md).
+writeFileSync(join(root, "scenarios", "asteroids.json"), JSON.stringify(migrateUnits(scenario as Json), null, 2) + "\n");
 console.log("wrote scenarios/asteroids.json");
