@@ -955,6 +955,13 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
   and welds 78%); the generators are 50 kW/kg (102 MW each), holding the shield up; and a crash is
   one shield hit, not one for each bounce of the elastic field (PWR-004). THRUST 1: 47.96 t full,
   43.96 t without the pilot; 184 m/s² forward, 11.6 rad/s² turning.
+- **After the second play (Chloe, 18 November 2026):** the shield draws twice as much while up
+  (332 MW: THRUST 1's battery in 10 s alone, about 26 s with its generators), and each hit costs
+  its energy at 12.5% (twice as dear).
+- **Saved designs load with today's rules** (`withCurrentRules`): every rule is applied again as
+  a design is loaded or imported, so the figures that follow from them (power, the shield, the
+  railgun's shot, the tractor, what containers hold, the pilot) are today's however they have been
+  retuned since it was saved. Nothing the player sets is touched: those figures are read-only.
 
 Tests: BPD-036, BPD-043, BPD-045, BPD-047, BPD-050, BPD-051.
 

@@ -1501,11 +1501,11 @@ function nodeColours(world: World): Map<string, boolean> {
  */
 /** How far off the screen a body may reach and still be drawn, px: its marks, labels and glow. */
 /**
- * A fast shell's streak: as long as it goes in this many seconds (2.5 frames at 60 Hz, so always
- * longer than its jump from one frame to the next), drawn once it moves more than STREAK_FROM
- * pixels a frame; slower shells stay dots.
+ * A fast shell's streak: as long as it goes in this many seconds (1.25 frames at 60 Hz, so a little
+ * longer than its jump from one frame to the next; Chloe: 2.5 was too long), drawn once it moves
+ * more than STREAK_FROM pixels a frame; slower shells stay dots.
  */
-const STREAK_TIME = 2.5 / 60;
+const STREAK_TIME = 1.25 / 60;
 const STREAK_FROM = 6;
 const STREAK_STEPS = 6;
 const CULL_MARGIN = 60;

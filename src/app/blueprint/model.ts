@@ -1098,6 +1098,20 @@ export function rebalanceV1(bp: Blueprint): Blueprint {
   return out;
 }
 
+/**
+ * A saved or imported blueprint with today's rules: brought up to rebalance v1 if it is from before
+ * it, then every rule applied again, so the figures that follow from them (power, the shield, the
+ * railgun's shot, the tractor, what containers hold, the pilot) are today's, however they have been
+ * retuned since it was saved (Sourcery, 18 November 2026). Nothing the player sets is touched: those
+ * figures are read-only in the designer.
+ */
+export function withCurrentRules(bp: Blueprint): Blueprint {
+  const out = clone(rebalanceV1(bp));
+  for (const c of out.components) applyRules(out, c.id);
+  reammo(out);
+  return out;
+}
+
 /** Shell feeds (WPN-015): every store of shells feeds every gun that fires shells like them. */
 export function reammo(bp: Blueprint): void {
   const ids = new Set(bp.ship.bodies.map((b) => b.id));
