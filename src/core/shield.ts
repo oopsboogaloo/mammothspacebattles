@@ -184,6 +184,8 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
       // Powered: its steady draw for this step, or it can't stay up.
       if (!held || (powered ? !takeEnergy(world, roots, gen.id, s.draw! * dt) : !tanks.length)) {
         s.r = undefined;
+        // A new field meets everything afresh.
+        delete s.struck;
         changed = dropField(world, gen) || changed;
         continue;
       }
@@ -217,13 +219,14 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
       // What is touching the field now (one encounter goes on while it does), and what has been clear of it long enough to hit afresh.
       const rehit = Math.round(REHIT / dt);
       if (s.hitEfficiency !== undefined) {
+        // First forget what has been clear of it long enough; then what still touches it is still the same encounter.
+        if (s.struck) s.struck = s.struck.filter((x) => world.tick - x.last <= rehit);
         for (const c of world.contacts ?? []) {
           const other = c.a === id ? c.b : c.b === id ? c.a : null;
           if (other === null) continue;
-          const seen = (s.struck ??= []).find((x) => x.by === other);
+          const seen = s.struck?.find((x) => x.by === other);
           if (seen) seen.last = world.tick;
         }
-        if (s.struck) s.struck = s.struck.filter((x) => world.tick - x.last <= rehit);
       }
       for (let i = world.events.length - 1; i >= 0 && world.events[i].tick >= world.tick - 1; i--) {
         const e = world.events[i];

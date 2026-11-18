@@ -779,7 +779,7 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     expect(body(wider, "shield").mass).toBeCloseTo((3000 / 1024) * 2 + 1, 9);
   });
 
-  it("BPD-045 PWR-004 a crash into a wall with the shield up is one hit, at the energy the ship brings (½ M v² at 25%), though the elastic field bounces against it many times as it settles", () => {
+  it("BPD-045 PWR-004 a crash into a wall with the shield up is one hit, at the energy the ship brings (½ M v² at 25%), though the elastic field bounces against it many times as it settles; once clear, another crash is another hit", () => {
     const w = measureWorld(regular);
     stepInPlace(w, [{ type: "control.set", channel: "action-c", value: 1 }], getProfile("sandbox"));
     for (let i = 0; i < 240; i++) stepInPlace(w, [], getProfile("sandbox"));
@@ -797,6 +797,19 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     const full = (0.5 * ship * v * v) / 0.25 / 1000;
     expect(Number(hits[0].data.energy)).toBeGreaterThan(0.9 * full);
     expect(Number(hits[0].data.energy)).toBeLessThan(1.01 * full);
+    // Clear of the wall for well over 0.5 s (it drifts away, bounced off), it flies into it again: a new crash, a new hit.
+    let lastTouch = w.tick;
+    for (let i = 0; i < 480; i++) {
+      stepInPlace(w, [], getProfile("sandbox"));
+      if (w.contacts.some((c) => [c.a, c.b].includes("wall"))) lastTouch = w.tick;
+    }
+    expect(w.tick - lastTouch).toBeGreaterThan(240);
+    const back = v - w.bodies.find((b) => b.id === "hull")!.velocity.x;
+    for (const b of w.bodies) if (b.id !== "wall") b.velocity = { x: b.velocity.x + back, y: b.velocity.y };
+    for (let i = 0; i < 960; i++) stepInPlace(w, [], getProfile("sandbox"));
+    const again = w.events.filter((e) => e.type === "shield.hit");
+    expect(again).toHaveLength(2);
+    expect(Number(again[1].data.energy)).toBeGreaterThan(0.8 * full);
   });
 
   it("BPD-046 a blueprint played in a game: its parts numbered as the game's ships, round its cockpit, its hull and gun named, and its wiring with the actions on the game's controls", () => {
