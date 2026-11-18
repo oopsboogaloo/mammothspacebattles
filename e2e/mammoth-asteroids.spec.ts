@@ -42,12 +42,12 @@ test("MAS-001 MAS-002 MAS-008 Mammoth Asteroids on its own page: the title, then
   await expect.poll(() => hook(page, (m) => m.arcade()?.phase)).toBe("playing");
 });
 
-test("MAS-010 the arena is the whole view: the screen's shape, 160 m high, its corners at the view's corners", async ({ page }) => {
+test("MAS-010 the arena is the whole view: the screen's shape, 640 m high (160 m before the units changed), its corners at the view's corners", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await start(page);
   const b = await hook(page, (m) => m.sandbox().world.bounds);
-  expect(b.max.y - b.min.y).toBe(160);
-  expect(b.max.x - b.min.x).toBeCloseTo(160 * (1280 / 720), 6);
+  expect(b.max.y - b.min.y).toBe(640);
+  expect(b.max.x - b.min.x).toBeCloseTo(640 * (1280 / 720), 6);
   await expect
     .poll(async () => {
       const c = await hook(page, (m) => {
@@ -287,7 +287,7 @@ test("MAS-007 How to play and The physics open from the title, each with Back, a
   await page.getByTestId("mas-open-physics").click();
   const physics = page.getByTestId("mas-physics");
   await expect(physics.getByRole("heading", { name: "THE PHYSICS" })).toBeVisible();
-  for (const text of ["There is no thrust force", "railgun", "Where the game cheats", "Gold can't be damaged", "sixty-six times", "5.5 kg"]) await expect(physics).toContainText(text);
+  for (const text of ["There is no thrust force", "railgun", "Where the game cheats", "Gold can't be damaged", "sixty-six times", "5.6 tonnes"]) await expect(physics).toContainText(text);
   // White on black, as the rest of the game.
   await expect(physics).toHaveCSS("color", "rgb(255, 255, 255)");
   await page.getByTestId("mas-back").click();

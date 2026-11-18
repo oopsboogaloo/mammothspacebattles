@@ -18,7 +18,7 @@ test("BPD-017 the sandbox's start screen links to the designer, which opens on T
   await openFresh(page);
   const scrolls = await page.evaluate(() => [document.documentElement.scrollHeight > innerHeight, document.documentElement.scrollWidth > innerWidth]);
   expect(scrolls).toEqual([false, false]);
-  await expect(page.getByTestId("performance")).toContainText("60.3 kg"); // THRUST 1: smaller wing tanks for its engines' chambers, and its welds weigh 1.4 kg
+  await expect(page.getByTestId("performance")).toContainText("61.71 t"); // THRUST 1: smaller wing tanks for its engines' chambers, and its welds weigh 1.5 t (the game's units: docs/units-rescale-plan.md)
 });
 
 test("BPD-018 select an engine and type a new nozzle length: a preset is copied, the walls change, and undo puts them back", async ({ page }) => {
@@ -26,11 +26,12 @@ test("BPD-018 select an engine and type a new nozzle length: a preset is copied,
   await page.getByTestId("part-main").locator("polygon").nth(1).click();
   await expect(page.getByTestId("selected-name")).toHaveText("Main thruster");
   const input = page.getByTestId("param-length").locator("input.num");
-  await input.fill("1.6");
+  // In the game's units: the walls 4.4 m long, made 6.4 m.
+  await input.fill("6.4");
   await input.press("Enter");
   await expect(page.getByTestId("drawing-name")).toHaveText("THRUST 1 COPY");
   await expect(page.getByTestId("toast")).toContainText("preset");
-  await expect(input).toHaveValue("1.60");
+  await expect(input).toHaveValue("6.40");
   const after = await blueprint(page);
   expect(after.preset).toBeFalsy();
   // A held stepper is one undo step.
@@ -44,7 +45,7 @@ test("BPD-018 select an engine and type a new nozzle length: a preset is copied,
   await page.keyboard.press("Control+z");
   await expect(flare).toHaveValue(before);
   await page.keyboard.press("Control+z");
-  await expect(input).toHaveValue("1.10");
+  await expect(input).toHaveValue("4.40");
 });
 
 test("BPD-019 click a weld point to see its two parts and its strength", async ({ page }) => {
@@ -153,12 +154,12 @@ test("BPD-025 Measure runs the real physics in the background and shows the meas
   await openFresh(page);
   await page.getByTestId("measure").click();
   await expect(page.getByTestId("performance")).toContainText("✓ measured", { timeout: 30_000 });
-  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward3[5-8]\.\d m\/s² ✓/);
+  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward1[4-5]\d\.\d m\/s² ✓/);
   // A change makes it an estimate again; undo brings the measurement back.
   await page.getByTestId("part-main").locator("polygon").nth(1).click();
   const rate = page.getByTestId("param-rate");
   await page.getByRole("region", { name: "Properties" }).getByRole("tab", { name: "FUEL" }).click();
-  await rate.locator("input.num").fill("5");
+  await rate.locator("input.num").fill("5000");
   await rate.locator("input.num").press("Enter");
   await expect(page.getByTestId("performance")).toContainText("est.");
 });
@@ -261,23 +262,23 @@ test("BPD-029 a game controller flies Try it: A is forward, the stick turns, thr
   await expect.poll(controls, { timeout: 15_000 }).toMatchObject({ main: 0 });
 });
 
-test("BPD-031 Try it's field is 120 × 75 m and wraps; the view follows the ship, showing 60 m of it", async ({ page }) => {
+test("BPD-031 Try it's field is 480 × 300 m (120 × 75 m before the units changed) and wraps; the view follows the ship, showing 240 m of it", async ({ page }) => {
   await openFresh(page);
   await page.getByTestId("try-it").click();
   const w = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bounds: { min: { x: number; y: number }; max: { x: number; y: number }; wrap: boolean } } } } }).__msb.sandbox().world.bounds);
-  expect([w.max.x - w.min.x, w.max.y - w.min.y, w.wrap]).toEqual([120, 75, true]);
+  expect([w.max.x - w.min.x, w.max.y - w.min.y, w.wrap]).toEqual([480, 300, true]);
   await page.keyboard.down("ArrowUp");
   // Held until it has flown, however slowly the browser runs the flight.
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; position: { y: number } }[] } } } }).__msb.sandbox().world.bodies.find((b) => b.id === "hull")!.position.y), { timeout: 60_000, intervals: [50] }).toBeGreaterThan(1);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; position: { y: number } }[] } } } }).__msb.sandbox().world.bodies.find((b) => b.id === "hull")!.position.y), { timeout: 60_000, intervals: [50] }).toBeGreaterThan(4);
   await page.keyboard.up("ArrowUp");
   const cam = await page.evaluate(() => {
     const msb = (window as unknown as { __msb: { camera: () => { x: number; y: number; zoom: number }; sandbox: () => { world: { bodies: { id: string; position: { x: number; y: number } }[] } } } }).__msb;
     return { cam: msb.camera(), at: msb.sandbox().world.bodies.find((b) => b.id === "hull")!.position, vw: innerWidth };
   });
-    expect(Math.abs(cam.cam.y - cam.at.y)).toBeLessThan(2); // and the view went with it
-  // It shows 60 m across (or 37.5 m up, whichever fits): about half the field.
-  expect(cam.vw / cam.cam.zoom).toBeGreaterThanOrEqual(59.9);
-  expect(cam.vw / cam.cam.zoom).toBeLessThan(75);
+    expect(Math.abs(cam.cam.y - cam.at.y)).toBeLessThan(8); // and the view went with it
+  // It shows 240 m across (or 150 m up, whichever fits): about half the field.
+  expect(cam.vw / cam.cam.zoom).toBeGreaterThanOrEqual(239.6);
+  expect(cam.vw / cam.cam.zoom).toBeLessThan(300);
 });
 
 test("BPD-032 on a touch screen Try it has Mammoth Thrust's buttons: L and R held together fly forward through the wiring", async ({ browser }) => {
@@ -328,10 +329,10 @@ test("BPD-035 parts never overlap: THRUST OG's railgun and shield emitter are fl
   await expect(page.getByTestId("overlapping")).toContainText("Railgun OG and Shield emitter OG");
   await page.getByTestId("part-tank-l").locator("polygon").first().click();
   const width = page.getByTestId("param-width").locator("input.num");
-  await width.fill("1.7");
+  await width.fill("6.8");
   await width.press("Enter");
   await expect(page.getByTestId("toast")).toContainText("overlap Generator L OG and Magazine L OG");
-  await expect(width).toHaveValue("1.50");
+  await expect(width).toHaveValue("6.00");
 });
 
 test("BPD-034 the action buttons are named by what they do in this ship, and the player can rename them for it", async ({ browser }) => {
@@ -355,11 +356,11 @@ test("BPD-018 arrow keys in a value box change it and the box keeps up; leaving 
   const input = page.getByTestId("param-length").locator("input.num");
   await input.focus();
   await page.keyboard.press("ArrowUp");
-  await expect(input).toHaveValue("1.15");
+  await expect(input).toHaveValue("4.60");
   await page.keyboard.press("ArrowUp");
-  await expect(input).toHaveValue("1.20");
+  await expect(input).toHaveValue("4.80");
   await input.blur();
-  await expect(input).toHaveValue("1.20");
+  await expect(input).toHaveValue("4.80");
 });
 
 test("BPD-034 a blueprint file saved with the old Fire, Tractor and Shield wiring imports wired to Actions A, B and C", async ({ page }) => {
@@ -381,8 +382,8 @@ test("BPD-036 the OG parts are listed after the regular ones; in Try it, THRUST 
   // Storage: the regular magazine, then the OG one under its heading.
   await page.getByRole("tab", { name: "ST" }).click();
   await expect(page.getByTestId("kind-name")).toHaveText("STORAGE");
-  await expect(page.getByTestId("card-mag-l")).toContainText("13.00 kg"); // 3 kg and 60 shells
-  await expect(page.getByTestId("card-mag-l-og")).toContainText("3.00 kg");
+  await expect(page.getByTestId("card-mag-l")).toContainText("13,312 kg"); // 3 kg and 60 shells, ×1024 in the game's units
+  await expect(page.getByTestId("card-mag-l-og")).toContainText("3,072 kg");
   await expect(page.getByText("OG · AS THRUST HAS THEM")).toBeVisible();
   await page.getByTestId("try-it").click();
   const shells = () =>

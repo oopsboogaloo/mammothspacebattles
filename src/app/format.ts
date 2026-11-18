@@ -15,6 +15,8 @@ export function fmt(value: number, unit = "", digits = 3): string {
   if (!Number.isFinite(value)) return `${value}${unit ? " " + unit : ""}`;
   if (value === 0) return `0${unit ? " " + unit : ""}`;
   const abs = Math.abs(value);
+  // A tonne and more of mass reads in tonnes (the game's ships weigh tens of them).
+  if (unit === "kg" && abs >= 999.5) return fmt(value / 1000, "t", digits);
   // Speeds below 1 m/s read better as "0.500 m/s" than "500 mm/s".
   if (PREFIXED.has(unit) && !(unit.startsWith("m/") && abs < 1)) {
     for (const [scale, prefix] of PREFIXES) {

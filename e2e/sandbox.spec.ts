@@ -87,7 +87,7 @@ test.describe("creating and editing", () => {
     await page.mouse.click(p.x, p.y);
     await page.getByTestId("palette-search").fill("");
     await page.getByTestId("spawn-box").click();
-    const q = await toPage(page, 3, 0);
+    const q = await toPage(page, 12, 0);
     await page.mouse.click(q.x, q.y);
     const w = await world(page);
     expect(w.bodies.map((b) => b.id).sort()).toEqual(["box-2", "hexagon-1"]);
@@ -97,10 +97,10 @@ test.describe("creating and editing", () => {
     await openStarter(page, "sc01-elastic-collision");
     const start = await hash(page);
     await page.keyboard.press("m");
-    await dragWorld(page, [3, 0], [3, 2]);
-    expect((await body(page, "b"))!.position.y).toBeCloseTo(2, 1);
+    await dragWorld(page, [12, 0], [12, 8]);
+    expect((await body(page, "b"))!.position.y).toBeCloseTo(8, 1); // the game's units: 2 m as set, ×4
     // Rotate handle sits above the selected body.
-    const c = await toPage(page, 3, 2);
+    const c = await toPage(page, 12, 8);
     const zoom = 60;
     await page.mouse.move(c.x, c.y - 0.5 * zoom - 22);
     await page.mouse.down();
@@ -121,8 +121,8 @@ test.describe("creating and editing", () => {
   test("SBX-018 the impulse tool previews J, Δv and Δω, then applies on release", async ({ page }) => {
     await openStarter(page, "rs02-off-centre-impact");
     await page.keyboard.press("i");
-    const a = await toPage(page, 0.8, 0);
-    const b = await toPage(page, 0.8, 0.5);
+    const a = await toPage(page, 3.2, 0);
+    const b = await toPage(page, 3.2, 2);
     await page.mouse.move(a.x, a.y);
     await page.mouse.down();
     await page.mouse.move(b.x, b.y, { steps: 5 });
@@ -130,13 +130,13 @@ test.describe("creating and editing", () => {
     expect((await body(page, "rod"))!.velocity.y).toBe(0);
     await page.mouse.up();
     const rod = (await body(page, "rod"))!;
-    expect(rod.velocity.y).toBeCloseTo(1, 1); // 0.5 m drag × 2 = 1 m/s
+    expect(rod.velocity.y).toBeCloseTo(4, 1); // 2 m drag (0.5 m before the units changed) × 2 = 4 m/s
     expect((await world(page)).ledger.violations).toBe(0);
   });
 
   test("SBX-022 right-click opens a context menu with the body's actions", async ({ page }) => {
     await openStarter(page, "sc01-elastic-collision");
-    const p = await toPage(page, 3, 0);
+    const p = await toPage(page, 12, 0);
     await page.mouse.click(p.x, p.y, { button: "right" });
     await expect(page.getByTestId("menu")).toBeVisible();
     await page.getByTestId("ctx-fixed").click();
@@ -150,7 +150,7 @@ test.describe("creating and editing", () => {
 test.describe("inspector", () => {
   test("INS-001 INS-002 sections collapse and remember; values accept typing and drag-scrubbing with units", async ({ page }) => {
     await openStarter(page, "sc01-elastic-collision");
-    const p = await toPage(page, -3, 0);
+    const p = await toPage(page, -12, 0);
     await page.mouse.click(p.x, p.y);
     await expect(page.getByTestId("inspector-title")).toHaveText("a");
     for (const s of ["identity", "shape", "material", "motion", "contents", "joints", "links", "live"]) await expect(page.getByTestId(`section-${s}`)).toBeVisible();
@@ -159,7 +159,7 @@ test.describe("inspector", () => {
     await page.reload();
     await page.getByTestId("pick-sc01-elastic-collision").click();
     await page.waitForTimeout(100);
-    const p2 = await toPage(page, -3, 0);
+    const p2 = await toPage(page, -12, 0);
     await page.mouse.click(p2.x, p2.y);
     await expect(page.getByTestId("inspector-title")).toHaveText("a");
     await expect(page.getByTestId("field-vx")).toHaveCount(0); // still collapsed
@@ -175,25 +175,25 @@ test.describe("inspector", () => {
     await page.mouse.down();
     await page.mouse.move(box.x + 45, box.y + box.height / 2, { steps: 5 });
     await page.mouse.up();
-    expect((await body(page, "a"))!.velocity.x).toBeCloseTo(3, 5); // 40 px / 4 px per step × 0.1
+    expect((await body(page, "a"))!.velocity.x).toBeCloseTo(9, 5); // 8 m/s, and 40 px / 4 px per step × 0.1
   });
 
   test("INS-003 INS-004 derived values are read-only with tooltips; invalid input is rejected inline", async ({ page }) => {
     await openStarter(page, "sc01-elastic-collision");
-    const p = await toPage(page, -3, 0);
+    const p = await toPage(page, -12, 0);
     await page.mouse.click(p.x, p.y);
     await expect(page.locator(".row[title*='÷ area']")).toContainText("kg/m²");
     await page.getByTestId("field-mass").fill("-1");
     await page.getByTestId("field-mass").press("Enter");
     await expect(page.getByTestId("error-mass")).toHaveText("Must be greater than 0");
-    await expect(page.getByTestId("field-mass")).toHaveValue("1");
-    expect((await body(page, "a"))!.mass).toBe(1);
+    await expect(page.getByTestId("field-mass")).toHaveValue("1024");
+    expect((await body(page, "a"))!.mass).toBe(1024);
   });
 
   test("INS-005 multi-selection edits shared values together and shows mixed ones", async ({ page }) => {
     await openStarter(page, "sc01-elastic-collision");
-    const a = await toPage(page, -3, 0);
-    const b = await toPage(page, 3, 0);
+    const a = await toPage(page, -12, 0);
+    const b = await toPage(page, 12, 0);
     await page.mouse.click(a.x, a.y);
     await page.keyboard.down("Shift");
     await page.mouse.click(b.x, b.y);
@@ -211,18 +211,18 @@ test.describe("seeing what's happening", () => {
   test("SBX-030 pan, zoom to the cursor, zoom to fit and follow", async ({ page }) => {
     await openStarter(page, "sc01-elastic-collision");
     const before = await toPage(page, 0, 0);
-    await dragWorld(page, [0, 2], [1, 2]); // select tool: drag empty space pans
+    await dragWorld(page, [0, 8], [4, 8]); // select tool: drag empty space pans
     const after = await toPage(page, 0, 0);
     expect(after.x - before.x).toBeGreaterThan(40);
-    const anchor = await toPage(page, 3, 0);
+    const anchor = await toPage(page, 12, 0);
     await page.mouse.move(anchor.x, anchor.y);
     await page.mouse.wheel(0, -400);
-    const still = await toPage(page, 3, 0);
+    const still = await toPage(page, 12, 0);
     expect(Math.abs(still.x - anchor.x)).toBeLessThan(2);
     await page.keyboard.press("z");
     const fitted = await toPage(page, 0, 0);
     expect(fitted.x).toBeGreaterThan(0);
-    const bNow = await toPage(page, 3, 0);
+    const bNow = await toPage(page, 12, 0);
     await page.mouse.click(bNow.x, bNow.y);
     await expect(page.getByTestId("inspector-title")).toHaveText("b");
     await page.keyboard.press("f");
@@ -254,15 +254,15 @@ test.describe("seeing what's happening", () => {
     const g = page.getByTestId("graph-vax").locator("canvas");
     const box = (await g.boundingBox())!;
     await page.mouse.move(box.x + 5, box.y + box.height / 2);
-    await expect(page.getByTestId("graph-value-vax")).toContainText("2.0000");
+    await expect(page.getByTestId("graph-value-vax")).toContainText("8.0000");
     await expect(page.getByTestId("graph-value-vax")).toContainText("@");
   });
 
   test("SBX-036 hovering a body shows type, mass, speed and spin", async ({ page }) => {
     await openStarter(page, "sc01-elastic-collision");
-    const p = await toPage(page, 3, 0);
+    const p = await toPage(page, 12, 0);
     await page.mouse.move(p.x, p.y);
-    await expect(page.getByTestId("hovercard")).toContainText("b · disc · 3.00 kg · 1.00 m/s · 0.00 rad/s");
+    await expect(page.getByTestId("hovercard")).toContainText("b · disc · 3.07 t · 4.00 m/s · 0.00 rad/s");
   });
 
   test("SBX-037 the event log lists collisions; clicking one jumps to its step", async ({ page }) => {
@@ -310,7 +310,7 @@ test.describe("onboarding and discoverability", () => {
     await page.getByTestId("overlay-com").click();
     await page.getByTestId("step10").click();
     await page.keyboard.press("i");
-    await dragWorld(page, [-2.95, 0.1], [-2.95, 0.6]);
+    await dragWorld(page, [-11.8, 0.4], [-11.8, 2.4]);
     await page.evaluate(() => window.dispatchEvent(new Event("beforeunload")));
     await page.goto("./");
     await expect(page.getByTestId("resume")).toContainText("Elastic collision");
@@ -336,7 +336,7 @@ test.describe("onboarding and discoverability", () => {
     await openStarter(page, "sc01-elastic-collision");
     await page.getByTestId("step10").click();
     await page.keyboard.press("Delete"); // nothing selected: no change
-    const p = await toPage(page, 3, 0);
+    const p = await toPage(page, 12, 0);
     await page.mouse.click(p.x, p.y);
     await page.keyboard.press("Delete");
     await page.getByTestId("scenarios").click();
@@ -352,14 +352,14 @@ test.describe("onboarding and discoverability", () => {
 test.describe("scenarios in the sandbox", () => {
   test("SCN-008 changing a parameter resets and reruns the scenario", async ({ page }) => {
     await openStarter(page, "sc01-elastic-collision");
-    await page.getByTestId("field-param-mB").fill("1");
+    await page.getByTestId("field-param-mB").fill("1024");
     await page.getByTestId("field-param-mB").press("Enter");
-    expect((await body(page, "b"))!.mass).toBe(1);
+    expect((await body(page, "b"))!.mass).toBe(1024);
     expect((await world(page)).tick).toBe(0);
     await page.keyboard.press("Space");
     await waitForTick(page, 500);
     // Equal masses swap velocities.
-    await expect(page.getByTestId("graph-value-vax")).toContainText("-1.0000");
+    await expect(page.getByTestId("graph-value-vax")).toContainText("-4.0000");
   });
 
   test("SCN-010 starters open with their note, overlays and graphs switched on", async ({ page }) => {
@@ -441,7 +441,7 @@ test.describe("quality and accessibility", () => {
       for (let i = 0; i < 6; i++) await page.getByTestId("step10").click();
       await shot(page, info, `${s}-t60`);
     }
-    const p = await toPage(page, 0, 0.5);
+    const p = await toPage(page, 0, 2);
     await page.mouse.click(p.x, p.y);
     await shot(page, info, "inspector-selected");
     await page.keyboard.press("Control+k");

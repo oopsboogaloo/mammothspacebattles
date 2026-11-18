@@ -29,7 +29,7 @@ test("UXV-001 W4 SBX-015 SBX-016 detach a part mid-flight and see the assembly's
   const hull = (await body(page, "hull"))!;
   await b.clickWorld(hull.position.x, hull.position.y);
   b.done();
-  await expect(page.locator(".section", { hasText: "ASSEMBLY" })).toContainText("5.00 kg");
+  await expect(page.locator(".section", { hasText: "ASSEMBLY" })).toContainText("5.12 t"); // 5 kg in the core's units, ×1024
   const after = (await body(page, "pod-right"))!;
   expect(after.velocity).toEqual(pod.velocity); // keeps its momentum
   expect((await world(page)).ledger.violations).toBe(0);
@@ -84,10 +84,11 @@ test("SBX-014 SBX-016 attaching shows a live valid/blocked preview, then welds t
   await page.getByTestId("hide-look-for").click();
   await page.keyboard.press("a");
   await page.getByTestId("spawn-box").click();
-  const top = await toPage(page, 0, 0.55);
+  // The scenario is in the game's units (lengths ×4): places as they were set, ×4.
+  const top = await toPage(page, 0, 0.55 * 4);
   await page.mouse.move(top.x, top.y);
   await expect(page.getByTestId("attach-readout")).toContainText("Valid: hull");
-  const right = await toPage(page, 1.05, 0);
+  const right = await toPage(page, 1.05 * 4, 0);
   await page.mouse.move(right.x, right.y);
   await expect(page.getByTestId("attach-readout")).toContainText("Blocked");
   await page.mouse.move(top.x, top.y);
@@ -95,10 +96,10 @@ test("SBX-014 SBX-016 attaching shows a live valid/blocked preview, then welds t
   const w = (await world(page)) as Awaited<ReturnType<typeof world>> & { joints: unknown[] };
   expect(w.joints).toHaveLength(3);
   const box = w.bodies.find((b) => b.id.startsWith("box-"))!;
-  expect(box.position.y).toBeCloseTo(1, 6);
+  expect(box.position.y).toBeCloseTo(4, 6);
   await page.keyboard.press("Escape");
   await clickWorld(page, 0, 0);
-  await expect(page.locator(".section", { hasText: "ASSEMBLY" })).toContainText("7.00 kg");
+  await expect(page.locator(".section", { hasText: "ASSEMBLY" })).toContainText("7.17 t");
 });
 
 test("SBX-017 the link tool makes a feed link between stores and lights up only compatible bodies", async ({ page }) => {
@@ -106,9 +107,9 @@ test("SBX-017 the link tool makes a feed link between stores and lights up only 
   await page.getByTestId("pick-empty").click();
   await page.keyboard.press("s");
   await page.getByTestId("spawn-box").click();
-  for (const x of [-2, 2, 0]) await clickWorld(page, x, x === 0 ? 3 : 0);
+  for (const x of [-8, 8, 0]) await clickWorld(page, x, x === 0 ? 12 : 0); // the game's units: ×4
   await page.keyboard.press("Escape");
-  for (const [x, amount] of [[-2, "5"], [2, ""]] as const) {
+  for (const [x, amount] of [[-8, "5"], [8, ""]] as const) {
     await clickWorld(page, x, 0);
     await page.getByTestId("add-store").click();
     if (amount) {
@@ -117,9 +118,9 @@ test("SBX-017 the link tool makes a feed link between stores and lights up only 
     }
   }
   await page.keyboard.press("l");
-  await dragWorld(page, [-2, 0], [0, 3]); // box without a store: refused
+  await dragWorld(page, [-8, 0], [0, 12]); // box without a store: refused
   await expect(page.getByTestId("toast")).toContainText("matching store");
-  await dragWorld(page, [-2, 0], [2, 0]);
+  await dragWorld(page, [-8, 0], [8, 0]);
   const w = await world(page);
   expect((w as unknown as { links: { kind: string; from: string; to: string }[] }).links).toEqual([expect.objectContaining({ kind: "feed", from: "box-1", to: "box-2" })]);
   await page.keyboard.press("Space");
@@ -152,7 +153,7 @@ test("SBX-021 an assembly can be saved as a prefab and spawned as a copy", async
   await page.getByTestId("ctx-prefab").click();
   await page.keyboard.press("s");
   await page.getByTestId("prefab-0").click();
-  await clickWorld(page, 3, 2.5);
+  await clickWorld(page, 12, 10);
   const w = await world(page);
   expect(w.bodies).toHaveLength(6);
   expect((w as unknown as { joints: unknown[] }).joints).toHaveLength(4);

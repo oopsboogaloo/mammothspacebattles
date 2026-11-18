@@ -26,7 +26,7 @@ export const shown = (v: number, unit: string): number => v * shownFactor(unit);
 /** A figure typed in, back in the designer's units. */
 export const fromShown = (v: number, unit: string): number => v / shownFactor(unit);
 /** Decimals for a figure grown by its factor: as many fewer as the factor has digits, at least none. */
-export const shownDecimals = (decimals: number, unit: string): number => Math.max(0, decimals - Math.round(Math.log10(shownFactor(unit))));
+export const shownDecimals = (decimals: number, unit: string): number => Math.max(0, decimals - Math.floor(Math.log10(shownFactor(unit))));
 
 /** A number field as shown: its value, range and step in the game's units. */
 export function shownParam<P extends { value: number; min: number; max: number; step: number; decimals: number; unit: string }>(p: P): P {

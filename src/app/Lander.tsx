@@ -476,7 +476,7 @@ function Play() {
         </div>
         <div class="lander-fuel" title="Fuel">
           <div class={`bar${fuelShare < 0.15 ? " low" : ""}`} style={{ width: `${(100 * fuelShare).toFixed(1)}%` }} />
-          <span>FUEL {status ? status.fuel.toFixed(2) : "–"} kg</span>
+          <span>FUEL {status ? (status.fuel / 1000).toFixed(2) : "–"} t</span>
         </div>
         <div class="lander-stats">
           <span data-testid="lander-score">

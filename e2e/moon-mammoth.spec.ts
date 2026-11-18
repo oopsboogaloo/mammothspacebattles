@@ -32,10 +32,12 @@ const start = async (page: Page, level = "?level=test") => {
 };
 /** How far round the moon the mammoth is, m clockwise from the top, and how high over the smooth surface. */
 const along = (page: Page) => hook(page, (m) => 40 * Math.atan2(m.mammoth().position.x, m.mammoth().position.y));
-const alt = (page: Page) => hook(page, (m) => Math.hypot(m.mammoth().position.x, m.mammoth().position.y) - 40);
+// The levels are in the game's units (lengths ×4); these helpers take and give metres as the levels
+// were set (the moon 40 m round): along it by angle, height and places ÷ and × 4.
+const alt = (page: Page) => hook(page, (m) => Math.hypot(m.mammoth().position.x, m.mammoth().position.y) / 4 - 40);
 /** Puts the mammoth standing at s m round, at rest: running there is the game, not the test. */
 const place = (page: Page, s: number) =>
-  page.evaluate(([s, r]) => (window as unknown as { __msb: Hook }).__msb.edit([{ type: "body.set", id: "mammoth", patch: { position: { x: r * Math.sin(s / 40), y: r * Math.cos(s / 40) }, velocity: { x: 0, y: 0 } } }]), [s, R + 1.02] as const);
+  page.evaluate(([s, r]) => (window as unknown as { __msb: Hook }).__msb.edit([{ type: "body.set", id: "mammoth", patch: { position: { x: r * Math.sin(s / 40), y: r * Math.cos(s / 40) }, velocity: { x: 0, y: 0 } } }]), [s, (R + 1.02) * 4] as const);
 const hold = (page: Page, id: string, on: boolean) => page.getByTestId(id).dispatchEvent(on ? "pointerdown" : "pointerup", { pointerId: 1, bubbles: true });
 
 test("MMN-001 Moon Mammoth: the title, Play, and the mammoth on the moon with nothing that leads to the sandbox", async ({ page }, info) => {
@@ -74,10 +76,10 @@ test("MMN-070 MMN-056 MMN-060 the keys run, jump, duck and roll; the clock start
   await page.keyboard.up("Space");
   await expect.poll(() => alt(page)).toBeLessThan(1.1);
   await page.keyboard.down("ArrowDown");
-  await expect.poll(() => hook(page, (m) => m.mammoth().shape.radius)).toBe(0.6);
+  await expect.poll(() => hook(page, (m) => m.mammoth().shape.radius)).toBe(0.6 * 4);
   await expect.poll(() => hook(page, (m) => m.moon()!.action)).toBe("sit");
   await page.keyboard.up("ArrowDown");
-  await expect.poll(() => hook(page, (m) => m.mammoth().shape.radius)).toBe(1);
+  await expect.poll(() => hook(page, (m) => m.mammoth().shape.radius)).toBe(1 * 4);
   await page.keyboard.down("ShiftLeft");
   await expect.poll(() => hook(page, (m) => m.moon()!.action)).toBe("roll");
   await page.keyboard.up("ShiftLeft");
@@ -246,7 +248,7 @@ test("MMN-101 the title offers level 2, which has the rifle and the hook; the ma
 test("MMN-103 MMN-113 the mouse aims from the mammoth to the pointer; held down it fires, and the block breaks", async ({ page }, info) => {
   await start(page, "?level=test2");
   await place(page, 13);
-  await expect.poll(() => hook(page, (m) => Math.hypot(m.mammoth().velocity.x, m.mammoth().velocity.y))).toBeLessThan(0.05);
+  await expect.poll(() => hook(page, (m) => Math.hypot(m.mammoth().velocity.x, m.mammoth().velocity.y))).toBeLessThan(0.05 * 4);
   let at = await drawnAt(page);
   // Up and to the left of it: three quarters of a turn's half.
   await page.mouse.move(at.x - 150, at.y - 150);
@@ -267,11 +269,11 @@ test("MMN-103 MMN-113 the mouse aims from the mammoth to the pointer; held down 
 test("MMN-103 MMN-120 MMN-124 the right button casts the hook where the mouse points, and jump lets it go", async ({ page }, info) => {
   await start(page, "?level=test2");
   await place(page, 51.5);
-  await expect.poll(() => hook(page, (m) => Math.hypot(m.mammoth().velocity.x, m.mammoth().velocity.y))).toBeLessThan(0.05);
+  await expect.poll(() => hook(page, (m) => Math.hypot(m.mammoth().velocity.x, m.mammoth().velocity.y))).toBeLessThan(0.05 * 4);
   // The beam over the pit: 8.5 m on and 7 m up, as the view draws it.
   const at = await drawnAt(page);
   const zoom = await hook(page, (m) => m.camera().zoom);
-  await page.mouse.move(at.x + 8.3 * zoom, at.y - 6.6 * zoom);
+  await page.mouse.move(at.x + 8.3 * 4 * zoom, at.y - 6.6 * 4 * zoom);
   await expect.poll(() => tools(page, (m) => m.aim()!.angle)).toBeCloseTo(Math.atan2(6.6, 8.3), 1);
   await page.mouse.down({ button: "right" });
   await expect.poll(() => tools(page, (m) => m.rope()?.mode ?? null)).toBe("held");
