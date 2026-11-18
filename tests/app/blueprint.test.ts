@@ -737,6 +737,34 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     }
   });
 
+  it("BPD-045 rebalance v1: a THRUST 1 saved before it loads as today's (the new shells and speed, the pilot, the rules); one saved since is left as it is", async () => {
+    const { rebalanceV1, component: comp } = await import("../../src/app/blueprint/model.ts");
+    // THRUST 1 as it was saved before the rebalance.
+    const old = structuredClone(regular);
+    const oldShell = { ...body(old, "gun").magazine!.shell, shape: { kind: "box" as const, width: 0.26, height: 0.22 }, mass: 0.166667 };
+    body(old, "gun").magazine = { ...body(old, "gun").magazine!, shell: oldShell, railgun: { ...body(old, "gun").magazine!.railgun!, speed: 144, shot: 3.5 } };
+    for (const id of ["mag-l", "mag-r"]) body(old, id).ammo = { count: 60, shell: structuredClone(oldShell) };
+    body(old, "hull").mass = 6;
+    delete comp(old, "hull").pilot;
+    body(old, "battery").power = { capacity: 1620 };
+    for (const id of ["gen-l", "gen-r"]) body(old, id).power = { output: 224, perKg: 1000 };
+    body(old, "shield").shield = { ...body(old, "shield").shield!, draw: 400, hitDraw: 1.25, minHitDraw: 25 };
+    delete body(old, "shield").shield!.hitEfficiency;
+    body(old, "hull").tractor = { ...body(old, "hull").tractor!, draw: 10, tetherDraw: 5 };
+    expect(rebalanceV1(old)).toEqual(regular);
+    expect(rebalanceV1(regular)).toBe(regular);
+  });
+
+  it("BPD-045 a part with a pilot aboard, resized: its own mass goes with its area, the pilot's stays", async () => {
+    const { component: comp } = await import("../../src/app/blueprint/model.ts");
+    const b = structuredClone(regular);
+    comp(b, "shield").pilot = 1;
+    body(b, "shield").mass += 1;
+    const w = body(b, "shield").shape as { width: number };
+    const wider = setParam(b, "shield", "width", w.width * 2);
+    expect(body(wider, "shield").mass).toBeCloseTo(0.3 * 2 + 1, 9);
+  });
+
   it("BPD-046 a blueprint played in a game: its parts numbered as the game's ships, round its cockpit, its hull and gun named, and its wiring with the actions on the game's controls", () => {
     const thrust = withBlueprint(scn, regular) as { world: { thrust: { ship: { bodies: { id: string; position: { x: number; y: number }; injector?: { channel: string }; shield?: { from: string[]; blocks: string[] } }[]; links: { from?: string; to: string; channel?: string }[] }; hull: string; gun?: string; tractor: string; mix?: unknown }; mix: { rows: { channel: string; lines: { control: string }[] }[] } } };
     const g = thrust.world.thrust;

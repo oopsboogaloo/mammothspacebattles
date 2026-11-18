@@ -38,7 +38,8 @@ export interface Shield {
    * Powered, each hit costing the energy it brings instead (PWR-004; Chloe, 18 November 2026): the
    * kinetic energy of the closing speed along the contact, for the two masses (½ μ v², μ the reduced
    * mass of what struck and the whole ship; the ship's alone against something fixed), divided by
-   * this efficiency. Replaces `hitDraw` and `minHitDraw` when set.
+   * this efficiency (0 to 1; at 0 a hit empties the batteries). Replaces `hitDraw` and `minHitDraw`
+   * when set.
    */
   hitEfficiency?: number;
   /** The control channels switched off while it is up (the ship's engines and gun). */
@@ -210,7 +211,7 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
         if (powered) {
           // A hit drains the batteries; one bigger than they hold empties them, and the field drops next step.
           const struck = e.data.a === id ? e.data.mb : e.data.ma;
-          const kJ = s.hitEfficiency ? hitEnergy(world, roots, gen.id, typeof struck === "number" ? struck : Infinity, Number(e.data.speed ?? 0)) / s.hitEfficiency / 1000 : Math.max(s.minHitDraw ?? 0, (s.hitDraw ?? 0) * Number(e.data.impulse ?? 0));
+          const kJ = s.hitEfficiency !== undefined ? (s.hitEfficiency > 0 ? hitEnergy(world, roots, gen.id, typeof struck === "number" ? struck : Infinity, Number(e.data.speed ?? 0)) / s.hitEfficiency / 1000 : Infinity) : Math.max(s.minHitDraw ?? 0, (s.hitDraw ?? 0) * Number(e.data.impulse ?? 0));
           world.events.push({ tick: world.tick, type: "shield.hit", data: { id: gen.id, by, energy: drainEnergy(world, roots, gen.id, kJ) } });
           continue;
         }

@@ -1047,6 +1047,31 @@ export function powerStats(bp: Blueprint): { stored: number; output: number; shi
   return { stored, output, shieldDraw, shieldSeconds: shieldDraw > output ? stored / (shieldDraw - output) : Infinity };
 }
 
+/**
+ * A blueprint saved before rebalance v1 (docs/rebalance-v1.md), brought up to it: its regular
+ * railguns' and magazines' shells the new ones (a railgun at the old 144 m/s now at the new speed;
+ * one set otherwise keeps its speed), its pilots aboard, and every rule applied again (power, the
+ * shield, the tractor, what the magazines hold). One already rebalanced comes back as it is.
+ */
+export function rebalanceV1(bp: Blueprint): Blueprint {
+  if (!bp.components.some((c) => c.part === "cockpit" && c.pilot === undefined)) return bp;
+  const out = clone(bp);
+  const old = (sh: { mass: number }) => Math.abs(sh.mass - 0.166667) < 1e-6;
+  for (const c of out.components) {
+    for (const id of c.bodies) {
+      const b = body(out, id);
+      if (c.part === "railgun" && b.magazine?.railgun && old(b.magazine.shell)) {
+        b.magazine.shell = { ...b.magazine.shell, shape: { ...SHELL.shape }, mass: SHELL.mass };
+        if (b.magazine.railgun.speed === 144) b.magazine.railgun.speed = SHELL.speed;
+      }
+      if (c.part === "magazine" && b.ammo && old(b.ammo.shell)) b.ammo = { ...b.ammo, shell: { ...b.ammo.shell, shape: { ...SHELL.shape }, mass: SHELL.mass } };
+    }
+  }
+  for (const c of out.components) applyRules(out, c.id);
+  reammo(out);
+  return out;
+}
+
 /** Shell feeds (WPN-015): every store of shells feeds every gun that fires shells like them. */
 export function reammo(bp: Blueprint): void {
   const ids = new Set(bp.ship.bodies.map((b) => b.id));
@@ -1657,6 +1682,9 @@ function setForm(bp: Blueprint, compId: string, key: string, value: number): Blu
   return ruled === bp ? bp : reweld(ruled, compId);
 }
 
+/** A part's mass scaled by `k` (its area's change), its pilot's, if it has one, kept as it is. */
+const scaledMass = (mass: number, k: number, pilot = 0): number => round((mass - pilot) * k + pilot);
+
 /** A part with a new outline; its mass and contents scaled by its area. */
 function withForm(bp: Blueprint, compId: string, form: Form): Blueprint {
   const out = clone(bp);
@@ -1667,7 +1695,7 @@ function withForm(bp: Blueprint, compId: string, form: Form): Blueprint {
   const before = Math.abs(polygonArea(shapeVertices(b.shape)));
   b.shape = { kind: "polygon", vertices: formVertices(f) };
   const k = Math.abs(polygonArea(b.shape.vertices)) / (before || 1);
-  b.mass = round(b.mass * k);
+  b.mass = scaledMass(b.mass, k, c.pilot);
   for (const s of b.contents ?? []) {
     s.capacity = round(s.capacity * k, 9);
     s.mass = round(s.mass * k, 9);
@@ -1707,7 +1735,7 @@ function setOther(bp: Blueprint, c: Component, key: string, value: number): Blue
     b.shape = { ...b.shape, [key]: value };
     // The same stuff, bigger or smaller: mass and what it holds go with its area (a container: its rules).
     const k = (b.shape.width * b.shape.height) / old;
-    b.mass = round(b.mass * k);
+    b.mass = scaledMass(b.mass, k, c.pilot);
     for (const s of b.contents ?? []) {
       s.capacity = round(s.capacity * k, 9);
       s.mass = round(s.mass * k, 9);

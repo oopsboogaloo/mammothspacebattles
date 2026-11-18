@@ -3,7 +3,7 @@
 import { computed, signal } from "@preact/signals";
 import { scenarioFile } from "../scenarios.ts";
 import { toCoreUnits } from "../../core/migrateUnits.ts";
-import { capRates, capWelds, loxodonPreset, mastodonPreset, partsTemplate, phiomiaPreset, stegodonPreset, thrustOgPreset, thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
+import { capRates, capWelds, loxodonPreset, mastodonPreset, partsTemplate, phiomiaPreset, rebalanceV1, stegodonPreset, thrustOgPreset, thrustPreset, type Blueprint, type Component, type Placement } from "./model.ts";
 import type { BodyInput, JointInput } from "../../core/index.ts";
 
 const KEY = "msb.blueprints.v1";
@@ -32,7 +32,8 @@ function load(): Saved {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
     if (raw) {
       const s = JSON.parse(raw) as Saved;
-      if (Array.isArray(s.mine)) return { ...s, mine: s.mine.map(renameActions) };
+      // Saved before rebalance v1: brought up to it.
+      if (Array.isArray(s.mine)) return { ...s, mine: s.mine.map((b) => rebalanceV1(renameActions(b))) };
     }
   } catch {
     // A broken save starts afresh rather than leaving the page blank.
@@ -223,7 +224,7 @@ export function importBlueprint(text: string): string | null {
     const bp = JSON.parse(text) as Blueprint;
     if (bp.format !== 1 || !bp.ship || !Array.isArray(bp.components) || !bp.mix) return "That file isn't a blueprint.";
     // A file saved before the actions were named A, B and C is wired to Fire, Tractor and Shield.
-    const copy = { ...renameActions(bp), id: newId(), name: uniqueName(bp.name || "IMPORTED"), preset: undefined };
+    const copy = { ...rebalanceV1(renameActions(bp)), id: newId(), name: uniqueName(bp.name || "IMPORTED"), preset: undefined };
     delete copy.preset;
     mine.value = [...mine.value, copy];
     open(copy.id);

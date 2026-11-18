@@ -941,6 +941,12 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
 - **Measured with the pilot:** THRUST 1 134 m/s² forward (it was 144), 9.8 rad/s² turning; the
   Phiomia about 22.6 m/s² forward (29.6), the Loxodon about 41 (56).
 
+- **Saved designs:** one saved or imported from before the rebalance (a regular cockpit with no
+  pilot) is brought up to it as it loads (`rebalanceV1`): its regular railguns' and magazines' old
+  shells become the new ones (a railgun at the old 144 m/s goes to the new speed; another speed is
+  kept), its pilots go aboard, and every rule is applied again.
+- Resizing a part keeps its pilot's mass as it is: only the part's own goes with its area.
+
 Tests: BPD-036, BPD-043, BPD-045, BPD-047, BPD-050, BPD-051.
 
 ## Sources
