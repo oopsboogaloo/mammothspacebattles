@@ -1,0 +1,49 @@
+# Rebalance v1 (agreed, not built yet)
+
+Chloe, 18 November 2026. To land after the units rescale (docs/units-rescale-plan.md) merges, as its
+own PR. Figures are in the game's units (lengths ×4, masses ×1024 against before).
+
+## The pilot
+
+- A woolly mammoth cow, **4 t** (adult females up to about 4 t, bulls about 6 t; herds were most
+  likely led by an experienced cow, inferred from fossil sex ratios and modern elephants:
+  [Wikipedia](https://en.wikipedia.org/wiki/Woolly_mammoth),
+  [Live Science](https://www.livescience.com/60845-male-mammoths-died-alone.html)).
+- She sits in the cockpit (4.8 m across). Ship masses are to be shown with and without her: the
+  next part of the game has landing and disembarking.
+
+## The railgun
+
+- Shell **40 kg at 1,200 m/s** (28.8 MJ, today's energy; was 171 kg at 576 m/s). Recoil per shot
+  about half of today's.
+- A shot's draw on the battery: about 72 MJ (some 40% efficient: the shell's 28.8 MJ).
+- Magazines: Chloe had no preference. Suggested: the same mass of shells per magazine, 256 of
+  40 kg (512 on THRUST 1).
+
+## Power: real-world figures
+
+| Part | Today (sci-fi) | v1 (real-world) | Source |
+|---|---|---|---|
+| Battery | 3,600 Wh/kg (THRUST 1's: 7.4 MWh in 2 t) | **450 Wh/kg** (0.9 MWh, 3.3 GJ) | best commercial lithium cell: [Amprius](https://www.unmannedsystemstechnology.com/2025/05/amprius-unveils-high-performance-lithium-ion-battery-for-demanding-aviation-applications/) |
+| Generator | 1,800 kW/kg (3.7 GW each) | **~5 kW/kg** (~10 MW each) | Toyota Mirai fuel cell stack, 128 kW in 24 kg: [JSME](https://jsme.or.jp/english/about/awards/2021-2/award2021-nt2) |
+| Electricity per kg of propellant | 16 MJ/kg | **~7 MJ/kg** | estimate: H₂ + O₂ (1 : 8) ~13 MJ/kg, about half turned into electricity |
+
+On those, THRUST 1's railgun has about 45 shots in a full battery, and its two generators make one
+shot about every 3.6 s.
+
+## Still to set (Chloe)
+
+The other draws were set against the sci-fi battery. On a 3.3 GJ battery:
+
+| Draw | Today | A full battery lasts |
+|---|---|---|
+| Shield | 6.5 GW | 0.5 s |
+| Tractor beam | 164 MW | 20 s |
+| Tether | 82 MW | 40 s |
+
+## Context: THRUST 1 today (game's units)
+
+Full 61.7 t (dry 35.0 t; propellant 6.2 t; shells 20.5 t); with the pilot 65.7 t. Cockpit 6.1 t,
+magazines 3.1 t dry each, tanks 1.9 t dry each, main engine 3.1 t, light thrusters 1.2 t each,
+generators and battery 2 t each, railgun, tractor and winch 1 t each, shield emitter 0.3 t, welds
+1.5 t. Ammunition is a third of the ship and propellant a tenth.
