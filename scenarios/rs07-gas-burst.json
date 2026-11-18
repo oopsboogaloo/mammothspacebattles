@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "rs07-gas-burst",
   "title": "Gas burst in vacuum",
   "description": "RS-07. A 1 m block of air at 300 K, moving at (10, 5) m/s, is released in empty space. It expands freely and cools, while its centre of mass keeps the original velocity.",
@@ -29,17 +29,17 @@
     "gas": [
       {
         "min": {
-          "x": -0.5,
-          "y": -0.5
+          "x": -2,
+          "y": -2
         },
         "max": {
-          "x": 0.5,
-          "y": 0.5
+          "x": 2,
+          "y": 2
         },
         "count": {
           "$param": "count"
         },
-        "mass": 0.1,
+        "mass": 102.4,
         "temperature": {
           "$param": "T"
         },
@@ -47,8 +47,8 @@
           "air": 1
         },
         "velocity": {
-          "x": 10,
-          "y": 5
+          "x": 40,
+          "y": 20
         }
       }
     ]
@@ -89,23 +89,23 @@
       "probe": "vx",
       "from": 0,
       "to": "end",
-      "min": 9.999999999,
-      "max": 10.000000001
+      "min": 39.999999996,
+      "max": 40.000000004
     },
     {
       "kind": "rangeOver",
       "probe": "vy",
       "from": 0,
       "to": "end",
-      "min": 4.999999999,
-      "max": 5.000000001
+      "min": 19.999999996,
+      "max": 20.000000004
     },
     {
       "kind": "rangeOver",
       "probe": "spread",
       "from": "end",
       "to": "end",
-      "min": 0.8
+      "min": 3.2
     },
     {
       "kind": "rangeOver",
@@ -117,7 +117,7 @@
     {
       "kind": "ledgerResidual",
       "quantity": "energy",
-      "maxAbs": 1e-06
+      "maxAbs": 0.016384
     },
     {
       "kind": "event",
@@ -136,9 +136,9 @@
       "vx"
     ],
     "camera": {
-      "x": 1,
-      "y": 0.5,
-      "zoom": 60
+      "x": 4,
+      "y": 2,
+      "zoom": 15
     }
   }
 }

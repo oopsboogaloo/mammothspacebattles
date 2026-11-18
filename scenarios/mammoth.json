@@ -1,8 +1,8 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "mammoth",
   "title": "The Mammoth",
-  "description": "The Mammoth: a big ship built round a woolly mammoth's cockpit, a 4 m by 8 m hull with a rounded nose (room behind the seat for an airlock and stores). Behind it sit a 2 m generator and a 2 m battery; a fuel-and-oxidiser tank on each side, either of which feeds every engine; four engines, two a side on outriggers, the front pair outboard of the rear so their exhaust clears; a railgun in the nose firing 0.5 kg explosive shells; and, at the tail, a tractor projector and a separate tether generator. Without the tether generator the beam still pulls but nothing can be towed. About 280 kg; at full thrust 6.4 m/s\u00b2, like the lander, but being four times as long it turns about half as fast (0.6 rad/s after half a second on one side, against the lander's 1.3). It flies on with one engine out, or one each side, at half thrust.",
+  "description": "The Mammoth: a big ship built round a woolly mammoth's cockpit, a 4 m by 8 m hull with a rounded nose (room behind the seat for an airlock and stores). Behind it sit a 2 m generator and a 2 m battery; a fuel-and-oxidiser tank on each side, either of which feeds every engine; four engines, two a side on outriggers, the front pair outboard of the rear so their exhaust clears; a railgun in the nose firing 0.5 kg explosive shells; and, at the tail, a tractor projector and a separate tether generator. Without the tether generator the beam still pulls but nothing can be towed. About 280 kg; at full thrust 6.4 m/s², like the lander, but being four times as long it turns about half as fast (0.6 rad/s after half a second on one side, against the lander's 1.3). It flies on with one engine out, or one each side, at half thrust.",
   "profile": "sandbox",
   "seed": 91,
   "world": {
@@ -11,10 +11,10 @@
         "id": "cockpit",
         "shape": {
           "kind": "box",
-          "width": 4,
-          "height": 6
+          "width": 16,
+          "height": 24
         },
-        "mass": 80.0,
+        "mass": 81920,
         "position": {
           "x": 0,
           "y": 0
@@ -30,10 +30,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -43,63 +43,63 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": 2.0,
-              "y": 0.0
+              "x": 8,
+              "y": 0
             },
             {
-              "x": 1.9319,
-              "y": 0.5176
+              "x": 7.7276,
+              "y": 2.0704
             },
             {
-              "x": 1.7321,
-              "y": 1.0
+              "x": 6.9284,
+              "y": 4
             },
             {
-              "x": 1.4142,
-              "y": 1.4142
+              "x": 5.6568,
+              "y": 5.6568
             },
             {
-              "x": 1.0,
-              "y": 1.7321
+              "x": 4,
+              "y": 6.9284
             },
             {
-              "x": 0.5176,
-              "y": 1.9319
+              "x": 2.0704,
+              "y": 7.7276
             },
             {
-              "x": 0.0,
-              "y": 2.0
+              "x": 0,
+              "y": 8
             },
             {
-              "x": -0.5176,
-              "y": 1.9319
+              "x": -2.0704,
+              "y": 7.7276
             },
             {
-              "x": -1.0,
-              "y": 1.7321
+              "x": -4,
+              "y": 6.9284
             },
             {
-              "x": -1.4142,
-              "y": 1.4142
+              "x": -5.6568,
+              "y": 5.6568
             },
             {
-              "x": -1.7321,
-              "y": 1.0
+              "x": -6.9284,
+              "y": 4
             },
             {
-              "x": -1.9319,
-              "y": 0.5176
+              "x": -7.7276,
+              "y": 2.0704
             },
             {
-              "x": -2.0,
-              "y": 0.0
+              "x": -8,
+              "y": 0
             }
           ]
         },
-        "mass": 15.0,
+        "mass": 15360,
         "position": {
           "x": 0,
-          "y": 3
+          "y": 12
         },
         "velocity": {
           "x": 0,
@@ -112,10 +112,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -123,13 +123,13 @@
         "id": "generator",
         "shape": {
           "kind": "box",
-          "width": 2,
-          "height": 2
+          "width": 8,
+          "height": 8
         },
-        "mass": 25.0,
+        "mass": 25600,
         "position": {
-          "x": -1,
-          "y": -4
+          "x": -4,
+          "y": -16
         },
         "velocity": {
           "x": 0,
@@ -142,10 +142,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -153,13 +153,13 @@
         "id": "battery",
         "shape": {
           "kind": "box",
-          "width": 2,
-          "height": 2
+          "width": 8,
+          "height": 8
         },
-        "mass": 25.0,
+        "mass": 25600,
         "position": {
-          "x": 1,
-          "y": -4
+          "x": 4,
+          "y": -16
         },
         "velocity": {
           "x": 0,
@@ -172,10 +172,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -183,12 +183,12 @@
         "id": "tank-l",
         "shape": {
           "kind": "box",
-          "width": 1.4,
-          "height": 3
+          "width": 5.6,
+          "height": 12
         },
-        "mass": 10.0,
+        "mass": 10240,
         "position": {
-          "x": -2.7,
+          "x": -10.8,
           "y": 0
         },
         "velocity": {
@@ -202,22 +202,22 @@
         "material": {
           "name": "tank",
           "threshold": {
-            "$expr": "80 * material"
+            "$expr": "(80 * material) * 16384"
           },
           "toughness": {
-            "$expr": "400 * material"
+            "$expr": "(400 * material) * 16384"
           }
         },
         "contents": [
           {
             "resource": "h2",
-            "mass": 1.5,
-            "capacity": 1.5
+            "mass": 1536,
+            "capacity": 1536
           },
           {
             "resource": "o2",
-            "mass": 12.0,
-            "capacity": 12.0
+            "mass": 12288,
+            "capacity": 12288
           }
         ]
       },
@@ -225,12 +225,12 @@
         "id": "tank-r",
         "shape": {
           "kind": "box",
-          "width": 1.4,
-          "height": 3
+          "width": 5.6,
+          "height": 12
         },
-        "mass": 10.0,
+        "mass": 10240,
         "position": {
-          "x": 2.7,
+          "x": 10.8,
           "y": 0
         },
         "velocity": {
@@ -244,22 +244,22 @@
         "material": {
           "name": "tank",
           "threshold": {
-            "$expr": "80 * material"
+            "$expr": "(80 * material) * 16384"
           },
           "toughness": {
-            "$expr": "400 * material"
+            "$expr": "(400 * material) * 16384"
           }
         },
         "contents": [
           {
             "resource": "h2",
-            "mass": 1.5,
-            "capacity": 1.5
+            "mass": 1536,
+            "capacity": 1536
           },
           {
             "resource": "o2",
-            "mass": 12.0,
-            "capacity": 12.0
+            "mass": 12288,
+            "capacity": 12288
           }
         ]
       },
@@ -267,13 +267,13 @@
         "id": "strut-front",
         "shape": {
           "kind": "box",
-          "width": 15.0,
-          "height": 0.3
+          "width": 60,
+          "height": 1.2
         },
-        "mass": 8.0,
+        "mass": 8192,
         "position": {
           "x": 0,
-          "y": 1.0
+          "y": 4
         },
         "velocity": {
           "x": 0,
@@ -286,10 +286,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -297,13 +297,13 @@
         "id": "strut-rear",
         "shape": {
           "kind": "box",
-          "width": 12.0,
-          "height": 0.3
+          "width": 48,
+          "height": 1.2
         },
-        "mass": 8.0,
+        "mass": 8192,
         "position": {
           "x": 0,
-          "y": -2.5
+          "y": -10
         },
         "velocity": {
           "x": 0,
@@ -316,10 +316,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -327,16 +327,16 @@
         "id": "engine-fl",
         "shape": {
           "kind": "box",
-          "width": 1.0,
-          "height": 0.2
+          "width": 4,
+          "height": 0.8
         },
-        "mass": 1.0,
+        "mass": 1024,
         "position": {
-          "x": -7.0,
-          "y": 0.75
+          "x": -28,
+          "y": 3
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -347,47 +347,47 @@
           {
             "resource": "h2",
             "mass": 0,
-            "capacity": 0.05
+            "capacity": 51.2
           },
           {
             "resource": "o2",
             "mass": 0,
-            "capacity": 0.4
+            "capacity": 409.6
           }
         ],
         "injector": {
           "channel": "left",
-          "rate": 2.75,
+          "rate": 2816,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
           },
           "outlet": {
             "x": 0,
-            "y": -0.15
+            "y": -0.6
           },
           "direction": {
             "x": 0,
             "y": -1
           },
-          "width": 0.6,
-          "speed": 10,
-          "parcelMass": 0.012,
-          "radius": 0.035,
+          "width": 2.4,
+          "speed": 40,
+          "parcelMass": 12.288,
+          "radius": 0.14,
           "igniter": true,
           "chamber": {
-            "width": 1.0,
-            "length": 1.45
+            "width": 4,
+            "length": 5.8
           },
           "economy": 20
         },
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -395,16 +395,16 @@
         "id": "chamber-fleft-fl",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": -7.45,
-          "y": 0.25
+          "x": -29.8,
+          "y": 1
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -414,10 +414,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -425,16 +425,16 @@
         "id": "chamber-right-fl",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": -6.55,
-          "y": 0.25
+          "x": -26.2,
+          "y": 1
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -444,10 +444,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -455,16 +455,16 @@
         "id": "throat-fleft-fl",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -7.325,
-          "y": -0.2
+          "x": -29.3,
+          "y": -0.8
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -474,10 +474,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -485,16 +485,16 @@
         "id": "throat-right-fl",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -6.675,
-          "y": -0.2
+          "x": -26.7,
+          "y": -0.8
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -504,10 +504,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -517,30 +517,30 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": 0.175,
-              "y": 0.3
+              "x": 0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": 0.3
+              "x": 0.38,
+              "y": 1.2
             },
             {
-              "x": -0.175,
-              "y": -0.3
+              "x": -0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": -0.3
+              "x": -0.38,
+              "y": -1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -7.325,
-          "y": -0.55
+          "x": -29.3,
+          "y": -2.2
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -550,10 +550,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -563,30 +563,30 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": -0.175,
-              "y": 0.3
+              "x": -0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": -0.3
+              "x": 0.38,
+              "y": -1.2
             },
             {
-              "x": 0.175,
-              "y": -0.3
+              "x": 0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": 0.3
+              "x": -0.38,
+              "y": 1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -6.675,
-          "y": -0.55
+          "x": -26.7,
+          "y": -2.2
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -596,10 +596,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -607,16 +607,16 @@
         "id": "engine-rl",
         "shape": {
           "kind": "box",
-          "width": 1.0,
-          "height": 0.2
+          "width": 4,
+          "height": 0.8
         },
-        "mass": 1.0,
+        "mass": 1024,
         "position": {
-          "x": -5.5,
-          "y": -2.75
+          "x": -22,
+          "y": -11
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -627,47 +627,47 @@
           {
             "resource": "h2",
             "mass": 0,
-            "capacity": 0.05
+            "capacity": 51.2
           },
           {
             "resource": "o2",
             "mass": 0,
-            "capacity": 0.4
+            "capacity": 409.6
           }
         ],
         "injector": {
           "channel": "left",
-          "rate": 2.75,
+          "rate": 2816,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
           },
           "outlet": {
             "x": 0,
-            "y": -0.15
+            "y": -0.6
           },
           "direction": {
             "x": 0,
             "y": -1
           },
-          "width": 0.6,
-          "speed": 10,
-          "parcelMass": 0.012,
-          "radius": 0.035,
+          "width": 2.4,
+          "speed": 40,
+          "parcelMass": 12.288,
+          "radius": 0.14,
           "igniter": true,
           "chamber": {
-            "width": 1.0,
-            "length": 1.45
+            "width": 4,
+            "length": 5.8
           },
           "economy": 20
         },
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -675,16 +675,16 @@
         "id": "chamber-rleft-rl",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": -5.95,
-          "y": -3.25
+          "x": -23.8,
+          "y": -13
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -694,10 +694,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -705,16 +705,16 @@
         "id": "chamber-right-rl",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": -5.05,
-          "y": -3.25
+          "x": -20.2,
+          "y": -13
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -724,10 +724,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -735,16 +735,16 @@
         "id": "throat-rleft-rl",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -5.825,
-          "y": -3.7
+          "x": -23.3,
+          "y": -14.8
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -754,10 +754,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -765,16 +765,16 @@
         "id": "throat-right-rl",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -5.175,
-          "y": -3.7
+          "x": -20.7,
+          "y": -14.8
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -784,10 +784,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -797,30 +797,30 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": 0.175,
-              "y": 0.3
+              "x": 0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": 0.3
+              "x": 0.38,
+              "y": 1.2
             },
             {
-              "x": -0.175,
-              "y": -0.3
+              "x": -0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": -0.3
+              "x": -0.38,
+              "y": -1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -5.825,
-          "y": -4.05
+          "x": -23.3,
+          "y": -16.2
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -830,10 +830,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -843,30 +843,30 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": -0.175,
-              "y": 0.3
+              "x": -0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": -0.3
+              "x": 0.38,
+              "y": -1.2
             },
             {
-              "x": 0.175,
-              "y": -0.3
+              "x": 0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": 0.3
+              "x": -0.38,
+              "y": 1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": -5.175,
-          "y": -4.05
+          "x": -20.7,
+          "y": -16.2
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -876,10 +876,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -887,16 +887,16 @@
         "id": "engine-fr",
         "shape": {
           "kind": "box",
-          "width": 1.0,
-          "height": 0.2
+          "width": 4,
+          "height": 0.8
         },
-        "mass": 1.0,
+        "mass": 1024,
         "position": {
-          "x": 7.0,
-          "y": 0.75
+          "x": 28,
+          "y": 3
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -907,47 +907,47 @@
           {
             "resource": "h2",
             "mass": 0,
-            "capacity": 0.05
+            "capacity": 51.2
           },
           {
             "resource": "o2",
             "mass": 0,
-            "capacity": 0.4
+            "capacity": 409.6
           }
         ],
         "injector": {
           "channel": "right",
-          "rate": 2.75,
+          "rate": 2816,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
           },
           "outlet": {
             "x": 0,
-            "y": -0.15
+            "y": -0.6
           },
           "direction": {
             "x": 0,
             "y": -1
           },
-          "width": 0.6,
-          "speed": 10,
-          "parcelMass": 0.012,
-          "radius": 0.035,
+          "width": 2.4,
+          "speed": 40,
+          "parcelMass": 12.288,
+          "radius": 0.14,
           "igniter": true,
           "chamber": {
-            "width": 1.0,
-            "length": 1.45
+            "width": 4,
+            "length": 5.8
           },
           "economy": 20
         },
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -955,16 +955,16 @@
         "id": "chamber-freft-fr",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": 6.55,
-          "y": 0.25
+          "x": 26.2,
+          "y": 1
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -974,10 +974,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -985,16 +985,16 @@
         "id": "chamber-right-fr",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": 7.45,
-          "y": 0.25
+          "x": 29.8,
+          "y": 1
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1004,10 +1004,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1015,16 +1015,16 @@
         "id": "throat-freft-fr",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 6.675,
-          "y": -0.2
+          "x": 26.7,
+          "y": -0.8
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1034,10 +1034,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1045,16 +1045,16 @@
         "id": "throat-right-fr",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 7.325,
-          "y": -0.2
+          "x": 29.3,
+          "y": -0.8
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1064,10 +1064,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1077,30 +1077,30 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": 0.175,
-              "y": 0.3
+              "x": 0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": 0.3
+              "x": 0.38,
+              "y": 1.2
             },
             {
-              "x": -0.175,
-              "y": -0.3
+              "x": -0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": -0.3
+              "x": -0.38,
+              "y": -1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 6.675,
-          "y": -0.55
+          "x": 26.7,
+          "y": -2.2
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1110,10 +1110,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1123,30 +1123,30 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": -0.175,
-              "y": 0.3
+              "x": -0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": -0.3
+              "x": 0.38,
+              "y": -1.2
             },
             {
-              "x": 0.175,
-              "y": -0.3
+              "x": 0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": 0.3
+              "x": -0.38,
+              "y": 1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 7.325,
-          "y": -0.55
+          "x": 29.3,
+          "y": -2.2
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1156,10 +1156,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1167,16 +1167,16 @@
         "id": "engine-rr",
         "shape": {
           "kind": "box",
-          "width": 1.0,
-          "height": 0.2
+          "width": 4,
+          "height": 0.8
         },
-        "mass": 1.0,
+        "mass": 1024,
         "position": {
-          "x": 5.5,
-          "y": -2.75
+          "x": 22,
+          "y": -11
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1187,47 +1187,47 @@
           {
             "resource": "h2",
             "mass": 0,
-            "capacity": 0.05
+            "capacity": 51.2
           },
           {
             "resource": "o2",
             "mass": 0,
-            "capacity": 0.4
+            "capacity": 409.6
           }
         ],
         "injector": {
           "channel": "right",
-          "rate": 2.75,
+          "rate": 2816,
           "mixture": {
             "h2": 0.1111111111111111,
             "o2": 0.8888888888888888
           },
           "outlet": {
             "x": 0,
-            "y": -0.15
+            "y": -0.6
           },
           "direction": {
             "x": 0,
             "y": -1
           },
-          "width": 0.6,
-          "speed": 10,
-          "parcelMass": 0.012,
-          "radius": 0.035,
+          "width": 2.4,
+          "speed": 40,
+          "parcelMass": 12.288,
+          "radius": 0.14,
           "igniter": true,
           "chamber": {
-            "width": 1.0,
-            "length": 1.45
+            "width": 4,
+            "length": 5.8
           },
           "economy": 20
         },
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1235,16 +1235,16 @@
         "id": "chamber-rreft-rr",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": 5.05,
-          "y": -3.25
+          "x": 20.2,
+          "y": -13
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1254,10 +1254,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1265,16 +1265,16 @@
         "id": "chamber-right-rr",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 0.8
+          "width": 0.4,
+          "height": 3.2
         },
-        "mass": 0.5,
+        "mass": 512,
         "position": {
-          "x": 5.95,
-          "y": -3.25
+          "x": 23.8,
+          "y": -13
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1284,10 +1284,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1295,16 +1295,16 @@
         "id": "throat-rreft-rr",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 5.175,
-          "y": -3.7
+          "x": 20.7,
+          "y": -14.8
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1314,10 +1314,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1325,16 +1325,16 @@
         "id": "throat-right-rr",
         "shape": {
           "kind": "box",
-          "width": 0.35,
-          "height": 0.1
+          "width": 1.4,
+          "height": 0.4
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 5.825,
-          "y": -3.7
+          "x": 23.3,
+          "y": -14.8
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1344,10 +1344,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1357,30 +1357,30 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": 0.175,
-              "y": 0.3
+              "x": 0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": 0.3
+              "x": 0.38,
+              "y": 1.2
             },
             {
-              "x": -0.175,
-              "y": -0.3
+              "x": -0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": -0.3
+              "x": -0.38,
+              "y": -1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 5.175,
-          "y": -4.05
+          "x": 20.7,
+          "y": -16.2
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1390,10 +1390,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1403,30 +1403,30 @@
           "kind": "polygon",
           "vertices": [
             {
-              "x": -0.175,
-              "y": 0.3
+              "x": -0.7,
+              "y": 1.2
             },
             {
-              "x": 0.095,
-              "y": -0.3
+              "x": 0.38,
+              "y": -1.2
             },
             {
-              "x": 0.175,
-              "y": -0.3
+              "x": 0.7,
+              "y": -1.2
             },
             {
-              "x": -0.095,
-              "y": 0.3
+              "x": -0.38,
+              "y": 1.2
             }
           ]
         },
-        "mass": 0.3,
+        "mass": 307.2,
         "position": {
-          "x": 5.825,
-          "y": -4.05
+          "x": 23.3,
+          "y": -16.2
         },
         "velocity": {
-          "x": 1.2,
+          "x": 4.8,
           "y": 0
         },
         "angle": 0,
@@ -1436,10 +1436,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1447,13 +1447,13 @@
         "id": "breech",
         "shape": {
           "kind": "box",
-          "width": 0.6,
-          "height": 0.3
+          "width": 2.4,
+          "height": 1.2
         },
-        "mass": 10.0,
+        "mass": 10240,
         "position": {
           "x": 0,
-          "y": 5.15
+          "y": 20.6
         },
         "velocity": {
           "x": 0,
@@ -1466,10 +1466,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         },
         "magazine": {
@@ -1482,15 +1482,15 @@
           "at": {
             "x": 0,
             "y": {
-              "$expr": "barrel + 0.31"
+              "$expr": "((barrel / 4) + 0.31) * 4"
             }
           },
           "angle": 0,
           "shell": {
             "shape": {
               "kind": "box",
-              "width": 0.26,
-              "height": 0.22
+              "width": 1.04,
+              "height": 0.88
             },
             "mass": {
               "$param": "shellMass"
@@ -1521,16 +1521,16 @@
         "id": "barrel-left",
         "shape": {
           "kind": "box",
-          "width": 0.1,
+          "width": 0.4,
           "height": {
-            "$expr": "barrel"
+            "$expr": "((barrel / 4)) * 4"
           }
         },
-        "mass": 1.5,
+        "mass": 1536,
         "position": {
-          "x": -0.25,
+          "x": -1,
           "y": {
-            "$expr": "5.3 + barrel / 2"
+            "$expr": "(5.3 + (barrel / 4) / 2) * 4"
           }
         },
         "velocity": {
@@ -1544,10 +1544,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1555,16 +1555,16 @@
         "id": "barrel-right",
         "shape": {
           "kind": "box",
-          "width": 0.1,
+          "width": 0.4,
           "height": {
-            "$expr": "barrel"
+            "$expr": "((barrel / 4)) * 4"
           }
         },
-        "mass": 1.5,
+        "mass": 1536,
         "position": {
-          "x": 0.25,
+          "x": 1,
           "y": {
-            "$expr": "5.3 + barrel / 2"
+            "$expr": "(5.3 + (barrel / 4) / 2) * 4"
           }
         },
         "velocity": {
@@ -1578,10 +1578,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1589,13 +1589,13 @@
         "id": "tractor",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 10.0,
+        "mass": 10240,
         "position": {
-          "x": -0.6,
-          "y": -5.5
+          "x": -2.4,
+          "y": -22
         },
         "velocity": {
           "x": 0,
@@ -1608,17 +1608,17 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         },
         "tractor": {
           "channel": "tractor",
           "origin": {
             "x": 0,
-            "y": -0.5
+            "y": -2
           },
           "direction": {
             "x": 0,
@@ -1627,7 +1627,7 @@
           "force": {
             "$param": "beam"
           },
-          "range": 70,
+          "range": 280,
           "tether": {
             "length": {
               "$param": "tether"
@@ -1635,7 +1635,7 @@
             "maxTension": {
               "$param": "maxTension"
             },
-            "stiffness": 8000
+            "stiffness": 8192000
           },
           "tetherFrom": "tether-gen"
         }
@@ -1644,13 +1644,13 @@
         "id": "tether-gen",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 10.0,
+        "mass": 10240,
         "position": {
-          "x": 0.6,
-          "y": -5.5
+          "x": 2.4,
+          "y": -22
         },
         "velocity": {
           "x": 0,
@@ -1663,10 +1663,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1674,13 +1674,13 @@
         "id": "leg-left",
         "shape": {
           "kind": "box",
-          "width": 0.3,
-          "height": 1.6
+          "width": 1.2,
+          "height": 6.4
         },
-        "mass": 3.0,
+        "mass": 3072,
         "position": {
-          "x": -1.75,
-          "y": -5.8
+          "x": -7,
+          "y": -23.2
         },
         "velocity": {
           "x": 0,
@@ -1693,10 +1693,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       },
@@ -1704,13 +1704,13 @@
         "id": "leg-right",
         "shape": {
           "kind": "box",
-          "width": 0.3,
-          "height": 1.6
+          "width": 1.2,
+          "height": 6.4
         },
-        "mass": 3.0,
+        "mass": 3072,
         "position": {
-          "x": 1.75,
-          "y": -5.8
+          "x": 7,
+          "y": -23.2
         },
         "velocity": {
           "x": 0,
@@ -1723,10 +1723,10 @@
         "material": {
           "name": "hull",
           "threshold": {
-            "$expr": "200 * material"
+            "$expr": "(200 * material) * 16384"
           },
           "toughness": {
-            "$expr": "2400 * material"
+            "$expr": "(2400 * material) * 16384"
           }
         }
       }
@@ -1738,7 +1738,7 @@
         "b": "nose",
         "anchorA": {
           "x": 0,
-          "y": 3
+          "y": 12
         },
         "anchorB": {
           "x": 0,
@@ -1746,16 +1746,16 @@
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "48000 * welds"
+            "$expr": "(48000 * welds) * 16384"
           }
         }
       },
@@ -1764,25 +1764,25 @@
         "a": "cockpit",
         "b": "generator",
         "anchorA": {
-          "x": -1,
-          "y": -3
+          "x": -4,
+          "y": -12
         },
         "anchorB": {
           "x": 0,
-          "y": 1
+          "y": 4
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -1791,25 +1791,25 @@
         "a": "cockpit",
         "b": "battery",
         "anchorA": {
-          "x": 1,
-          "y": -3
+          "x": 4,
+          "y": -12
         },
         "anchorB": {
           "x": 0,
-          "y": 1
+          "y": 4
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -1818,25 +1818,25 @@
         "a": "generator",
         "b": "battery",
         "anchorA": {
-          "x": 1,
+          "x": 4,
           "y": 0
         },
         "anchorB": {
-          "x": -1,
+          "x": -4,
           "y": 0
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -1845,25 +1845,25 @@
         "a": "cockpit",
         "b": "tank-l",
         "anchorA": {
-          "x": -2,
+          "x": -8,
           "y": 0
         },
         "anchorB": {
-          "x": 0.7,
+          "x": 2.8,
           "y": 0
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -1872,25 +1872,25 @@
         "a": "cockpit",
         "b": "tank-r",
         "anchorA": {
-          "x": 2,
+          "x": 8,
           "y": 0
         },
         "anchorB": {
-          "x": -0.7,
+          "x": -2.8,
           "y": 0
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -1900,24 +1900,24 @@
         "b": "strut-front",
         "anchorA": {
           "x": 0,
-          "y": 1.0
+          "y": 4
         },
         "anchorB": {
           "x": 0,
-          "y": 0.0
+          "y": 0
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "48000 * welds"
+            "$expr": "(48000 * welds) * 16384"
           }
         }
       },
@@ -1927,24 +1927,24 @@
         "b": "strut-rear",
         "anchorA": {
           "x": 0,
-          "y": -2.5
+          "y": -10
         },
         "anchorB": {
           "x": 0,
-          "y": 0.0
+          "y": 0
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "48000 * welds"
+            "$expr": "(48000 * welds) * 16384"
           }
         }
       },
@@ -1953,25 +1953,25 @@
         "a": "tank-l",
         "b": "strut-front",
         "anchorA": {
-          "x": 0.0,
-          "y": 1.0
+          "x": 0,
+          "y": 4
         },
         "anchorB": {
-          "x": -2.7,
-          "y": 0.0
+          "x": -10.8,
+          "y": 0
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -1980,25 +1980,25 @@
         "a": "tank-l",
         "b": "strut-rear",
         "anchorA": {
-          "x": 0.0,
-          "y": -1.5
+          "x": 0,
+          "y": -6
         },
         "anchorB": {
-          "x": -2.7,
-          "y": 1.0
+          "x": -10.8,
+          "y": 4
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2007,25 +2007,25 @@
         "a": "tank-r",
         "b": "strut-front",
         "anchorA": {
-          "x": 0.0,
-          "y": 1.0
+          "x": 0,
+          "y": 4
         },
         "anchorB": {
-          "x": 2.7,
-          "y": 0.0
+          "x": 10.8,
+          "y": 0
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2034,25 +2034,25 @@
         "a": "tank-r",
         "b": "strut-rear",
         "anchorA": {
-          "x": 0.0,
-          "y": -1.5
+          "x": 0,
+          "y": -6
         },
         "anchorB": {
-          "x": 2.7,
-          "y": 1.0
+          "x": 10.8,
+          "y": 4
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2061,25 +2061,25 @@
         "a": "engine-fl",
         "b": "chamber-fleft-fl",
         "anchorA": {
-          "x": -0.45,
-          "y": -0.1
+          "x": -1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2088,25 +2088,25 @@
         "a": "engine-fl",
         "b": "chamber-right-fl",
         "anchorA": {
-          "x": 0.45,
-          "y": -0.1
+          "x": 1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2115,25 +2115,25 @@
         "a": "chamber-fleft-fl",
         "b": "throat-fleft-fl",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": -0.125,
-          "y": 0.05
+          "x": -0.5,
+          "y": 0.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2142,25 +2142,25 @@
         "a": "chamber-right-fl",
         "b": "throat-right-fl",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": 0.125,
-          "y": 0.05
+          "x": 0.5,
+          "y": 0.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2169,25 +2169,25 @@
         "a": "throat-fleft-fl",
         "b": "nozzle-fleft-fl",
         "anchorA": {
-          "x": 0.135,
-          "y": -0.05
+          "x": 0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": 0.135,
-          "y": 0.3
+          "x": 0.54,
+          "y": 1.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2196,25 +2196,25 @@
         "a": "throat-right-fl",
         "b": "nozzle-right-fl",
         "anchorA": {
-          "x": -0.135,
-          "y": -0.05
+          "x": -0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": -0.135,
-          "y": 0.3
+          "x": -0.54,
+          "y": 1.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2223,25 +2223,25 @@
         "a": "strut-front",
         "b": "engine-fl",
         "anchorA": {
-          "x": -7.0,
-          "y": -0.15
+          "x": -28,
+          "y": -0.6
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.1
+          "x": 0,
+          "y": 0.4
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -2250,25 +2250,25 @@
         "a": "engine-rl",
         "b": "chamber-rleft-rl",
         "anchorA": {
-          "x": -0.45,
-          "y": -0.1
+          "x": -1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2277,25 +2277,25 @@
         "a": "engine-rl",
         "b": "chamber-right-rl",
         "anchorA": {
-          "x": 0.45,
-          "y": -0.1
+          "x": 1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2304,25 +2304,25 @@
         "a": "chamber-rleft-rl",
         "b": "throat-rleft-rl",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": -0.125,
-          "y": 0.05
+          "x": -0.5,
+          "y": 0.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2331,25 +2331,25 @@
         "a": "chamber-right-rl",
         "b": "throat-right-rl",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": 0.125,
-          "y": 0.05
+          "x": 0.5,
+          "y": 0.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2358,25 +2358,25 @@
         "a": "throat-rleft-rl",
         "b": "nozzle-rleft-rl",
         "anchorA": {
-          "x": 0.135,
-          "y": -0.05
+          "x": 0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": 0.135,
-          "y": 0.3
+          "x": 0.54,
+          "y": 1.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2385,25 +2385,25 @@
         "a": "throat-right-rl",
         "b": "nozzle-right-rl",
         "anchorA": {
-          "x": -0.135,
-          "y": -0.05
+          "x": -0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": -0.135,
-          "y": 0.3
+          "x": -0.54,
+          "y": 1.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2412,25 +2412,25 @@
         "a": "strut-rear",
         "b": "engine-rl",
         "anchorA": {
-          "x": -5.5,
-          "y": -0.15
+          "x": -22,
+          "y": -0.6
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.1
+          "x": 0,
+          "y": 0.4
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -2439,25 +2439,25 @@
         "a": "engine-fr",
         "b": "chamber-freft-fr",
         "anchorA": {
-          "x": -0.45,
-          "y": -0.1
+          "x": -1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2466,25 +2466,25 @@
         "a": "engine-fr",
         "b": "chamber-right-fr",
         "anchorA": {
-          "x": 0.45,
-          "y": -0.1
+          "x": 1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2493,25 +2493,25 @@
         "a": "chamber-freft-fr",
         "b": "throat-freft-fr",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": -0.125,
-          "y": 0.05
+          "x": -0.5,
+          "y": 0.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2520,25 +2520,25 @@
         "a": "chamber-right-fr",
         "b": "throat-right-fr",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": 0.125,
-          "y": 0.05
+          "x": 0.5,
+          "y": 0.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2547,25 +2547,25 @@
         "a": "throat-freft-fr",
         "b": "nozzle-freft-fr",
         "anchorA": {
-          "x": 0.135,
-          "y": -0.05
+          "x": 0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": 0.135,
-          "y": 0.3
+          "x": 0.54,
+          "y": 1.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2574,25 +2574,25 @@
         "a": "throat-right-fr",
         "b": "nozzle-right-fr",
         "anchorA": {
-          "x": -0.135,
-          "y": -0.05
+          "x": -0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": -0.135,
-          "y": 0.3
+          "x": -0.54,
+          "y": 1.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2601,25 +2601,25 @@
         "a": "strut-front",
         "b": "engine-fr",
         "anchorA": {
-          "x": 7.0,
-          "y": -0.15
+          "x": 28,
+          "y": -0.6
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.1
+          "x": 0,
+          "y": 0.4
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -2628,25 +2628,25 @@
         "a": "engine-rr",
         "b": "chamber-rreft-rr",
         "anchorA": {
-          "x": -0.45,
-          "y": -0.1
+          "x": -1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2655,25 +2655,25 @@
         "a": "engine-rr",
         "b": "chamber-right-rr",
         "anchorA": {
-          "x": 0.45,
-          "y": -0.1
+          "x": 1.8,
+          "y": -0.4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.4
+          "x": 0,
+          "y": 1.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2682,25 +2682,25 @@
         "a": "chamber-rreft-rr",
         "b": "throat-rreft-rr",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": -0.125,
-          "y": 0.05
+          "x": -0.5,
+          "y": 0.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2709,25 +2709,25 @@
         "a": "chamber-right-rr",
         "b": "throat-right-rr",
         "anchorA": {
-          "x": 0.0,
-          "y": -0.4
+          "x": 0,
+          "y": -1.6
         },
         "anchorB": {
-          "x": 0.125,
-          "y": 0.05
+          "x": 0.5,
+          "y": 0.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2736,25 +2736,25 @@
         "a": "throat-rreft-rr",
         "b": "nozzle-rreft-rr",
         "anchorA": {
-          "x": 0.135,
-          "y": -0.05
+          "x": 0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": 0.135,
-          "y": 0.3
+          "x": 0.54,
+          "y": 1.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2763,25 +2763,25 @@
         "a": "throat-right-rr",
         "b": "nozzle-right-rr",
         "anchorA": {
-          "x": -0.135,
-          "y": -0.05
+          "x": -0.54,
+          "y": -0.2
         },
         "anchorB": {
-          "x": -0.135,
-          "y": 0.3
+          "x": -0.54,
+          "y": 1.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2790,25 +2790,25 @@
         "a": "strut-rear",
         "b": "engine-rr",
         "anchorA": {
-          "x": 5.5,
-          "y": -0.15
+          "x": 22,
+          "y": -0.6
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.1
+          "x": 0,
+          "y": 0.4
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -2818,24 +2818,24 @@
         "b": "breech",
         "anchorA": {
           "x": 0,
-          "y": 2.0
+          "y": 8
         },
         "anchorB": {
           "x": 0,
-          "y": -0.15
+          "y": -0.6
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -2844,27 +2844,27 @@
         "a": "breech",
         "b": "barrel-left",
         "anchorA": {
-          "x": -0.25,
-          "y": 0.15
+          "x": -1,
+          "y": 0.6
         },
         "anchorB": {
           "x": 0,
           "y": {
-            "$expr": "-barrel / 2"
+            "$expr": "(-(barrel / 4) / 2) * 4"
           }
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -2873,27 +2873,27 @@
         "a": "breech",
         "b": "barrel-right",
         "anchorA": {
-          "x": 0.25,
-          "y": 0.15
+          "x": 1,
+          "y": 0.6
         },
         "anchorB": {
           "x": 0,
           "y": {
-            "$expr": "-barrel / 2"
+            "$expr": "(-(barrel / 4) / 2) * 4"
           }
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "32000 * welds"
+            "$expr": "(32000 * welds) * 16384"
           }
         }
       },
@@ -2902,25 +2902,25 @@
         "a": "generator",
         "b": "tractor",
         "anchorA": {
-          "x": 0.4,
-          "y": -1.0
+          "x": 1.6,
+          "y": -4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.5
+          "x": 0,
+          "y": 2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2929,25 +2929,25 @@
         "a": "battery",
         "b": "tether-gen",
         "anchorA": {
-          "x": -0.4,
-          "y": -1.0
+          "x": -1.6,
+          "y": -4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.5
+          "x": 0,
+          "y": 2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2956,25 +2956,25 @@
         "a": "tractor",
         "b": "tether-gen",
         "anchorA": {
-          "x": 0.6,
-          "y": 0.0
+          "x": 2.4,
+          "y": 0
         },
         "anchorB": {
-          "x": -0.6,
-          "y": 0.0
+          "x": -2.4,
+          "y": 0
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -2983,25 +2983,25 @@
         "a": "generator",
         "b": "leg-left",
         "anchorA": {
-          "x": -0.75,
-          "y": -1.0
+          "x": -3,
+          "y": -4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.8
+          "x": 0,
+          "y": 3.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       },
@@ -3010,25 +3010,25 @@
         "a": "battery",
         "b": "leg-right",
         "anchorA": {
-          "x": 0.75,
-          "y": -1.0
+          "x": 3,
+          "y": -4
         },
         "anchorB": {
-          "x": 0.0,
-          "y": 0.8
+          "x": 0,
+          "y": 3.2
         },
         "limits": {
           "tension": {
-            "$expr": "40000 * welds"
+            "$expr": "(40000 * welds) * 4096"
           },
           "compression": {
-            "$expr": "80000 * welds"
+            "$expr": "(80000 * welds) * 4096"
           },
           "shear": {
-            "$expr": "24000 * welds"
+            "$expr": "(24000 * welds) * 4096"
           },
           "torque": {
-            "$expr": "16000 * welds"
+            "$expr": "(16000 * welds) * 16384"
           }
         }
       }
@@ -3040,7 +3040,7 @@
         "from": "tank-l",
         "to": "engine-fl",
         "resource": "h2",
-        "rate": 0.05
+        "rate": 51.2
       },
       {
         "id": "feed-o2-tank-l-engine-fl",
@@ -3048,7 +3048,7 @@
         "from": "tank-l",
         "to": "engine-fl",
         "resource": "o2",
-        "rate": 0.4
+        "rate": 409.6
       },
       {
         "id": "feed-h2-tank-l-engine-rl",
@@ -3056,7 +3056,7 @@
         "from": "tank-l",
         "to": "engine-rl",
         "resource": "h2",
-        "rate": 0.05
+        "rate": 51.2
       },
       {
         "id": "feed-o2-tank-l-engine-rl",
@@ -3064,7 +3064,7 @@
         "from": "tank-l",
         "to": "engine-rl",
         "resource": "o2",
-        "rate": 0.4
+        "rate": 409.6
       },
       {
         "id": "feed-h2-tank-l-engine-fr",
@@ -3072,7 +3072,7 @@
         "from": "tank-l",
         "to": "engine-fr",
         "resource": "h2",
-        "rate": 0.05
+        "rate": 51.2
       },
       {
         "id": "feed-o2-tank-l-engine-fr",
@@ -3080,7 +3080,7 @@
         "from": "tank-l",
         "to": "engine-fr",
         "resource": "o2",
-        "rate": 0.4
+        "rate": 409.6
       },
       {
         "id": "feed-h2-tank-l-engine-rr",
@@ -3088,7 +3088,7 @@
         "from": "tank-l",
         "to": "engine-rr",
         "resource": "h2",
-        "rate": 0.05
+        "rate": 51.2
       },
       {
         "id": "feed-o2-tank-l-engine-rr",
@@ -3096,7 +3096,7 @@
         "from": "tank-l",
         "to": "engine-rr",
         "resource": "o2",
-        "rate": 0.4
+        "rate": 409.6
       },
       {
         "id": "feed-h2-tank-r-engine-fl",
@@ -3104,7 +3104,7 @@
         "from": "tank-r",
         "to": "engine-fl",
         "resource": "h2",
-        "rate": 0.05
+        "rate": 51.2
       },
       {
         "id": "feed-o2-tank-r-engine-fl",
@@ -3112,7 +3112,7 @@
         "from": "tank-r",
         "to": "engine-fl",
         "resource": "o2",
-        "rate": 0.4
+        "rate": 409.6
       },
       {
         "id": "feed-h2-tank-r-engine-rl",
@@ -3120,7 +3120,7 @@
         "from": "tank-r",
         "to": "engine-rl",
         "resource": "h2",
-        "rate": 0.05
+        "rate": 51.2
       },
       {
         "id": "feed-o2-tank-r-engine-rl",
@@ -3128,7 +3128,7 @@
         "from": "tank-r",
         "to": "engine-rl",
         "resource": "o2",
-        "rate": 0.4
+        "rate": 409.6
       },
       {
         "id": "feed-h2-tank-r-engine-fr",
@@ -3136,7 +3136,7 @@
         "from": "tank-r",
         "to": "engine-fr",
         "resource": "h2",
-        "rate": 0.05
+        "rate": 51.2
       },
       {
         "id": "feed-o2-tank-r-engine-fr",
@@ -3144,7 +3144,7 @@
         "from": "tank-r",
         "to": "engine-fr",
         "resource": "o2",
-        "rate": 0.4
+        "rate": 409.6
       },
       {
         "id": "feed-h2-tank-r-engine-rr",
@@ -3152,7 +3152,7 @@
         "from": "tank-r",
         "to": "engine-rr",
         "resource": "h2",
-        "rate": 0.05
+        "rate": 51.2
       },
       {
         "id": "feed-o2-tank-r-engine-rr",
@@ -3160,7 +3160,7 @@
         "from": "tank-r",
         "to": "engine-rr",
         "resource": "o2",
-        "rate": 0.4
+        "rate": 409.6
       },
       {
         "id": "ctl-engine-fl",
@@ -3205,15 +3205,15 @@
     },
     "bounds": {
       "min": {
-        "x": -500,
-        "y": -500
+        "x": -2000,
+        "y": -2000
       },
       "max": {
-        "x": 500,
-        "y": 500
+        "x": 2000,
+        "y": 2000
       },
-      "farField": 10,
-      "depth": 2
+      "farField": 40,
+      "depth": 8
     },
     "asteroids": [
       {
@@ -3222,23 +3222,23 @@
         "pieces": {
           "$param": "pieces"
         },
-        "radius": 4,
-        "density": 100,
+        "radius": 16,
+        "density": 6400,
         "material": {
           "name": "rock",
-          "threshold": 100,
-          "toughness": 20000
+          "threshold": 1638400,
+          "toughness": 327680000
         },
         "bond": {
-          "$expr": "3500 * bond"
+          "$expr": "(3500 * bond) * 1024"
         },
         "position": {
-          "x": -26.400000000000002,
-          "y": 44.0
+          "x": -105.60000000000001,
+          "y": 176
         },
         "velocity": {
-          "x": 0.2,
-          "y": -0.1
+          "x": 0.8,
+          "y": -0.4
         },
         "angle": 0.8999999999999999,
         "angularVelocity": 0.05,
@@ -3251,23 +3251,23 @@
         "pieces": {
           "$param": "pieces"
         },
-        "radius": 3.5,
-        "density": 100,
+        "radius": 14,
+        "density": 6400,
         "material": {
           "name": "rock",
-          "threshold": 100,
-          "toughness": 20000
+          "threshold": 1638400,
+          "toughness": 327680000
         },
         "bond": {
-          "$expr": "3500 * bond"
+          "$expr": "(3500 * bond) * 1024"
         },
         "position": {
-          "x": 30.800000000000004,
-          "y": 35.2
+          "x": 123.20000000000002,
+          "y": 140.8
         },
         "velocity": {
-          "x": -0.15,
-          "y": 0.05
+          "x": -0.6,
+          "y": 0.2
         },
         "angle": 2.4,
         "angularVelocity": -0.08,
@@ -3280,23 +3280,23 @@
         "pieces": {
           "$param": "pieces"
         },
-        "radius": 5,
-        "density": 100,
+        "radius": 20,
+        "density": 6400,
         "material": {
           "name": "rock",
-          "threshold": 100,
-          "toughness": 20000
+          "threshold": 1638400,
+          "toughness": 327680000
         },
         "bond": {
-          "$expr": "3500 * bond"
+          "$expr": "(3500 * bond) * 1024"
         },
         "position": {
-          "x": 4.4,
-          "y": 74.80000000000001
+          "x": 17.6,
+          "y": 299.20000000000005
         },
         "velocity": {
-          "x": 0.05,
-          "y": -0.15
+          "x": 0.2,
+          "y": -0.6
         },
         "angle": 3.9,
         "angularVelocity": 0.03,
@@ -3309,23 +3309,23 @@
         "pieces": {
           "$param": "pieces"
         },
-        "radius": 3,
-        "density": 100,
+        "radius": 12,
+        "density": 6400,
         "material": {
           "name": "rock",
-          "threshold": 100,
-          "toughness": 20000
+          "threshold": 1638400,
+          "toughness": 327680000
         },
         "bond": {
-          "$expr": "3500 * bond"
+          "$expr": "(3500 * bond) * 1024"
         },
         "position": {
-          "x": -52.800000000000004,
-          "y": 4.4
+          "x": -211.20000000000002,
+          "y": 17.6
         },
         "velocity": {
-          "x": 0.1,
-          "y": 0.2
+          "x": 0.4,
+          "y": 0.8
         },
         "angle": 6.3,
         "angularVelocity": 0.1,
@@ -3365,12 +3365,19 @@
   ],
   "ui": {
     "lookFor": "Fly with Q and E; F fires the railgun; hold T to beam, and bring a piece within 25 m to tow it. It pushes like the lander but swings round slowly: start a turn early and check it early. Shoot away an engine and keep flying by tapping the stronger side. Try the shell mass, the tether length and the weld strength.",
-    "overlays": ["velocity", "damage"],
-    "graphs": ["vx", "vy", "tension"],
+    "overlays": [
+      "velocity",
+      "damage"
+    ],
+    "graphs": [
+      "vx",
+      "vy",
+      "tension"
+    ],
     "camera": {
       "x": 0,
-      "y": -4,
-      "zoom": 12
+      "y": -16,
+      "zoom": 3
     },
     "follow": "cockpit",
     "keys": {
@@ -3386,28 +3393,28 @@
       "id": "muzzle",
       "label": "Railgun launch speed",
       "unit": "m/s",
-      "min": 20,
-      "max": 200,
-      "step": 2,
-      "default": 96
+      "min": 80,
+      "max": 800,
+      "step": 8,
+      "default": 384
     },
     {
       "id": "shellMass",
       "label": "Shell mass",
       "unit": "kg",
-      "min": 0.25,
-      "max": 10,
-      "step": 0.25,
-      "default": 0.5
+      "min": 256,
+      "max": 10240,
+      "step": 256,
+      "default": 512
     },
     {
       "id": "barrel",
       "label": "Barrel length",
       "unit": "m",
-      "min": 1,
-      "max": 4,
-      "step": 0.25,
-      "default": 1.5
+      "min": 4,
+      "max": 16,
+      "step": 1,
+      "default": 6
     },
     {
       "id": "ammo",
@@ -3430,7 +3437,7 @@
     {
       "id": "material",
       "label": "Material strength",
-      "unit": "\u00d7",
+      "unit": "×",
       "min": 0.05,
       "max": 50,
       "step": 0.05,
@@ -3439,7 +3446,7 @@
     {
       "id": "welds",
       "label": "Weld strength",
-      "unit": "\u00d7",
+      "unit": "×",
       "min": 0.01,
       "max": 100,
       "step": 0.01,
@@ -3457,7 +3464,7 @@
     {
       "id": "bond",
       "label": "Bond strength",
-      "unit": "\u00d7",
+      "unit": "×",
       "min": 0.1,
       "max": 20,
       "step": 0.1,
@@ -3467,10 +3474,10 @@
       "id": "blast",
       "label": "Explosive charge",
       "unit": "kg",
-      "min": 0.05,
-      "max": 0.5,
-      "step": 0.05,
-      "default": 0.3
+      "min": 51.2,
+      "max": 512,
+      "step": 51.2,
+      "default": 307.2
     },
     {
       "id": "fragments",
@@ -3485,37 +3492,37 @@
       "id": "radius",
       "label": "Blast radius",
       "unit": "m",
-      "min": 0.5,
-      "max": 5,
-      "step": 0.25,
-      "default": 2
+      "min": 2,
+      "max": 20,
+      "step": 1,
+      "default": 8
     },
     {
       "id": "tether",
       "label": "Tether length",
       "unit": "m",
-      "min": 10,
-      "max": 60,
-      "step": 1,
-      "default": 25.0
+      "min": 40,
+      "max": 240,
+      "step": 4,
+      "default": 100
     },
     {
       "id": "maxTension",
       "label": "Tether breaks at",
       "unit": "N",
-      "min": 5000,
-      "max": 100000,
-      "step": 1000,
-      "default": 40000.0
+      "min": 20480000,
+      "max": 409600000,
+      "step": 4096000,
+      "default": 163840000
     },
     {
       "id": "beam",
       "label": "Beam force",
       "unit": "N",
-      "min": 200,
-      "max": 5000,
-      "step": 100,
-      "default": 1600.0
+      "min": 819200,
+      "max": 20480000,
+      "step": 409600,
+      "default": 6553600
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "rs05b-spinning-assembly",
   "title": "Spinning assembly sheds a pod",
   "description": "RS-05b. A 4 kg hull with two 1 kg pods welded to its ends drifts and spins at 0.8 rad/s. At t = 2 s the right pod is detached: it leaves along the tangent with the velocity it had, and the remaining assembly's mass, centre of mass and inertia update.",
@@ -11,16 +11,16 @@
         "id": "hull",
         "shape": {
           "kind": "box",
-          "width": 2,
-          "height": 1
+          "width": 8,
+          "height": 4
         },
-        "mass": 4,
+        "mass": 4096,
         "position": {
           "x": 0,
           "y": 0
         },
         "velocity": {
-          "x": 1,
+          "x": 4,
           "y": 0
         },
         "angle": 0,
@@ -30,17 +30,17 @@
         "id": "pod-left",
         "shape": {
           "kind": "box",
-          "width": 0.6,
-          "height": 0.6
+          "width": 2.4,
+          "height": 2.4
         },
-        "mass": 1,
+        "mass": 1024,
         "position": {
-          "x": -1.3,
+          "x": -5.2,
           "y": 0
         },
         "velocity": {
-          "x": 1,
-          "y": -1.04
+          "x": 4,
+          "y": -4.16
         },
         "angle": 0,
         "angularVelocity": 0.8
@@ -49,17 +49,17 @@
         "id": "pod-right",
         "shape": {
           "kind": "box",
-          "width": 0.6,
-          "height": 0.6
+          "width": 2.4,
+          "height": 2.4
         },
-        "mass": 1,
+        "mass": 1024,
         "position": {
-          "x": 1.3,
+          "x": 5.2,
           "y": 0
         },
         "velocity": {
-          "x": 1,
-          "y": 1.04
+          "x": 4,
+          "y": 4.16
         },
         "angle": 0,
         "angularVelocity": 0.8
@@ -71,11 +71,11 @@
         "a": "hull",
         "b": "pod-left",
         "anchorA": {
-          "x": -1,
+          "x": -4,
           "y": 0
         },
         "anchorB": {
-          "x": 0.3,
+          "x": 1.2,
           "y": 0
         }
       },
@@ -84,11 +84,11 @@
         "a": "hull",
         "b": "pod-right",
         "anchorA": {
-          "x": 1,
+          "x": 4,
           "y": 0
         },
         "anchorB": {
-          "x": -0.3,
+          "x": -1.2,
           "y": 0
         }
       }
@@ -146,23 +146,23 @@
     {
       "kind": "formula",
       "at": "end",
-      "left": "L@end - L@0",
+      "left": "(L@end / 16384) - (L@0 / 16384)",
       "right": "0",
-      "tol": 1e-09
+      "tol": 1e-9
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "px@end - px@0",
+      "left": "(px@end / 4096) - (px@0 / 4096)",
       "right": "0",
-      "tol": 1e-09
+      "tol": 1e-9
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "ke@end",
-      "right": "ke@0",
-      "tol": 1e-09,
+      "left": "(ke@end / 16384)",
+      "right": "(ke@0 / 16384)",
+      "tol": 1e-9,
       "relative": true
     },
     {
@@ -175,7 +175,7 @@
     {
       "kind": "ledgerResidual",
       "quantity": "angularMomentum",
-      "maxAbs": 1e-09
+      "maxAbs": 0.000016384
     },
     {
       "kind": "event",
@@ -196,9 +196,9 @@
       "wHull"
     ],
     "camera": {
-      "x": 3,
+      "x": 12,
       "y": 0,
-      "zoom": 60
+      "zoom": 15
     }
   }
 }

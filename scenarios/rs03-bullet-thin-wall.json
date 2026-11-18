@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "rs03-bullet-thin-wall",
   "title": "Bullet against a thin wall",
   "description": "RS-03. A 10 g, 1 cm bullet at up to limit.maxSpeed (2,000 m/s) hits a fixed wall limit.minThickness (5 cm) thick. It travels 8 m per step but must never pass through.",
@@ -10,10 +10,10 @@
       "id": "speed",
       "label": "Bullet speed",
       "unit": "m/s",
-      "min": 10,
-      "max": 2000,
-      "step": 10,
-      "default": 2000
+      "min": 40,
+      "max": 8000,
+      "step": 40,
+      "default": 8000
     },
     {
       "id": "e",
@@ -30,15 +30,15 @@
         "id": "bullet",
         "shape": {
           "kind": "disc",
-          "radius": 0.01
+          "radius": 0.04
         },
-        "mass": 0.01,
+        "mass": 10.24,
         "restitution": {
           "$param": "e"
         },
         "friction": 0,
         "position": {
-          "x": -5,
+          "x": -20,
           "y": 0
         },
         "velocity": {
@@ -54,10 +54,10 @@
         "id": "wall",
         "shape": {
           "kind": "box",
-          "width": 0.05,
-          "height": 2
+          "width": 0.2,
+          "height": 8
         },
-        "mass": 1,
+        "mass": 1024,
         "fixed": true,
         "restitution": {
           "$param": "e"
@@ -96,14 +96,14 @@
       "probe": "bx",
       "from": 0,
       "to": "end",
-      "max": -0.03
+      "max": -0.12
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "(vx + e * speed) / speed",
+      "left": "((vx / 4) + e * (speed / 4)) / (speed / 4)",
       "right": "0",
-      "tol": 1e-09
+      "tol": 1e-9
     },
     {
       "kind": "event",
@@ -127,9 +127,9 @@
       "vx"
     ],
     "camera": {
-      "x": -2.5,
+      "x": -10,
       "y": 0,
-      "zoom": 80
+      "zoom": 20
     }
   }
 }

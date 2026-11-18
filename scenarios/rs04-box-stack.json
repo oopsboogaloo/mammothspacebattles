@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "rs04-box-stack",
   "title": "Box stack settles",
   "description": "RS-04. Five 1 m boxes stacked on fixed ground under gravity. They must settle with less than tol.penetration (5 mm) overlap and no jitter.",
@@ -11,16 +11,16 @@
         "id": "ground",
         "shape": {
           "kind": "box",
-          "width": 20,
-          "height": 1
+          "width": 80,
+          "height": 4
         },
-        "mass": 1,
+        "mass": 1024,
         "fixed": true,
         "restitution": 0,
         "friction": 0.6,
         "position": {
           "x": 0,
-          "y": -0.5
+          "y": -2
         },
         "velocity": {
           "x": 0,
@@ -33,15 +33,15 @@
         "id": "box0",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 1,
+        "mass": 1024,
         "restitution": 0,
         "friction": 0.6,
         "position": {
           "x": 0,
-          "y": 0.5
+          "y": 2
         },
         "velocity": {
           "x": 0,
@@ -54,15 +54,15 @@
         "id": "box1",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 1,
+        "mass": 1024,
         "restitution": 0,
         "friction": 0.6,
         "position": {
           "x": 0,
-          "y": 1.5
+          "y": 6
         },
         "velocity": {
           "x": 0,
@@ -75,15 +75,15 @@
         "id": "box2",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 1,
+        "mass": 1024,
         "restitution": 0,
         "friction": 0.6,
         "position": {
           "x": 0,
-          "y": 2.5
+          "y": 10
         },
         "velocity": {
           "x": 0,
@@ -96,15 +96,15 @@
         "id": "box3",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 1,
+        "mass": 1024,
         "restitution": 0,
         "friction": 0.6,
         "position": {
           "x": 0,
-          "y": 3.5
+          "y": 14
         },
         "velocity": {
           "x": 0,
@@ -117,15 +117,15 @@
         "id": "box4",
         "shape": {
           "kind": "box",
-          "width": 1,
-          "height": 1
+          "width": 4,
+          "height": 4
         },
-        "mass": 1,
+        "mass": 1024,
         "restitution": 0,
         "friction": 0.6,
         "position": {
           "x": 0,
-          "y": 4.5
+          "y": 18
         },
         "velocity": {
           "x": 0,
@@ -137,7 +137,7 @@
     ],
     "gravity": {
       "x": 0,
-      "y": -9.81
+      "y": -39.24
     }
   },
   "timeline": [],
@@ -186,35 +186,35 @@
     {
       "kind": "formula",
       "at": "end",
-      "left": "y0",
+      "left": "(y0 / 4)",
       "right": "0.5",
       "tol": 0.005
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "y1 - y0",
+      "left": "(y1 / 4) - (y0 / 4)",
       "right": "1",
       "tol": 0.005
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "y2 - y1",
+      "left": "(y2 / 4) - (y1 / 4)",
       "right": "1",
       "tol": 0.005
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "y3 - y2",
+      "left": "(y3 / 4) - (y2 / 4)",
       "right": "1",
       "tol": 0.005
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "y4 - y3",
+      "left": "(y4 / 4) - (y3 / 4)",
       "right": "1",
       "tol": 0.005
     },
@@ -223,16 +223,16 @@
       "probe": "topVy",
       "from": 480,
       "to": "end",
-      "min": -0.05,
-      "max": 0.05
+      "min": -0.2,
+      "max": 0.2
     },
     {
       "kind": "rangeOver",
       "probe": "topX",
       "from": 0,
       "to": "end",
-      "min": -0.001,
-      "max": 0.001
+      "min": -0.004,
+      "max": 0.004
     },
     {
       "kind": "rangeOver",
@@ -245,7 +245,7 @@
     {
       "kind": "formula",
       "at": "end",
-      "left": "y4@end - y4@720",
+      "left": "(y4@end / 4) - (y4@720 / 4)",
       "right": "0",
       "tol": 0.0005
     },
@@ -266,8 +266,8 @@
     ],
     "camera": {
       "x": 0,
-      "y": 2.5,
-      "zoom": 60
+      "y": 10,
+      "zoom": 15
     }
   }
 }

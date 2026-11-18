@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "sc03-simplest-rocket",
   "title": "SC-03 Simplest rocket",
   "description": "RS-07b. The SC-02 box pre-filled with 1 kg of air at 1,000 K, with a 0.4 m hole in its left wall. Gas jets out of the hole and the box accelerates to the right. Its momentum is always minus the momentum of the gas. A centred hole gives no spin; move the hole off-centre and the box spins, with angular momentum conserved.",
@@ -10,18 +10,18 @@
       "id": "hole",
       "label": "Hole width",
       "unit": "m",
-      "min": 0.1,
-      "max": 1,
-      "step": 0.05,
-      "default": 0.4
+      "min": 0.4,
+      "max": 4,
+      "step": 0.2,
+      "default": 1.6
     },
     {
       "id": "holeY",
       "label": "Hole position",
       "unit": "m",
-      "min": -0.45,
-      "max": 0.45,
-      "step": 0.05,
+      "min": -1.8,
+      "max": 1.8,
+      "step": 0.2,
       "default": 0
     },
     {
@@ -36,10 +36,10 @@
       "id": "gasMass",
       "label": "Gas mass",
       "unit": "kg",
-      "min": 0.1,
-      "max": 5,
-      "step": 0.1,
-      "default": 1
+      "min": 102.4,
+      "max": 5120,
+      "step": 102.4,
+      "default": 1024
     },
     {
       "id": "T",
@@ -54,10 +54,10 @@
       "id": "boxMass",
       "label": "Box mass",
       "unit": "kg",
-      "min": 1,
-      "max": 100,
-      "step": 1,
-      "default": 10
+      "min": 1024,
+      "max": 102400,
+      "step": 1024,
+      "default": 10240
     }
   ],
   "world": {
@@ -66,15 +66,15 @@
         "id": "bottom",
         "shape": {
           "kind": "box",
-          "width": 2.2,
-          "height": 0.1
+          "width": 8.8,
+          "height": 0.4
         },
         "mass": {
-          "$expr": "boxMass * 0.22 / (0.84 - 0.1 * hole)"
+          "$expr": "((boxMass / 1024) * 0.22 / (0.84 - 0.1 * (hole / 4))) * 1024"
         },
         "position": {
           "x": 0,
-          "y": -1.05
+          "y": -4.2
         },
         "velocity": {
           "x": 0,
@@ -89,18 +89,18 @@
         "id": "left-high",
         "shape": {
           "kind": "box",
-          "width": 0.1,
+          "width": 0.4,
           "height": {
-            "$expr": "1 - holeY - hole / 2"
+            "$expr": "(1 - (holeY / 4) - (hole / 4) / 2) * 4"
           }
         },
         "mass": {
-          "$expr": "boxMass * 0.1 * (1 - holeY - hole / 2) / (0.84 - 0.1 * hole)"
+          "$expr": "((boxMass / 1024) * 0.1 * (1 - (holeY / 4) - (hole / 4) / 2) / (0.84 - 0.1 * (hole / 4))) * 1024"
         },
         "position": {
-          "x": -1.05,
+          "x": -4.2,
           "y": {
-            "$expr": "(1 + holeY + hole / 2) / 2"
+            "$expr": "((1 + (holeY / 4) + (hole / 4) / 2) / 2) * 4"
           }
         },
         "velocity": {
@@ -116,18 +116,18 @@
         "id": "left-low",
         "shape": {
           "kind": "box",
-          "width": 0.1,
+          "width": 0.4,
           "height": {
-            "$expr": "1 + holeY - hole / 2"
+            "$expr": "(1 + (holeY / 4) - (hole / 4) / 2) * 4"
           }
         },
         "mass": {
-          "$expr": "boxMass * 0.1 * (1 + holeY - hole / 2) / (0.84 - 0.1 * hole)"
+          "$expr": "((boxMass / 1024) * 0.1 * (1 + (holeY / 4) - (hole / 4) / 2) / (0.84 - 0.1 * (hole / 4))) * 1024"
         },
         "position": {
-          "x": -1.05,
+          "x": -4.2,
           "y": {
-            "$expr": "(-1 + holeY - hole / 2) / 2"
+            "$expr": "((-1 + (holeY / 4) - (hole / 4) / 2) / 2) * 4"
           }
         },
         "velocity": {
@@ -143,14 +143,14 @@
         "id": "right",
         "shape": {
           "kind": "box",
-          "width": 0.1,
-          "height": 2.0
+          "width": 0.4,
+          "height": 8
         },
         "mass": {
-          "$expr": "boxMass * 0.2 / (0.84 - 0.1 * hole)"
+          "$expr": "((boxMass / 1024) * 0.2 / (0.84 - 0.1 * (hole / 4))) * 1024"
         },
         "position": {
-          "x": 1.05,
+          "x": 4.2,
           "y": 0
         },
         "velocity": {
@@ -166,15 +166,15 @@
         "id": "top",
         "shape": {
           "kind": "box",
-          "width": 2.2,
-          "height": 0.1
+          "width": 8.8,
+          "height": 0.4
         },
         "mass": {
-          "$expr": "boxMass * 0.22 / (0.84 - 0.1 * hole)"
+          "$expr": "((boxMass / 1024) * 0.22 / (0.84 - 0.1 * (hole / 4))) * 1024"
         },
         "position": {
           "x": 0,
-          "y": 1.05
+          "y": 4.2
         },
         "velocity": {
           "x": 0,
@@ -194,18 +194,18 @@
         "anchorA": {
           "x": 0,
           "y": {
-            "$expr": "(1 - holeY - hole / 2) / 2"
+            "$expr": "((1 - (holeY / 4) - (hole / 4) / 2) / 2) * 4"
           }
         },
         "anchorB": {
-          "x": -1.05,
-          "y": -0.05
+          "x": -4.2,
+          "y": -0.2
         },
         "limits": {
-          "tension": 1000000000.0,
-          "compression": 1000000000.0,
-          "shear": 1000000000.0,
-          "torque": 1000000000.0
+          "tension": 4096000000000,
+          "compression": 4096000000000,
+          "shear": 4096000000000,
+          "torque": 16384000000000
         }
       },
       {
@@ -215,18 +215,18 @@
         "anchorA": {
           "x": 0,
           "y": {
-            "$expr": "-(1 + holeY - hole / 2) / 2"
+            "$expr": "(-(1 + (holeY / 4) - (hole / 4) / 2) / 2) * 4"
           }
         },
         "anchorB": {
-          "x": -1.05,
-          "y": 0.05
+          "x": -4.2,
+          "y": 0.2
         },
         "limits": {
-          "tension": 1000000000.0,
-          "compression": 1000000000.0,
-          "shear": 1000000000.0,
-          "torque": 1000000000.0
+          "tension": 4096000000000,
+          "compression": 4096000000000,
+          "shear": 4096000000000,
+          "torque": 16384000000000
         }
       },
       {
@@ -235,17 +235,17 @@
         "b": "top",
         "anchorA": {
           "x": 0,
-          "y": 1
+          "y": 4
         },
         "anchorB": {
-          "x": 1.05,
-          "y": -0.05
+          "x": 4.2,
+          "y": -0.2
         },
         "limits": {
-          "tension": 1000000000.0,
-          "compression": 1000000000.0,
-          "shear": 1000000000.0,
-          "torque": 1000000000.0
+          "tension": 4096000000000,
+          "compression": 4096000000000,
+          "shear": 4096000000000,
+          "torque": 16384000000000
         }
       },
       {
@@ -254,39 +254,39 @@
         "b": "bottom",
         "anchorA": {
           "x": 0,
-          "y": -1
+          "y": -4
         },
         "anchorB": {
-          "x": 1.05,
-          "y": 0.05
+          "x": 4.2,
+          "y": 0.2
         },
         "limits": {
-          "tension": 1000000000.0,
-          "compression": 1000000000.0,
-          "shear": 1000000000.0,
-          "torque": 1000000000.0
+          "tension": 4096000000000,
+          "compression": 4096000000000,
+          "shear": 4096000000000,
+          "torque": 16384000000000
         }
       }
     ],
     "bounds": {
       "min": {
-        "x": -60,
-        "y": -60
+        "x": -240,
+        "y": -240
       },
       "max": {
-        "x": 60,
-        "y": 60
+        "x": 240,
+        "y": 240
       }
     },
     "gas": [
       {
         "min": {
-          "x": -1,
-          "y": -1
+          "x": -4,
+          "y": -4
         },
         "max": {
-          "x": 1,
-          "y": 1
+          "x": 4,
+          "y": 4
         },
         "count": {
           "$param": "count"
@@ -369,30 +369,30 @@
     {
       "kind": "formula",
       "at": "end",
-      "left": "boxPx + gasPx + leftPx",
+      "left": "(boxPx / 4096) + (gasPx / 4096) + (leftPx / 4096)",
       "right": "0",
-      "tol": 1e-09
+      "tol": 1e-9
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "boxPy + gasPy + leftPy",
+      "left": "(boxPy / 4096) + (gasPy / 4096) + (leftPy / 4096)",
       "right": "0",
-      "tol": 1e-09
+      "tol": 1e-9
     },
     {
       "kind": "formula",
       "at": "end",
-      "left": "boxL + gasL + leftL",
+      "left": "(boxL / 16384) + (gasL / 16384) + (leftL / 16384)",
       "right": "0",
-      "tol": 1e-09
+      "tol": 1e-9
     },
     {
       "kind": "rangeOver",
       "probe": "boxVx",
       "from": "end",
       "to": "end",
-      "min": 40
+      "min": 160
     },
     {
       "kind": "rangeOver",
@@ -407,12 +407,12 @@
       "probe": "leftMass",
       "from": "end",
       "to": "end",
-      "min": 0.75
+      "min": 768
     },
     {
       "kind": "ledgerResidual",
       "quantity": "energy",
-      "maxAbs": 1e-06
+      "maxAbs": 0.016384
     },
     {
       "kind": "event",
@@ -432,7 +432,7 @@
     "camera": {
       "x": 0,
       "y": 0,
-      "zoom": 45
+      "zoom": 11.25
     },
     "follow": "top"
   }
