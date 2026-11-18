@@ -22,6 +22,8 @@ own PR. Figures are in the game's units (lengths ×4, masses ×1024 against befo
 
 ## Power: real-world figures
 
+Start grounded (Chloe): today's real figures first; being sci-fi, they may be raised from there.
+
 | Part | Today (sci-fi) | v1 (real-world) | Source |
 |---|---|---|---|
 | Battery | 3,600 Wh/kg (THRUST 1's: 7.4 MWh in 2 t) | **450 Wh/kg** (0.9 MWh, 3.3 GJ) | best commercial lithium cell: [Amprius](https://www.unmannedsystemstechnology.com/2025/05/amprius-unveils-high-performance-lithium-ion-battery-for-demanding-aviation-applications/) |
