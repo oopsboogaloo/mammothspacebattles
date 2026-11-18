@@ -958,6 +958,10 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
 - **After the second play (Chloe, 18 November 2026):** the shield draws twice as much while up
   (332 MW: THRUST 1's battery in 10 s alone, about 26 s with its generators), and each hit costs
   its energy at 12.5% (twice as dear).
+- **Saved designs load with today's rules** (`withCurrentRules`): every rule is applied again as
+  a design is loaded or imported, so the figures that follow from them (power, the shield, the
+  railgun's shot, the tractor, what containers hold, the pilot) are today's however they have been
+  retuned since it was saved. Nothing the player sets is touched: those figures are read-only.
 
 Tests: BPD-036, BPD-043, BPD-045, BPD-047, BPD-050, BPD-051.
 

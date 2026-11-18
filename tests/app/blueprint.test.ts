@@ -771,6 +771,16 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     expect(rebalanceV1(regular)).toBe(regular);
   });
 
+  it("BPD-045 a design saved since the rebalance loads with today's rule figures (the shield's draw and hit cost, the generators retuned since); today's THRUST 1 and THRUST OG are left as they are", async () => {
+    const { withCurrentRules } = await import("../../src/app/blueprint/model.ts");
+    const saved = structuredClone(regular);
+    body(saved, "shield").shield = { ...body(saved, "shield").shield!, draw: 202.5 / 20, hitEfficiency: 0.25 };
+    for (const id of ["gen-l", "gen-r"]) body(saved, id).power = { output: 1.5625, perKg: 437.5 };
+    expect(withCurrentRules(saved)).toEqual(regular);
+    expect(withCurrentRules(regular)).toEqual(regular);
+    expect(withCurrentRules(bp)).toEqual(bp);
+  });
+
   it("BPD-045 a part with a pilot aboard, resized: its own mass goes with its area, the pilot's stays", async () => {
     const { component: comp } = await import("../../src/app/blueprint/model.ts");
     const b = structuredClone(regular);
