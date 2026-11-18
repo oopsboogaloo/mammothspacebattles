@@ -86,3 +86,24 @@ In the designer's rules (`src/app/blueprint/rules.ts`: `SHELL`, `POWER`, `PILOT`
 - The battery's and magazines' blasts are as before.
 - Every regular cockpit has the pilot, so the Mastodon, Stegodon, Phiomia and Loxodon are each 4 t
   heavier (the Phiomia and Loxodon accelerate about a quarter less). THRUST OG has none.
+
+## After the first play (Chloe, 18 November 2026)
+
+Flown through to level 6: "clearly not shit". The railgun makes the game much easier, which is
+fine (the game is hard). Changes:
+
+- **Shells: 100, not 512.** A railgun's demands are on the ship's power, and the gun is heavy; its
+  ammunition should be small and light. THRUST 1's magazines hold 50 each and shrink to fit: 1.25 m
+  square, as small as holds them. Their walls are as thick as a part that small may have (a quarter
+  of its side, 0.31 m against the standard 0.4 m), so their armour, and the welds on them, are 78%
+  of before. THRUST 1: 47.96 t full, 43.96 t without the pilot; 184 m/s² forward, 11.6 rad/s².
+- **The shield in a crash.** One crash into a wall emptied the battery. That was a bug, not the
+  figure: the elastic field bounces against the wall many times as it settles, and each touch was
+  charged as a new hit (a 20 m/s crash: about 30 hits, some 35 times the energy it brought). Now
+  one encounter is one hit: a body touching the field again within 0.5 s of last touching it costs
+  nothing more. A 20 m/s crash costs 54 MJ (1.6% of the battery), 40 m/s 220 MJ (7%). Asked for:
+  hits a quarter to a fifth as dear; the fix alone makes a crash about 35 times cheaper, so the
+  25% efficiency is kept (a shell still costs 115 MJ).
+- **Generators ×4: 50 kW/kg**, 102 MW each, 205 MW the pair ("they're half the ship"). They hold
+  the shield (166 MW) up for as long as there is propellant, burning about 24 kg/s for it (THRUST
+  1's 6.2 t: about 4 minutes), and refill a shot (72 MJ) in 0.35 s.
