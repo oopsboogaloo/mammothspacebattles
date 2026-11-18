@@ -53,3 +53,45 @@ describe("the units proof for the designer's presets, flown in Thrust's first le
     }, 600_000);
   }
 });
+
+describe("the units proof for timeline commands", () => {
+  it("UNITS-001 a drag with a capped acceleration converts with the scenario (drag.set's anchor, target and maxAcceleration)", () => {
+    const disc = {
+      id: "ball",
+      shape: { kind: "disc", radius: 0.5 },
+      mass: 2,
+      position: { x: 0, y: 0 },
+      velocity: { x: 0, y: 0 },
+      angle: 0,
+      angularVelocity: 0,
+    };
+    const raw = {
+      schema: 1,
+      name: "drag",
+      profile: "test",
+      seed: 1,
+      world: { bodies: [disc] },
+      timeline: [
+        {
+          step: 0,
+          commands: [
+            {
+              type: "drag.set",
+              id: "ball",
+              anchor: { x: 0.2, y: 0 },
+              target: { x: 40, y: 10 },
+              stiffness: 30,
+              maxAcceleration: 10,
+            },
+          ],
+        },
+      ],
+      end: { steps: 240 },
+      probes: [],
+      assertions: [],
+    };
+    const r = proof(raw, 240, false);
+    expect(r.untagged).toEqual([]);
+    expect(r.diff).toBe("");
+  });
+});

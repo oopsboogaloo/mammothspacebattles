@@ -194,7 +194,9 @@ const FIELDS: Record<string, Dim> = {
   "goal.tolerance": D.length,
   "route.speed": D.speed,
   "pilot.detect": D.length,
-  "command.maxAcceleration": D.accel,
+  // drag.set, in a timeline: its pull per metre per kg is 1/s², kept.
+  "commands[].maxAcceleration": D.accel,
+  "commands[].stiffness": D.none,
 };
 
 /** Keys never scaled wherever they sit. */

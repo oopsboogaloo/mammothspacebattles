@@ -302,7 +302,7 @@ export function runPlant(world: World, spec: PlantSpec, s: PlantState, ship: str
         const toward = d > 1e-9 * (world.units?.length ?? 1) ? { x: (near.x - at.x) / d, y: (near.y - at.y) / d } : { x: 0, y: -1 };
         const across = { x: -toward.y, y: toward.x };
         for (let k = 0; k < n; k++) {
-          const off = (k - (n - 1) / 2) * 1;
+          const off = (k - (n - 1) / 2) * (world.units?.length ?? 1);
           addLeak(dome, nearestOnOutline(dome, add(near, { x: across.x * off, y: across.y * off })), spec.leakSpeed, (world.units?.length ?? 1));
           s.holes += 1;
         }
