@@ -18,7 +18,9 @@ test("BPD-017 the sandbox's start screen links to the designer, which opens on T
   await openFresh(page);
   const scrolls = await page.evaluate(() => [document.documentElement.scrollHeight > innerHeight, document.documentElement.scrollWidth > innerWidth]);
   expect(scrolls).toEqual([false, false]);
-  await expect(page.getByTestId("performance")).toContainText("61.71 t"); // THRUST 1: smaller wing tanks for its engines' chambers, and its welds weigh 1.5 t (the game's units: docs/units-rescale-plan.md)
+  // THRUST 1: smaller wing tanks for its engines' chambers, and its welds weigh 1.5 t (the game's units:
+  // docs/units-rescale-plan.md); with its pilot, a 4 t mammoth (docs/rebalance-v1.md).
+  await expect(page.getByTestId("performance")).toContainText("65.71 t · 61.71 t without the pilot");
 });
 
 test("BPD-018 select an engine and type a new nozzle length: a preset is copied, the walls change, and undo puts them back", async ({ page }) => {
@@ -154,7 +156,7 @@ test("BPD-025 Measure runs the real physics in the background and shows the meas
   await openFresh(page);
   await page.getByTestId("measure").click();
   await expect(page.getByTestId("performance")).toContainText("✓ measured", { timeout: 30_000 });
-  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward1[4-5]\d\.\d m\/s² ✓/);
+  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward13\d\.\d m\/s² ✓/); // with its 4 t pilot (docs/rebalance-v1.md)
   // A change makes it an estimate again; undo brings the measurement back.
   await page.getByTestId("part-main").locator("polygon").nth(1).click();
   const rate = page.getByTestId("param-rate");
@@ -382,7 +384,7 @@ test("BPD-036 the OG parts are listed after the regular ones; in Try it, THRUST 
   // Storage: the regular magazine, then the OG one under its heading.
   await page.getByRole("tab", { name: "ST" }).click();
   await expect(page.getByTestId("kind-name")).toHaveText("STORAGE");
-  await expect(page.getByTestId("card-mag-l")).toContainText("13,312 kg"); // 3 kg and 60 shells, ×1024 in the game's units
+  await expect(page.getByTestId("card-mag-l")).toContainText("13,312 kg"); // 3 kg and 256 shells of 40 kg (rebalance v1), ×1024 in the game's units
   await expect(page.getByTestId("card-mag-l-og")).toContainText("3,072 kg");
   await expect(page.getByText("OG · AS THRUST HAS THEM")).toBeVisible();
   await page.getByTestId("try-it").click();
@@ -391,9 +393,9 @@ test("BPD-036 the OG parts are listed after the regular ones; in Try it, THRUST 
       const w = (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; ammo?: { count: number } }[] } } | null } }).__msb.sandbox()?.world;
       return (w?.bodies ?? []).filter((b) => b.ammo).reduce((s, b) => s + b.ammo!.count, 0);
     });
-  await expect.poll(shells, { timeout: 15_000 }).toBeLessThanOrEqual(119); // one already in the gun
+  await expect.poll(shells, { timeout: 15_000 }).toBeLessThanOrEqual(511); // 256 in each magazine; one already in the gun
   await page.keyboard.down("Space");
-  await expect.poll(shells, { timeout: 60_000 }).toBeLessThan(115);
+  await expect.poll(shells, { timeout: 60_000 }).toBeLessThan(507);
   await page.keyboard.up("Space");
 });
 

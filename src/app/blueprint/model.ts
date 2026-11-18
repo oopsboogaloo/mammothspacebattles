@@ -5,7 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, normalizePolygon, polygonArea, steerMixer } from "../../core/index.ts";
-import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, POWER, PRESSURE, powerSpec, WALL, maxWeldQuality, WALL_DENSITY, WELD_K, WELD_UNLOCK, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
+import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, PILOT, POWER, PRESSURE, powerSpec, railgunShot, SHELL, WALL, maxWeldQuality, WALL_DENSITY, WELD_K, WELD_UNLOCK, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
 import { shown as show } from "./shown.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
@@ -43,6 +43,8 @@ export interface Component {
   form?: Form;
   /** A container's blast while it can hold nothing (its body then has none), kept for when it can again. */
   blast?: NonNullable<BodyInput["explosive"]>;
+  /** A cockpit's pilot, kg (rebalance v1: a 4 t mammoth cow), counted in its body's mass. */
+  pilot?: number;
 }
 
 /**
@@ -318,6 +320,11 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   const { ship, mix } = thrustShip(scenario);
   const gun = ship.bodies.find((b) => b.id === "gun");
   const mags = ship.bodies.filter((b) => b.id === "mag-l" || b.id === "mag-r");
+  // Rebalance v1 (Chloe, 18 November 2026): the railgun's shell is 40 kg at 1,200 m/s (in the game's units).
+  if (gun?.magazine?.railgun) {
+    gun.magazine.shell = { ...gun.magazine.shell, shape: { ...SHELL.shape }, mass: SHELL.mass };
+    gun.magazine.railgun.speed = SHELL.speed;
+  }
   if (gun?.magazine && mags.length) {
     const each = Math.floor(gun.magazine.count / mags.length);
     for (const m of mags) m.ammo = { count: each, shell: structuredClone(gun.magazine.shell) };
@@ -1007,8 +1014,14 @@ export function applyRules(bp: Blueprint, compId: string): void {
   }
   for (const id of c.bodies) {
     const x = body(bp, id);
-    if (c.part === "shield-emitter" && x.shield) x.shield = { ...x.shield, ...POWER.shield };
-    if (c.part === "railgun" && x.magazine?.railgun) x.magazine = { ...x.magazine, railgun: { ...x.magazine.railgun, shot: POWER.railgunShot } };
+    if (c.part === "shield-emitter" && x.shield) {
+      const { hitDraw: _h, minHitDraw: _m, ...rest } = x.shield;
+      void _h;
+      void _m;
+      x.shield = { ...rest, ...POWER.shield };
+    }
+    // A shot draws its shell's energy at the rule's efficiency: as its muzzle speed is set.
+    if (c.part === "railgun" && x.magazine?.railgun) x.magazine = { ...x.magazine, railgun: { ...x.magazine.railgun, shot: railgunShot(x.magazine.shell.mass, x.magazine.railgun.speed) } };
     // The gun: its muzzle speed from its barrel's length, its muzzle at the barrel's end; no power.
     if (c.part === "gun" && x.magazine?.railgun && x.shape.kind === "box") {
       const { shot: _free, ...launch } = x.magazine.railgun;
@@ -1016,6 +1029,11 @@ export function applyRules(bp: Blueprint, compId: string): void {
       x.magazine = { ...x.magazine, at: { x: 0, y: round(x.shape.height / 2 + GUN.muzzle, 6) }, railgun: { ...launch, speed: gunSpeed(x.shape.height) } };
     }
     if (c.part === "cockpit" && x.tractor) x.tractor = { ...x.tractor, draw: POWER.beam, tetherDraw: POWER.tether };
+  }
+  // The pilot sits in the cockpit (rebalance v1): her mass is the cockpit's, counted once.
+  if (c.part === "cockpit" && c.pilot !== PILOT.mass) {
+    b.mass = round(b.mass - (c.pilot ?? 0) + PILOT.mass, 9);
+    c.pilot = PILOT.mass;
   }
 }
 
@@ -1100,6 +1118,8 @@ export function engines(bp: Blueprint): EngineInfo[] {
 
 export interface Stats {
   mass: number;
+  /** Of which the pilots, kg (in the mass): the ship without them is mass − pilot. */
+  pilot: number;
   com: Vec2;
   /** Moment of inertia about the centre of mass, kg·m². */
   inertia: number;
@@ -1164,6 +1184,7 @@ export function stats(bp: Blueprint): Stats {
   const ws = welds(bp);
   return {
     mass: m,
+    pilot: bp.components.reduce((t, c) => t + (c.pilot ?? 0), 0),
     com,
     inertia,
     width: bp.ship.bodies.length ? box.maxX - box.minX : 0,
@@ -1506,7 +1527,7 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   const c = component(bp, compId);
   const b = body(bp, c.bodies[0]);
   const ps: Param[] = [];
-  const mass = (tab: Tab = "build"): Param => ({ key: "mass", label: "Mass", unit: "kg", value: c.bodies.reduce((s, id) => s + body(bp, id).mass, 0), min: 0.05, max: 500, step: 0.1, decimals: 2, tab });
+  const mass = (tab: Tab = "build"): Param => ({ key: "mass", label: c.pilot ? "Mass, without the pilot" : "Mass", unit: "kg", value: round(c.bodies.reduce((s, id) => s + body(bp, id).mass, 0) - (c.pilot ?? 0), 9), min: 0.05, max: 500, step: 0.1, decimals: 2, tab });
   if (c.kind === "engine") {
     const g = engineGeom(bp, c);
     const units = engineUnits(bp, c);
@@ -1578,6 +1599,7 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   }
   if (b.shield) ps.push({ key: "radius", label: "Shield radius", unit: "m", value: b.shield.radius, min: 0.5, max: 20, step: 0.05, decimals: 2, tab: "function" });
   if (!ck && !pk) ps.push(mass());
+  if (c.pilot) ps.push({ key: "pilot", label: "Pilot", unit: "kg", value: c.pilot, min: 0, max: 1e9, step: 1, decimals: 0, tab: "build", readonly: true, note: "A woolly mammoth cow, in the cockpit" });
   else if (pk) ps.push({ ...mass(), readonly: true, note: "From its size (the design rules)" });
   return ps;
 }
@@ -1699,10 +1721,13 @@ function setOther(bp: Blueprint, c: Component, key: string, value: number): Blue
       s.capacity = value;
       s.mass = value; // full at the start
     }
-  } else if (key === "mass") b.mass = value;
+  } else if (key === "mass") b.mass = round(value + (c.pilot ?? 0), 9);
   else if (key === "count" && b.magazine) b.magazine.count = Math.round(value);
   else if (key === "ammo" && b.ammo) b.ammo.count = Math.round(value);
-  else if (key === "speed" && b.magazine?.railgun) b.magazine.railgun.speed = value;
+  else if (key === "speed" && b.magazine?.railgun) {
+    b.magazine.railgun.speed = value;
+    if (c.part === "railgun") b.magazine.railgun.shot = railgunShot(b.magazine.shell.mass, value);
+  }
   else if (key === "reload" && b.magazine) b.magazine.reload = value;
   else if (key === "range" && b.tractor) b.tractor.range = value;
   else if (key === "force" && b.tractor) b.tractor.force = value;
@@ -2201,7 +2226,7 @@ export function instantiate(bp: Blueprint, tpl: Blueprint, compId: string, label
     return b;
   });
   const joints = tpl.ship.joints.filter((j) => c.bodies.includes(j.a) && c.bodies.includes(j.b)).map((j) => ({ ...structuredClone(j), id: `${id}-${j.id}`, a: rename(j.a), b: rename(j.b) }));
-  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, label ?? c.label.replace(/ (L|R|BL|BR|FL|FR)( OG)?$/, "$2")), bodies: bodies.map((b) => b.id), ...(c.part ? { part: c.part } : {}), ...(c.heads ? { heads: c.heads.map(rename) } : {}), ...(c.form ? { form: { ...c.form } } : {}) }, bodies, joints };
+  return { comp: { id, kind: c.kind, label: uniqueLabel(bp, label ?? c.label.replace(/ (L|R|BL|BR|FL|FR)( OG)?$/, "$2")), bodies: bodies.map((b) => b.id), ...(c.part ? { part: c.part } : {}), ...(c.heads ? { heads: c.heads.map(rename) } : {}), ...(c.form ? { form: { ...c.form } } : {}), ...(c.pilot ? { pilot: c.pilot } : {}) }, bodies, joints };
 }
 
 function uniqueLabel(bp: Blueprint, base: string): string {

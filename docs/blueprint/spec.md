@@ -515,6 +515,9 @@ thickness, welds, size limits).
 
 The rules of `design-rules-proposal.md` §4, as approved (core: PWR-001…PWR-004, `src/core/power.ts`).
 
+*Figures as first set, in the core's units; rebalance v1 (§32, 18 November 2026) replaced them with
+real-world ones.*
+
 - **Battery:** 2,700 kJ per m² of outline (THRUST 1's: 1,620 kJ), 3.3 kg per m², 0.2–2 m each way.
   It starts full; its charge explodes in proportion to its capacity.
 - **Generator:** up to 400 kW per m² (THRUST 1's pair: 448 kW), 3.6 kg per m², 0.3–2 m each way.
@@ -913,6 +916,32 @@ Tests: BPD-055 (`tests/app/weldsize.test.ts`).
 alone when the main engine is lost, felt lacking against THRUST OG's. Their flow is raised from 1.45
 to 1.51 kg/s each (`LIGHT_RATE`), which brings reverse to THRUST OG's: 9.82 m/s² (THRUST OG 9.81, 9.43
 before). Forward is 35.7 m/s² (THRUST OG 36.1) and turning 9.9 rad/s² (9.3).
+
+## 32. Rebalance v1: the pilot, the railgun, real-world power (18 November 2026, Chloe)
+
+As agreed in `docs/rebalance-v1.md`; figures in the game's units (the designer keeps the core's
+inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG is as it was.
+
+- **The pilot:** a woolly mammoth cow, 4 t, in every regular cockpit (`PILOT`). Her mass is the
+  cockpit's, counted once (`Component.pilot`); the cockpit's Mass field is without her, and a
+  read-only Pilot field shows her. PERFORMANCE shows the ship with and without her: THRUST 1
+  65.71 t, 61.71 t without.
+- **The railgun's shell:** 40 kg at 1,200 m/s (28.8 MJ; it was 171 kg at 576 m/s), its size going
+  with its mass (0.5 × 0.42 m). A shot draws its energy at 40%: 72 MJ, and follows the muzzle speed
+  when it is set.
+- **Magazines:** 256 shells in THRUST 1's (the same mass as the 60 old ones); the blast as before.
+  Bullet magazines are unchanged: a bullet is the old shell's mass, taking twice its room.
+- **Battery:** 450 Wh/kg, THRUST 1's 3.32 GJ (2.048 t); about 46 shots. Its blast is as before.
+- **Generators:** 12.5 kW/kg, 25.6 MW each, from 7 MJ a kg of propellant (about 3.7 kg/s each at full).
+- **Shield:** up, it drains THRUST 1's battery in 20 s (166 MW); with its generators running, about
+  29 s. Each hit costs the energy it brings at 25% (PWR-004 `hitEfficiency`: ½ μ v², the closing
+  speed along the contact, μ the reduced mass of what struck and the whole ship): a new shell,
+  about 115 MJ.
+- **Tractor:** the beam 60 MW, the tether 20 MW.
+- **Measured with the pilot:** THRUST 1 134 m/s² forward (it was 144), 9.8 rad/s² turning; the
+  Phiomia about 22.6 m/s² forward (29.6), the Loxodon about 41 (56).
+
+Tests: BPD-036, BPD-043, BPD-045, BPD-047, BPD-050, BPD-051.
 
 ## Sources
 

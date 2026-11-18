@@ -1,4 +1,4 @@
-# Rebalance v1 (agreed, not built yet)
+# Rebalance v1 (agreed; built 18 November 2026)
 
 Chloe, 18 November 2026. To land after the units rescale (docs/units-rescale-plan.md) merges, as its
 own PR. Figures are in the game's units (lengths ×4, masses ×1024 against before).
@@ -70,3 +70,19 @@ Full 61.7 t (dry 35.0 t; propellant 6.2 t; shells 20.5 t); with the pilot 65.7 t
 magazines 3.1 t dry each, tanks 1.9 t dry each, main engine 3.1 t, light thrusters 1.2 t each,
 generators and battery 2 t each, railgun, tractor and winch 1 t each, shield emitter 0.3 t, welds
 1.5 t. Ammunition is a third of the ship and propellant a tenth.
+
+## As built (18 November 2026)
+
+In the designer's rules (`src/app/blueprint/rules.ts`: `SHELL`, `POWER`, `PILOT`, the magazine's
+256), the shield's new hit cost in the core (PWR-004 `hitEfficiency`), and docs/blueprint/spec.md
+§32. Where the figures above were rounded:
+
+- The battery is 2.048 t in the game (2 kg in the designer's units), so at 450 Wh/kg it stores
+  3.32 GJ, not 3.24: about 46 shots. The shield's draw is set so it still drains it in 20 s
+  (166 MW, not 162).
+- The generators are 2.048 t too: 25.6 MW each, 51.2 MW the pair.
+- A hit's energy is taken against the whole ship (the reduced mass): a 40 kg shell on THRUST 1
+  costs just under 115.2 MJ.
+- The battery's and magazines' blasts are as before.
+- Every regular cockpit has the pilot, so the Mastodon, Stegodon, Phiomia and Loxodon are each 4 t
+  heavier (the Phiomia and Loxodon accelerate about a quarter less). THRUST OG has none.
