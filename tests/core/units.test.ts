@@ -5,7 +5,8 @@ import { basename } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readFile, readJson, scenarioFiles } from "../helpers.ts";
 import { proof, proofMigrated } from "../unitsProof.ts";
-import { parseScenario, runScenario } from "../../src/core/index.ts";
+import { getProfile, initialWorld, parseScenario, runScenario, stepInPlace } from "../../src/core/index.ts";
+import { scaleShip } from "../../src/core/scaleScenario.ts";
 import { migrateUnits, toCoreUnits } from "../../src/core/migrateUnits.ts";
 import { withBlueprint } from "../../src/app/playtest.ts";
 import { loxodonPreset, mastodonPreset, phiomiaPreset, stegodonPreset, thrustOgPreset, thrustPreset } from "../../src/app/blueprint/model.ts";
@@ -147,5 +148,21 @@ describe("schema 1 → 2: the migration to the game's units (UNITS-003)", () => 
     expect(back.schema).toBe(1);
     expect(back.world.bodies[0].shape).toEqual(old.world.bodies[0].shape);
     expect(back.ui).toEqual(old.ui);
+  });
+});
+
+describe("saved ships in the game's units", () => {
+  it("UNITS-003 a prefab saved from a running world (a gun with its magazine's timer and count, an engine with its chamber) converts, leaving state with no dimension as it is", () => {
+    const w = initialWorld(parseScenario(readJson("scenarios/gunship.json") as Record<string, unknown>));
+    for (let i = 0; i < 30; i++) stepInPlace(w, [], getProfile("sandbox"));
+    const bodies = structuredClone(w.bodies.filter((b) => b.magazine || b.injector));
+    expect(bodies.some((b) => b.magazine)).toBe(true);
+    expect(() => scaleShip({ bodies }, { length: 4, mass: 1024 })).toThrow(/no dimension known/);
+    const out = scaleShip({ bodies }, { length: 4, mass: 1024 }, { strict: false });
+    const gun = out.bodies.find((b) => b.magazine)!;
+    const before = bodies.find((b) => b.magazine)!;
+    expect(gun.mass).toBe(before.mass * 1024);
+    expect(gun.magazine!.timer).toBe(before.magazine!.timer);
+    expect(gun.magazine!.loaded).toBe(before.magazine!.loaded);
   });
 });

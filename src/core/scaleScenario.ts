@@ -175,6 +175,15 @@ const FIELDS: Record<string, Dim> = {
   "collector.reel": D.speed,
   "collector.maxTension": D.force,
   "turret.range": D.length,
+  // State a world's bodies carry (a prefab is saved from a running world).
+  "vessel.mass": D.mass,
+  "vessel.thermal": D.energy,
+  "vessel.throat": D.length,
+  "vessel.credit": D.mass,
+  "tractor.tension": D.force,
+  "tractor.paid": D.length,
+  "collector.tension": D.force,
+  "collector.length": D.length,
   "spawn.radius": D.length,
   "generator.burn": D.massRate,
   "shield.radius": D.length,
@@ -212,6 +221,8 @@ const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 
 
 /** The dimension of a number at `key` in an object held at `parent`, or undefined if it has none listed. */
 export function dimAt(parent: string, key: string): Dim | undefined {
+  // What a collector has delivered: kg by mineral.
+  if (parent === "delivered") return D.mass;
   const vec = VECTORS[parent];
   return vec && (key === "x" || key === "y") ? vec : (FIELDS[`${parent}.${key}`] ?? FIELDS[key]);
 }
@@ -280,9 +291,9 @@ export function scaleScenario(scn: Scenario, by: Units): { scenario: Scenario; u
 }
 
 /** A ship (bodies, joints, links: a blueprint's or a level's) converted by `by`, as scaleScenario does a world. */
-export function scaleShip<T extends { bodies: unknown[]; joints?: unknown[]; links?: unknown[] }>(ship: T, by: Units): T {
+export function scaleShip<T extends { bodies: unknown[]; joints?: unknown[]; links?: unknown[] }>(ship: T, by: Units, opts: { strict?: boolean } = {}): T {
   const unknown = new Set<string>();
   const out = walk(ship, "ship", (n, d) => (d ? n * factor(by, d) : n), unknown) as T;
-  if (unknown.size) throw new Error(`scaleShip: no dimension known for ${[...unknown].sort().join(", ")}`);
+  if (unknown.size && (opts.strict ?? true)) throw new Error(`scaleShip: no dimension known for ${[...unknown].sort().join(", ")}`);
   return out;
 }

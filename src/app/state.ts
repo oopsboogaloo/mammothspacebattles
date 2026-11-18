@@ -80,7 +80,21 @@ export const bindings = signal<Record<string, string>>(prefs.bindings ?? {});
 /** Key waiting to be captured for a channel, while the user presses "Bind key". */
 export const bindingFor = signal<string | null>(null);
 // Prefabs saved before the units changed (no `units`) are in the core's: brought into the game's.
-export const prefabs = signal<Prefab[]>((prefs.prefabs ?? []).map((p) => (p.units === "game" ? p : { ...p, ...scaleShip({ bodies: p.bodies, joints: p.joints }, GAME_UNITS), units: "game" as const })));
+export const prefabs = signal<Prefab[]>((prefs.prefabs ?? []).map(prefabInGame));
+
+/**
+ * A saved prefab in the game's units. Saved from a running world, it may carry state the table has no
+ * dimension for: that is left as it is (a timer, a count). One that still can't be converted is
+ * kept as it was rather than stop the page loading.
+ */
+function prefabInGame(p: Prefab): Prefab {
+  if (p.units === "game") return p;
+  try {
+    return { ...p, ...scaleShip({ bodies: p.bodies, joints: p.joints }, GAME_UNITS, { strict: false }), units: "game" };
+  } catch {
+    return p;
+  }
+}
 export const camera = signal<Camera>({ x: 0, y: 0, zoom: 60 * ZOOM });
 export const viewport = signal<Viewport>({ width: 800, height: 500 });
 export const follow = signal(false);

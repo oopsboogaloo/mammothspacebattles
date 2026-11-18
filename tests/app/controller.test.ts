@@ -20,6 +20,20 @@ describe("sandbox controller", () => {
     expect((exported.timeline as unknown[]).length).toBe(2);
   });
 
+  it("UNITS-003 SCN-006 an experiment from a schema 1 world exports in the game's units, so saving and reopening keeps what was added", () => {
+    // The empty world is written as schema 1 (the core's units) and migrated as it opens.
+    const s = new Sandbox(emptyScenario());
+    s.edit([{ type: "body.add", body: disc("d", { mass: 1024, shape: { kind: "disc", radius: 2 } }) }], "Spawn");
+    const exported = s.exportScenario();
+    expect(exported.schema).toBe(2);
+    // The edit is in the timeline: one step applies it.
+    const again = new Sandbox(exported);
+    again.step(1);
+    const d = again.world.bodies.find((b) => b.id === "d")!;
+    expect(d.mass).toBe(1024);
+    expect(d.shape).toEqual({ kind: "disc", radius: 2 });
+  });
+
   it("SBX-019 undo and redo work for at least 200 edits", () => {
     const s = new Sandbox(emptyScenario());
     const hashes = [hashValue(s.world)];
