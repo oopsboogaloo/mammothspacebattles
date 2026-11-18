@@ -27,11 +27,13 @@ Start grounded (Chloe): today's real figures first; being sci-fi, they may be ra
 | Part | Today (sci-fi) | v1 (real-world) | Source |
 |---|---|---|---|
 | Battery | 3,600 Wh/kg (THRUST 1's: 7.4 MWh in 2 t) | **450 Wh/kg** (0.9 MWh, 3.3 GJ) | best commercial lithium cell: [Amprius](https://www.unmannedsystemstechnology.com/2025/05/amprius-unveils-high-performance-lithium-ion-battery-for-demanding-aviation-applications/) |
-| Generator | 1,800 kW/kg (3.7 GW each) | **~5 kW/kg** (~10 MW each) | Toyota Mirai fuel cell stack, 128 kW in 24 kg: [JSME](https://jsme.or.jp/english/about/awards/2021-2/award2021-nt2) |
+| Generator | 1,800 kW/kg (3.7 GW each) | **12.5 kW/kg** (25 MW each): 2.5 × a fuel cell's ~5 kW/kg (Chloe: "here we have massive generators") | Toyota Mirai fuel cell stack, 128 kW in 24 kg: [JSME](https://jsme.or.jp/english/about/awards/2021-2/award2021-nt2) |
 | Electricity per kg of propellant | 16 MJ/kg | **~7 MJ/kg** | estimate: H₂ + O₂ (1 : 8) ~13 MJ/kg, about half turned into electricity |
 
-On those, THRUST 1's railgun has about 45 shots in a full battery, and its two generators make one
-shot about every 3.6 s.
+On those, THRUST 1's railgun has about 45 shots in a full battery (about 49 in one burst, the
+generators adding as it fires), and its two generators (50 MW) make one shot about every 1.4 s
+(42 a minute). At full output they burn about 7 kg/s of propellant: THRUST 1's 6.2 t lasts about
+15 minutes of it.
 
 ## The shield (Chloe, 18 November 2026)
 
@@ -41,8 +43,9 @@ shot about every 3.6 s.
   energy; the cost is in braking it actively, and a perfectly springy field would cost nothing.
   Today's rule (5 kJ per N·s of impulse, at least 410 MJ) charges by momentum instead.
 - **Running it** drains THRUST 1's battery in **20 s**: 3.24 GJ ÷ 20 s = **162 MW** (a fixed draw,
-  set by THRUST 1's battery). Its generators (20 MW) can't keep it up: the shield is a short,
-  deliberate measure. From full, with no hits, 20 s; each hit takes about 0.7 s off that.
+  set by THRUST 1's battery). Its generators (50 MW) can't keep it up: the shield is a short,
+  deliberate measure. From full, with no hits, about 29 s with the generators running (20 s on the
+  battery alone); each hit takes about 1 s off that.
 
 ## Still to set (Chloe)
 
