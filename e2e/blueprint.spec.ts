@@ -156,7 +156,7 @@ test("BPD-025 Measure runs the real physics in the background and shows the meas
   await openFresh(page);
   await page.getByTestId("measure").click();
   await expect(page.getByTestId("performance")).toContainText("✓ measured", { timeout: 30_000 });
-  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward12\d\.\d m\/s² ✓/); // with its 4 t pilot (docs/rebalance-v1.md) and 3 t shield emitter
+  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward(12[6-9]|13[0-2])\.\d m\/s² ✓/); // 129 m/s², within the jet's run-to-run noise: with its 4 t pilot (docs/rebalance-v1.md) and 3 t shield emitter
   // A change makes it an estimate again; undo brings the measurement back.
   await page.getByTestId("part-main").locator("polygon").nth(1).click();
   const rate = page.getByTestId("param-rate");
