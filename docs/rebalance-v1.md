@@ -112,3 +112,11 @@ fine (the game is hard). Changes:
   frame is now drawn with a streak behind it as long as it goes in 2.5 frames (so longer than its
   jump from one frame to the next), fading toward the tail; it is still one particle in the
   physics. Slower shells (the turrets' bolts) stay dots (`src/app/render.ts`).
+
+## After the second play (Chloe, 18 November 2026)
+
+- **The shield costs twice as much to hold up:** 332 MW, draining THRUST 1's battery in 10 s on
+  its own, about 26 s with the generators (205 MW) running. "The shield should drain the battery."
+- **Hits cost twice as much:** at 12.5% efficiency, not 25% (one crash still one hit). A 20 m/s
+  crash costs 108 MJ (3.3% of the battery), 40 m/s 440 MJ (13%); a 40 kg shell about 230 MJ (7%).
+- **Streaks half as long:** a fast shell's streak is as long as it goes in 1.25 frames.
