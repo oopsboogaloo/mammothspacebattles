@@ -151,7 +151,7 @@ export function detonate(world: World, roots: ReadonlyMap<string, string> | null
       if (own !== undefined && (roots?.get(other) ?? other) === own) continue;
       J = Math.max(J, c.normalImpulse);
     }
-    if (e.trigger || (e.whenDestroyed && s.integrity <= 0) || J > (e.arm ?? 5) * bodyMass(s)) struck.push(s);
+    if (e.trigger || (e.whenDestroyed && s.integrity <= 0) || J > (e.arm ?? 5 * (world.units?.length ?? 1)) * bodyMass(s)) struck.push(s);
   }
   for (const s of struck) burst(world, s, dt);
   if (struck.length) breakWreckage(world);

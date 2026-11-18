@@ -44,6 +44,7 @@ const VECTORS: Record<string, Dim> = {
   "parked[]": D.length,
   "flags[]": D.length,
   direction: D.none,
+  axis: D.none,
   normal: D.none,
   camera: D.length,
 };

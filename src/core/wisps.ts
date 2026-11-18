@@ -113,11 +113,11 @@ const BIG_GRID_FROM = 8;
 const BIG_PAD = 1e-3;
 
 /** Files a body's bounding circle into `cells` by its index. */
-function file(cells: Map<number, number[]>, b: Body, i: number, r: number, CELL = 4): void {
-  const x0 = Math.floor((b.position.x - r) / CELL);
-  const x1 = Math.floor((b.position.x + r) / CELL);
-  const y0 = Math.floor((b.position.y - r) / CELL);
-  const y1 = Math.floor((b.position.y + r) / CELL);
+function file(cells: Map<number, number[]>, b: Body, i: number, r: number, cell: number): void {
+  const x0 = Math.floor((b.position.x - r) / cell);
+  const x1 = Math.floor((b.position.x + r) / cell);
+  const y0 = Math.floor((b.position.y - r) / cell);
+  const y1 = Math.floor((b.position.y + r) / cell);
   for (let cx = x0; cx <= x1; cx++)
     for (let cy = y0; cy <= y1; cy++) {
       const k = cellKey(cx, cy);
@@ -143,6 +143,7 @@ function fixedGrid(world: World): FixedGrid {
     if (same && j === kept.bodies.length) return kept;
   }
   const g: FixedGrid = { bodies: [], index: [], x: [], y: [], angle: [], shape: [], cells: new Map(), big: [], reach: [] };
+  const cell = CELL * (world.units?.length ?? 1);
   bodies.forEach((b, i) => {
     if (!b.fixed) return;
     const r = boundingRadiusOf(b.shape);
@@ -153,8 +154,8 @@ function fixedGrid(world: World): FixedGrid {
     g.angle.push(b.angle);
     g.shape.push(b.shape);
     g.reach[i] = r;
-    if (r > 4 * CELL) g.big.push(i);
-    else file(g.cells, b, i, r);
+    if (r > 4 * cell) g.big.push(i);
+    else file(g.cells, b, i, r, cell);
   });
   fixedGrids.set(world, g);
   return g;
@@ -176,6 +177,10 @@ export function stepWisps(world: World, dt: number, bigGrid = true): number {
   // bodies of its cell in the world's order, then the big ones, also in order.
   const fixed = fixedGrid(world);
   const reach = fixed.reach;
+  // The grids' cells, in the world's units (units.ts).
+  const l = world.units?.length ?? 1;
+  const cell = CELL * l;
+  const bigCell = BIG_CELL * l;
   const moving = new Map<number, number[]>();
   const bigMoving: number[] = [];
   for (let i = 0; i < bodies.length; i++) {
@@ -183,8 +188,8 @@ export function stepWisps(world: World, dt: number, bigGrid = true): number {
     if (b.fixed) continue;
     const r = boundingRadiusOf(b.shape);
     reach[i] = r;
-    if (r > 4 * CELL) bigMoving.push(i);
-    else file(moving, b, i, r);
+    if (r > 4 * cell) bigMoving.push(i);
+    else file(moving, b, i, r, cell);
   }
   const big = merge(fixed.big, bigMoving);
   // Many big bodies: filed by the cells their reach, plus the largest wisp's radius, covers, in
@@ -196,9 +201,9 @@ export function stepWisps(world: World, dt: number, bigGrid = true): number {
     for (const w of list) rmax = Math.max(rmax, w.radius);
     rmax *= WISP_GROW;
     bigCells = new Map();
-    for (const i of big) file(bigCells, bodies[i], i, reach[i] + rmax + BIG_PAD, BIG_CELL);
+    for (const i of big) file(bigCells, bodies[i], i, reach[i] + rmax + BIG_PAD * l, bigCell);
   }
-  const bigKey = (p: Vec2) => cellKey(Math.floor(p.x / BIG_CELL), Math.floor(p.y / BIG_CELL));
+  const bigKey = (p: Vec2) => cellKey(Math.floor(p.x / bigCell), Math.floor(p.y / bigCell));
   let bounces = 0;
   /** Bounces wisp w (mass m, radius r) off body b if it has run into it. */
   // Each body as placed this step, and its outline in world coordinates, worked out once when a wisp
@@ -249,7 +254,7 @@ export function stepWisps(world: World, dt: number, bigGrid = true): number {
     w.position.y = w.position.y + w.velocity.y * dt;
     const m = wispMass(w);
     const r = wispRadius(w);
-    const k = cellKey(Math.floor(w.position.x / CELL), Math.floor(w.position.y / CELL));
+    const k = cellKey(Math.floor(w.position.x / cell), Math.floor(w.position.y / cell));
     const a = fixed.cells.get(k);
     const c = moving.get(k);
     // Each nearby body in the world's order (the two lists merged), then each big one.

@@ -26,6 +26,30 @@ export function difference(a: World, b: World): string {
       ["integrity", p.integrity, q.integrity, D.none],
     ];
     for (const [k, x, y, d] of checks) if (!same(x, y, d)) return `${p.id}.${k}: ${x} vs ${y / f(d)} (×${f(d)})`;
+    const va = p.injector?.vessel;
+    const vb = q.injector?.vessel;
+    if (!!va !== !!vb) return `${p.id}.vessel: ${!!va} vs ${!!vb}`;
+    if (va && vb) {
+      const vc: [string, number, number, Dim][] = [
+        ["mass", va.mass, vb.mass, D.mass],
+        ["thermal", va.thermal, vb.thermal, D.energy],
+        ["throat", va.throat, vb.throat, D.length],
+        ["credit", va.credit, vb.credit, D.mass],
+        ["count", va.count, vb.count, D.none],
+      ];
+      for (const [k, x, y, d] of vc) if (!same(x, y, d)) return `${p.id}.vessel.${k}: ${x} vs ${y / f(d)}`;
+    }
+    if (p.injector && q.injector && !same(p.injector.credit, q.injector.credit, D.mass)) return `${p.id}.injector.credit: ${p.injector.credit} vs ${q.injector.credit / f(D.mass)}`;
+  }
+  const ca = Object.keys(a.controls).sort();
+  for (const k of ca) if (!Object.is(a.controls[k], b.controls[k])) return `controls.${k}: ${a.controls[k]} vs ${b.controls[k]}`;
+  if (a.contacts.length !== b.contacts.length) return `contacts: ${a.contacts.length} vs ${b.contacts.length}`;
+  for (let i = 0; i < a.contacts.length; i++) {
+    const c = a.contacts[i];
+    const e = b.contacts[i];
+    if (c.a !== e.a || c.b !== e.b) return `contact ${i}: ${c.a}/${c.b} vs ${e.a}/${e.b}`;
+    if (!same(c.normalImpulse, e.normalImpulse, D.momentum)) return `contact ${c.a}/${c.b} normalImpulse: ${c.normalImpulse} vs ${e.normalImpulse / f(D.momentum)}`;
+    if (!same(c.separation, e.separation, D.length)) return `contact ${c.a}/${c.b} separation: ${c.separation} vs ${e.separation / f(D.length)}`;
   }
   if (a.joints.length !== b.joints.length) return `joints: ${a.joints.length} vs ${b.joints.length}`;
   for (let i = 0; i < a.joints.length; i++) {
