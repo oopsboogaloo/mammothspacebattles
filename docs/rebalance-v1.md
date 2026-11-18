@@ -107,3 +107,8 @@ fine (the game is hard). Changes:
 - **Generators ×4: 50 kW/kg**, 102 MW each, 205 MW the pair ("they're half the ship"). They hold
   the shield (166 MW) up for as long as there is propellant, burning about 24 kg/s for it (THRUST
   1's 6.2 t: about 4 minutes), and refill a shot (72 MJ) in 0.35 s.
+- **Fast shells are drawn as streaks.** THRUST 1's railgun shells (1,200 m/s) went too far
+  between frames to be seen, showing as spaced-out dots. A shell that moves more than 6 pixels a
+  frame is now drawn with a streak behind it as long as it goes in 2.5 frames (so longer than its
+  jump from one frame to the next), fading toward the tail; it is still one particle in the
+  physics. Slower shells (the turrets' bolts) stay dots (`src/app/render.ts`).

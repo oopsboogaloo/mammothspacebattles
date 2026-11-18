@@ -1500,6 +1500,14 @@ function nodeColours(world: World): Map<string, boolean> {
  * as the screen's diagonal, so no corner is left out whatever the turn.
  */
 /** How far off the screen a body may reach and still be drawn, px: its marks, labels and glow. */
+/**
+ * A fast shell's streak: as long as it goes in this many seconds (2.5 frames at 60 Hz, so always
+ * longer than its jump from one frame to the next), drawn once it moves more than STREAK_FROM
+ * pixels a frame; slower shells stay dots.
+ */
+const STREAK_TIME = 2.5 / 60;
+const STREAK_FROM = 6;
+const STREAK_STEPS = 6;
 const CULL_MARGIN = 60;
 const radii = new WeakMap<object, number>();
 /** A shape's bounding radius about its centre, m (kept for each shape object). */
@@ -1624,9 +1632,31 @@ function drawFrame(ctx: Ctx, world: World, c: Camera, vp: Viewport, opts: Render
       // In Mammoth Asteroids a slug is too small to see at the arena's scale: a white dot, 2 px at least.
       if (game && b.id.includes("-shell-")) {
         const at = toScreen(cam, vp, b.position);
-        ctx.fillStyle = b.id.startsWith("p") ? "#fff" : "#ff6b6b"; // an enemy's shell (a gunship's, a turret's) is red
+        const colour = b.id.startsWith("p") ? "#fff" : "#ff6b6b"; // an enemy's shell (a gunship's, a turret's) is red
+        const r = Math.max(2, 0.12 * LEN * cam.zoom);
+        // Too fast to see (Chloe, 18 November 2026: THRUST 1's railgun shells were spaced-out dots):
+        // a streak behind it, longer than it goes in a frame, so it reads as a line. Still one
+        // particle in the physics; only its drawing is drawn out.
+        const tail = toScreen(cam, vp, { x: b.position.x - b.velocity.x * STREAK_TIME, y: b.position.y - b.velocity.y * STREAK_TIME });
+        if (Math.hypot(at.x - tail.x, at.y - tail.y) > STREAK_FROM * (STREAK_TIME * 60)) {
+          // Fading toward the tail: segments from faint to full.
+          ctx.strokeStyle = colour;
+          ctx.lineWidth = r * 1.5;
+          const alpha = ctx.globalAlpha;
+          for (let i = 0; i < STREAK_STEPS; i++) {
+            const k0 = i / STREAK_STEPS;
+            const k1 = (i + 1) / STREAK_STEPS;
+            ctx.globalAlpha = alpha * k1;
+            ctx.beginPath();
+            ctx.moveTo(tail.x + (at.x - tail.x) * k0, tail.y + (at.y - tail.y) * k0);
+            ctx.lineTo(tail.x + (at.x - tail.x) * k1, tail.y + (at.y - tail.y) * k1);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = alpha;
+        }
+        ctx.fillStyle = colour;
         ctx.beginPath();
-        ctx.arc(at.x, at.y, Math.max(2, 0.12 * LEN * cam.zoom), 0, Math.PI * 2);
+        ctx.arc(at.x, at.y, r, 0, Math.PI * 2);
         ctx.fill();
         continue;
       }
