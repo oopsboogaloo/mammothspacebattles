@@ -7,8 +7,9 @@ import { measureWorld } from "../../src/app/blueprint/measure.ts";
 import { getProfile, mixture, stepInPlace, type World } from "../../src/core/index.ts";
 import { nozzleFlow } from "../../src/core/nozzle.ts";
 import { vesselShape, wallLoads } from "../../src/core/vessel.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const scn = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
+const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8")));
 const sandbox = getProfile("sandbox");
 
 /** One engine on its own: its bodies, welds and control link, with plenty of propellant. */

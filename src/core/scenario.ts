@@ -105,7 +105,16 @@ export class ScenarioError extends Error {
 export type Migration = (raw: Record<string, unknown>) => Record<string, unknown>;
 
 /** Migrations keyed by the schema version they upgrade FROM. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: (raw) => migrateUnits(raw) };
+export const MIGRATIONS: Readonly<Record<number, Migration>> = {
+  // A file that is malformed is left for validation to report: what can't be placed isn't converted.
+  1: (raw) => {
+    try {
+      return migrateUnits(raw, GAME_UNITS, { strict: false });
+    } catch {
+      return { ...raw, schema: 2 };
+    }
+  },
+};
 
 export function migrateScenario(raw: unknown, migrations: Readonly<Record<number, Migration>> = MIGRATIONS): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;

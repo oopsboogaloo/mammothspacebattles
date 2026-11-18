@@ -224,7 +224,7 @@ it("TER-006 what is anchored to the rock comes loose when a crater cuts the rock
   });
 
   it("SCN-002 a malformed terrain is refused", () => {
-    const scn = (terrain: unknown) => ({ schema: 1, name: "t", title: "t", description: "", profile: "sandbox", seed: 1, world: { bodies: [], terrain }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] });
+    const scn = (terrain: unknown) => ({ schema: 2, name: "t", title: "t", description: "", profile: "sandbox", seed: 1, world: { units: { length: 1, mass: 1 }, bodies: [], terrain }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] });
     expect(() => parseScenario(scn({ outline: FLAT, craters: {} }))).not.toThrow();
     const anchored = (a: unknown, fixed = true) => ({ ...scn({ outline: FLAT }), world: { terrain: { outline: FLAT }, bodies: [{ id: "a", fixed, shape: { kind: "box", width: 1, height: 1 }, mass: 1, position: P(0, 0), velocity: P(0, 0), angle: 0, angularVelocity: 0, anchored: a }] } });
     expect(() => parseScenario(anchored({ mass: 5, group: "g" }))).not.toThrow();

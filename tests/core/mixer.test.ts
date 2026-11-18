@@ -2,8 +2,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { createWorld, getProfile, initialWorld, mixerValues, parseScenario, ScenarioError, steerMixer, steerValues, stepInPlace, type Mixer } from "../../src/core/index.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const thrust = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
+const thrust = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8")));
 const sandbox = getProfile("sandbox");
 
 describe("mixer", () => {
@@ -61,7 +62,7 @@ describe("mixer", () => {
   });
 
   it("BPD-011 a scenario carries a mix, and a bad one is refused with where it is wrong", () => {
-    const scn = { schema: 1, name: "mix", profile: "sandbox", seed: 1, world: { bodies: [], mix: steerMixer(thrust.world.thrust.mix) }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] };
+    const scn = { schema: 2, name: "mix", profile: "sandbox", seed: 1, world: { units: { length: 1, mass: 1 }, bodies: [], mix: steerMixer(thrust.world.thrust.mix) }, timeline: [], end: { steps: 1 }, probes: [], assertions: [] };
     expect(initialWorld(parseScenario(scn)).mix?.rows.length).toBe(5);
     const bad = structuredClone(scn) as { world: { mix: { rows: { channel: string; combine?: string; lines: { weight: number }[] }[] } } };
     bad.world.mix.rows[1].channel = "main";

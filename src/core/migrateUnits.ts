@@ -70,7 +70,17 @@ export function rescaleFormula(src: string, scale: Record<string, number>): stri
  * the conversion (default the game's units). Throws on a number it finds no dimension for, so
  * nothing is left behind unconverted.
  */
-export function migrateUnits(raw: Record<string, unknown>, by: Units = GAME_UNITS): Record<string, unknown> {
+export function migrateUnits(raw: Record<string, unknown>, by: Units = GAME_UNITS, opts: { strict?: boolean } = {}): Record<string, unknown> {
+  const strict = opts.strict ?? true;
+  // Lenient (a file being loaded): what it can't place is left as it is, for validation to report.
+  const dimOfProbe = (path: string): Dim => {
+    try {
+      return probeDim(path);
+    } catch (e) {
+      if (strict) throw e;
+      return D.none;
+    }
+  };
   const f = (d: Dim | undefined) => (d ? factor(by, d) : 1);
   const params = (Array.isArray(raw.parameters) ? raw.parameters : []) as Record<string, unknown>[];
   const pf: Record<string, number> = {};
@@ -110,7 +120,7 @@ export function migrateUnits(raw: Record<string, unknown>, by: Units = GAME_UNIT
   // Assertions: by the probes they read.
   const probes = (Array.isArray(raw.probes) ? raw.probes : []) as { id: string; path: string }[];
   const qf: Record<string, number> = {};
-  for (const p of probes) qf[p.id] = f(probeDim(p.path));
+  for (const p of probes) if (p && typeof p.path === "string") qf[p.id] = f(dimOfProbe(p.path));
   const names = { ...pf, ...qf };
   if (Array.isArray(raw.assertions)) {
     out.assertions = raw.assertions.map((a: Record<string, unknown>) => {
@@ -134,7 +144,7 @@ export function migrateUnits(raw: Record<string, unknown>, by: Units = GAME_UNIT
     if (ui.spawn !== undefined) ui.spawn = walk(ui.spawn, "spawn", num, unknown, leaf);
     out.ui = ui;
   }
-  if (unknown.size) throw new Error(`migrateUnits: no dimension known for ${[...unknown].sort().join(", ")}`);
+  if (unknown.size && strict) throw new Error(`migrateUnits: no dimension known for ${[...unknown].sort().join(", ")}`);
   return out;
 }
 

@@ -8,6 +8,11 @@ import { getProfile, initialWorld, parseScenario, stepInPlace, type World } from
 const raw = (n: number) => JSON.parse(readFileSync(new URL(`../../scenarios/thrust-${n}.json`, import.meta.url), "utf8"));
 const world = (n = 1): World => initialWorld(parseScenario(raw(n)));
 const sandbox = getProfile("sandbox");
+// The levels are in the game's units (lengths ×4): views and places written as they were set, in metres
+// of the core's units, are scaled here (a camera ×4 across and ÷4 in zoom draws the same pixels).
+const L = 4;
+const cam = (x: number, y: number, zoom: number) => ({ x: x * L, y: y * L, zoom: zoom / L });
+const at4 = (x: number, y: number) => ({ x: x * L, y: y * L });
 
 /** A canvas that writes down what is drawn, with the fill colour in force. */
 function recorder(): { ctx: Ctx; calls: string[] } {
@@ -44,8 +49,8 @@ describe("Mammoth Thrust's page", () => {
 
   it("MTH-052 the view follows the ship, 90 m tall, and leans toward a pod on the tether", () => {
     expect(zoomFor(720)).toBe(720 / VIEW_HEIGHT);
-    expect(zoomFor(200)).toBe(3.5);
-    expect(zoomFor(4000)).toBe(12);
+    expect(zoomFor(200)).toBe(3.5 / L);
+    expect(zoomFor(4000)).toBe(12 / L);
     const w = world();
     const start = w.thrust!.spec.start;
     expect(lookAt(w, 0)!.x).toBeCloseTo(start.x, 6);
@@ -84,53 +89,53 @@ describe("Mammoth Thrust's page", () => {
     const w = world();
     const view = w.thrust!.spec.view!;
     // Deep in the rock at 8 px a metre: 1 m of pitch is a 4 px line and a 4 px gap.
-    expect(stripeHeight(view.pitch, 8)).toBe(4);
-    const calls = draw(w, { x: 0, y: -40, zoom: 8 });
+    expect(stripeHeight(view.pitch, 8 / L)).toBe(4);
+    const calls = draw(w, cam(0, -40, 8));
     const lines = calls.filter((c) => c.startsWith("fillRect(0,") && c.endsWith(`fill=${view.colour}`));
     expect(lines.length).toBeGreaterThan(60);
     const ys = lines.map((c) => Number(c.split(",")[1])).sort((a, b) => a - b);
     expect(new Set(lines.map((c) => c.split(",")[3].split(")")[0]))).toEqual(new Set(["4"])); // every line 4 px high
     expect(new Set(ys.slice(1).map((y, i) => y - ys[i]))).toEqual(new Set([8])); // 8 px apart: a line and a gap
     // Fixed to the world: half a metre up, the lines are 4 px down the screen.
-    const moved = draw(w, { x: 0, y: -39.5, zoom: 8 }).filter((c) => c.startsWith("fillRect(0,") && c.endsWith(`fill=${view.colour}`));
+    const moved = draw(w, cam(0, -39.5, 8)).filter((c) => c.startsWith("fillRect(0,") && c.endsWith(`fill=${view.colour}`));
     const shift = Number(moved[0].split(",")[1]) - Number(lines[0].split(",")[1]);
     expect(((shift % 8) + 8) % 8).toBe(4);
     // The rock's own bodies aren't drawn, and nothing is stroked along the ground: no dashed outline.
     expect(calls.some((c) => c.startsWith("setLineDash(6,4)"))).toBe(false);
     // Far out, where the lines can't be told apart: one fill, no lines.
-    expect(draw(w, { x: 0, y: 0, zoom: 2 }).filter((c) => c.startsWith("fillRect(0,") && c.endsWith(`fill=${view.colour}`))).toHaveLength(1);
+    expect(draw(w, cam(0, 0, 2)).filter((c) => c.startsWith("fillRect(0,") && c.endsWith(`fill=${view.colour}`))).toHaveLength(1);
   });
 
   it("MTH-053 stars show only in the sky: none in the rock, and none in a cave, which is plain black", () => {
     const w = world(2);
     const view = w.thrust!.spec.view!;
-    expect(insideOutline(view.sky, { x: 0, y: 100 })).toBe(true);
-    expect(insideOutline(view.sky, { x: 0, y: -15 })).toBe(false); // the chamber
-    expect(insideOutline(view.caves[0], { x: 0, y: -15 })).toBe(true);
-    expect(insideOutline(view.caves[0], { x: 70, y: -15 })).toBe(false); // rock
-    const stars = (cam: { x: number; y: number; zoom: number }) => draw(w, cam).filter((c) => c.startsWith("fillRect(") && c.endsWith("fill=#dfe7ff")).length;
-    expect(stars({ x: 0, y: 90, zoom: 8 })).toBeGreaterThan(20); // open sky
-    expect(stars({ x: 0, y: -15, zoom: 20 })).toBe(0); // inside the chamber: 40 × 30 m of it
-    expect(stars({ x: 70, y: -15, zoom: 20 })).toBe(0); // inside the rock
+    expect(insideOutline(view.sky, at4(0, 100))).toBe(true);
+    expect(insideOutline(view.sky, at4(0, -15))).toBe(false); // the chamber
+    expect(insideOutline(view.caves[0], at4(0, -15))).toBe(true);
+    expect(insideOutline(view.caves[0], at4(70, -15))).toBe(false); // rock
+    const stars = (c: { x: number; y: number; zoom: number }) => draw(w, c).filter((c) => c.startsWith("fillRect(") && c.endsWith("fill=#dfe7ff")).length;
+    expect(stars(cam(0, 90, 8))).toBeGreaterThan(20); // open sky
+    expect(stars(cam(0, -15, 20))).toBe(0); // inside the chamber: 40 × 30 m of it
+    expect(stars(cam(70, -15, 20))).toBe(0); // inside the rock
     // The cave and the sky are filled black over the lines.
-    expect(draw(w, { x: 0, y: -15, zoom: 8 }).filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length).toBe(2);
+    expect(draw(w, cam(0, -15, 8)).filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length).toBe(2);
   });
 
   it("TER-004 craters are drawn as open space: plain black discs cut into the rock's lines", () => {
     const w = world();
-    const view = { ...w.thrust!.spec.view!, craters: [{ x: 0, y: -40, r: 3 }, { x: 500, y: -40, r: 3 }] };
+    const view = { ...w.thrust!.spec.view!, craters: [{ x: 0, y: -160, r: 12 }, { x: 2000, y: -160, r: 12 }] };
     const r = recorder();
-    renderFrame(r.ctx, w, { x: 0, y: -40, zoom: 8 }, { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null, thrust: view });
+    renderFrame(r.ctx, w, cam(0, -40, 8), { width: 800, height: 600 }, { overlays: new Set(), selection: new Set(), hover: null, thrust: view });
     // The one in view: a 24 px disc at the middle of the screen, filled black. The one far off isn't drawn.
     expect(r.calls.filter((c) => c.startsWith("arc(400,300,24,") && c.endsWith("fill=#000"))).toHaveLength(1);
     const black = r.calls.filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length;
-    const plain = draw(w, { x: 0, y: -40, zoom: 8 }).filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length;
+    const plain = draw(w, cam(0, -40, 8)).filter((c) => c.startsWith("fill(") && c.endsWith("fill=#000")).length;
     expect(black).toBe(plain + 1);
   });
 
   it("MTH-053 the pod glows, and a protected ship flashes", () => {
     const w = world();
-    const calls = draw(w, { x: 12, y: -6, zoom: 20 });
+    const calls = draw(w, cam(12, -6, 20));
     expect(calls.filter((c) => c.startsWith("arc(")).length).toBeGreaterThanOrEqual(3); // the pod and its two rings
     // A new ship after a loss is protected, and is drawn faint on alternate tenths of a second.
     stepInPlace(w, [{ type: "control.set", channel: "destruct", value: 1 }], sandbox);
@@ -142,15 +147,15 @@ describe("Mammoth Thrust's page", () => {
     const w = world(3);
     const barrel = w.bodies.find((b) => b.id === "t6-barrel")!;
     const mag = w.bodies.find((b) => b.id === "t6-breech")!.magazine!;
-    expect(barrel.recoil).toEqual({ gun: "t6-breech", travel: 0.7 });
+    expect(barrel.recoil).toEqual({ gun: "t6-breech", travel: 0.7 * L });
     // Before its first shot it is out.
     expect(recoilOf(w, barrel)).toBe(0);
     // At the shot it is all the way back; halfway through, half; then out.
     mag.loaded = 1;
     mag.timer = 0;
-    expect(recoilOf(w, barrel)).toBeCloseTo(0.7, 9);
+    expect(recoilOf(w, barrel)).toBeCloseTo(0.7 * L, 9);
     mag.timer = RECOIL_TIME / 2;
-    expect(recoilOf(w, barrel)).toBeCloseTo(0.35, 9);
+    expect(recoilOf(w, barrel)).toBeCloseTo(0.35 * L, 9);
     mag.timer = RECOIL_TIME * 2;
     expect(recoilOf(w, barrel)).toBe(0);
   });
@@ -159,23 +164,23 @@ describe("Mammoth Thrust's page", () => {
     const strokes = (calls: string[]) => calls.filter((c) => c.startsWith("stroke(")).map((c) => c.split("|stroke=")[1].split("|fill=")[0]);
     const fills = (calls: string[]) => calls.filter((c) => c.startsWith("fill(")).map((c) => c.split("|fill=")[1]);
     // Over the antennae: both lines there, and the shock between them.
-    const cam = { x: -18, y: -50, zoom: 8 };
-    let calls = draw(w, cam);
+    const over = cam(-18, -50, 8);
+    let calls = draw(w, over);
     expect(strokes(calls).filter((c) => c === LINE_ON).length).toBe(7);
     expect(strokes(calls)).not.toContain(LINE_OFF);
     expect(strokes(calls)).toContain("#eaf6ff");
     // The plant offline: every line dark, no shock, and its light red.
     w.thrust!.state.plant!.offlineUntil = w.time + 10;
-    calls = draw(w, cam);
+    calls = draw(w, over);
     expect(strokes(calls).filter((c) => c === LINE_OFF).length).toBe(7);
     expect(strokes(calls)).not.toContain("#eaf6ff");
-    const plant = { x: 61, y: 10, zoom: 8 };
+    const plant = cam(61, 10, 8);
     expect(fills(draw(w, plant))).toContain(LAMP_OFF);
     w.thrust!.state.plant!.offlineUntil = 0;
     expect(fills(draw(w, plant))).toContain(LAMP_ON);
     // The transmitter down: only the line beyond it is dark.
     w.thrust!.state.plant!.up = { tx: false };
-    calls = draw(w, cam);
+    calls = draw(w, over);
     expect(strokes(calls).filter((c) => c === LINE_OFF).length).toBe(1);
     expect(strokes(calls)).not.toContain("#eaf6ff");
   });
@@ -198,7 +203,7 @@ describe("Mammoth Thrust's page", () => {
     const w = world(3);
     expect(coolantStatus(w)).toEqual({ share: 1, holes: 0 });
     const core = w.bodies.find((b) => b.id === "plant-core")!;
-    core.contents![0].mass = 3; // of 12 kg
+    core.contents![0].mass = core.contents![0].capacity / 4; // a quarter
     w.thrust!.state.plant!.holes = 4;
     const c = coolantStatus(w)!;
     expect(c.share).toBeCloseTo(0.25, 9);

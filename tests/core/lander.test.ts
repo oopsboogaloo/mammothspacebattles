@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { bodyMass, getProfile, hashValue, initialWorld, parseScenario, stepInPlace, type World } from "../../src/core/index.ts";
+import { inCoreUnits } from "../helpers.ts";
 
 // Mammoth Lander (docs/games/mammoth-lander.md), on the Easy scenario.
-const raw = JSON.parse(readFileSync(new URL("../../scenarios/lander-easy.json", import.meta.url), "utf8"));
+const raw = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/lander-easy.json", import.meta.url), "utf8")));
 const pad1 = raw.world.bodies.find((b: { id: string }) => b.id === "pad-1");
 const padTop = pad1.position.y + 0.2;
 /** The ship reaches this far below its hull's centre (legs and nozzles), m. */
@@ -233,7 +234,7 @@ describe("Mammoth Lander", () => {
   });
 
   it("LND-040 Emergency: the tank leaks from the start, draining fuel and pushing the ship sideways", () => {
-    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-emergency.json", import.meta.url), "utf8"));
+    const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/lander-emergency.json", import.meta.url), "utf8")));
     scn.world.gravity = { x: 0, y: 0 };
     scn.world.lander.start = { position: { x: 0, y: 900 }, velocity: { x: 0, y: 0 } };
     const s = parseScenario(scn);
@@ -249,7 +250,7 @@ describe("Mammoth Lander", () => {
   });
 
   it("LND-010 Cave: the deepest pad scores ×6, and the cave doesn't wrap", () => {
-    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-cave.json", import.meta.url), "utf8"));
+    const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/lander-cave.json", import.meta.url), "utf8")));
     expect(scn.world.bounds.wrap).toBe(false);
     const deep = scn.world.bodies.find((b: { id: string }) => b.id === "pad-5");
     expect(scn.world.lander.pads.find((p: { id: string }) => p.id === "pad-5").multiplier).toBe(6);
@@ -268,7 +269,7 @@ describe("Mammoth Lander", () => {
   });
 
   it("LND-010 Cave 2: pads score by their number, and a gentle drop onto each one lands there", () => {
-    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-cave-2.json", import.meta.url), "utf8"));
+    const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/lander-cave-2.json", import.meta.url), "utf8")));
     expect(scn.world.bounds.wrap).toBe(false);
     expect(scn.world.lander.pads.map((p: { multiplier: number }) => p.multiplier)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(scn.world.lander.solid).toEqual(["outside"]);
@@ -288,7 +289,7 @@ describe("Mammoth Lander", () => {
   // A gentle touchdown on a pad riding a spinning rock: just above it, tilted to its "up", moving with
   // the rock there (its core's velocity and spin) and coming down at 1 m/s.
   const rockLanding = (file: string, padId: string, coreId: string) => {
-    const scn = JSON.parse(readFileSync(new URL(`../../scenarios/${file}.json`, import.meta.url), "utf8"));
+    const scn = inCoreUnits(JSON.parse(readFileSync(new URL(`../../scenarios/${file}.json`, import.meta.url), "utf8")));
     const pad = scn.world.bodies.find((b: { id: string }) => b.id === padId);
     const core = scn.world.bodies.find((b: { id: string }) => b.id === coreId);
     const a = pad.angle;
@@ -310,7 +311,7 @@ describe("Mammoth Lander", () => {
   };
 
   it("FLT-014 Binary: the two rocks pull each other, equal and opposite, and orbit", () => {
-    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-binary.json", import.meta.url), "utf8"));
+    const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/lander-binary.json", import.meta.url), "utf8")));
     scn.world.lander.start = { position: { x: 0, y: 900 }, velocity: { x: 0, y: 0 } }; // the ship well away
     const s = parseScenario(scn);
     const w = initialWorld(s);
@@ -341,7 +342,7 @@ describe("Mammoth Lander", () => {
   }, 120_000); // simulation-heavy: CI runs several times slower
 
   it("LND-011 Orbital: a gentle touchdown on a pad riding the spinning asteroid lands, judged against the pad", () => {
-    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-orbital.json", import.meta.url), "utf8"));
+    const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/lander-orbital.json", import.meta.url), "utf8")));
     const core = scn.world.bodies.find((b: { id: string }) => b.id === "rock-core");
     expect(core.gravity.mu).toBeGreaterThan(0);
     const w0 = core.angularVelocity;
@@ -374,7 +375,7 @@ describe("Mammoth Lander", () => {
   });
 
   it("LND-011 Orbital: the asteroid holds together and spins in place, and the ship starts in orbit", () => {
-    const s = parseScenario(JSON.parse(readFileSync(new URL("../../scenarios/lander-orbital.json", import.meta.url), "utf8")));
+    const s = parseScenario(inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/lander-orbital.json", import.meta.url), "utf8"))));
     const prof = getProfile(s.profile);
     const w = initialWorld(s);
     for (let k = 0; k < 10 * 240; k++) stepInPlace(w, [], prof);
@@ -393,7 +394,7 @@ describe("Mammoth Lander", () => {
 
   it("LND-042 a wrapped level's ground reaches both edges exactly and no further, so there is no hole at the seam", () => {
     for (const name of ["easy", "medium", "hard", "emergency"]) {
-      const scn = JSON.parse(readFileSync(new URL(`../../scenarios/lander-${name}.json`, import.meta.url), "utf8"));
+      const scn = inCoreUnits(JSON.parse(readFileSync(new URL(`../../scenarios/lander-${name}.json`, import.meta.url), "utf8")));
       const xs = scn.world.bodies
         .filter((b: { id: string }) => b.id.startsWith("ground-"))
         .flatMap((b: { position: { x: number }; shape: { vertices: { x: number }[] } }) => b.shape.vertices.map((v) => v.x + b.position.x));
@@ -433,7 +434,7 @@ describe("Mammoth Lander", () => {
   });
 
   it("LND-040 Emergency's ship comes in fast and spinning, as one rigid body", () => {
-    const scn = JSON.parse(readFileSync(new URL("../../scenarios/lander-emergency.json", import.meta.url), "utf8"));
+    const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/lander-emergency.json", import.meta.url), "utf8")));
     const { velocity, spin } = scn.world.lander.start;
     expect(Math.abs(velocity.x)).toBeGreaterThanOrEqual(20);
     expect(spin).toBeGreaterThan(1);

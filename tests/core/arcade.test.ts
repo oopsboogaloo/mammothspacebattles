@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ARCADE_SCORES, bodyMass, steerValues, clearestSpot, orbitVelocities, computeTotals, createWorld, getProfile, gunshipPlan, gunshipSpot, hashValue, initialWorld, parseScenario, stepInPlace, type Body, type Command, type World } from "../../src/core/index.ts";
 import { disc } from "../helpers.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const raw = JSON.parse(readFileSync(new URL("../../scenarios/asteroids.json", import.meta.url), "utf8"));
+const raw = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/asteroids.json", import.meta.url), "utf8")));
 const sandbox = getProfile("sandbox");
 const set = (channel: string, value: number): Command => ({ type: "control.set", channel, value });
 

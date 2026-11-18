@@ -206,7 +206,7 @@ describe("tractor beam", () => {
     expect(at(loose, "ship").tractor!.targets).toContain("ball");
 
     // It must name a body in the world.
-    const raw = { schema: 1, name: "t", seed: 1, world: { bodies: [{ ...ship({ tetherFrom: "nope" }) }] }, end: { steps: 1 } };
+    const raw = { schema: 2, name: "t", seed: 1, world: { units: { length: 1, mass: 1 }, bodies: [{ ...ship({ tetherFrom: "nope" }) }] }, end: { steps: 1 } };
     expect(() => parseScenario(raw)).toThrow(/tetherFrom/);
     expect(() => parseScenario(raw)).toThrow(ScenarioError);
   });

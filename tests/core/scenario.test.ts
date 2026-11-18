@@ -3,7 +3,7 @@ import {
   SCENARIO_SCHEMA,
   ScenarioError,
   evaluateFormula,
-  migrateScenario,
+  migrateScenario, MIGRATIONS,
   parseScenario,
   resolvePath,
   runScenario,
@@ -35,11 +35,11 @@ describe("scenario format", () => {
 
   it("SCN-002 reports every error with its JSON path, not just the first", () => {
     const errs = errorsOf({
-      schema: 1,
+      schema: 2,
       name: "",
       profile: "nope",
       seed: 1.5,
-      world: { bodies: [{ id: "a", shape: { kind: "box" }, mass: -1, position: { x: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 }] },
+      world: { units: { length: 1, mass: 1 }, bodies: [{ id: "a", shape: { kind: "box" }, mass: -1, position: { x: 0 }, velocity: { x: 0, y: 0 }, angle: 0, angularVelocity: 0 }] },
       timeline: [{ step: 99, commands: [{ type: "teleport" }] }],
       end: { steps: 10 },
       probes: [{ id: "p", path: "bodies[[" }],
@@ -98,9 +98,11 @@ describe("scenario format", () => {
         void _drop;
         return { ...rest, schema: 1 };
       },
+      // Then the real one: schema 1 → 2, the game's units.
+      1: MIGRATIONS[1],
     };
     const migrated = migrateScenario(old, migrations) as Record<string, unknown>;
-    expect(migrated.schema).toBe(1);
+    expect(migrated.schema).toBe(2);
     expect(migrated.name).toBe("legacy");
     expect(migrated).not.toHaveProperty("title");
     expect(parseScenario(migrated).name).toBe("legacy");

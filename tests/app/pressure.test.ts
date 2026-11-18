@@ -4,8 +4,9 @@ import { describe, expect, it } from "vitest";
 import { body, capRates, component, lstarOf, maxRate, params, pressureCeiling, setParam, stegodonPreset, thrustOgPreset, thrustPreset } from "../../src/app/blueprint/model.ts";
 import { burnEfficiency, holdPressure, PRESSURE } from "../../src/app/blueprint/rules.ts";
 import { measureNow } from "../../src/app/blueprint/measure.ts";
+import { inCoreUnits } from "../helpers.ts";
 
-const scn = JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8"));
+const scn = inCoreUnits(JSON.parse(readFileSync(new URL("../../scenarios/thrust-1.json", import.meta.url), "utf8")));
 const t1 = thrustPreset(scn);
 const C_STAR = 206 / (1 + 1 / 1.33);
 const pressureOf = (bp: typeof t1, id: string) => ((body(bp, id).injector!.rate ?? 0) * C_STAR) / component(bp, id).rocket!.throat;

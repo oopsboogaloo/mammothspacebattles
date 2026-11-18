@@ -10,11 +10,11 @@ const box = (id: string, x: number, y: number, extra: Record<string, unknown> = 
 function world(joined = false): World {
   return initialWorld(
     parseScenario({
-      schema: 1,
+      schema: 2,
       name: "ammo",
       profile: "sandbox",
       seed: 1,
-      world: {
+      world: { units: { length: 1, mass: 1 },
         gravity: { x: 0, y: 0 },
         bodies: [
           box("gun", 0, 1, { mass: 1, magazine: { count: 0, reload: 0.125, at: { x: 0, y: 0.65 }, angle: 0, shell, railgun: { channel: "fire", speed: 100 } } }),
@@ -93,11 +93,11 @@ describe("shell feeds (WPN-015)", () => {
     const bad = () =>
       initialWorld(
         parseScenario({
-          schema: 1,
+          schema: 2,
           name: "ammo-bad",
           profile: "sandbox",
           seed: 1,
-          world: { bodies: [box("a", 0, 0), box("b", 3, 0, { ammo: { count: 1, shell } })], links: [{ id: "x", kind: "ammo", from: "a", to: "b" }] },
+          world: { units: { length: 1, mass: 1 }, bodies: [box("a", 0, 0), box("b", 3, 0, { ammo: { count: 1, shell } })], links: [{ id: "x", kind: "ammo", from: "a", to: "b" }] },
           timeline: [],
           end: { steps: 1 },
           probes: [],

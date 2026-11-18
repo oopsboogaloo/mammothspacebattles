@@ -25,12 +25,12 @@ function recorder(): { ctx: Ctx; calls: string[] } {
 }
 
 describe("Mammoth Asteroids' page", () => {
-  it("MAS-010 the arena is 160 m high and the screen's shape, within 1.2 to 2.2 times as wide", () => {
-    expect(arenaFor(1600, 900)).toEqual({ width: 160 * (16 / 9), height: 160 });
-    expect(arenaFor(1180, 820).width).toBeCloseTo(230.2, 1); // an iPad in landscape, less its bars
-    expect(arenaFor(600, 900).width).toBe(192); // a tall phone: 1.2 at the least
-    expect(arenaFor(3440, 1000).width).toBe(352); // an ultrawide: 2.2 at the most
-    expect(arenaFor(800, 0).height).toBe(160);
+  it("MAS-010 the arena is 160 m high (640 m in the game's units) and the screen's shape, within 1.2 to 2.2 times as wide", () => {
+    expect(arenaFor(1600, 900)).toEqual({ width: 640 * (16 / 9), height: 640 });
+    expect(arenaFor(1180, 820).width).toBeCloseTo(4 * 230.2, 0); // an iPad in landscape, less its bars
+    expect(arenaFor(600, 900).width).toBe(4 * 192); // a tall phone: 1.2 at the least
+    expect(arenaFor(3440, 1000).width).toBe(4 * 352); // an ultrawide: 2.2 at the most
+    expect(arenaFor(800, 0).height).toBe(640);
   });
 
   it("MAS-051 the HUD reads the flying ship's fuel, slugs and worst-hit part", () => {
