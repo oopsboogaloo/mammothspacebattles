@@ -33,13 +33,23 @@ Start grounded (Chloe): today's real figures first; being sci-fi, they may be ra
 On those, THRUST 1's railgun has about 45 shots in a full battery, and its two generators make one
 shot about every 3.6 s.
 
+## The shield (Chloe, 18 November 2026)
+
+- **Each hit** costs the energy it brings, relative to the ship (½ m v², the shell's mass and its
+  speed relative to the field), at **25% efficiency**: 4 × that energy from the battery. The new
+  40 kg shell at 1,200 m/s: 28.8 MJ, so 115 MJ a hit. Physics: stopping a hit means soaking up its
+  energy; the cost is in braking it actively, and a perfectly springy field would cost nothing.
+  Today's rule (5 kJ per N·s of impulse, at least 410 MJ) charges by momentum instead.
+- **Running it** drains THRUST 1's battery in **20 s**: 3.24 GJ ÷ 20 s = **162 MW** (a fixed draw,
+  set by THRUST 1's battery). Its generators (20 MW) can't keep it up: the shield is a short,
+  deliberate measure. From full, with no hits, 20 s; each hit takes about 0.7 s off that.
+
 ## Still to set (Chloe)
 
 The other draws were set against the sci-fi battery. On a 3.3 GJ battery:
 
 | Draw | Today | A full battery lasts |
 |---|---|---|
-| Shield | 6.5 GW | 0.5 s |
 | Tractor beam | 164 MW | 20 s |
 | Tether | 82 MW | 40 s |
 
