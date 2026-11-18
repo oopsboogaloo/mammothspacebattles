@@ -3,6 +3,8 @@
 import { gravityAt, localVertices, MOON_SHOT, moonAim, moonRope, type Body, type Vec2, type World } from "../core/index.ts";
 import type { Camera, Viewport } from "./camera.ts";
 import { COLUMNS, FRAME, frameOf, ROWS, STAND_PX } from "./moon/sheet.ts";
+// Sizes drawn in metres are the core units' figures times LEN (the game's units: ./units.ts).
+import { LEN } from "./units.ts";
 
 /** What the page asks of the drawing: the title's view turns slowly by itself, about the moon's centre. */
 export const moonView = { title: false };
@@ -93,7 +95,7 @@ export function aimPath(world: World, speed: number, reach: number, every: numbe
   const p = { x: aim.from.x, y: aim.from.y };
   const v = { x: m.velocity.x + aim.dir.x * speed, y: m.velocity.y + aim.dir.y * speed };
   const out: Vec2[] = [];
-  const dt = Math.min(every / 8, 0.25) / speed;
+  const dt = Math.min(every / 8, 0.25 * LEN) / speed;
   let gone = 0;
   let next = every;
   while (gone < reach) {
@@ -165,11 +167,11 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
     ctx.save();
     ctx.clip(path);
     ctx.fillStyle = "#00000022";
-    const count = Math.round(radius * 0.9);
+    const count = Math.round((radius / LEN) * 0.9);
     for (let k = 0; k < count; k++) {
       const a = hash(k, 11) * Math.PI * 2;
-      const r = radius - 2 - hash(k, 12) * 14;
-      const size = 0.5 + 2.2 * hash(k, 13);
+      const r = radius - (2 + hash(k, 12) * 14) * LEN;
+      const size = (0.5 + 2.2 * hash(k, 13)) * LEN;
       ctx.beginPath();
       ctx.arc(spec.centre.x + r * Math.cos(a), spec.centre.y + r * Math.sin(a), size, 0, Math.PI * 2);
       ctx.fill();
@@ -189,9 +191,9 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
     const right = { x: up.y, y: -up.x };
     const foot = { x: f.at.x - up.x * spec.size.stand, y: f.at.y - up.y * spec.size.stand };
     const at = (along: number, high: number) => ({ x: foot.x + right.x * along + up.x * high, y: foot.y + right.y * along + up.y * high });
-    const top = at(0, 3.4);
+    const top = at(0, 3.4 * LEN);
     ctx.strokeStyle = "#fff";
-    ctx.lineWidth = Math.max(2 * px, 0.08);
+    ctx.lineWidth = Math.max(2 * px, 0.08 * LEN);
     ctx.beginPath();
     ctx.moveTo(foot.x, foot.y);
     ctx.lineTo(top.x, top.y);
@@ -201,7 +203,7 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
       // The finish: chequered.
       for (let a = 0; a < 3; a++)
         for (let b = 0; b < 2; b++) {
-          const q = [at(0.5 * a, 3.4 - 0.5 * b), at(0.5 * a + 0.5, 3.4 - 0.5 * b), at(0.5 * a + 0.5, 2.9 - 0.5 * b), at(0.5 * a, 2.9 - 0.5 * b)];
+          const q = [at(0.5 * a * LEN, (3.4 - 0.5 * b) * LEN), at((0.5 * a + 0.5) * LEN, (3.4 - 0.5 * b) * LEN), at((0.5 * a + 0.5) * LEN, (2.9 - 0.5 * b) * LEN), at(0.5 * a * LEN, (2.9 - 0.5 * b) * LEN)];
           ctx.fillStyle = (a + b) % 2 ? "#111" : "#fff";
           ctx.beginPath();
           q.forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
@@ -209,8 +211,8 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
           ctx.fill();
         }
     } else {
-      const tip = at(1.5, 2.9);
-      const low = at(0, 2.4);
+      const tip = at(1.5 * LEN, 2.9 * LEN);
+      const low = at(0, 2.4 * LEN);
       ctx.fillStyle = i <= state.flag ? FLAG_DONE : i === state.flag + 1 ? FLAG_NEXT : FLAG_LATER;
       ctx.beginPath();
       ctx.moveTo(top.x, top.y);
@@ -268,9 +270,9 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
     if (b.id.startsWith(MOON_SHOT)) {
       // A shot: a bright dot with a short streak behind it.
       const speed = Math.hypot(b.velocity.x, b.velocity.y) || 1;
-      const tail = Math.min(1.6, speed * 0.004);
+      const tail = Math.min(1.6 * LEN, speed * 0.004);
       ctx.strokeStyle = SHOT;
-      ctx.lineWidth = Math.max(3 * px, 0.14);
+      ctx.lineWidth = Math.max(3 * px, 0.14 * LEN);
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(b.position.x - (b.velocity.x / speed) * tail, b.position.y - (b.velocity.y / speed) * tail);
@@ -308,7 +310,7 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
   const holder = world.bodies.find((b) => b.id === spec.mammoth);
   if (rope && holder) {
     ctx.strokeStyle = ROPE;
-    ctx.lineWidth = Math.max(2 * px, 0.09);
+    ctx.lineWidth = Math.max(2 * px, 0.09 * LEN);
     ctx.lineJoin = "round";
     ctx.beginPath();
     rope.points.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
@@ -316,7 +318,7 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
     ctx.stroke();
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(rope.points[0].x, rope.points[0].y, Math.max(3.5 * px, 0.16), 0, Math.PI * 2);
+    ctx.arc(rope.points[0].x, rope.points[0].y, Math.max(3.5 * px, 0.16 * LEN), 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -324,13 +326,13 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
   // and a ring where the hook's reach ends.
   const tools = spec.tools;
   if (tools && state.phase !== "won" && !moonView.title) {
-    const dots = aimPath(world, tools.rifle.speed, 26, 1.3);
+    const dots = aimPath(world, tools.rifle.speed, 26 * LEN, 1.3 * LEN);
     ctx.fillStyle = AIM;
     dots.forEach((q, i) => {
       if (i < 1) return;
       ctx.globalAlpha = 0.85 * (1 - i / dots.length);
       ctx.beginPath();
-      ctx.arc(q.x, q.y, Math.max(1.6 * px, 0.07), 0, Math.PI * 2);
+      ctx.arc(q.x, q.y, Math.max(1.6 * px, 0.07 * LEN), 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 0.8;
@@ -339,7 +341,7 @@ export function drawMoon(ctx: CanvasRenderingContext2D, world: World, c: Camera,
       ctx.strokeStyle = AIM;
       ctx.lineWidth = 1.5 * px;
       ctx.beginPath();
-      ctx.arc(reach.x, reach.y, Math.max(5 * px, 0.28), 0, Math.PI * 2);
+      ctx.arc(reach.x, reach.y, Math.max(5 * px, 0.28 * LEN), 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;

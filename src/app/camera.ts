@@ -1,6 +1,7 @@
 // World ↔ screen transforms. World y points up; screen y points down.
 import type { Vec2, World } from "../core/index.ts";
 import { massProps } from "../core/index.ts";
+import { LEN, ZOOM } from "./units.ts";
 
 export interface Camera {
   x: number; // world point at the centre of the view, m
@@ -13,8 +14,9 @@ export interface Viewport {
   height: number;
 }
 
-export const MIN_ZOOM = 2;
-export const MAX_ZOOM = 4000;
+// Pixels per metre, in the game's units (×4 lengths: zooms ÷4; ./units.ts).
+export const MIN_ZOOM = 2 * ZOOM;
+export const MAX_ZOOM = 4000 * ZOOM;
 
 export function toScreen(c: Camera, vp: Viewport, p: Vec2): Vec2 {
   return { x: vp.width / 2 + (p.x - c.x) * c.zoom, y: vp.height / 2 - (p.y - c.y) * c.zoom };
@@ -59,9 +61,9 @@ export function worldBounds(world: World, ids?: ReadonlySet<string>): Bounds | n
 
 /** Camera that shows `b` with `padding` px around it. */
 export function fitBounds(b: Bounds | null, vp: Viewport, padding = 48): Camera {
-  if (!b) return { x: 0, y: 0, zoom: 60 };
-  const w = Math.max(b.maxX - b.minX, 0.5);
-  const h = Math.max(b.maxY - b.minY, 0.5);
+  if (!b) return { x: 0, y: 0, zoom: 60 * ZOOM };
+  const w = Math.max(b.maxX - b.minX, 0.5 * LEN);
+  const h = Math.max(b.maxY - b.minY, 0.5 * LEN);
   const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min((vp.width - 2 * padding) / w, (vp.height - 2 * padding) / h)));
   return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2, zoom };
 }

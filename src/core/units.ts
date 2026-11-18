@@ -59,10 +59,12 @@ export const D = {
 } as const satisfies Record<string, Dim>;
 
 const profiles = new WeakMap<Profile, Map<string, Profile>>();
+/** Profiles already in a world's units: never scaled twice. */
+const scaled = new WeakSet<Profile>();
 
 /** A profile in `units`: its tolerances and limits scaled (cached, so a world's profile stays one object). */
 export function scaledProfile(p: Profile, units: Units | undefined): Profile {
-  if (!units || (units.length === 1 && units.mass === 1)) return p;
+  if (!units || (units.length === 1 && units.mass === 1) || scaled.has(p)) return p;
   const key = `${units.length}|${units.mass}`;
   let byUnits = profiles.get(p);
   if (!byUnits) profiles.set(p, (byUnits = new Map()));
@@ -90,5 +92,6 @@ export function scaledProfile(p: Profile, units: Units | undefined): Profile {
     },
   };
   byUnits.set(key, out);
+  scaled.add(out);
   return out;
 }

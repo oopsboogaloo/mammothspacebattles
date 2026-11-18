@@ -8,6 +8,7 @@ import { TryOut, startTry } from "./TryOut.tsx";
 import { playIn, type PlaytestGame } from "../playtest.ts";
 import { layout, narrow, PanelToggle, setLayout, useNarrow } from "./Layout.tsx";
 import { ControlsPanel, MixerTable, ResponseBox, testHeld, useTestKeys, WiringPanel } from "./Controls.tsx";
+import { shown as show } from "./shown.ts";
 
 type Toggle = keyof typeof overlays.value;
 const TOGGLES: [Toggle, string, string, string, string][] = [
@@ -233,7 +234,7 @@ export function BlueprintApp() {
             </div>
             <div>
               <small>GRID</small>
-              <b>1 m · {zoom > 40 ? "0.2 m" : "1 m"}</b>
+              <b>{show(1, "m")} m · {zoom > 40 ? `${show(0.2, "m")} m` : `${show(1, "m")} m`}</b>
             </div>
             <div>
               <small>REV</small>
@@ -248,7 +249,7 @@ export function BlueprintApp() {
             <button aria-label="Zoom in" onClick={() => view.zoomBy?.(1.25)}>
               ＋
             </button>
-            <div class="zl">{Math.round(zoom)} px/m</div>
+            <div class="zl">{Math.round(zoom / show(1, "m"))} px/m</div>
             <button aria-label="Zoom out" onClick={() => view.zoomBy?.(0.8)}>
               −
             </button>

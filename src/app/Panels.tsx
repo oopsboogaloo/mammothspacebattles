@@ -4,6 +4,7 @@ import { assemblyIds, makePrefab } from "./ports.ts";
 import { deg, fmt, rad } from "./format.ts";
 import { NumberField } from "./NumberField.tsx";
 import { Icon } from "./icons.tsx";
+import { DENSITY, FLOW, LEN, MASS } from "./units.ts";
 import {
   ACTIONS,
   achieved,
@@ -141,15 +142,15 @@ export function ToolRail() {
 }
 
 const PALETTE: { kind: PartChoice; label: string; detail: string }[] = [
-  { kind: "hull", label: "Hull", detail: "1.2 × 1 m · 8 kg" },
-  { kind: "tank", label: "Tank (H₂ + O₂)", detail: "0.2 kg H₂ + 1.6 kg O₂ · 2 kg dry" },
+  { kind: "hull", label: "Hull", detail: "4.8 × 4 m · 8 192 kg" },
+  { kind: "tank", label: "Tank (H₂ + O₂)", detail: "205 kg H₂ + 1 638 kg O₂ · 2 048 kg dry" },
   { kind: "engine", label: "Engine", detail: "chamber, nozzle, injector · attach by its top" },
-  { kind: "disc", label: "Disc", detail: "0.5 m radius · 1 kg" },
-  { kind: "box", label: "Box", detail: "1 × 1 m · 1 kg" },
-  { kind: "plank", label: "Plank", detail: "3 × 0.2 m · 2 kg" },
-  { kind: "triangle", label: "Triangle", detail: "convex polygon · 1 kg" },
-  { kind: "hexagon", label: "Hexagon", detail: "convex polygon · 1.5 kg" },
-  { kind: "wall", label: "Wall (fixed)", detail: "4 × 0.4 m · never moves" },
+  { kind: "disc", label: "Disc", detail: "2 m radius · 1 024 kg" },
+  { kind: "box", label: "Box", detail: "4 × 4 m · 1 024 kg" },
+  { kind: "plank", label: "Plank", detail: "12 × 0.8 m · 2 048 kg" },
+  { kind: "triangle", label: "Triangle", detail: "convex polygon · 1 024 kg" },
+  { kind: "hexagon", label: "Hexagon", detail: "convex polygon · 1 536 kg" },
+  { kind: "wall", label: "Wall (fixed)", detail: "16 × 1.6 m · never moves" },
 ];
 
 export function SpawnPalette() {
@@ -236,8 +237,8 @@ export function GasPalette() {
       {o.mode === "fill" ? (
         <>
           <NumberField id="gas-temperature" label="Temperature" unit="K" step={10} value={T} validate={(v) => (v >= 1 && v <= 10000 ? null : "Must be between 1 and 10,000 K")} onCommit={(v) => set({ temperature: v })} />
-          <NumberField id="gas-density" label="Density" unit="kg/m²" step={0.005} value={o.density} validate={(v) => (v > 0 && v <= 100 ? null : "Must be above 0 and at most 100")} onCommit={(v) => set({ density: v })} />
-          <NumberField id="gas-spacing" label="Parcel spacing" unit="m" step={0.01} value={o.spacing} validate={(v) => (v >= 0.02 && v <= 1 ? null : "Must be between 0.02 and 1 m")} onCommit={(v) => set({ spacing: v })} />
+          <NumberField id="gas-density" label="Density" unit="kg/m²" step={0.005 * DENSITY} value={o.density} validate={(v) => (v > 0 && v <= 100 * DENSITY ? null : `Must be above 0 and at most ${100 * DENSITY}`)} onCommit={(v) => set({ density: v })} />
+          <NumberField id="gas-spacing" label="Parcel spacing" unit="m" step={0.01 * LEN} value={o.spacing} validate={(v) => (v >= 0.02 * LEN && v <= 1 * LEN ? null : `Must be between ${0.02 * LEN} and ${1 * LEN} m`)} onCommit={(v) => set({ spacing: v })} />
           <div class="field">
             <label for="gas-species">Species</label>
             <div class="input">
@@ -596,7 +597,7 @@ function ContentsSection({ body }: { body: Body }) {
         <button
           class="btn small"
           disabled={!resource.trim() || stores.some((s) => s.resource === resource.trim())}
-          onClick={() => setStores([...stores, { resource: resource.trim(), mass: 0, capacity: 10 }], `Add ${resource.trim()} store`)}
+          onClick={() => setStores([...stores, { resource: resource.trim(), mass: 0, capacity: 10 * MASS }], `Add ${resource.trim()} store`)}
           data-testid="add-store"
         >
           Add store
@@ -621,7 +622,7 @@ function InjectorSection({ body }: { body: Body }) {
         <span aria-hidden="true">{status.firing ? "●" : "○"}</span> {status.reason}
       </div>
       <Row k="Channel" v={inj.channel} title="Commanded through a control link on this channel (0–1)." />
-      <NumberField id="injector-rate" label="Flow at full command" unit="kg/s" step={0.05} value={inj.rate} validate={(v) => (v >= 0 && v <= 20 ? null : "Must be between 0 and 20 kg/s")} onCommit={(v) => set({ rate: v }, "Set injector flow")} />
+      <NumberField id="injector-rate" label="Flow at full command" unit="kg/s" step={0.05 * FLOW} value={inj.rate} validate={(v) => (v >= 0 && v <= 20 * FLOW ? null : `Must be between 0 and ${20 * FLOW} kg/s`)} onCommit={(v) => set({ rate: v }, "Set injector flow")} />
       <Row k="Mixture" v={Object.entries(inj.mixture).map(([k, y]) => `${k} ${(y * 100).toFixed(0)}%`).join(" · ")} title="Mass fractions drawn from the injector's own stores." />
       <label class="row">
         <span class="muted">Igniter</span>

@@ -2,13 +2,15 @@
 // geometry matches RS-08 (scenarios/rs08-chemical-rocket.json). No DOM.
 import type { BodyInput, World } from "../core/index.ts";
 import type { Prefab } from "./ports.ts";
+import { scaleShip } from "../core/scaleScenario.ts";
+import { GAME_UNITS } from "../core/units.ts";
 
 /** A prefab with the body that welds onto whatever it is attached to. */
 export interface MountedPrefab extends Prefab {
   mount: string;
 }
 
-export const HULL: Omit<BodyInput, "id" | "position" | "velocity"> = {
+export const HULL_CORE: Omit<BodyInput, "id" | "position" | "velocity"> = {
   shape: {
     kind: "box",
     width: 1.2,
@@ -21,7 +23,7 @@ export const HULL: Omit<BodyInput, "id" | "position" | "velocity"> = {
   friction: 0.3,
 };
 
-export const TANK: Omit<BodyInput, "id" | "position" | "velocity"> = {
+export const TANK_CORE: Omit<BodyInput, "id" | "position" | "velocity"> = {
   shape: {
     kind: "box",
     width: 1.0,
@@ -47,7 +49,7 @@ export const TANK: Omit<BodyInput, "id" | "position" | "velocity"> = {
 };
 
 /** Chamber, throat and flared nozzle around an injector head ("engine"), which is the mount. Exhaust leaves along −y. */
-export const ENGINE: MountedPrefab = {
+const ENGINE_CORE: MountedPrefab = {
   name: "Engine",
   mount: "engine",
   bodies: [
@@ -347,6 +349,13 @@ export const ENGINE: MountedPrefab = {
     },
   ],
 };
+
+// The parts above are in the core's units (metres and kilograms as they were); the sandbox's worlds
+// are in the game's (lengths ×4, masses ×1024: docs/units-rescale-plan.md).
+const inGame = <T extends object>(b: T): T => scaleShip({ bodies: [b] }, GAME_UNITS).bodies[0] as T;
+export const HULL = inGame(HULL_CORE);
+export const TANK = inGame(TANK_CORE);
+export const ENGINE: MountedPrefab = { ...scaleShip(ENGINE_CORE, GAME_UNITS), name: ENGINE_CORE.name, mount: ENGINE_CORE.mount };
 
 /** A control channel no injector in the world uses yet: main, main-2, main-3, … (SBX-025). */
 export function freeChannel(world: World): string {

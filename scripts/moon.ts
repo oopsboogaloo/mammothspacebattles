@@ -9,7 +9,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { initialWorld, parseScenario, polygonArea } from "../src/core/index.ts";
-import { migrateUnits, toCoreUnits } from "../src/core/migrateUnits.ts";
+import { migrateUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Vec = { x: number; y: number };

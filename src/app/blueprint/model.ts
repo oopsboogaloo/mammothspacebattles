@@ -6,6 +6,7 @@
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, normalizePolygon, polygonArea, steerMixer } from "../../core/index.ts";
 import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, POWER, PRESSURE, powerSpec, WALL, maxWeldQuality, WALL_DENSITY, WELD_K, WELD_UNLOCK, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
+import { shown as show } from "./shown.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
 
@@ -930,9 +931,9 @@ function containerParams(bp: Blueprint, c: Component, kind: ContainerKind): Para
   const ro = (key: string, label: string, unit: string, value: number, decimals: number, note?: string): Param => ({ key, label, unit, value, min: 0, max: 1e6, step: 1, decimals, tab: "build", readonly: true, ...(note ? { note } : {}) });
   return [
     { key: "wall", label: "Wall thickness", unit: "m", value: t, min: WALL.min, max: maxWall(box.maxX - box.minX, box.maxY - box.minY), step: 0.01, decimals: 2, tab: "build", note: "Thicker: stronger welds and walls, heavier, holds less" },
-    kind === "tank" ? ro("holds", "Propellant held", "kg", s.holds, 2, "H₂ and O₂, 1 : 8 by mass") : ro("holds", kind === "bullets" ? "Bullets held" : "Shells held", "", s.holds, 0, `${round(bodyMass((b.ammo?.shell ?? { mass: 0 }) as Parameters<typeof bodyMass>[0]) * s.holds, 2)} kg of shells, fed to the guns welded to it`),
+    kind === "tank" ? ro("holds", "Propellant held", "kg", s.holds, 2, "H₂ and O₂, 1 : 8 by mass") : ro("holds", kind === "bullets" ? "Bullets held" : "Shells held", "", s.holds, 0, `${Math.round(show(bodyMass((b.ammo?.shell ?? { mass: 0 }) as Parameters<typeof bodyMass>[0]) * s.holds, "kg"))} kg of shells, fed to the guns welded to it`),
     ro("dry", "Dry mass", "kg", s.dryMass, 2),
-    ro("strength", "Strength", "×", k, 2, `Welds and armour against Thrust's (${s.material.threshold} J to dent, ${s.material.toughness} J more to destroy)`),
+    ro("strength", "Strength", "×", k, 2, `Welds and armour against Thrust's (${Math.round(show(s.material.threshold, "J") / 1000)} kJ to dent, ${Math.round(show(s.material.toughness, "J") / 1000)} kJ more to destroy)`),
   ];
 }
 
@@ -1304,7 +1305,7 @@ function rocketParams(bp: Blueprint, c: Component, rate: number): Param[] {
     ro("pressure", "Chamber pressure", "N/m", pressure, 0, "Burn rate × c* ÷ throat: a narrower throat, a higher pressure"),
     ro("ceiling", "Pressure ceiling", "N/m", cap.ceiling, 0, `Set by ${cap.by}: thicker or shorter tank walls raise it. Now at ${Math.round((100 * pressure) / cap.ceiling)}%`),
     ro("areaRatio", "Area ratio", "×", exit / r.throat, 2, "Nozzle exit over throat: a wider nozzle gets more from each kg"),
-    ro("lstar", "L*", "m", lstar, 2, `Chamber area ÷ throat width; below ${PRESSURE.lstar} m it doesn't all burn`),
+    ro("lstar", "L*", "m", lstar, 2, `Chamber area ÷ throat width; below ${show(PRESSURE.lstar, "m")} m it doesn't all burn`),
     ro("efficiency", "Burns", "%", 100 * burnEfficiency(lstar), 0, "Of its propellant's energy, from L*: a longer chamber burns it all"),
   ];
 }
@@ -1522,7 +1523,7 @@ function partParams(bp: Blueprint, compId: string): Param[] {
       { key: "rate", label: `Flow (burn rate)${each}`, unit: "kg/s", value: inj.rate ?? 0, min: 0.05, max: c.rocket ? Math.max(0.05, Math.floor(maxRate(bp, c.id) * 1000) / 1000) : 20, step: 0.05, decimals: 3, tab: "fuel", ...(c.rocket ? { note: "Up to its pressure ceiling (Shape)" } : {}) },
       { key: "economy", label: "Fuel efficiency", unit: "×", value: inj.economy ?? 1, min: 1, max: 200, step: 1, decimals: 0, tab: "fuel" },
       { key: "injWidth", label: "Injector width", unit: "m", value: inj.width ?? 0, min: 0.05, max: 4, step: 0.05, decimals: 2, tab: "fuel" },
-      { key: "thrust", label: `Thrust (est.)${each}`, unit: "N", value: (inj.rate ?? 0) * exhaustSpeed(c), min: 0, max: 1e5, step: 1, decimals: 0, tab: "fuel", readonly: true, note: `flow × ${exhaustSpeed(c)} m/s; Measure gives the real figure` },
+      { key: "thrust", label: `Thrust (est.)${each}`, unit: "N", value: (inj.rate ?? 0) * exhaustSpeed(c), min: 0, max: 1e5, step: 1, decimals: 0, tab: "fuel", readonly: true, note: `flow × ${show(exhaustSpeed(c), "m/s")} m/s; Measure gives the real figure` },
       { ...mass(), key: "headMass", label: `Head mass${each}`, value: body(bp, units[0].head).mass },
       { key: "wallMass", label: "Wall mass (each)", unit: "kg", value: units[0].walls.length ? body(bp, units[0].walls[0]).mass : 0, min: 0.01, max: 100, step: 0.05, decimals: 2, tab: "build" },
     );
@@ -1553,19 +1554,19 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   if (ck) ps.push(...containerParams(bp, c, ck));
   if (pk && b.power) {
     const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "function", readonly: true, note });
-    if (pk === "battery") ps.push(ro("capacity", "Stores", "kJ", b.power.capacity ?? 0, 0, `${POWER.battery.perArea} kJ per m²; full at the start. About ${round((b.power.capacity ?? 0) / POWER.shield.draw, 1)} s of shield alone`));
-    else ps.push(ro("output", "Makes up to", "kW", b.power.output ?? 0, 0, `${POWER.generator.perArea} kW per m², burning ${round((b.power.output ?? 0) / POWER.perKg, 3)} kg/s of propellant at full; only while the batteries aren't full`));
+    if (pk === "battery") ps.push(ro("capacity", "Stores", "kJ", b.power.capacity ?? 0, 0, `${Math.round(show(POWER.battery.perArea, "kJ") / show(1, "m²"))} kJ per m²; full at the start. About ${round((b.power.capacity ?? 0) / POWER.shield.draw, 1)} s of shield alone`));
+    else ps.push(ro("output", "Makes up to", "kW", b.power.output ?? 0, 0, `${Math.round(show(POWER.generator.perArea, "kW") / show(1, "m²"))} kW per m², burning ${round(show((b.power.output ?? 0) / POWER.perKg, "kg/s"), 1)} kg/s of propellant at full; only while the batteries aren't full`));
   }
   for (const s of ck ? [] : (b.contents ?? [])) {
     ps.push({ key: `cap:${s.resource}`, label: `${s.resource === "h2" ? "H₂" : s.resource === "o2" ? "O₂" : s.resource} capacity`, unit: "kg", value: s.capacity, min: 0, max: 100, step: 0.05, decimals: 3, tab: "fuel" });
   }
   if (b.ammo && !ck) {
     const kg = bodyMass(b.ammo.shell as Parameters<typeof bodyMass>[0]);
-    ps.push({ key: "ammo", label: "Shells stored", unit: "", value: b.ammo.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", note: `${round(kg, 3)} kg each, fed to the guns welded to it` });
+    ps.push({ key: "ammo", label: "Shells stored", unit: "", value: b.ammo.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", note: `${round(show(kg, "kg"), 1)} kg each, fed to the guns welded to it` });
   }
   if (b.magazine) {
     ps.push({ key: "count", label: "Shells in the gun", unit: "", value: b.magazine.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", ...(bp.ship.links.some((l) => l.kind === "ammo" && l.to === b.id) ? { note: "Magazines welded to it pass it more, one at a time" } : {}) });
-    if (b.magazine.railgun && c.part === "gun") ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function", readonly: true, note: `From the barrel's length (its height): ${GUN.speed} m/s at ${GUN.length} m, as its square root. Chemical: no power` });
+    if (b.magazine.railgun && c.part === "gun") ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function", readonly: true, note: `From the barrel's length (its height): ${show(GUN.speed, "m/s")} m/s at ${show(GUN.length, "m")} m, as its square root. Chemical: no power` });
     else if (b.magazine.railgun) ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function" });
     ps.push({ key: "reload", label: "Reload", unit: "s", value: b.magazine.reload, min: 0.01, max: 10, step: 0.005, decimals: 3, tab: "function" });
   }

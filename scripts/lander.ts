@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseScenario } from "../src/core/index.ts";
 import { landShip, type Leak } from "./landShip.ts";
-import { migrateUnits, toCoreUnits } from "../src/core/migrateUnits.ts";
+import { migrateUnits } from "../src/core/migrateUnits.ts";
 
 const root = new URL("..", import.meta.url).pathname;
 type Json = Record<string, unknown>;

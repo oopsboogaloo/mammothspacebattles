@@ -37,7 +37,7 @@ import { detonate, releaseBlasts, type Blast, type Explosive } from "./explosive
 import { spawnWisps, stepWisps, type Wisp } from "./wisps.ts";
 import { removeDestroyed, stepDust, type Dust } from "./dust.ts";
 import { fireRailguns, type Railgun } from "./railgun.ts";
-import { D, factor, type Dim, type Units } from "./units.ts";
+import { D, factor, scaledProfile, type Dim, type Units } from "./units.ts";
 
 export type { Vec2 } from "./math.ts";
 export type { Shape } from "./shapes.ts";
@@ -544,6 +544,7 @@ export function createWorld(
   extra: { joints?: JointInput[]; links?: LinkInput[]; gas?: GasFill[]; bounds?: Bounds; challenge?: LandingGoal; duel?: DuelGoal; lander?: LanderSpec; arcade?: ArcadeSpec; thrust?: ThrustSpec; moon?: MoonSpec; terrain?: TerrainSpec; frame?: Frame; mix?: Mixer; shipRules?: ShipRules; units?: Units } = {},
   profile?: Profile,
 ): World {
+  if (profile) profile = scaledProfile(profile, extra.units);
   const gasScale = profile?.gasScale ?? 1;
   const world: World = {
     schema: WORLD_SCHEMA,
@@ -1530,6 +1531,8 @@ export interface StepTimings {
 
 /** Advances the world one fixed step in place, mutating it. Commands apply at the start of the step. */
 export function stepInPlace(world: World, commands: readonly Command[], profile: Profile, timings?: StepTimings): void {
+  // The profile in the world's units (units.ts): whoever passes the core's own gets it scaled.
+  profile = scaledProfile(profile, world.units);
   const dt = profile.timestep;
   // With the ledger off, its totals (a walk over every body and gas parcel, several times a step)
   // are skipped: they only feed the ledger's record.

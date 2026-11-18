@@ -2,16 +2,17 @@
 // reads, and the best time kept on the device.
 import type { World } from "../core/index.ts";
 import type { Viewport } from "./camera.ts";
+import { LEN } from "./units.ts";
 
 /** How much of the moon the screen shows: this many metres top to bottom, and at least this many across. */
-export const VIEW_HEIGHT = 20;
-export const VIEW_WIDTH = 24;
+export const VIEW_HEIGHT = 20 * LEN;
+export const VIEW_WIDTH = 24 * LEN;
 /** The mammoth stands this share of the screen's height below its middle. */
 export const LOWER = 0.05;
 /** How quickly the view's height follows the mammoth's, s (real): slowly, so a jump doesn't bob the view. */
 const EASE = 0.35;
 /** A jump in the mammoth's height larger than this is a move to a flag, m: the view goes with it at once. */
-const SNAP = 8;
+const SNAP = 8 * LEN;
 
 /** What the view remembers between frames: how far from the moon's centre it looks. */
 export interface MoonCam {

@@ -278,3 +278,11 @@ export function scaleScenario(scn: Scenario, by: Units): { scenario: Scenario; u
     untagged: [...untagged].sort(),
   };
 }
+
+/** A ship (bodies, joints, links: a blueprint's or a level's) converted by `by`, as scaleScenario does a world. */
+export function scaleShip<T extends { bodies: unknown[]; joints?: unknown[]; links?: unknown[] }>(ship: T, by: Units): T {
+  const unknown = new Set<string>();
+  const out = walk(ship, "ship", (n, d) => (d ? n * factor(by, d) : n), unknown) as T;
+  if (unknown.size) throw new Error(`scaleShip: no dimension known for ${[...unknown].sort().join(", ")}`);
+  return out;
+}

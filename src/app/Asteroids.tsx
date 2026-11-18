@@ -610,13 +610,13 @@ function Physics() {
       <h3>Thrust is gas</h3>
       <p>There is no thrust force. The engines burn hydrogen and oxygen in their chambers, and the hot gas pushes on the engine's head and walls and leaves through the nozzle. The tanks drain as you burn, so the ship gets lighter.</p>
       <h3>The gun</h3>
-      <p>The gun is a railgun: it throws a 170 gram shell at 144 m/s, and the ship is pushed back with the same momentum. A hundred and twenty shells weigh 20 kg, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within four metres, and its gas pushes the rock's pieces apart.</p>
+      <p>The gun is a railgun: it throws a 170 kg shell at 576 m/s, and the ship is pushed back with the same momentum. A hundred and twenty shells weigh 20 tonnes, so the ship handles better as you use them. A shell carries a charge that goes off when it strikes. Its blast damages what is within sixteen metres, and its gas pushes the rock's pieces apart.</p>
       <h3>Welds bend and break</h3>
       <p>Every weld has limits in tension, compression, shear and torque. A load past its limit breaks it. On the ship, a load past 30% of the limit bends the weld and leaves it weaker. A rock breaks along its welds: a blast, or another rock, loads them until they go. Where a piece of rock is destroyed, a burst of gas pushes its neighbours apart.</p>
       <h3>Damage</h3>
       <p>Impact and blast energy beyond a part's threshold costs it integrity. A part at zero is destroyed and leaves as dust. A damaged engine gives less thrust, and a damaged tank leaks; the leak pushes the ship.</p>
       <h3>Gravity</h3>
-      <p>Every rock, and every chunk broken off one, pulls by its mass: about 1 m/s² at a large rock's surface, a small part of your forward thrust. Rocks pull each other and you; the ship pulls nothing.</p>
+      <p>Every rock, and every chunk broken off one, pulls by its mass: about 4 m/s² at a large rock's surface, a small part of your forward thrust. Rocks pull each other and you; the ship pulls nothing.</p>
       <h3>The wrap</h3>
       <p>The arena has no edges. Collisions, gravity, blasts and the gunships' aim all work across them.</p>
       <h3>Nothing created, nothing lost</h3>
@@ -624,11 +624,11 @@ function Physics() {
       <h3>Where the game cheats</h3>
       <ul>
         <li>Fuel goes sixty-six times further than it would for real, so the tanks last.</li>
-        <li>A shell's blast makes thirty-three times the shell's weight in gas (5.5 kg from a 0.17 kg shell), so it can push the rock's pieces apart.</li>
+        <li>A shell's blast makes thirty-three times the shell's weight in gas (5.6 tonnes from a 170 kg shell), so it can push the rock's pieces apart.</li>
         <li>Gold can't be damaged or destroyed. Gold you can collect doesn't collide with your ship: it would be a blow from something heavier than the ship.</li>
         <li>Space doesn't wrap round. This arena does, both ways.</li>
         <li>New ships, new levels and beamed-out rocks appear and vanish. The ledger records them as crossing the world's boundary.</li>
-        <li>A shell is removed after flying 144 m, so it can't come round and hit you.</li>
+        <li>A shell is removed after flying 576 m, so it can't come round and hit you.</li>
         <li>All the pieces of a rock pull as one from its centre, not each on its own.</li>
       </ul>
     </Page>

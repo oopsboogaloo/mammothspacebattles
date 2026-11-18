@@ -1,8 +1,9 @@
 // Mammoth Asteroids: what its page works out from the screen and the world (no drawing here).
 import type { World } from "../core/index.ts";
+import { LEN } from "./units.ts";
 
 /** The arena's height, m, and its width as a multiple of that: the screen's shape, within these (MAS-010). */
-const HEIGHT = 160;
+const HEIGHT = 160 * LEN;
 const NARROWEST = 1.2;
 const WIDEST = 2.2;
 

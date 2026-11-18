@@ -1,4 +1,5 @@
 // Attachment ports and placement for the Attach tool (SBX-014). No DOM.
+import { LEN } from "./units.ts";
 import {
   add,
   assemblyRoots,
@@ -26,8 +27,8 @@ export interface Port {
 }
 
 /** Spacing of extra ports along a long face, and how close to a corner one may sit, m (SBX-024). */
-const PORT_SPACING = 1;
-const PORT_CORNER_CLEARANCE = 0.25;
+const PORT_SPACING = 1 * LEN;
+const PORT_CORNER_CLEARANCE = 0.25 * LEN;
 /** At most this many ports either side of a face's midpoint; longer faces space them wider, so previews stay cheap. */
 const MAX_PORTS_PER_SIDE = 4;
 
@@ -178,6 +179,8 @@ export function assemblyIds(world: World, id: string): string[] {
 /** A saved assembly, relative to its first body, for prefabs (SBX-021). */
 export interface Prefab {
   name: string;
+  /** "game": in the game's units (docs/units-rescale-plan.md). Absent: saved before, in the core's; scaled on load. */
+  units?: "game";
   bodies: BodyInput[];
   joints: { id: string; a: string; b: string; anchorA: Vec2; anchorB: Vec2; limits?: Record<string, number> }[];
 }
@@ -188,6 +191,7 @@ export function makePrefab(world: World, id: string, name: string): Prefab {
   const origin = bodies[0].position;
   return {
     name,
+    units: "game",
     bodies: bodies.map((b) => ({ ...structuredClone(b), position: sub(b.position, origin), velocity: { x: 0, y: 0 }, angularVelocity: 0 })),
     joints: world.joints.filter((j) => ids.has(j.a) && ids.has(j.b)).map((j) => ({ id: j.id, a: j.a, b: j.b, anchorA: j.anchorA, anchorB: j.anchorB, limits: { ...j.limits } })),
   };

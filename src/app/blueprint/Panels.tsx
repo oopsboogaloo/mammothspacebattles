@@ -4,6 +4,7 @@ import { Fragment } from "preact";
 import { useState } from "preact/hooks";
 import { bodyMass } from "../../core/bodies.ts";
 import { NumberControl } from "./NumberControl.tsx";
+import { fromShown, shown as show, shownParam } from "./shown.ts";
 import { loadsFor } from "./tryLoads.ts";
 import { layout, StatsFold } from "./Layout.tsx";
 import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
@@ -157,7 +158,8 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
           const mass = c ? c.bodies.reduce((s, id) => s + bodyMass(body(preset, id) as Parameters<typeof bodyMass>[0]), 0) : 0;
           const firstOg = it.og && !items[i - 1]?.og;
           const f = c?.form;
-          const size = f ? (f.kind === "trapezoid" ? `${f.base} / ${f.top} × ${f.height} m` : `${f.base} × ${f.height} m`) : b?.shape.kind === "box" ? `${b.shape.width} × ${b.shape.height} m` : "";
+          const m = (x: number) => +show(x, "m").toFixed(2);
+          const size = f ? (f.kind === "trapezoid" ? `${m(f.base)} / ${m(f.top)} × ${m(f.height)} m` : `${m(f.base)} × ${m(f.height)} m`) : b?.shape.kind === "box" ? `${m(b.shape.width)} × ${m(b.shape.height)} m` : "";
           const nHeads = c?.heads?.length ?? 1;
           return (
             <Fragment key={it.name}>
@@ -172,8 +174,8 @@ export function ComponentsPanel({ kindIndex, setKind }: { kindIndex: number; set
               <div class="thumb">{c && <Thumb bp={preset} ids={c.bodies} />}</div>
               <div class="ctext">
                 <div class="cname">{it.name}</div>
-                <div class="cstat">{size || `${b?.injector ? `${nHeads > 1 ? `${nHeads} × ` : ""}${b.injector.rate} kg/s` : ""}`}</div>
-                <div class="cstat">{mass.toFixed(2)} kg</div>
+                <div class="cstat">{size || `${b?.injector ? `${nHeads > 1 ? `${nHeads} × ` : ""}${Math.round(show(b.injector.rate ?? 0, "kg/s"))} kg/s` : ""}`}</div>
+                <div class="cstat">{Math.round(show(mass, "kg")).toLocaleString("en-GB")} kg</div>
               </div>
               <button class="add" title="Add to the blueprint" aria-label={`Add ${it.name}`} onClick={() => addAtFreeSpot(preset, it.from, it.name)}>
                 ＋
@@ -215,12 +217,12 @@ export function PerformanceBox() {
   const burn = flow > 0 ? st.propellant / flow : NaN;
   const tag = m ? " ✓" : "";
   const rows: [string, string, number, number][] = [
-    ["Mass", `${n(st.mass)} kg`, st.mass, bs.mass],
-    ["Width × height", `${n(st.width, 2)} × ${n(st.height, 2)} m`, st.width, bs.width],
-    ["Accel. forward", `${n(f.ahead)} m/s²${tag}`, f.ahead, bf.ahead],
-    ["Accel. reverse", `${n(-rv.ahead)} m/s²${tag}`, -rv.ahead, -brv.ahead],
+    ["Mass", `${n(show(st.mass, "kg") / 1000, 2)} t`, st.mass, bs.mass],
+    ["Width × height", `${n(show(st.width, "m"), 1)} × ${n(show(st.height, "m"), 1)} m`, st.width, bs.width],
+    ["Accel. forward", `${n(show(f.ahead, "m/s²"))} m/s²${tag}`, f.ahead, bf.ahead],
+    ["Accel. reverse", `${n(show(-rv.ahead, "m/s²"))} m/s²${tag}`, -rv.ahead, -brv.ahead],
     ["Turn", `${n(Math.abs(l.turn), 2)} rad/s²${tag}`, Math.abs(l.turn), Math.abs(bl.turn)],
-    ["Thrust ÷ mass", `${n(f.ahead / 9.81, 2)} g${tag}`, f.ahead, bf.ahead],
+    ["Thrust ÷ mass", `${n(show(f.ahead, "m/s²") / 9.81, 2)} g${tag}`, f.ahead, bf.ahead],
     ["Full-burn time", `${Number.isFinite(burn) ? n(burn, 0) : "—"} s`, burn, burn],
     ["Joins", `${st.welds} welds · ${st.parts} parts`, st.welds, bs.welds],
   ];
@@ -380,22 +382,24 @@ function ComponentProps({ id }: { id: string }) {
         {shown.map((p) => {
           const w = was(p);
           const changed = w !== undefined && Math.abs(w - p.value) > 1e-9;
+          // Shown and typed in the game's units (shown.ts); kept in the designer's.
+          const sp = shownParam(p);
           return (
             <NumberControl
               key={p.key}
               testid={`param-${p.key}`}
               label={p.label}
-              value={p.value}
+              value={sp.value}
               unit={p.unit}
-              min={p.min}
-              max={p.max}
-              step={p.step}
-              decimals={p.decimals}
+              min={sp.min}
+              max={sp.max}
+              step={sp.step}
+              decimals={sp.decimals}
               readonly={p.readonly}
               note={p.note}
               changed={changed}
               onReset={() => w !== undefined && edit((b) => noOverlap(b, setParam(b, id, p.key, w), id))}
-              onLive={(v) => live((b) => noOverlap(b, setParam(b, id, p.key, v), id))}
+              onLive={(v) => live((b) => noOverlap(b, setParam(b, id, p.key, fromShown(v, p.unit)), id))}
               onEnd={endGesture}
             />
           );
@@ -404,7 +408,7 @@ function ComponentProps({ id }: { id: string }) {
       <div class="derived">
         <div>
           <small>MASS</small>
-          <b>{mass.toFixed(2)} kg</b>
+          <b>{Math.round(show(mass, "kg")).toLocaleString("en-GB")} kg</b>
         </div>
         <div>
           <small>WELDS</small>
@@ -468,7 +472,7 @@ function WeldProps({ id }: { id: string }) {
   const flown = loadsFor(bp)?.[id] ?? null;
   const weakest = (["tension", "shear", "torque"] as const).reduce((p, k) => (lim[k] / (k === "torque" ? 0.5 : 1) < lim[p] / (p === "torque" ? 0.5 : 1) ? k : p), "tension" as "tension" | "shear" | "torque");
   const field = (key: keyof typeof lim, label: string, unit: string) => (
-    <NumberControl key={key} label={label} unit={unit} value={lim[key]} min={100} max={200000} step={50} decimals={0} onLive={(v) => live((bb) => setWeld(bb, id, { [key]: v }))} onEnd={endGesture} />
+    <NumberControl key={key} label={label} {...shownParam({ value: lim[key], min: 100, max: 200000, step: 50, decimals: 0, unit })} onLive={(v) => live((bb) => setWeld(bb, id, { [key]: fromShown(v, unit) }))} onEnd={endGesture} />
   );
   return (
     <>
@@ -504,7 +508,7 @@ function WeldProps({ id }: { id: string }) {
             onClick={() => edit((bb) => setWeld(bb, id, p.limits, p.yield))}
           >
             {p.name}
-            {!og && <small> {(pts * weldMass({ ...j, limits: p.limits }, Math.min(wallOf(a), wallOf(b)))).toFixed(3)} kg</small>}
+            {!og && <small> {show(pts * weldMass({ ...j, limits: p.limits }, Math.min(wallOf(a), wallOf(b))), "kg").toFixed(1)} kg</small>}
           </button>
         ))}
         <button class={preset ? "" : "on"} disabled>
@@ -530,7 +534,7 @@ function WeldProps({ id }: { id: string }) {
         <div>
           <small>WEIGHS</small>
           <b data-testid="weld-mass" title={og ? "A weld on an OG part is free, as in Thrust" : "A fillet bead of the walls' own material: Light 0.25×, Heavy 4× a Standard weld's mass, for half or twice its strength"}>
-            {og ? "— (OG)" : `${weldKg.toFixed(3)} kg`}
+            {og ? "— (OG)" : `${show(weldKg, "kg").toFixed(1)} kg`}
           </b>
         </div>
         <div>
@@ -695,7 +699,7 @@ export function BlueprintsDrawer() {
                   )}
                   <small>{b.preset ? "🔒 Preset" : `Yours · rev ${b.rev}`}</small>
                   <small>
-                    {st.mass.toFixed(1)} kg · {fwd.toFixed(1)} m/s² · {b.components.filter((c) => c.kind === "engine").length} engines
+                    {(show(st.mass, "kg") / 1000).toFixed(1)} t · {show(fwd, "m/s²").toFixed(1)} m/s² · {b.components.filter((c) => c.kind === "engine").length} engines
                   </small>
                 </div>
               </div>
