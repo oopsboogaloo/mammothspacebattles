@@ -229,7 +229,7 @@ function groundUnder(world: World, id: string, up: Vec2, slope: number): { n: Ve
   let best: { n: Vec2; gap: number } | null = null;
   let most = slope;
   for (const c of world.contacts) {
-    if (c.separation > NEAR) continue;
+    if (c.separation > NEAR * (world.units?.length ?? 1)) continue;
     // The contact's normal runs from a to b: turned to point from the other body into the mammoth.
     const n = c.b === id ? c.normal : c.a === id ? scale(c.normal, -1) : null;
     if (!n) continue;
@@ -252,7 +252,7 @@ function blocked(world: World, self: string, p: Vec2, r: number): boolean {
     const dy = b.position.y - p.y;
     if (dx * dx + dy * dy > reach * reach) continue;
     const m = collideDisc(disc, { shape: b.shape, position: b.position, rot: sinCos(b.angle) }, 0);
-    if (m?.points.some((q) => q.separation < -ROOM)) return true;
+    if (m?.points.some((q) => q.separation < -ROOM * (world.units?.length ?? 1))) return true;
   }
   return false;
 }
@@ -291,7 +291,7 @@ export function driveMoon(world: World, dt: number): void {
     const a = sub(m.velocity, s.drove.v);
     const along = dot(s.drove.v, s.drove.t);
     const lost = -dot(a, s.drove.t) * Math.sign(along);
-    if (dot(a, s.drove.n) > KNOCK.up && lost > 0 && lost < Math.max(1, KNOCK.back * Math.abs(along))) m.velocity = { ...s.drove.v };
+    if (dot(a, s.drove.n) > KNOCK.up * (world.units?.length ?? 1) && lost > 0 && lost < Math.max((world.units?.length ?? 1), KNOCK.back * Math.abs(along))) m.velocity = { ...s.drove.v };
   }
   // Along the ground to the right (up a slope, not into it); in the air, level to the right.
   const t = n ? { x: n.y, y: -n.x } : { x: up.y, y: -up.x };
@@ -341,7 +341,7 @@ export function driveMoon(world: World, dt: number): void {
   const vt = dot(m.velocity, t);
   let to = vt;
   if (rolling) {
-    if (onGround) to = approach(vt, spec.roll.speed * s.facing, (spec.roll.accel ?? ROLL_ACCEL) * dt);
+    if (onGround) to = approach(vt, spec.roll.speed * s.facing, (spec.roll.accel ?? ROLL_ACCEL * (world.units?.length ?? 1)) * dt);
   } else if (onGround) {
     if (s.ducked) to = Math.abs(vt) <= spec.slide.crawl || input === 0 ? approach(vt, spec.slide.crawl * input, spec.slide.brake * dt) : approach(vt, 0, spec.slide.brake * dt);
     else to = approach(vt, spec.run.speed * input, (input !== 0 && input * vt >= 0 ? spec.run.accel : spec.run.brake) * dt);
@@ -386,7 +386,7 @@ export function driveMoon(world: World, dt: number): void {
 
   // Landing: the gap the solver left under it is closed this step (it lets a body close exactly
   // the gap it has), so the mammoth doesn't hang a moment over the ground it has landed on.
-  if (n && landing && !leapt && gap > 0.02) {
+  if (n && landing && !leapt && gap > 0.02 * (world.units?.length ?? 1)) {
     const vn = dot(m.velocity, n);
     const want = (-0.9 * gap) / dt;
     if (vn > want) m.velocity = add(m.velocity, scale(n, want - vn));
@@ -416,7 +416,7 @@ export function driveMoon(world: World, dt: number): void {
           : "fall"
         : now - s.turnedAt < TURN
           ? "turn"
-          : speed > 0.5
+          : speed > 0.5 * (world.units?.length ?? 1)
             ? "walk"
             : "idle";
   if (action !== s.action) {
@@ -507,7 +507,7 @@ function runRifle(world: World, game: MoonGame, m: Body, ops: MoonOps): boolean 
       mass: rifle.mass,
       restitution: 0,
       friction: 0.2,
-      position: add(m.position, scale(aim.dir, radius + rifle.radius + 0.05)),
+      position: add(m.position, scale(aim.dir, radius + rifle.radius + 0.05 * (world.units?.length ?? 1))),
       velocity: add(m.velocity, scale(aim.dir, rifle.speed)),
       angle: 0,
       angularVelocity: 0,
@@ -577,8 +577,8 @@ export function runMoon(world: World, dt: number, ops: MoonOps): boolean {
   // an obstacle, not something the mammoth shoves along (MMN-053).
   for (const id of s.loose) {
     const b = world.bodies.find((x) => x.id === id);
-    if (!b || b.fixed || length(b.velocity) > ROCK_RESTS) continue;
-    const resting = world.contacts.some((c) => c.separation <= TOUCH && (c.a === id || c.b === id) && world.bodies.find((x) => x.id === (c.a === id ? c.b : c.a))?.fixed);
+    if (!b || b.fixed || length(b.velocity) > ROCK_RESTS * (world.units?.length ?? 1)) continue;
+    const resting = world.contacts.some((c) => c.separation <= TOUCH * (world.units?.length ?? 1) && (c.a === id || c.b === id) && world.bodies.find((x) => x.id === (c.a === id ? c.b : c.a))?.fixed);
     if (!resting) continue;
     world.bodies = world.bodies.filter((x) => x.id !== id);
     world.contacts = world.contacts.filter((c) => c.a !== id && c.b !== id);
@@ -590,13 +590,13 @@ export function runMoon(world: World, dt: number, ops: MoonOps): boolean {
   let why: NonNullable<MoonState["back"]>["why"] | null = s.left <= 0 ? "time" : null;
   if (!why)
     for (const c of world.contacts) {
-      if (c.separation > TOUCH || (c.a !== m.id && c.b !== m.id)) continue;
+      if (c.separation > TOUCH * (world.units?.length ?? 1) || (c.a !== m.id && c.b !== m.id)) continue;
       const other = c.a === m.id ? c.b : c.a;
       if (other.startsWith(spec.spikes)) why = "spikes";
       else if (s.loose.includes(other)) {
         const rock = world.bodies.find((x) => x.id === other);
         // Falling: moving toward the moon's centre. Pushed along the ground, it is only in the way.
-        if (rock && -dot(rock.velocity, upAt(spec, rock.position)) > ROCK_HURTS) why = "rock";
+        if (rock && -dot(rock.velocity, upAt(spec, rock.position)) > ROCK_HURTS * (world.units?.length ?? 1)) why = "rock";
       }
       if (why) break;
     }

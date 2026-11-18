@@ -106,13 +106,13 @@ export function castRope(world: World, id: string, holder: Body, dir: Vec2, spec
     mode: "cast",
     points: [{ ...holder.position }],
     velocities: [{ x: holder.velocity.x + dir.x * spec.speed, y: holder.velocity.y + dir.y * spec.speed }],
-    stretch: spec.stretch ?? 0.5,
+    stretch: spec.stretch ?? 0.5 * (world.units?.length ?? 1),
     last: 0,
-    radius: spec.radius ?? 0.08,
+    radius: spec.radius ?? 0.08 * (world.units?.length ?? 1),
     range: spec.range,
-    least: spec.least ?? 1.5,
+    least: spec.least ?? 1.5 * (world.units?.length ?? 1),
     reel: 0,
-    retract: spec.retract ?? 120,
+    retract: spec.retract ?? 120 * (world.units?.length ?? 1),
     ...(ignores?.length ? { ignores: [...ignores] } : {}),
   };
   world.ropes = [...(world.ropes ?? []), rope];
@@ -219,7 +219,7 @@ function stepCast(world: World, r: Rope, holder: Body, dt: number): void {
   v.x += g.x * dt;
   v.y += g.y * dt;
   const speed = Math.sqrt(v.x * v.x + v.y * v.y);
-  const n = Math.max(1, Math.ceil((speed * dt) / SWEEP));
+  const n = Math.max(1, Math.ceil((speed * dt) / (SWEEP * (world.units?.length ?? 1))));
   const bodies = near(world, r, holder, speed * dt + r.radius);
   const shapes = bodies.map(placed);
   for (let k = 0; k < n; k++) {
@@ -344,7 +344,7 @@ function stepChain(world: World, r: Rope, holder: Body, dt: number): boolean {
   }
   // Reeling: the last stretch grows or shrinks, and a point is added or taken as it passes a stretch's length.
   const rate = held ? r.reel : -r.retract;
-  if (rate !== 0 && !(rate < 0 && held && pulled > STUCK)) {
+  if (rate !== 0 && !(rate < 0 && held && pulled > STUCK * (world.units?.length ?? 1))) {
     let length = ropeLength(r) + rate * dt;
     if (held) length = Math.min(r.range, Math.max(r.least, length));
     r.last = length - (r.points.length - 1) * r.stretch;

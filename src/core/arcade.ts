@@ -359,8 +359,8 @@ function layout(world: World, game: ArcadeGame, ops: ArcadeOps, shipAt: Vec2): v
     const o = offset(world, p, q);
     return o.x * o.x + o.y * o.y >= d * d;
   };
-  let fromShip = SHIP_CLEAR;
-  let apart = 2 * rk.radius + ROCK_GAP;
+  let fromShip = SHIP_CLEAR * (world.units?.length ?? 1);
+  let apart = 2 * rk.radius + ROCK_GAP * (world.units?.length ?? 1);
   const placed: Vec2[] = [];
   const gold: string[] = [];
   const rocks: { at: Vec2; drift: Vec2; rock: ReturnType<typeof generateAsteroid> }[] = [];
@@ -483,7 +483,7 @@ function clearance(world: World, p: Vec2, free: { b: World["bodies"][number]; re
     const r = offset(world, p, b.position);
     const v = b.velocity;
     const vv = v.x * v.x + v.y * v.y;
-    const t = vv > 1e-12 ? Math.min(LOOK_AHEAD, Math.max(0, -(r.x * v.x + r.y * v.y) / vv)) : 0;
+    const t = vv > 1e-12 * (world.units?.length ?? 1) * (world.units?.length ?? 1) ? Math.min(LOOK_AHEAD, Math.max(0, -(r.x * v.x + r.y * v.y) / vv)) : 0;
     const cx = r.x + v.x * t;
     const cy = r.y + v.y * t;
     const d = Math.sqrt(cx * cx + cy * cy) - reach;
@@ -504,14 +504,14 @@ export function gunshipSpot(world: World, player: Vec2): Vec2 {
   let best: Vec2 | null = null;
   let bestScore = -Infinity;
   let bestFar = -Infinity;
-  for (const least of [GUNSHIP_CLEAR, 0]) {
+  for (const least of [GUNSHIP_CLEAR * (world.units?.length ?? 1), 0]) {
     for (let i = 0; i < 9; i++)
       for (let j = 0; j < 5; j++) {
         const p = { x: world.bounds.min.x + ((i + 0.5) * W) / 9, y: world.bounds.min.y + ((j + 0.5) * H) / 5 };
         const o = offset(world, player, p);
         const far = Math.sqrt(o.x * o.x + o.y * o.y);
         if (far < least) continue;
-        const score = Math.min(clearance(world, p, free), CLEAR_ENOUGH);
+        const score = Math.min(clearance(world, p, free), CLEAR_ENOUGH * (world.units?.length ?? 1));
         if (score > bestScore || (score === bestScore && far > bestFar)) {
           best = p;
           bestScore = score;
@@ -557,7 +557,7 @@ export function clearestSpot(world: World): Vec2 {
   let best = points[0];
   let bestScore = -Infinity;
   for (const p of points) {
-    const score = Math.min(clearance(world, p, free), CLEAR_ENOUGH);
+    const score = Math.min(clearance(world, p, free), CLEAR_ENOUGH * (world.units?.length ?? 1));
     if (score > bestScore) {
       bestScore = score;
       best = p;
@@ -805,7 +805,7 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
       const k = (s.bursts = (s.bursts ?? 0) + 1);
       ops.addBody(world, {
         id: `burst-${k}`,
-        shape: { kind: "box", width: BURST_SIZE, height: BURST_SIZE },
+        shape: { kind: "box", width: BURST_SIZE * (world.units?.length ?? 1), height: BURST_SIZE * (world.units?.length ?? 1) },
         mass: spec.rocks.burst.charge,
         position: { x: Number(e.data.x), y: Number(e.data.y) },
         velocity: { x: 0, y: 0 },
@@ -849,9 +849,10 @@ export function runArcade(world: World, dt: number, ops: ArcadeOps): boolean {
       for (const p of parts) {
         // The gold's copy nearest the part: they may meet across the arena's edge.
         const o = offset(world, p.b.position, g.position);
-        if (o.x * o.x + o.y * o.y > (p.r + gr + TOUCH) * (p.r + gr + TOUCH)) continue;
-        const m = collide(p.at, { shape: g.shape, position: { x: p.b.position.x + o.x, y: p.b.position.y + o.y }, rot }, TOUCH, 0);
-        if (m?.points.some((pt) => pt.separation <= TOUCH)) {
+        const touch = TOUCH * (world.units?.length ?? 1);
+        if (o.x * o.x + o.y * o.y > (p.r + gr + touch) * (p.r + gr + touch)) continue;
+        const m = collide(p.at, { shape: g.shape, position: { x: p.b.position.x + o.x, y: p.b.position.y + o.y }, rot }, touch, 0);
+        if (m?.points.some((pt) => pt.separation <= touch)) {
           got.add(id);
           break;
         }
