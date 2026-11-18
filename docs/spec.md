@@ -5,6 +5,13 @@
 **Date:** 2026-11-03
 **Supersedes:** `docs/ears-requirements.md` v0.1 (see git history at `5196811`)
 
+
+> **Units (18 November 2026, docs/units-rescale-plan.md, UNITS-001…003):** scenario files are schema 2,
+> in the game's units: lengths ×4 and masses ×1024 against the figures written before that date in
+> this document, time unchanged. The core's own constants keep their old figures and scale with a
+> world's `units`; a schema 1 file is migrated on load. Figures in requirements written before
+> 18 November 2026 are in the old units.
+
 ## 1. Purpose and Direction
 
 Mammoth Space Battles will eventually be a 2D space-combat, mining and ship-design game. Ships are built from physically simulated components and fight AI ships and asteroids.

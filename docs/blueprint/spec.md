@@ -6,6 +6,13 @@ The ship in every mockup is drawn from the real Thrust ship (`scenarios/thrust-1
 `world.thrust.ship`), so its shapes, weld points and centre of mass are true. Performance
 numbers marked *est.* are placeholders until the calculations below exist.
 
+> **Units (18 November 2026, docs/units-rescale-plan.md):** the game's units are now lengths ×4 and
+> masses ×1024 against the figures in this document, time unchanged (speeds and accelerations ×4,
+> forces ×4,096, energies and power ×16,384). The designer still works in the old units inside (its
+> rules, and designs saved before, are as written here) and shows and takes the new ones: a 0.1 m wall
+> reads 0.4 m, THRUST 1's 60.3 kg reads 61.7 t (with its welds), 36 m/s² reads 143 m/s². Figures
+> below are in the old units unless they say otherwise.
+
 ## 1. Purpose
 
 The part of Mammoth Space Battles where the player changes, tunes, reconfigures or repairs a

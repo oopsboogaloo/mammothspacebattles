@@ -83,3 +83,23 @@ before the gas scale, so they are not converted.
    read-outs, effects sized in metres, drag thresholds; checked with the browser tests.
 10. Saved designs in the browser (localStorage) get a version stamp and are converted on load.
 11. Docs: a dated note where figures are historical; current figures updated.
+
+**Stage 2 as built (18 November 2026).**
+
+- **Scenario files are schema 2**, in the game's units; a schema 1 file is migrated on load, exactly
+  (`migrateUnits.ts`: parameters by their units, formulas and assertions rewritten so they give and
+  check the same, the camera's zoom ÷4). The 61 files were converted by `scripts/convert-units.ts`,
+  each checked bit for bit against its original over 5 s of scripted input before it was replaced;
+  UNITS-003 keeps the migration checked. The level scripts build in the core's units and write in the
+  game's.
+- **The core's constants keep their figures**, scaling with a world's units (stage 1); profiles are
+  scaled wherever they are passed (`stepInPlace`, `createWorld`).
+- **The designer keeps the core's units inside**, so its rules, presets and saved designs are as they
+  were; it shows and takes the game's (`src/app/blueprint/shown.ts`), and a ship goes into a game in
+  the game's units (`withBlueprint`). Saved designs need no migration.
+- **The sandbox and the games run in the game's units**: their parts, palette, gas tool, ports,
+  cameras, views and HUDs, and the renderers' sizes in metres, written as the old figure times its
+  factor (`src/app/units.ts`). Prefabs saved before are scaled up on load.
+- **Tests:** the core's and the designer's read levels converted back to the core's units
+  (`tests/helpers.ts` `inCoreUnits`), checking what they always did; the games' pages are tested in
+  the game's units.
