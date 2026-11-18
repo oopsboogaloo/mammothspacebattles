@@ -771,7 +771,7 @@ bigger, heavier engine), a better nozzle, or more pressure. Pressure now has a p
 
 | Ship | Ceiling (set by) | Its engines now | Most flow |
 |---|---|---|---|
-| THRUST 1 | 2,284 N/m (wing tanks) | main 50%, light 15% | main 15.5 kg/s (7.8), light 9.7 (1.45) |
+| THRUST 1 | 2,284 N/m (wing tanks) | main 50%, light 16% | main 15.5 kg/s (7.8), light 9.7 (1.51; 1.45 until 18 November) |
 | Stegodon | 2,856 (its tank) | 56% | 6.1 (3.4) |
 | Phiomia | 4,895 (its tank) | 3% | 10.4 (0.3) |
 | Loxodon | 1,577 (top tanks, 0.05 m walls) | 12% | 3.35 (0.4) |
@@ -779,7 +779,8 @@ bigger, heavier engine), a better nozzle, or more pressure. Pressure now has a p
 - At its ceiling THRUST 1's main engine doubles its push: the ship goes from 36.1 to 61.7 m/s²
   forward. To triple it, the wing tanks need 0.15 m walls: about 23% less fuel and 43% more dry
   mass.
-- THRUST 1 flies as before: 36.1 m/s² forward, 9.7 rad/s² turning, 58.8 kg.
+- THRUST 1 flew as before: 36.1 m/s² forward, 9.7 rad/s² turning, 58.8 kg (at the time; for its
+  figures since the light thrusters went to 1.51 kg/s, see the note after §31).
 
 Tests: BPD-052 (`tests/app/pressure.test.ts`).
 
@@ -900,6 +901,11 @@ before heavy welds can be added."
   loses nothing when dropped: it lands on its nozzles.
 
 Tests: BPD-055 (`tests/app/weldsize.test.ts`).
+
+**THRUST 1's light thrusters, 18 November 2026 (Chloe):** reverse, and flying on the light thrusters
+alone when the main engine is lost, felt lacking against THRUST OG's. Their flow is raised from 1.45
+to 1.51 kg/s each (`LIGHT_RATE`), which brings reverse to THRUST OG's: 9.82 m/s² (THRUST OG 9.81, 9.43
+before). Forward is 35.7 m/s² (THRUST OG 36.1) and turning 9.9 rad/s² (9.3).
 
 ## Sources
 

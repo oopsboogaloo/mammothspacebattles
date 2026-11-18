@@ -341,6 +341,9 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
     bp = moveComponent(bp, `front-${side}`, 0, -cut);
   }
   for (const c of bp.components.filter((x) => x.kind === "engine")) bp = toRocket(bp, c.id, c.id === "main" ? { chamberLength: 0.2, throat: 0.8 } : { chamberLength: LIGHT_CHAMBER, throat: 0.5 });
+  // Chloe, 18 November 2026: reverse (and flying on the light thrusters alone) felt lacking against
+  // THRUST OG's; their flow raised until reverse matches it (9.8 m/s², from 9.4 at 1.45 kg/s).
+  for (const id of ["back-l", "back-r", "front-l", "front-r"]) bp = setParam(bp, id, "rate", LIGHT_RATE);
   for (const c of bp.components) bp = reweld(bp, c.id);
   return bp;
 }
@@ -352,6 +355,8 @@ const THRUST_TANK_HEIGHT = 0.8;
  * over the L* rule's 0.3 m, so they burn completely (Chloe's choice B, 17 November 2026; 0.1 m before).
  */
 const LIGHT_CHAMBER = 0.19;
+/** THRUST 1's light thrusters' flow, kg/s each (THRUST OG's: 1.45): reverse as THRUST OG's, 9.8 m/s². */
+const LIGHT_RATE = 1.51;
 
 /**
  * An engine of THRUST OG's kind (a head and two flared walls) rebuilt as a rocket with a chamber of
