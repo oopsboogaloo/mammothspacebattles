@@ -193,7 +193,8 @@ const BATTERY_PER_AREA = ((450 * 3600) / G_SPECIFIC / 1000) * BATTERY_MASS_PER_A
 /**
  * Power (design rules §4), rebalance v1:
  * - battery: 450 Wh/kg (THRUST 1's: 3.3 GJ, about 46 shots). Its blast is today's at full.
- * - generator: 12.5 kW/kg, 2.5 × a fuel cell's (THRUST 1's: 25.6 MW each).
+ * - generator: 50 kW/kg, 10 × a fuel cell's (THRUST 1's: 102 MW each; Chloe, 18 November 2026,
+ *   after flying it: 12.5 kW/kg was nowhere near enough for half the ship).
  * - propellant: ~7 MJ of electricity a kg (H₂ + O₂ at 1 : 8, about 13 MJ/kg, half of it made electric).
  * - shield: up, it drains THRUST 1's battery in 20 s; each hit costs the energy it brings at 25%.
  * - tractor: the beam 60 MW, the tether 20 MW.
@@ -202,7 +203,7 @@ export const POWER = {
   /** kJ a generator makes from 1 kg of propellant. */
   perKg: (7e6 / G_SPECIFIC) / 1000,
   battery: { perArea: BATTERY_PER_AREA, massPerArea: BATTERY_MASS_PER_AREA, chargeFull: 0.05 / (BATTERY_PER_AREA * BATTERY_AREA), min: 0.2, max: 2 },
-  generator: { perArea: ((12_500 / G_SPECIFIC) / 1000) * (2 / 0.56), massPerArea: 2 / 0.56, min: 0.3, max: 2 },
+  generator: { perArea: ((50_000 / G_SPECIFIC) / 1000) * (2 / 0.56), massPerArea: 2 / 0.56, min: 0.3, max: 2 },
   /** The shield's draw while up (kW), and each hit's: the energy it brings, at this efficiency. */
   shield: { draw: (BATTERY_PER_AREA * BATTERY_AREA) / 20, hitEfficiency: 0.25 },
   /** A railgun shot, kJ. */

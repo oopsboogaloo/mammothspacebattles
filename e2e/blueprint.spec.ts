@@ -19,8 +19,8 @@ test("BPD-017 the sandbox's start screen links to the designer, which opens on T
   const scrolls = await page.evaluate(() => [document.documentElement.scrollHeight > innerHeight, document.documentElement.scrollWidth > innerWidth]);
   expect(scrolls).toEqual([false, false]);
   // THRUST 1: smaller wing tanks for its engines' chambers, and its welds weigh 1.5 t (the game's units:
-  // docs/units-rescale-plan.md); with its pilot, a 4 t mammoth (docs/rebalance-v1.md), and its 3 t shield emitter.
-  await expect(page.getByTestId("performance")).toContainText("68.40 t · 64.40 t without the pilot");
+  // docs/units-rescale-plan.md); with its pilot, a 4 t mammoth (docs/rebalance-v1.md), its 3 t shield emitter, and 100 shells.
+  await expect(page.getByTestId("performance")).toContainText("47.96 t · 43.96 t without the pilot");
 });
 
 test("BPD-018 select an engine and type a new nozzle length: a preset is copied, the walls change, and undo puts them back", async ({ page }) => {
@@ -156,7 +156,7 @@ test("BPD-025 Measure runs the real physics in the background and shows the meas
   await openFresh(page);
   await page.getByTestId("measure").click();
   await expect(page.getByTestId("performance")).toContainText("✓ measured", { timeout: 30_000 });
-  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward(12[6-9]|13[0-2])\.\d m\/s² ✓/); // 129 m/s², within the jet's run-to-run noise: with its 4 t pilot (docs/rebalance-v1.md) and 3 t shield emitter
+  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward(179|18[0-8])\.\d m\/s² ✓/); // 184 m/s² ± 2.5% (the jet's run-to-run noise): with its 4 t pilot (docs/rebalance-v1.md), 3 t shield emitter and 100 shells
   // A change makes it an estimate again; undo brings the measurement back.
   await page.getByTestId("part-main").locator("polygon").nth(1).click();
   const rate = page.getByTestId("param-rate");
@@ -384,7 +384,7 @@ test("BPD-036 the OG parts are listed after the regular ones; in Try it, THRUST 
   // Storage: the regular magazine, then the OG one under its heading.
   await page.getByRole("tab", { name: "ST" }).click();
   await expect(page.getByTestId("kind-name")).toHaveText("STORAGE");
-  await expect(page.getByTestId("card-mag-l")).toContainText("13,312 kg"); // 3 kg and 256 shells of 40 kg (rebalance v1), ×1024 in the game's units
+  await expect(page.getByTestId("card-mag-l")).toContainText("3,183 kg"); // 1.18 t, and 50 shells of 40 kg (rebalance v1; Chloe: 100 rounds is plenty)
   await expect(page.getByTestId("card-mag-l-og")).toContainText("3,072 kg");
   await expect(page.getByText("OG · AS THRUST HAS THEM")).toBeVisible();
   await page.getByTestId("try-it").click();
@@ -393,9 +393,9 @@ test("BPD-036 the OG parts are listed after the regular ones; in Try it, THRUST 
       const w = (window as unknown as { __msb: { sandbox: () => { world: { bodies: { id: string; ammo?: { count: number } }[] } } | null } }).__msb.sandbox()?.world;
       return (w?.bodies ?? []).filter((b) => b.ammo).reduce((s, b) => s + b.ammo!.count, 0);
     });
-  await expect.poll(shells, { timeout: 15_000 }).toBeLessThanOrEqual(511); // 256 in each magazine; one already in the gun
+  await expect.poll(shells, { timeout: 15_000 }).toBeLessThanOrEqual(99); // 50 in each magazine; one already in the gun
   await page.keyboard.down("Space");
-  await expect.poll(shells, { timeout: 60_000 }).toBeLessThan(507);
+  await expect.poll(shells, { timeout: 60_000 }).toBeLessThan(95);
   await page.keyboard.up("Space");
 });
 

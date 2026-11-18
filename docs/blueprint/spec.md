@@ -950,6 +950,11 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
   0.31 t) and twice the tether winch's size, two winches side by side: 4.4 × 1.6 m, its bottom
   where it was, the railgun lifted onto it. THRUST 1 is then 68.40 t full, 64.40 t without the
   pilot; 129 m/s² forward, 9.5 rad/s² turning. The parts round it are to be rearranged later.
+- **After the first play (Chloe, 18 November 2026; `docs/rebalance-v1.md`):** THRUST 1 carries 100
+  shells, 50 in each of two 1.25 m square magazines (walls 0.31 m, a quarter of the side; armour
+  and welds 78%); the generators are 50 kW/kg (102 MW each), holding the shield up; and a crash is
+  one shield hit, not one for each bounce of the elastic field (PWR-004). THRUST 1: 47.96 t full,
+  43.96 t without the pilot; 184 m/s² forward, 11.6 rad/s² turning.
 
 Tests: BPD-036, BPD-043, BPD-045, BPD-047, BPD-050, BPD-051.
 

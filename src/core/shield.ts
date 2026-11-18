@@ -42,6 +42,13 @@ export interface Shield {
    * when set.
    */
   hitEfficiency?: number;
+  /**
+   * State, with `hitEfficiency`: what has struck the field lately and the last tick it touched it.
+   * One encounter is one hit: the elastic field bouncing on its spring meets a wall again and again
+   * as it settles, so a body touching it again within `REHIT` seconds of last touching it costs
+   * nothing more (Chloe, 18 November 2026: one crash emptied the battery).
+   */
+  struck?: { by: string; last: number }[];
   /** The control channels switched off while it is up (the ship's engines and gun). */
   blocks: string[];
   /** The field's mass, kg: light. */
@@ -158,6 +165,9 @@ function hitEnergy(world: World, roots: ReadonlyMap<string, string>, gen: string
   return 0.5 * mu * v * v;
 }
 
+/** Seconds a body must be clear of a field before touching it again is a new hit. */
+const REHIT = 0.5;
+
 export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
   const gens = world.bodies.filter((b) => b.shield);
   const blocked = new Set<string>();
@@ -174,6 +184,8 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
       // Powered: its steady draw for this step, or it can't stay up.
       if (!held || (powered ? !takeEnergy(world, roots, gen.id, s.draw! * dt) : !tanks.length)) {
         s.r = undefined;
+        // A new field meets everything afresh.
+        delete s.struck;
         changed = dropField(world, gen) || changed;
         continue;
       }
@@ -204,12 +216,33 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
       if (s.spring && spring(world, field, host, s, roots, dt)) changed = true;
       // Its fuel: a steady burn, and more for each hit in the step before (a new contact with the field).
       let kg = powered ? 0 : s.burn * dt;
+      // What is touching the field now (one encounter goes on while it does), and what has been clear of it long enough to hit afresh.
+      const rehit = Math.round(REHIT / dt);
+      if (s.hitEfficiency !== undefined) {
+        // First forget what has been clear of it long enough; then what still touches it is still the same encounter.
+        if (s.struck) s.struck = s.struck.filter((x) => world.tick - x.last <= rehit);
+        for (const c of world.contacts ?? []) {
+          const other = c.a === id ? c.b : c.b === id ? c.a : null;
+          if (other === null) continue;
+          const seen = s.struck?.find((x) => x.by === other);
+          if (seen) seen.last = world.tick;
+        }
+      }
       for (let i = world.events.length - 1; i >= 0 && world.events[i].tick >= world.tick - 1; i--) {
         const e = world.events[i];
         if (e.type !== "collision" || e.tick !== world.tick - 1 || (e.data.a !== id && e.data.b !== id)) continue;
         const by = e.data.a === id ? String(e.data.b) : String(e.data.a);
         if (powered) {
           // A hit drains the batteries; one bigger than they hold empties them, and the field drops next step.
+          // The same encounter as one already paid for: nothing more.
+          if (s.hitEfficiency !== undefined) {
+            const seen = (s.struck ??= []).find((x) => x.by === by);
+            if (seen) {
+              seen.last = world.tick;
+              continue;
+            }
+            s.struck.push({ by, last: world.tick });
+          }
           const struck = e.data.a === id ? e.data.mb : e.data.ma;
           const kJ = s.hitEfficiency !== undefined ? (s.hitEfficiency > 0 ? hitEnergy(world, roots, gen.id, typeof struck === "number" ? struck : Infinity, Number(e.data.speed ?? 0)) / s.hitEfficiency / 1000 : Infinity) : Math.max(s.minHitDraw ?? 0, (s.hitDraw ?? 0) * Number(e.data.impulse ?? 0));
           world.events.push({ tick: world.tick, type: "shield.hit", data: { id: gen.id, by, energy: drainEnergy(world, roots, gen.id, kJ) } });

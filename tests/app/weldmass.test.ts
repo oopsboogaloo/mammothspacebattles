@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { dropTest } from "../../src/app/blueprint/droptest.ts";
 import { measureWorld } from "../../src/app/blueprint/measure.ts";
-import { body, component, phiomiaPreset, stats, stegodonPreset, thrustOgPreset, thrustPreset, weldMasses, welds, WELD_PRESETS, type Blueprint } from "../../src/app/blueprint/model.ts";
+import { body, component, phiomiaPreset, stats, stegodonPreset, thrustOgPreset, thrustPreset, wallOf, weldMasses, welds, WELD_PRESETS, type Blueprint } from "../../src/app/blueprint/model.ts";
 import { WELD_K, weldLimits, weldPointMass } from "../../src/app/blueprint/rules.ts";
 import { inCoreUnits } from "../helpers.ts";
 
@@ -22,8 +22,9 @@ describe("weld mass (BPD-054)", () => {
 
   it("BPD-054 the welds between parts add their mass to the ship, in the designer and in the physics, half on each part; welds inside a part and on OG parts are free", () => {
     const t1 = thrustPreset(level);
-    const points = welds(t1).reduce((n, w) => n + w.joints.length, 0);
-    expect(total(t1)).toBeCloseTo(points * weldPointMass(0.1, 1), 9); // all Standard on 0.1 m walls
+    // All Standard, each on the thinner of the walls it joins (0.1 m, or the small magazines' 0.078 m).
+    const thinner = (bp: Blueprint, w: { a: string; b: string }) => Math.min(wallOf(component(bp, w.a)), wallOf(component(bp, w.b)));
+    expect(total(t1)).toBeCloseTo(welds(t1).reduce((m, w) => m + w.joints.length * weldPointMass(thinner(t1, w), 1), 0), 9);
     expect(total(t1)).toBeGreaterThan(1);
     // In the physics: each body heavier by its share.
     const w = measureWorld(t1);
@@ -41,6 +42,7 @@ describe("weld mass (BPD-054)", () => {
       for (const w of welds(bp)) for (const j of w.joints) expect(j.limits!.tension, `${bp.name} ${w.id}`).toBeCloseTo(weldLimits(Math.min(component(bp, w.a).wall ?? 0.1, component(bp, w.b).wall ?? 0.1), 0.5).tension, 6);
       expect(dropTest(bp, level).welds.length, bp.name).toBeGreaterThan(0);
     }
-    expect(welds(thrustPreset(level)).every((w) => w.joints.every((j) => j.limits!.tension === weldLimits(0.1, 1).tension))).toBe(true);
+    const t1 = thrustPreset(level);
+    for (const w of welds(t1)) for (const j of w.joints) expect(j.limits!.tension, w.id).toBeCloseTo(weldLimits(Math.min(wallOf(component(t1, w.a)), wallOf(component(t1, w.b))), 1).tension, 6);
   }, 120_000);
 });

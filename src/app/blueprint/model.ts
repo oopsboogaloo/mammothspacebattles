@@ -344,6 +344,14 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
     bp = moveComponent(bp, "shield", 0, (winch.height - was.height) / 2);
     body(bp, "shield").mass = SHIELD_EMITTER_MASS;
   }
+  // The magazines (Chloe, 18 November 2026): 100 rounds is plenty, 50 each, in magazines as small as
+  // holds them. Each keeps its corner on the cockpit and the generator below it.
+  for (const [id, sx] of [["mag-l", -1], ["mag-r", 1]] as const) {
+    const m = body(bp, id);
+    const sh = m.shape as { width: number; height: number };
+    const corner = { x: m.position.x - (sx * sh.width) / 2, y: m.position.y - sh.height / 2 };
+    bp = resizeComponent(bp, id, THRUST_MAGAZINE.width, THRUST_MAGAZINE.height, corner, { x: sx, y: 1 });
+  }
   // The railgun stands on the shield emitter, not through it (in the game it overlaps it by 0.12 m).
   const lift = overlapLift(bp, "gun");
   if (lift > 0) bp = moveComponent(bp, "gun", 0, lift);
@@ -366,6 +374,12 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   return bp;
 }
 
+/**
+ * THRUST 1's magazines, m (1.25 m square in the game): 50 shells each, as small as holds them. Their
+ * walls are as thick as a part this small may have (a quarter of its side: 0.078 m, 0.31 m in the
+ * game, against the standard 0.1 m), so their armour is 78% of the old magazines'.
+ */
+const THRUST_MAGAZINE = { width: 0.3125, height: 0.3125 } as const;
 /** THRUST 1's shield emitter, kg (3 t in the game; Chloe, 18 November 2026). */
 const SHIELD_EMITTER_MASS = 3000 / 1024;
 /** THRUST 1's wing tanks, m tall (THRUST OG's are 1.0): room for the light thrusters' chambers. */
