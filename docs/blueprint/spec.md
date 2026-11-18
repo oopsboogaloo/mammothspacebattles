@@ -946,6 +946,10 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
   shells become the new ones (a railgun at the old 144 m/s goes to the new speed; another speed is
   kept), its pilots go aboard, and every rule is applied again.
 - Resizing a part keeps its pilot's mass as it is: only the part's own goes with its area.
+- **Shield emitter (Chloe, 18 November 2026, after the rebalance):** THRUST 1's is 3 t (it was
+  0.31 t) and twice the tether winch's size, two winches side by side: 4.4 × 1.6 m, its bottom
+  where it was, the railgun lifted onto it. THRUST 1 is then 68.40 t full, 64.40 t without the
+  pilot; 129 m/s² forward, 9.5 rad/s² turning. The parts round it are to be rearranged later.
 
 Tests: BPD-036, BPD-043, BPD-045, BPD-047, BPD-050, BPD-051.
 
