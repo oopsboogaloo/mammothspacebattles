@@ -194,6 +194,7 @@ const FIELDS: Record<string, Dim> = {
   "shield.draw": D.power,
   "shield.hitDraw": D.hitDraw,
   "shield.minHitDraw": D.energy,
+  "shield.hitEfficiency": D.none,
   "shield.mass": D.mass,
   "spring.stiffness": D.pressure,
   "power.capacity": D.energy,

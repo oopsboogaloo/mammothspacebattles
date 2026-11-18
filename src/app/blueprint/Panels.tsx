@@ -217,7 +217,7 @@ export function PerformanceBox() {
   const burn = flow > 0 ? st.propellant / flow : NaN;
   const tag = m ? " ✓" : "";
   const rows: [string, string, number, number][] = [
-    ["Mass", `${n(show(st.mass, "kg") / 1000, 2)} t`, st.mass, bs.mass],
+    ["Mass", `${n(show(st.mass, "kg") / 1000, 2)} t${st.pilot ? ` · ${n(show(st.mass - st.pilot, "kg") / 1000, 2)} t without the pilot` : ""}`, st.mass, bs.mass],
     ["Width × height", `${n(show(st.width, "m"), 1)} × ${n(show(st.height, "m"), 1)} m`, st.width, bs.width],
     ["Accel. forward", `${n(show(f.ahead, "m/s²"))} m/s²${tag}`, f.ahead, bf.ahead],
     ["Accel. reverse", `${n(show(-rv.ahead, "m/s²"))} m/s²${tag}`, -rv.ahead, -brv.ahead],

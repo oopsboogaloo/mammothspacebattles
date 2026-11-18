@@ -34,6 +34,14 @@ export interface Shield {
   draw?: number;
   hitDraw?: number;
   minHitDraw?: number;
+  /**
+   * Powered, each hit costing the energy it brings instead (PWR-004; Chloe, 18 November 2026): the
+   * kinetic energy of the closing speed along the contact, for the two masses (½ μ v², μ the reduced
+   * mass of what struck and the whole ship; the ship's alone against something fixed), divided by
+   * this efficiency (0 to 1; at 0 a hit empties the batteries). Replaces `hitDraw` and `minHitDraw`
+   * when set.
+   */
+  hitEfficiency?: number;
   /** The control channels switched off while it is up (the ship's engines and gun). */
   blocks: string[];
   /** The field's mass, kg: light. */
@@ -138,6 +146,18 @@ function spring(world: World, field: Body, host: Body, s: Shield, roots: Readonl
  * and its hits, and the controls it switches off. Returns whether anything changed the world's
  * totals (the field coming or going, its fuel), for the ledger.
  */
+/**
+ * A hit's energy, J: ½ μ v² for the closing speed `v` of what struck, of mass `m` (Infinity if fixed;
+ * from the collision, as it may be gone since), and the ship `gen` is on.
+ */
+function hitEnergy(world: World, roots: ReadonlyMap<string, string>, gen: string, m: number, v: number): number {
+  const root = roots.get(gen);
+  let ship = 0;
+  for (const b of world.bodies) if (roots.get(b.id) === root) ship += bodyMass(b);
+  const mu = Number.isFinite(m) ? (m * ship) / (m + ship) : ship;
+  return 0.5 * mu * v * v;
+}
+
 export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
   const gens = world.bodies.filter((b) => b.shield);
   const blocked = new Set<string>();
@@ -190,7 +210,8 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
         const by = e.data.a === id ? String(e.data.b) : String(e.data.a);
         if (powered) {
           // A hit drains the batteries; one bigger than they hold empties them, and the field drops next step.
-          const kJ = Math.max(s.minHitDraw ?? 0, (s.hitDraw ?? 0) * Number(e.data.impulse ?? 0));
+          const struck = e.data.a === id ? e.data.mb : e.data.ma;
+          const kJ = s.hitEfficiency !== undefined ? (s.hitEfficiency > 0 ? hitEnergy(world, roots, gen.id, typeof struck === "number" ? struck : Infinity, Number(e.data.speed ?? 0)) / s.hitEfficiency / 1000 : Infinity) : Math.max(s.minHitDraw ?? 0, (s.hitDraw ?? 0) * Number(e.data.impulse ?? 0));
           world.events.push({ tick: world.tick, type: "shield.hit", data: { id: gen.id, by, energy: drainEnergy(world, roots, gen.id, kJ) } });
           continue;
         }

@@ -55,7 +55,10 @@ interface ContainerRule {
 /** Inner area of a box w × h with walls t. */
 const boxInner = (w: number, h: number, t: number) => Math.max(0, w - 2 * t) * Math.max(0, h - 2 * t);
 
-/** Thrust's tank (1.5 × 1.0 m, 2 kg dry, 4.05 kg propellant) and THRUST 1's magazine (0.7 × 0.45 m, 3 kg, 60 shells). */
+/**
+ * Thrust's tank (1.5 × 1.0 m, 2 kg dry, 4.05 kg propellant) and THRUST 1's magazine (0.7 × 0.45 m,
+ * 3 kg): rebalance v1, 256 of the new shells, about the mass of the 60 old ones.
+ */
 export const CONTAINERS: Record<ContainerKind, ContainerRule> = {
   tank: {
     perArea: 4.05 / boxInner(1.5, 1, WALL.default),
@@ -66,10 +69,10 @@ export const CONTAINERS: Record<ContainerKind, ContainerRule> = {
     max: 3,
   },
   magazine: {
-    perArea: 60 / boxInner(0.7, 0.45, WALL.default),
+    perArea: 256 / boxInner(0.7, 0.45, WALL.default),
     dryPerWall: 3 / (0.7 * 0.45 - boxInner(0.7, 0.45, WALL.default)),
     material: { name: "hull", threshold: 150, toughness: 3000 },
-    chargePerUnit: 1 / 60,
+    chargePerUnit: 1 / 256,
     min: 0.3,
     max: 2,
   },
@@ -167,23 +170,50 @@ const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
 
 // ---------- power (design rules §4) ----------
 
+// Rebalance v1 (docs/rebalance-v1.md; Chloe, 18 November 2026): real-world figures to start from,
+// set in the game's units and written here in the designer's (the core's: lengths ÷4, masses ÷1024;
+// energy ÷16384, power ÷16384, energy per kg ÷16).
+const G_ENERGY = 16384;
+const G_SPECIFIC = 16;
+
 /**
- * Power, calibrated on Thrust's battery (1.2 × 0.5 m, 2 kg) and generators (0.7 × 0.8 m, 2 kg each)
- * and today's shield (0.4 kg/s of fuel, 0.00125 kg per N·s of each hit, at least 0.025 kg).
+ * The railgun's shell (Chloe): 40 kg at 1,200 m/s, 28.8 MJ (it was 171 kg at 576 m/s). Its size goes
+ * with its mass at the old shell's density. A shot draws its energy at 40%: 72 MJ.
+ */
+export const SHELL = { mass: 40 / 1024, speed: 1200 / 4, shape: { kind: "box" as const, width: 0.125, height: 0.105 }, efficiency: 0.4 } as const;
+/** A railgun shot, kJ (the designer's units). */
+export const railgunShot = (mass: number = SHELL.mass, speed: number = SHELL.speed): number => (0.5 * mass * speed * speed) / SHELL.efficiency / 1000;
+
+/** The battery's figures, as THRUST 1's (1.2 × 0.5 m, 2 kg; 2 t in the game). */
+const BATTERY_AREA = 0.6;
+const BATTERY_MASS_PER_AREA = 2 / BATTERY_AREA;
+/** 450 Wh per kg (the best commercial lithium cells), in kJ per m². */
+const BATTERY_PER_AREA = ((450 * 3600) / G_SPECIFIC / 1000) * BATTERY_MASS_PER_AREA;
+
+/**
+ * Power (design rules §4), rebalance v1:
+ * - battery: 450 Wh/kg (THRUST 1's: 3.3 GJ, about 46 shots). Its blast is today's at full.
+ * - generator: 12.5 kW/kg, 2.5 × a fuel cell's (THRUST 1's: 25.6 MW each).
+ * - propellant: ~7 MJ of electricity a kg (H₂ + O₂ at 1 : 8, about 13 MJ/kg, half of it made electric).
+ * - shield: up, it drains THRUST 1's battery in 20 s; each hit costs the energy it brings at 25%.
+ * - tractor: the beam 60 MW, the tether 20 MW.
  */
 export const POWER = {
   /** kJ a generator makes from 1 kg of propellant. */
-  perKg: 1000,
-  battery: { perArea: 2700, massPerArea: 2 / 0.6, chargeFull: 0.05 / (2700 * 0.6), min: 0.2, max: 2 },
-  generator: { perArea: 400, massPerArea: 2 / 0.56, min: 0.3, max: 2 },
-  /** The shield's draw while up (kW), and each hit's (kJ per N·s, and at least). */
-  shield: { draw: 400, hitDraw: 1.25, minHitDraw: 25 },
-  /** A railgun shot, kJ: its kinetic energy (½ × 0.167 kg × 144²) at 50%. Chloe will raise it. */
-  railgunShot: 3.5,
+  perKg: (7e6 / G_SPECIFIC) / 1000,
+  battery: { perArea: BATTERY_PER_AREA, massPerArea: BATTERY_MASS_PER_AREA, chargeFull: 0.05 / (BATTERY_PER_AREA * BATTERY_AREA), min: 0.2, max: 2 },
+  generator: { perArea: ((12_500 / G_SPECIFIC) / 1000) * (2 / 0.56), massPerArea: 2 / 0.56, min: 0.3, max: 2 },
+  /** The shield's draw while up (kW), and each hit's: the energy it brings, at this efficiency. */
+  shield: { draw: (BATTERY_PER_AREA * BATTERY_AREA) / 20, hitEfficiency: 0.25 },
+  /** A railgun shot, kJ. */
+  railgunShot: railgunShot(),
   /** The tractor's beam and its tether, kW. */
-  beam: 10,
-  tether: 5,
+  beam: 60e6 / G_ENERGY / 1000,
+  tether: 20e6 / G_ENERGY / 1000,
 } as const;
+
+/** The pilot (Chloe): a woolly mammoth cow, 4 t, in the cockpit. kg (the designer's units). */
+export const PILOT = { mass: 4000 / 1024 } as const;
 
 export type PowerKind = "battery" | "generator";
 
