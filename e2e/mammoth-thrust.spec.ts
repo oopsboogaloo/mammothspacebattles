@@ -234,13 +234,13 @@ test("MTH-052 the view doesn't jump when the tether takes the pod: it eases towa
   await expect(page.getByTestId("mth-pod")).toHaveText("POD ON THE TETHER", { timeout: 15_000 });
   await page.keyboard.up("z");
   // It ends up leaning toward the pod...
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __lean: number[] }).__lean.at(-1)!), { timeout: 15_000 }).toBeGreaterThan(2);
-  // ...and got there with no frame moving it far (a jump was about 3 m at once).
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __lean: number[] }).__lean.at(-1)!), { timeout: 15_000 }).toBeGreaterThan(2 * 4);
+  // ...and got there with no frame moving it far (a jump was about 12 m at once).
   const steps = await page.evaluate(() => {
     const v = (window as unknown as { __lean: number[] }).__lean;
     return Math.max(...v.slice(1).map((x, i) => Math.abs(x - v[i])));
   });
-  expect(steps).toBeLessThan(1.5);
+  expect(steps).toBeLessThan(1.5 * 4);
 });
 
 test("MTH-030 MTH-036 a turret that sees the ship waits, turns its gun and fires bolts; they show in flight", async ({ page }) => {
