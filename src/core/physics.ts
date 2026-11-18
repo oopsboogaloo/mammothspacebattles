@@ -518,7 +518,8 @@ export function solveContacts(world: World, rbs: RB[], profile: Profile): { acco
       world.events.push({
         tick: world.tick,
         type: "collision",
-        data: { a: c.a.body.id, b: c.b.body.id, impulse: total, speed: -Math.min(...c.points.map((p) => p.vn0)) },
+        // Each side's mass (none for a fixed body): what struck may be gone before the hit is read (a shell that detonates).
+        data: { a: c.a.body.id, b: c.b.body.id, impulse: total, speed: -Math.min(...c.points.map((p) => p.vn0)), ...(c.a.invMass > 0 ? { ma: c.a.mass } : {}), ...(c.b.invMass > 0 ? { mb: c.b.mass } : {}) },
       });
     }
   }

@@ -717,21 +717,24 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     expect(r.upFor).toBeLessThan(20.2);
   }, 120_000);
 
-  it("BPD-045 PWR-004 rebalance v1: a hit on THRUST 1's shield costs the energy it brings at 25%: a 40 kg shell at 1,200 m/s (28.8 MJ in the game) about 115 MJ", () => {
-    const w = measureWorld(regular);
-    stepInPlace(w, [{ type: "control.set", channel: "action-c", value: 1 }], getProfile("sandbox"));
-    for (let i = 0; i < 240; i++) stepInPlace(w, [], getProfile("sandbox")); // the field grown to its radius
-    const hull = w.bodies.find((b) => b.id === "hull")!;
-    const v = 300; // 1,200 m/s in the game
-    const shell = { id: "incoming", shape: { ...SHELL.shape }, mass: SHELL.mass, position: { x: hull.position.x + 20, y: hull.position.y }, velocity: { x: hull.velocity.x - v, y: hull.velocity.y }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.05 };
-    stepInPlace(w, [{ type: "body.add", body: shell }], getProfile("sandbox"));
-    for (let i = 0; i < 60 && !w.events.some((e) => e.type === "shield.hit"); i++) stepInPlace(w, [], getProfile("sandbox"));
-    const hit = w.events.find((e) => e.type === "shield.hit");
-    expect(hit?.data.by).toBe("incoming");
-    // ½ μ v² ÷ 0.25, μ the shell's mass against the whole ship's (65.7 t in the game): just under 4 × 28.8 MJ.
-    const kJ = Number(hit!.data.energy) * 16384;
-    expect(kJ).toBeGreaterThan(0.97 * 4 * 28_800);
-    expect(kJ).toBeLessThan(4 * 28_800 * 1.001);
+  it("BPD-045 PWR-004 rebalance v1: a hit on THRUST 1's shield costs the energy it brings at 25%: a 40 kg shell at 1,200 m/s (28.8 MJ in the game) about 115 MJ; one that goes off as it hits too, by the mass it had", () => {
+    for (const explosive of [undefined, { charge: 0.05, heat: 30_000_000 / 16, fragments: 0, radius: 0.6, gas: 1.5 }]) {
+      const w = measureWorld(regular);
+      stepInPlace(w, [{ type: "control.set", channel: "action-c", value: 1 }], getProfile("sandbox"));
+      for (let i = 0; i < 240; i++) stepInPlace(w, [], getProfile("sandbox")); // the field grown to its radius
+      const hull = w.bodies.find((b) => b.id === "hull")!;
+      const v = 300; // 1,200 m/s in the game
+      const shell = { id: "incoming", shape: { ...SHELL.shape }, mass: SHELL.mass, position: { x: hull.position.x + 20, y: hull.position.y }, velocity: { x: hull.velocity.x - v, y: hull.velocity.y }, angle: 0, angularVelocity: 0, restitution: 0, friction: 0.05, ...(explosive ? { explosive } : {}) };
+      stepInPlace(w, [{ type: "body.add", body: shell }], getProfile("sandbox"));
+      for (let i = 0; i < 60 && !w.events.some((e) => e.type === "shield.hit"); i++) stepInPlace(w, [], getProfile("sandbox"));
+      const hit = w.events.find((e) => e.type === "shield.hit");
+      expect(hit?.data.by).toBe("incoming");
+      // ½ μ v² ÷ 0.25, μ the shell's mass against the whole ship's (65.7 t in the game): just under 4 × 28.8 MJ.
+      const kJ = Number(hit!.data.energy) * 16384;
+      expect(kJ).toBeGreaterThan(0.97 * 4 * 28_800);
+      expect(kJ).toBeLessThan(4 * 28_800 * 1.001);
+      if (explosive) expect(w.bodies.some((b) => b.id === "incoming")).toBe(false); // it went off
+    }
   });
 
   it("BPD-046 a blueprint played in a game: its parts numbered as the game's ships, round its cockpit, its hull and gun named, and its wiring with the actions on the game's controls", () => {
