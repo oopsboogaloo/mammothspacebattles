@@ -901,6 +901,11 @@ before heavy welds can be added."
 
 Tests: BPD-055 (`tests/app/weldsize.test.ts`).
 
+**THRUST 1's light thrusters, 18 November 2026 (Chloe):** reverse, and flying on the light thrusters
+alone when the main engine is lost, felt lacking against THRUST OG's. Their flow is raised from 1.45
+to 1.51 kg/s each (`LIGHT_RATE`), which brings reverse to THRUST OG's: 9.82 m/s² (THRUST OG 9.81, 9.43
+before). Forward is 35.7 m/s² (THRUST OG 36.1) and turning 9.9 rad/s² (9.3).
+
 ## Sources
 
 - Apple Human Interface Guidelines, Sliders (pair a slider with a text field and stepper):

@@ -788,8 +788,10 @@ describe("engines with chambers (design rules §5; Chloe, 16 November 2026)", as
       return { sealed: !!w.bodies.find((x) => x.id === "main")!.injector!.vessel, w };
     };
     expect(thrustOf(regular).sealed).toBe(true);
-    // The estimate is the same, engine by engine (the model's jet is the throat's, as before).
-    expect(engines(regular).map((e) => e.thrust)).toEqual(engines(bp).map((e) => e.thrust));
+    // The estimate is the same, engine by engine, but for the light thrusters' flow: 1.51 kg/s, not
+    // 1.45, so its reverse matches THRUST OG's (Chloe, 18 November 2026).
+    const og = engines(bp);
+    engines(regular).forEach((e, i) => expect(e.thrust).toBeCloseTo(og[i].thrust * (e.id === "main" ? 1 : 1.51 / 1.45), 6));
   }, 60_000);
   it("BPD-048 in a 10 s flight, forward and turning both ways, THRUST 1's engine walls hold their angles to their heads (within 1°) and no weld breaks", () => {
     const w = measureWorld(regular);
