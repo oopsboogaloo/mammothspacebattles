@@ -19,8 +19,8 @@ test("BPD-017 the sandbox's start screen links to the designer, which opens on T
   const scrolls = await page.evaluate(() => [document.documentElement.scrollHeight > innerHeight, document.documentElement.scrollWidth > innerWidth]);
   expect(scrolls).toEqual([false, false]);
   // THRUST 1: smaller wing tanks for its engines' chambers, and its welds weigh 1.5 t (the game's units:
-  // docs/units-rescale-plan.md); with its pilot, a 4 t mammoth (docs/rebalance-v1.md).
-  await expect(page.getByTestId("performance")).toContainText("65.71 t · 61.71 t without the pilot");
+  // docs/units-rescale-plan.md); with its pilot, a 4 t mammoth (docs/rebalance-v1.md), and its 3 t shield emitter.
+  await expect(page.getByTestId("performance")).toContainText("68.40 t · 64.40 t without the pilot");
 });
 
 test("BPD-018 select an engine and type a new nozzle length: a preset is copied, the walls change, and undo puts them back", async ({ page }) => {
@@ -156,7 +156,7 @@ test("BPD-025 Measure runs the real physics in the background and shows the meas
   await openFresh(page);
   await page.getByTestId("measure").click();
   await expect(page.getByTestId("performance")).toContainText("✓ measured", { timeout: 30_000 });
-  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward13\d\.\d m\/s² ✓/); // with its 4 t pilot (docs/rebalance-v1.md)
+  await expect(page.getByTestId("performance")).toContainText(/Accel\. forward12\d\.\d m\/s² ✓/); // with its 4 t pilot (docs/rebalance-v1.md) and 3 t shield emitter
   // A change makes it an estimate again; undo brings the measurement back.
   await page.getByTestId("part-main").locator("polygon").nth(1).click();
   const rate = page.getByTestId("param-rate");

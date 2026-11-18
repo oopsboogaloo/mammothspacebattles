@@ -43,13 +43,16 @@ describe("blueprint model", () => {
     expect(regular.ship.links.filter((l) => l.kind === "ammo").map((l) => [l.kind === "ammo" && l.from, l.to])).toEqual([["mag-l", "gun"], ["mag-r", "gun"]]);
     // The same mass but for its smaller wing tanks (room for its engines' chambers), its welds,
     // which weigh something (THRUST OG's don't), its shells (about the same mass: 512 new for 120
-    // old) and its pilot; its centre lower, the 20 kg of shells being in the magazines, not the nose.
+    // old), its pilot, and its shield emitter (3 t in the game, twice the winch's size); its centre lower, the 20 kg of shells being in the magazines, not the nose.
     const [o, r] = [stats(bp), stats(regular)];
     const tanks = (b: typeof bp) => ["tank-l", "tank-r"].reduce((sum, id) => sum + body(b, id).mass + body(b, id).contents!.reduce((a, c) => a + c.mass, 0), 0);
     const weld = [...weldMasses(regular).values()].reduce((a, m) => a + m, 0);
     expect([...weldMasses(bp).values()]).toEqual([]);
     const shells = (b: typeof bp) => b.ship.bodies.reduce((a, x) => a + (x.magazine ? x.magazine.count * x.magazine.shell.mass : 0) + (x.ammo ? x.ammo.count * x.ammo.shell.mass : 0), 0);
-    expect(r.mass).toBeCloseTo(o.mass - tanks(bp) + tanks(regular) + weld - shells(bp) + shells(regular) + PILOT.mass, 9);
+    const emitter = (b: typeof bp) => body(b, "shield").mass;
+    expect(emitter(regular)).toBe(3000 / 1024);
+    expect(body(regular, "shield").shape).toEqual({ kind: "box", width: 2 * (body(regular, "tether").shape as { width: number }).width, height: (body(regular, "tether").shape as { height: number }).height });
+    expect(r.mass).toBeCloseTo(o.mass - tanks(bp) + tanks(regular) + weld - shells(bp) + shells(regular) + PILOT.mass - emitter(bp) + emitter(regular), 9);
     expect(r.pilot).toBe(PILOT.mass);
     expect(o.pilot).toBe(0);
     expect(r.com.y).toBeLessThan(o.com.y - 0.2);
@@ -762,7 +765,7 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     body(b, "shield").mass += 1;
     const w = body(b, "shield").shape as { width: number };
     const wider = setParam(b, "shield", "width", w.width * 2);
-    expect(body(wider, "shield").mass).toBeCloseTo(0.3 * 2 + 1, 9);
+    expect(body(wider, "shield").mass).toBeCloseTo((3000 / 1024) * 2 + 1, 9);
   });
 
   it("BPD-046 a blueprint played in a game: its parts numbered as the game's ships, round its cockpit, its hull and gun named, and its wiring with the actions on the game's controls", () => {

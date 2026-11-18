@@ -334,6 +334,16 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   // Its tanks, magazines, battery, generators and what draws power, from the design rules: at Thrust's sizes, Thrust's figures.
   for (const c of bp.components) applyRules(bp, c.id);
   reammo(bp);
+  // The shield emitter (Chloe, 18 November 2026): 3 t, twice the tether winch's size (two side by
+  // side, 4.4 × 1.6 m in the game), its bottom where it was. The parts around it are to be rearranged.
+  {
+    const winch = body(bp, "tether").shape as { width: number; height: number };
+    const was = body(bp, "shield").shape as { height: number };
+    bp = setParam(bp, "shield", "width", winch.width * 2);
+    bp = setParam(bp, "shield", "height", winch.height);
+    bp = moveComponent(bp, "shield", 0, (winch.height - was.height) / 2);
+    body(bp, "shield").mass = SHIELD_EMITTER_MASS;
+  }
   // The railgun stands on the shield emitter, not through it (in the game it overlaps it by 0.12 m).
   const lift = overlapLift(bp, "gun");
   if (lift > 0) bp = moveComponent(bp, "gun", 0, lift);
@@ -356,6 +366,8 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   return bp;
 }
 
+/** THRUST 1's shield emitter, kg (3 t in the game; Chloe, 18 November 2026). */
+const SHIELD_EMITTER_MASS = 3000 / 1024;
 /** THRUST 1's wing tanks, m tall (THRUST OG's are 1.0): room for the light thrusters' chambers. */
 const THRUST_TANK_HEIGHT = 0.8;
 /**
