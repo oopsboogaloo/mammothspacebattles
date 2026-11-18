@@ -791,6 +791,8 @@ describe("engines with chambers (design rules §5; Chloe, 16 November 2026)", as
     // The estimate is the same, engine by engine, but for the light thrusters' flow: 1.51 kg/s, not
     // 1.45, so its reverse matches THRUST OG's (Chloe, 18 November 2026).
     const og = engines(bp);
+    expect(og.length).toBe(5);
+    og.forEach((e) => expect(e.thrust).toBeGreaterThan(0));
     engines(regular).forEach((e, i) => expect(e.thrust).toBeCloseTo(og[i].thrust * (e.id === "main" ? 1 : 1.51 / 1.45), 6));
   }, 60_000);
   it("BPD-048 in a 10 s flight, forward and turning both ways, THRUST 1's engine walls hold their angles to their heads (within 1°) and no weld breaks", () => {
