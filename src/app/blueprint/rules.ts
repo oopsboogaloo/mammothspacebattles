@@ -88,11 +88,12 @@ export const CONTAINERS: Record<ContainerKind, ContainerRule> = {
 };
 
 /**
- * The gun (Chloe, 16 November 2026): bullets fired by their own propellant, so it needs no power,
- * but slower than a railgun of the same length: 100 m/s from a 0.7 m barrel (the railgun's 144),
- * going as the square root of the length (the propellant's push over the barrel: v² ∝ length).
+ * The gun (Chloe, 16 November 2026): bullets fired by their own propellant, so it needs no power:
+ * 150 m/s from a 0.7 m barrel (600 m/s from 2.8 m in the game), going as the square root of the
+ * length (the propellant's push over the barrel: v² ∝ length). It was 100 m/s; Chloe, 19 November
+ * 2026: the Mastodon's bullets bounced off everything, 50% faster.
  */
-export const GUN = { speed: 100, length: 0.7, muzzle: 0.16 } as const;
+export const GUN = { speed: 150, length: 0.7, muzzle: 0.16 } as const;
 export const gunSpeed = (length: number) => round(GUN.speed * Math.sqrt(length / GUN.length), 3);
 
 /** A bullet: the railgun's shell's mass, in a cartridge that takes twice the room. */

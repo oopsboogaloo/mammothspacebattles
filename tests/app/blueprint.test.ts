@@ -856,16 +856,16 @@ describe("the gun and the bullet magazine (Chloe, 16 November 2026)", async () =
     expect(containerSpec("bullets", box(2, 2), 0.1).holds).toBe(Math.floor((1.8 * 1.8 * 480) / 2));
   });
 
-  it("BPD-047 the gun needs no power; its muzzle speed comes from its barrel's length: 100 m/s at 0.7 m (the railgun's 144), as the square root", () => {
-    expect(gunSpeed(0.7)).toBe(100);
-    expect(gunSpeed(2.8)).toBe(200);
+  it("BPD-047 the gun needs no power; its muzzle speed comes from its barrel's length: 150 m/s at 0.7 m (Chloe, 19 November 2026: 50% up from 100), as the square root", () => {
+    expect(gunSpeed(0.7)).toBe(150);
+    expect(gunSpeed(2.8)).toBe(300);
     const g = body(m, "gun-l");
-    expect(g.magazine!.railgun).toMatchObject({ speed: 100 });
+    expect(g.magazine!.railgun).toMatchObject({ speed: 150 });
     expect(g.magazine!.railgun!.shot).toBeUndefined();
     expect(component(m, "gun-l").part).toBe("gun");
     // A longer barrel: faster, and its muzzle at the new end.
     const long = setParam(m, "gun-ol", "height", 1.4);
-    expect(body(long, "gun-ol").magazine!.railgun!.speed).toBeCloseTo(141.421, 3);
+    expect(body(long, "gun-ol").magazine!.railgun!.speed).toBeCloseTo(212.132, 3);
     expect(body(long, "gun-ol").magazine!.at).toEqual({ x: 0, y: 0.86 });
     // The Mastodon: four guns, two bullet magazines feeding all four, and no power system.
     expect(m.components.filter((c) => c.part === "gun")).toHaveLength(4);
@@ -876,7 +876,7 @@ describe("the gun and the bullet magazine (Chloe, 16 November 2026)", async () =
 
   it("BPD-047 the Mastodon's guns fire with no power: Action A empties its bullet magazines", () => {
     const [r] = measureNow(m, [{ "action-a": 1 }]);
-    // Four guns firing, with a recoil in proportion to 100 m/s, not 144.
+    // Four guns firing, with a recoil in proportion to their 150 m/s.
     expect(r.ahead).toBeLessThan(-4);
   }, 60_000);
 });
