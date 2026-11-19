@@ -2,7 +2,7 @@
 // mass and thrust; select by clicking; pan by dragging the empty grid; zoom with the wheel, a pinch
 // or the buttons.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { addComponent, allOverlaps, body, component, componentAngle, componentBounds, componentSize, engineGeom, engines, GRID, jointPoint, moveComponent, place, resizable, resizeComponent, rotateComponent, SNAP, stats, TURN_STEP, weldingOf, welds, withoutNewOverlaps, worldPoint, worldVertices, type Blueprint, type Kind } from "./model.ts";
+import { addComponent, allOverlaps, body, component, muzzles, componentAngle, componentBounds, componentSize, engineGeom, engines, GRID, jointPoint, moveComponent, place, resizable, resizeComponent, rotateComponent, SNAP, stats, TURN_STEP, weldingOf, welds, withoutNewOverlaps, worldPoint, worldVertices, type Blueprint, type Kind } from "./model.ts";
 import { current, edit, endGesture, live, mode, overlays, placing, preview, say, selection, type Placing } from "./store.ts";
 import { testHeld } from "./Controls.tsx";
 import { loadsFor } from "./tryLoads.ts";
@@ -249,6 +249,22 @@ export function BlueprintView({ onZoom }: { onZoom?: (z: number) => void }) {
               const bad = crossing.has(c.id);
               return <polygon key={id} points={pts} fill={colour} fill-opacity={on ? 0.3 : 0.16} stroke={bad ? "#ff7b7b" : colour} stroke-width={on ? 2 : bad ? 2 : 1.3} stroke-dasharray={bad ? "5 3" : undefined} stroke-linejoin="round" data-overlap={bad ? "1" : undefined} />;
             })}
+          </g>
+        );
+      })}
+      {/* Where each gun fires from (Chloe, 19 November 2026): a chevron at its muzzle, pointing the way its shells fly; red if something blocks it. */}
+      {muzzles(bp).map((m, i) => {
+        const s = Math.max(7, 0.14 * v.zoom);
+        const x = sx(m.at.x);
+        const y = sy(m.at.y);
+        const d = { x: m.dir.x, y: -m.dir.y };
+        const n = { x: -d.y, y: d.x };
+        const tip = { x: x + d.x * s, y: y + d.y * s };
+        const colour = m.blocked ? "#ff7b7b" : "#ffd27a";
+        return (
+          <g key={`muzzle-${i}`} pointer-events="none" data-testid={`muzzle-${m.comp}`} data-blocked={m.blocked ? "1" : undefined}>
+            <line x1={x - d.x * s * 0.6} y1={y - d.y * s * 0.6} x2={tip.x} y2={tip.y} stroke={colour} stroke-width={1.5} stroke-dasharray="2 2" />
+            <polygon points={`${tip.x},${tip.y} ${x + n.x * s * 0.55},${y + n.y * s * 0.55} ${x - n.x * s * 0.55},${y - n.y * s * 0.55}`} fill={colour} fill-opacity={0.9} />
           </g>
         );
       })}

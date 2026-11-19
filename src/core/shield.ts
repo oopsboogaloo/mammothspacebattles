@@ -174,13 +174,18 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
   let changed = false;
   if (gens.length) {
     const roots = assemblyRoots(world);
+    const served = new Set<string>();
     for (const gen of gens) {
       const s = gen.shield!;
       const linked = world.links.some((l) => l.kind === "control" && l.to === gen.id && l.channel === s.channel && l.integrity > 0 && !l.off);
       const host = world.bodies.find((b) => b.id === s.to);
       const tanks = fuelOf(world, gen, roots);
       const powered = s.draw !== undefined;
-      const held = linked && gen.integrity > 0 && !!host && roots.get(host.id) === roots.get(gen.id) && (world.controls[s.channel] ?? 0) > 0;
+      // One field a ship (Chloe, 19 November 2026: two or three emitters put up two or three shields):
+      // the first of its emitters that can hold it does; the others stand by, drawing nothing, and
+      // one takes over if that one is lost. (The designer gives every emitter the figures of their
+      // area together.)
+      const held = linked && gen.integrity > 0 && !!host && roots.get(host.id) === roots.get(gen.id) && (world.controls[s.channel] ?? 0) > 0 && !served.has(roots.get(gen.id)!);
       // Powered: its steady draw for this step, or it can't stay up.
       if (!held || (powered ? !takeEnergy(world, roots, gen.id, s.draw! * dt) : !tanks.length)) {
         s.r = undefined;
@@ -212,6 +217,7 @@ export function runShields(world: World, dt: number, ops: ShieldOps): boolean {
           changed = true;
         }
       }
+      served.add(roots.get(gen.id)!);
       // The elastic field's spring (SHD-006).
       if (s.spring && spring(world, field, host, s, roots, dt)) changed = true;
       // Its fuel: a steady burn, and more for each hit in the step before (a new contact with the field).
