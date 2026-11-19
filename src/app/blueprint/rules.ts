@@ -205,8 +205,7 @@ const BATTERY_PER_AREA = ((450 * 3600) / G_SPECIFIC / 1000) * BATTERY_MASS_PER_A
  * - generator: 50 kW/kg, 10 × a fuel cell's (THRUST 1's: 102 MW each; Chloe, 18 November 2026,
  *   after flying it: 12.5 kW/kg was nowhere near enough for half the ship).
  * - propellant: ~7 MJ of electricity a kg (H₂ + O₂ at 1 : 8, about 13 MJ/kg, half of it made electric).
- * - shield: up, it drains THRUST 1's battery in 10 s on its own, about 26 s with the generators;
- *   each hit costs the energy it brings at 12.5% (Chloe, 18 November 2026, after flying it: both doubled).
+ * - shield: by its emitter's area (SHIELD, below).
  * - tractor: the beam 60 MW, the tether 20 MW.
  */
 export const POWER = {
@@ -214,14 +213,49 @@ export const POWER = {
   perKg: (7e6 / G_SPECIFIC) / 1000,
   battery: { perArea: BATTERY_PER_AREA, massPerArea: BATTERY_MASS_PER_AREA, chargeFull: 0.05 / (BATTERY_PER_AREA * BATTERY_AREA), min: 0.2, max: 2 },
   generator: { perArea: ((50_000 / G_SPECIFIC) / 1000) * (2 / 0.56), massPerArea: 2 / 0.56, min: 0.3, max: 2 },
-  /** The shield's draw while up (kW), and each hit's: the energy it brings, at this efficiency. */
-  shield: { draw: (BATTERY_PER_AREA * BATTERY_AREA) / 10, hitEfficiency: 0.125 },
   /** A railgun shot, kJ. */
   railgunShot: railgunShot(),
   /** The tractor's beam and its tether, kW. */
   beam: 60e6 / G_ENERGY / 1000,
   tether: 20e6 / G_ENERGY / 1000,
 } as const;
+
+/**
+ * The shield emitter, by its area (Chloe, 19 November 2026; like every part, its shape doesn't
+ * matter). A field of radius R needs an emitter of at least `refArea` × (R ÷ `refRadius`)² (the
+ * emitter a fixed share of the field's area); THRUST 1's, 7.04 m² for its 17.8 m field in the game, is
+ * that minimum. What it has over the minimum, its oversize, buys efficiency:
+ * - its draw while up goes with the field's edge (its radius) and falls with the oversize:
+ *   `draw` × (R ÷ `refRadius`) ÷ oversize (664 MW at the minimum, THRUST 1's: its battery and
+ *   generators hold it about 7 s);
+ * - each hit costs its energy at `hitEfficiency` × oversize, at most `maxEfficiency`;
+ * - it weighs `massPerArea` (THRUST 1's 3 t over its 7.04 m²).
+ * An emitter smaller than its field needs projects only the field it can: the radius is cut to fit.
+ */
+export const SHIELD = {
+  refArea: 7.04 / 16,
+  refRadius: 4.452363,
+  draw: (BATTERY_PER_AREA * BATTERY_AREA) / 5,
+  hitEfficiency: 0.0625,
+  maxEfficiency: 0.5,
+  massPerArea: 3000 / 1024 / (7.04 / 16),
+} as const;
+
+/** A shield emitter's figures from its area and the field radius asked of it (designer's units). */
+export function shieldSpec(area: number, radius: number): { radius: number; oversize: number; draw: number; hitEfficiency: number; mass: number; leastArea: number } {
+  const fits = SHIELD.refRadius * Math.sqrt(area / SHIELD.refArea);
+  const r = Math.min(radius, fits);
+  const leastArea = SHIELD.refArea * (r / SHIELD.refRadius) ** 2;
+  const oversize = leastArea > 0 ? area / leastArea : 1;
+  return {
+    radius: round(r, 6),
+    oversize,
+    draw: round((SHIELD.draw * (r / SHIELD.refRadius)) / oversize, 9),
+    hitEfficiency: round(Math.min(SHIELD.maxEfficiency, SHIELD.hitEfficiency * oversize), 9),
+    mass: round(area * SHIELD.massPerArea, 6),
+    leastArea: round(leastArea, 9),
+  };
+}
 
 /** The pilot (Chloe): a woolly mammoth cow, 4 t, in the cockpit. kg (the designer's units). */
 export const PILOT = { mass: 4000 / 1024 } as const;

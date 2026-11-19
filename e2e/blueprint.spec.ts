@@ -20,7 +20,7 @@ test("BPD-017 the sandbox's start screen links to the designer, which opens on T
   expect(scrolls).toEqual([false, false]);
   // THRUST 1: smaller wing tanks for its engines' chambers, and its welds weigh 1.5 t (the game's units:
   // docs/units-rescale-plan.md); with its pilot, a 4 t mammoth (docs/rebalance-v1.md), its 3 t shield emitter, and 100 shells.
-  await expect(page.getByTestId("performance")).toContainText("47.96 t · 43.96 t without the pilot");
+  await expect(page.getByTestId("performance")).toContainText("48.03 t · 44.03 t without the pilot");
 });
 
 test("BPD-018 select an engine and type a new nozzle length: a preset is copied, the walls change, and undo puts them back", async ({ page }) => {

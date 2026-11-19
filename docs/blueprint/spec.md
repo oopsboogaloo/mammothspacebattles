@@ -971,6 +971,21 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
   pilot aboard. The Phiomia's flow is doubled (0.6 kg/s each in the designer's units): 44.9 m/s²
   forward in the game, 4.9 rad/s² turning, its beams still holding. The Loxodon's is 50% up (0.6):
   61.8 m/s² forward, 6.1 rad/s² turning.
+- **The shield by its emitter's area (Chloe, 19 November 2026; `SHIELD`, `shieldSpec` in rules.ts):**
+  only the area counts, as for every part. A field of radius R needs an emitter of at least 7.04 m² ×
+  (R ÷ 17.8 m)² in the game; its oversize (area ÷ that least) makes it efficient:
+  - draw while up: 664 MW × (R ÷ 17.8 m) ÷ oversize (with the field's edge);
+  - hit efficiency: 6.25% × oversize, at most 50%;
+  - mass: 426 kg per m² (THRUST 1's 3 t);
+  - an emitter too small for the field asked of it projects only what it can: the radius is cut.
+  The emitter's Function tab shows the least area for its field, its draw and its hit efficiency.
+  THRUST 1 keeps the least (7.04 m², 3 t): 664 MW (its battery alone 5 s, with its generators about
+  7 s), hits at 6.25%. Twice the area halves the draw and doubles the efficiency (14 m², 6 t: the
+  shield it had before); four times (28 m², 12 t), its generators hold it up.
+- **THRUST 1's layout (Chloe, 19 November 2026):** the shield emitter is just under the cockpit, as
+  wide as it (4.8 × 1.47 m in the game), with the battery and the main engine moved down 1.47 m
+  under it; the railgun stands on the cockpit's top, 1.6 m lower than it was. 48.03 t full, 44.03 t
+  without the pilot; 184 m/s² forward.
 - **Saved designs load with today's rules** (`withCurrentRules`): every rule is applied again as
   a design is loaded or imported, so the figures that follow from them (power, the shield, the
   railgun's shot, the tractor, what containers hold, the pilot) are today's however they have been

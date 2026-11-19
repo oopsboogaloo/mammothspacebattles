@@ -5,7 +5,7 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, normalizePolygon, polygonArea, steerMixer } from "../../core/index.ts";
-import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, PILOT, POWER, PRESSURE, powerSpec, railgunShot, SHELL, WALL, maxWeldQuality, WALL_DENSITY, WELD_K, WELD_UNLOCK, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
+import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, PILOT, POWER, PRESSURE, powerSpec, railgunShot, SHELL, SHIELD, shieldSpec, WALL, maxWeldQuality, WALL_DENSITY, WELD_K, WELD_UNLOCK, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
 import { shown as show } from "./shown.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
@@ -334,16 +334,6 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   // Its tanks, magazines, battery, generators and what draws power, from the design rules: at Thrust's sizes, Thrust's figures.
   for (const c of bp.components) applyRules(bp, c.id);
   reammo(bp);
-  // The shield emitter (Chloe, 18 November 2026): 3 t, twice the tether winch's size (two side by
-  // side, 4.4 × 1.6 m in the game), its bottom where it was. The parts around it are to be rearranged.
-  {
-    const winch = body(bp, "tether").shape as { width: number; height: number };
-    const was = body(bp, "shield").shape as { height: number };
-    bp = setParam(bp, "shield", "width", winch.width * 2);
-    bp = setParam(bp, "shield", "height", winch.height);
-    bp = moveComponent(bp, "shield", 0, (winch.height - was.height) / 2);
-    body(bp, "shield").mass = SHIELD_EMITTER_MASS;
-  }
   // The magazines (Chloe, 18 November 2026): 100 rounds is plenty, 50 each, in magazines as small as
   // holds them. Each keeps its corner on the cockpit and the generator below it.
   for (const [id, sx] of [["mag-l", -1], ["mag-r", 1]] as const) {
@@ -370,6 +360,23 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   // Chloe, 18 November 2026: reverse (and flying on the light thrusters alone) felt lacking against
   // THRUST OG's; their flow raised until reverse matches it (9.8 m/s², from 9.4 at 1.45 kg/s).
   for (const id of ["back-l", "back-r", "front-l", "front-r"]) bp = setParam(bp, id, "rate", LIGHT_RATE);
+  // The shield emitter (Chloe, 19 November 2026): just under the cockpit, as wide as the space there
+  // between the generators (the cockpit's width), and of the least area its field needs (SHIELD:
+  // 7.04 m² in the game, 3 t). The battery and the main engine under it move down to make room; the
+  // railgun, no longer on the emitter, stands on the cockpit's top.
+  {
+    const hb = boundsOf(worldVertices(body(bp, "hull")));
+    const width = round(hb.maxX - hb.minX, 6);
+    const height = round(SHIELD.refArea / width, 6);
+    for (const id of ["battery", "main"]) bp = moveComponent(bp, id, 0, -height);
+    bp = setParam(bp, "shield", "width", width);
+    bp = setParam(bp, "shield", "height", height);
+    const eb = boundsOf(worldVertices(body(bp, "shield")));
+    bp = moveComponent(bp, "shield", round((hb.minX + hb.maxX) / 2 - (eb.minX + eb.maxX) / 2), round(hb.minY - eb.maxY));
+    bp = setParam(bp, "shield", "radius", SHIELD.refRadius);
+    const gb = boundsOf(worldVertices(body(bp, "gun")));
+    bp = moveComponent(bp, "gun", 0, round(hb.maxY - gb.minY));
+  }
   for (const c of bp.components) bp = reweld(bp, c.id);
   return bp;
 }
@@ -380,8 +387,6 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
  * game, against the standard 0.1 m), so their armour is 78% of the old magazines'.
  */
 const THRUST_MAGAZINE = { width: 0.3125, height: 0.3125 } as const;
-/** THRUST 1's shield emitter, kg (3 t in the game; Chloe, 18 November 2026). */
-const SHIELD_EMITTER_MASS = 3000 / 1024;
 /** THRUST 1's wing tanks, m tall (THRUST OG's are 1.0): room for the light thrusters' chambers. */
 const THRUST_TANK_HEIGHT = 0.8;
 /**
@@ -986,7 +991,7 @@ function fitsLimits(bp: Blueprint, c: Component): boolean {
 /** After a container's outline changes: back within its limits (or refused), its walls no thicker than it allows, and its rules applied. */
 function afterReshape(before: Blueprint, after: Blueprint, compId: string): Blueprint {
   const c = component(after, compId);
-  if (powerKind(c) || c.part === "gun") {
+  if (powerKind(c) || c.part === "gun" || c.part === "shield-emitter") {
     if (!fitsLimits(after, c)) return before;
     applyRules(after, compId);
     return after;
@@ -1043,11 +1048,14 @@ export function applyRules(bp: Blueprint, compId: string): void {
   }
   for (const id of c.bodies) {
     const x = body(bp, id);
+    // The shield, from its emitter's area and the field asked of it (Chloe, 19 November 2026).
     if (c.part === "shield-emitter" && x.shield) {
       const { hitDraw: _h, minHitDraw: _m, ...rest } = x.shield;
       void _h;
       void _m;
-      x.shield = { ...rest, ...POWER.shield };
+      const s = shieldSpec(Math.abs(polygonArea(shapeVertices(x.shape))), x.shield.radius);
+      x.shield = { ...rest, radius: s.radius, draw: s.draw, hitEfficiency: s.hitEfficiency };
+      x.mass = s.mass;
     }
     // A shot draws its shell's energy at the rule's efficiency: as its muzzle speed is set.
     if (c.part === "railgun" && x.magazine?.railgun) x.magazine = { ...x.magazine, railgun: { ...x.magazine.railgun, shot: railgunShot(x.magazine.shell.mass, x.magazine.railgun.speed) } };
@@ -1125,6 +1133,12 @@ export function withCurrentRules(bp: Blueprint): Blueprint {
   for (const c of out.components) applyRules(out, c.id);
   reammo(out);
   return out;
+}
+
+/** A battery's note: how long it alone holds the ship's shields up. */
+function shieldNote(bp: Blueprint, capacity: number): string {
+  const draw = bp.ship.bodies.reduce((s, x) => s + (x.shield?.draw ?? 0), 0);
+  return draw > 0 ? `. About ${round(capacity / draw, 1)} s of shield alone` : "";
 }
 
 /** Shell feeds (WPN-015): every store of shells feeds every gun that fires shells like them. */
@@ -1655,7 +1669,7 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   if (ck) ps.push(...containerParams(bp, c, ck));
   if (pk && b.power) {
     const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "function", readonly: true, note });
-    if (pk === "battery") ps.push(ro("capacity", "Stores", "kJ", b.power.capacity ?? 0, 0, `${Math.round(show(POWER.battery.perArea, "kJ") / show(1, "m²"))} kJ per m²; full at the start. About ${round((b.power.capacity ?? 0) / POWER.shield.draw, 1)} s of shield alone`));
+    if (pk === "battery") ps.push(ro("capacity", "Stores", "kJ", b.power.capacity ?? 0, 0, `${Math.round(show(POWER.battery.perArea, "kJ") / show(1, "m²"))} kJ per m²; full at the start. ${shieldNote(bp, b.power.capacity ?? 0)}`));
     else ps.push(ro("output", "Makes up to", "kW", b.power.output ?? 0, 0, `${Math.round(show(POWER.generator.perArea, "kW") / show(1, "m²"))} kW per m², burning ${round(show((b.power.output ?? 0) / POWER.perKg, "kg/s"), 1)} kg/s of propellant at full; only while the batteries aren't full`));
   }
   for (const s of ck ? [] : (b.contents ?? [])) {
@@ -1678,6 +1692,15 @@ function partParams(bp: Blueprint, compId: string): Param[] {
     );
   }
   if (b.shield) ps.push({ key: "radius", label: "Shield radius", unit: "m", value: b.shield.radius, min: 0.5, max: 20, step: 0.05, decimals: 2, tab: "function" });
+  if (b.shield && c.part === "shield-emitter") {
+    const s = shieldSpec(Math.abs(polygonArea(shapeVertices(b.shape))), b.shield.radius);
+    const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "function", readonly: true, note });
+    ps.push(
+      ro("leastArea", "Least emitter for this field", "m²", s.leastArea, 2, `Its area is ${round(s.oversize, 2)} × that: the bigger, the cheaper the shield to run and to hit`),
+      ro("shieldDraw", "Draws while up", "kW", s.draw, 0, "With the field's radius, and less as the emitter is bigger"),
+      ro("hitEfficiency", "Hit efficiency", "%", round(s.hitEfficiency * 100, 2), 1, "Each hit costs its energy at this efficiency: more as the emitter is bigger, at most 50%"),
+    );
+  }
   if (!ck && !pk) ps.push(mass());
   if (c.pilot) ps.push({ key: "pilot", label: "Pilot", unit: "kg", value: c.pilot, min: 0, max: 1e9, step: 1, decimals: 0, tab: "build", readonly: true, note: "A woolly mammoth cow, in the cockpit" });
   else if (pk) ps.push({ ...mass(), readonly: true, note: "From its size (the design rules)" });
@@ -1814,7 +1837,11 @@ function setOther(bp: Blueprint, c: Component, key: string, value: number): Blue
   else if (key === "reload" && b.magazine) b.magazine.reload = value;
   else if (key === "range" && b.tractor) b.tractor.range = value;
   else if (key === "force" && b.tractor) b.tractor.force = value;
-  else if (key === "radius" && b.shield) b.shield.radius = value;
+  else if (key === "radius" && b.shield) {
+    b.shield.radius = value;
+    // Its draw and efficiency follow (and a field too big for the emitter is cut to fit it).
+    if (c.part === "shield-emitter") applyRules(out, compId);
+  }
   return out;
 }
 
