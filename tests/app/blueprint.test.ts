@@ -776,9 +776,23 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     const saved = structuredClone(regular);
     body(saved, "shield").shield = { ...body(saved, "shield").shield!, draw: 202.5 / 20, hitEfficiency: 0.25 };
     for (const id of ["gen-l", "gen-r"]) body(saved, id).power = { output: 1.5625, perKg: 437.5 };
+    // Its shells as they were shaped then: boxes (since 19 November 2026, discs).
+    for (const id of ["mag-l", "mag-r"]) body(saved, id).ammo!.shell.shape = { kind: "box", width: 0.125, height: 0.105 };
+    body(saved, "gun").magazine!.shell.shape = { kind: "box", width: 0.125, height: 0.105 };
     expect(withCurrentRules(saved)).toEqual(regular);
     expect(withCurrentRules(regular)).toEqual(regular);
     expect(withCurrentRules(bp)).toEqual(bp);
+  });
+
+  it("BPD-047 projectiles are discs (Chloe, 19 November 2026), of the area of the boxes they were: THRUST 1's shells and the Mastodon's bullets", async () => {
+    const { BULLET } = await import("../../src/app/blueprint/rules.ts");
+    const { mastodonPreset: mast } = await import("../../src/app/blueprint/model.ts");
+    expect(SHELL.shape.kind).toBe("disc");
+    expect(Math.PI * SHELL.shape.radius ** 2).toBeCloseTo(0.125 * 0.105, 5);
+    expect(Math.PI * BULLET.shape.radius ** 2).toBeCloseTo(0.22 * 0.22, 5);
+    expect(body(regular, "gun").magazine!.shell.shape).toEqual(SHELL.shape);
+    const m = mast(scn);
+    for (const b of m.ship.bodies) for (const sh of [b.magazine?.shell, b.ammo?.shell]) if (sh) expect(sh.shape).toEqual(BULLET.shape);
   });
 
   it("BPD-045 a part with a pilot aboard, resized: its own mass goes with its area, the pilot's stays", async () => {

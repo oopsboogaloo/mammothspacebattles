@@ -1107,6 +1107,18 @@ export function rebalanceV1(bp: Blueprint): Blueprint {
  */
 export function withCurrentRules(bp: Blueprint): Blueprint {
   const out = clone(rebalanceV1(bp));
+  // The regular parts' shells and bullets as they are shaped today (discs since 19 November 2026).
+  for (const c of out.components) {
+    if (!["railgun", "magazine", "gun", "bullet-magazine"].includes(c.part ?? "")) continue;
+    for (const id of c.bodies) {
+      const b = body(out, id);
+      for (const sh of [b.magazine?.shell, b.ammo?.shell]) {
+        if (!sh) continue;
+        if (sh.mass === SHELL.mass) sh.shape = { ...SHELL.shape };
+        else if (sh.mass === BULLET.mass) sh.shape = { ...BULLET.shape };
+      }
+    }
+  }
   for (const c of out.components) applyRules(out, c.id);
   reammo(out);
   return out;

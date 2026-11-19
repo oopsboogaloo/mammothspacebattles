@@ -96,8 +96,15 @@ export const CONTAINERS: Record<ContainerKind, ContainerRule> = {
 export const GUN = { speed: 150, length: 0.7, muzzle: 0.16 } as const;
 export const gunSpeed = (length: number) => round(GUN.speed * Math.sqrt(length / GUN.length), 3);
 
-/** A bullet: the railgun's shell's mass, in a cartridge that takes twice the room. */
-export const BULLET = { shape: { kind: "box" as const, width: 0.22, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05 };
+/** A disc of the same area as a box w × h, m (Chloe, 19 November 2026: projectiles are discs). */
+const discOf = (w: number, h: number) => ({ kind: "disc" as const, radius: Math.round(Math.sqrt((w * h) / Math.PI) * 1e6) / 1e6 });
+
+/**
+ * A bullet: the railgun's old shell's mass, in a cartridge that takes twice the room. A disc (Chloe,
+ * 19 November 2026) of the area of the 0.22 m square it was: 0.99 m across in the game. A disc has
+ * no corners to catch and tumble on, and is the cheaper shape to collide.
+ */
+export const BULLET = { shape: discOf(0.22, 0.22), mass: 0.166667, restitution: 0, friction: 0.05 };
 
 /** The propellant's mixture by mass: H₂ : O₂ is 1 : 8 (the game's). */
 export const MIXTURE = { h2: 1 / 9, o2: 8 / 9 } as const;
@@ -179,9 +186,10 @@ const G_SPECIFIC = 16;
 
 /**
  * The railgun's shell (Chloe): 40 kg at 1,200 m/s, 28.8 MJ (it was 171 kg at 576 m/s). Its size goes
- * with its mass at the old shell's density. A shot draws its energy at 40%: 72 MJ.
+ * with its mass at the old shell's density: a disc (Chloe, 19 November 2026) of the area of a
+ * 0.5 × 0.42 m box, 0.52 m across in the game. A shot draws its energy at 40%: 72 MJ.
  */
-export const SHELL = { mass: 40 / 1024, speed: 1200 / 4, shape: { kind: "box" as const, width: 0.125, height: 0.105 }, efficiency: 0.4 } as const;
+export const SHELL = { mass: 40 / 1024, speed: 1200 / 4, shape: discOf(0.125, 0.105), efficiency: 0.4 } as const;
 /** A railgun shot, kJ (the designer's units). */
 export const railgunShot = (mass: number = SHELL.mass, speed: number = SHELL.speed): number => (0.5 * mass * speed * speed) / SHELL.efficiency / 1000;
 
