@@ -790,8 +790,11 @@ export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
 
 /** The Phiomia's engines: 0.5 m chambers, a 0.25 m throat, nozzles flared to the chamber's inside. */
 const phiomiaEngine = (): Rocket => ({ chamberWidth: 0.5, chamberLength: 0.35, headHeight: 0.15, throat: 0.25, nozzleLength: 0.5, flare: round(Math.atan((0.5 - 2 * 0.1 - 0.25) / 2 / 0.5) / DEG, 6), wall: 0.1, nozzleMass: 0.3 });
-/** Each engine's flow at full, kg/s: gentle, for a ship held together by its beams. */
-const PHIOMIA_FLOW = 0.3;
+/**
+ * Each engine's flow at full, kg/s: gentle, for a ship held together by its beams. Doubled from 0.3
+ * (Chloe, 19 November 2026): it was struggling with its 4 t pilot aboard.
+ */
+const PHIOMIA_FLOW = 0.6;
 
 // ---------- the Loxodon (Chloe's sketch, 16 November 2026) ----------
 
@@ -871,8 +874,8 @@ export function loxodonPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
 
 /** The Loxodon's engines: a 0.5 m square housing (head, chamber and throat), and a 0.45 m nozzle flared out to 0.54 m. */
 const loxodonEngine = (): Rocket => ({ chamberWidth: 0.5, chamberLength: 0.3, headHeight: 0.1, throat: 0.25, nozzleLength: 0.45, flare: round(Math.atan((0.54 - 0.25) / 2 / 0.45) / DEG, 6), wall: 0.1, nozzleMass: 0.3 });
-/** Each engine's flow at full, kg/s. */
-const LOXODON_FLOW = 0.4;
+/** Each engine's flow at full, kg/s: 50% up from 0.4 (Chloe, 19 November 2026: struggling with its 4 t pilot aboard). */
+const LOXODON_FLOW = 0.6;
 /** A turn alone: the far engine's throttle. Forward and a turn: how far the near engine eases. */
 const LOXODON_TURN = 0.4;
 const LOXODON_EASE = 0.5;

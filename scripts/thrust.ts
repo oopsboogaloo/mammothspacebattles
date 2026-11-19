@@ -456,7 +456,7 @@ write({
   title: "The surface",
   description: "Fly down to the pod in the valley, take it on the tether with the tractor beam, and carry it up past the top. The turret on the shoulder runs on its own capacitor, generator and fuel.",
   colour: "#7a7a28",
-  top: 90,
+  top: 180, // Chloe, 19 November 2026: twice as high as it was (90 m), to leave the level
   // Right to left: the open space is above.
   ground: [
     P(102.2, 36.7), P(98.6, 36.6), P(92.0, 39.3), P(85.78, 38.4), P(82.98, 38.4), P(80.0, 38.3), P(78.4, 37.5), P(77.5, 31.3),
@@ -547,7 +547,7 @@ write({
     title: "The chamber",
     description: "The pod is in a chamber at the foot of a shaft, under two turrets. Fly down, take it on the tether, and carry it up the shaft and past the top.",
     colour: "#9d1ab8",
-    top: 120,
+    top: 240, // Chloe, 19 November 2026: twice as high as it was (120 m), to leave the level
     ground,
     caves: [ground.slice(mouth[0], mouth[1] + 1)],
     caveBelow: 40,
@@ -622,7 +622,7 @@ write({
     title: "The canyon",
     description: "The pod stands on a pillar at the bottom of a canyon, under eight electric turrets and a power plant. Fly down, take it on the tether, and carry it back up and past the top.",
     colour: "#2f74c0",
-    top: 70,
+    top: 140, // Chloe, 19 November 2026: twice as high as it was (70 m), to leave the level
     ground,
     caves: [ground.slice(mouth[0], mouth[1] + 1)],
     caveBelow: -30,
@@ -697,7 +697,7 @@ write({
     title: "The winding cave",
     description: "The pod is at the bottom of a winding cave, past six electric turrets. Fly down, take it on the tether, and carry it back up and past the top.",
     colour: "#3fa35a",
-    top: 90,
+    top: 180, // Chloe, 19 November 2026: twice as high as it was (90 m), to leave the level
     ground,
     caves: [ground.slice(mouth[0], mouth[1] + 1)],
     caveBelow: 0,
@@ -915,7 +915,7 @@ write({
     title: "The warren",
     description: "Caves layered under a roof of rock, a power plant deep inside and the pod on the floor below it. Fly in, take the pod on the tether, and carry it out past the top.",
     colour: "#8a5c94",
-    top: 100,
+    top: 200, // Chloe, 19 November 2026: twice as high as it was (100 m), to leave the level
     ground,
     caves: [ground.slice(mouth[0], mouth[1] + 1)],
     start: P(-125, 40),
@@ -1193,7 +1193,7 @@ write({
     title: "The airbase",
     description: "An airbase over a cavern, three gunships parked by the shaft: the first lifts off when you come near, the next once it is down. Fly down the shaft, take the pod on the tether, and carry it up past the top.",
     colour: "#1fd81f",
-    top: 82,
+    top: 164, // Chloe, 19 November 2026: twice as high as it was (82 m), to leave the level
     ground,
     caves: [ground.slice(21, 101)],
     start: P(-112, 57),

@@ -1076,10 +1076,10 @@ describe("the Phiomia (Chloe's sketch, 16 November 2026)", async () => {
     expect(response(ph, { left: 1 }).turn).toBeLessThan(0);
   });
 
-  it("BPD-050 measured: gentle, about 5.6 m/s² forward with its 4 t pilot (7.4 without; rebalance v1) and 2.5 rad/s² turning (its nozzles working, PRP-012), both ways alike; forward alone goes straight", () => {
+  it("BPD-050 measured: about 11.2 m/s² forward with its 4 t pilot and its engines' flow doubled (Chloe, 19 November 2026; 5.6 before) and 4.9 rad/s² turning (its nozzles working, PRP-012), both ways alike; forward alone goes straight", () => {
     const r = measureNow(ph, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
-    expect(r[0].ahead).toBeGreaterThan(4.5);
-    expect(r[0].ahead).toBeLessThan(7);
+    expect(r[0].ahead).toBeGreaterThan(9.5);
+    expect(r[0].ahead).toBeLessThan(13);
     expect(Math.abs(r[0].turn)).toBeLessThan(0.5);
     expect(Math.abs(r[0].side)).toBeLessThan(0.5);
     expect(r[1].turn).toBeLessThan(-2);
@@ -1145,14 +1145,14 @@ describe("the Loxodon (Chloe's sketch, 16 November 2026)", async () => {
     expect(response(lx, { left: 1 }).turn).toBeGreaterThan(0);
   });
 
-  it("BPD-051 measured: about 10.3 m/s² forward with its 4 t pilot (14 without; rebalance v1), going straight; 4.1 rad/s² turning, both ways alike", () => {
+  it("BPD-051 measured: about 15.5 m/s² forward with its 4 t pilot and its engines' flow 50% up (Chloe, 19 November 2026; 10.3 before), going straight; 6.1 rad/s² turning, both ways alike", () => {
     const r = measureNow(lx, [{ forward: 1 }, { left: 1 }, { right: 1 }]);
-    expect(r[0].ahead).toBeGreaterThan(9);
-    expect(r[0].ahead).toBeLessThan(12);
+    expect(r[0].ahead).toBeGreaterThan(13.5);
+    expect(r[0].ahead).toBeLessThan(17.5);
     expect(Math.abs(r[0].turn)).toBeLessThan(0.3);
     expect(Math.abs(r[0].side)).toBeLessThan(0.3);
-    expect(r[1].turn).toBeGreaterThan(3.5);
-    expect(r[1].turn).toBeLessThan(6);
+    expect(r[1].turn).toBeGreaterThan(5);
+    expect(r[1].turn).toBeLessThan(7.5);
     expect(Math.abs(r[1].turn + r[2].turn)).toBeLessThan(0.3);
     expect(r.map((x) => x.broke)).toEqual([0, 0, 0]);
   }, 120_000);

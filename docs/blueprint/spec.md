@@ -967,6 +967,10 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
 - **After the second play (Chloe, 18 November 2026):** the shield draws twice as much while up
   (332 MW: THRUST 1's battery in 10 s alone, about 26 s with its generators), and each hit costs
   its energy at 12.5% (twice as dear).
+- **The Phiomia's and Loxodon's engines (Chloe, 19 November 2026):** both struggled with the 4 t
+  pilot aboard. The Phiomia's flow is doubled (0.6 kg/s each in the designer's units): 44.9 m/s²
+  forward in the game, 4.9 rad/s² turning, its beams still holding. The Loxodon's is 50% up (0.6):
+  61.8 m/s² forward, 6.1 rad/s² turning.
 - **Saved designs load with today's rules** (`withCurrentRules`): every rule is applied again as
   a design is loaded or imported, so the figures that follow from them (power, the shield, the
   railgun's shot, the tractor, what containers hold, the pilot) are today's however they have been
