@@ -871,10 +871,15 @@ describe("the gun and the bullet magazine (Chloe, 16 November 2026)", async () =
   });
 
   it("BPD-047 the gun needs no power; its muzzle speed comes from its barrel's length: 150 m/s at 0.7 m (Chloe, 19 November 2026: 50% up from 100), as the square root", () => {
+    // In the designer's units (the core's: lengths ÷4 against the game's). The Mastodon's barrels are
+    // 0.7 m (2.8 m in the game) and fire at 150 m/s (600 m/s in the game); a barrel four times as
+    // long, twice as fast.
     expect(gunSpeed(0.7)).toBe(150);
     expect(gunSpeed(2.8)).toBe(300);
     const g = body(m, "gun-l");
+    expect((g.shape as { height: number }).height).toBe(0.7);
     expect(g.magazine!.railgun).toMatchObject({ speed: 150 });
+    for (const id of ["gun-l", "gun-r", "gun-ol", "gun-or"]) expect(body(m, id).magazine!.railgun!.speed * 4).toBe(600); // the game's m/s
     expect(g.magazine!.railgun!.shot).toBeUndefined();
     expect(component(m, "gun-l").part).toBe("gun");
     // A longer barrel: faster, and its muzzle at the new end.

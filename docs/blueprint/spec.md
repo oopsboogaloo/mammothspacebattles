@@ -560,11 +560,12 @@ chemically propelled guns.
 
 - **Gun** (Weapons):
   - It fires bullets launched by their own propellant, so it needs no power.
-  - Its muzzle speed comes from its barrel's length, its height: 100 m/s at 0.7 m, going as the
-    square root of the length. The propellant's push over the barrel gives v² ∝ length.
-  - So it is slower than a railgun of the same length (144 m/s at 0.7 m).
-  - *Chloe, 19 November 2026: 150 m/s at 0.7 m (50% faster; the Mastodon's 2.8 m barrels fire at
-    600 m/s in the game, 31 MJ a bullet). Its bullets bounced off everything.*
+  - Its muzzle speed comes from its barrel's length, its height: 150 m/s at 0.7 m (600 m/s from
+    2.8 m in the game), going as the square root of the length. The propellant's push over the
+    barrel gives v² ∝ length.
+  - *As first set (16 November 2026): 100 m/s at 0.7 m, slower than the railgun of then (144 m/s).*
+  - *Chloe, 19 November 2026: 50% faster (the Mastodon's bullets bounced off everything): 31 MJ a
+    bullet in the game, from 13.7.*
   - *Chloe, 19 November 2026: projectiles are discs.* The bullet is a disc of the area of the 0.22 m
     square it was (0.99 m across in the game), and so is THRUST 1's railgun shell (0.52 m across, the
     area of its 0.5 × 0.42 m box). A disc has no corners to catch and tumble on, and is the cheaper
