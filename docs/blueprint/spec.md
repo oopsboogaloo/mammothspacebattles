@@ -979,6 +979,11 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
   - mass: 426 kg per m² (THRUST 1's 3 t);
   - an emitter too small for the field asked of it projects only what it can: the radius is cut.
   The emitter's Function tab shows the least area for its field, its draw and its hit efficiency.
+  **Several emitters make one shield** (Chloe, 19 November 2026; SHD-007): their areas are summed,
+  and every emitter gets the shield of that total, at the largest field radius asked of any (setting
+  one's radius sets them all). In the game the first that can holds the one field and the others
+  stand by, drawing nothing; one takes over if that one is lost. Two of THRUST 1's emitters: half
+  the draw and twice the efficiency.
   THRUST 1 keeps the least (7.04 m², 3 t): 664 MW (its battery alone 5 s, with its generators about
   7 s), hits at 6.25%. Twice the area halves the draw and doubles the efficiency (14 m², 6 t: the
   shield it had before); four times (28 m², 12 t), its generators hold it up.

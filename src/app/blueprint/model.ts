@@ -1053,9 +1053,9 @@ export function applyRules(bp: Blueprint, compId: string): void {
       const { hitDraw: _h, minHitDraw: _m, ...rest } = x.shield;
       void _h;
       void _m;
-      const s = shieldSpec(Math.abs(polygonArea(shapeVertices(x.shape))), x.shield.radius);
-      x.shield = { ...rest, radius: s.radius, draw: s.draw, hitEfficiency: s.hitEfficiency };
-      x.mass = s.mass;
+      x.shield = rest;
+      x.mass = shieldSpec(Math.abs(polygonArea(shapeVertices(x.shape))), x.shield.radius).mass;
+      reshield(bp);
     }
     // A shot draws its shell's energy at the rule's efficiency: as its muzzle speed is set.
     if (c.part === "railgun" && x.magazine?.railgun) x.magazine = { ...x.magazine, railgun: { ...x.magazine.railgun, shot: railgunShot(x.magazine.shell.mass, x.magazine.railgun.speed) } };
@@ -1080,7 +1080,7 @@ export function powerStats(bp: Blueprint): { stored: number; output: number; shi
   if (!bodies.some((b) => b.power)) return null;
   const stored = bodies.reduce((s, b) => s + (b.power?.capacity ?? 0), 0);
   const output = bodies.reduce((s, b) => s + (b.power?.output ?? 0), 0);
-  const shieldDraw = bodies.reduce((s, b) => s + (b.shield?.draw ?? 0), 0);
+  const shieldDraw = Math.max(0, ...bodies.map((b) => b.shield?.draw ?? 0)); // one field a ship (SHD-007)
   return { stored, output, shieldDraw, shieldSeconds: shieldDraw > output ? stored / (shieldDraw - output) : Infinity };
 }
 
@@ -1135,9 +1135,28 @@ export function withCurrentRules(bp: Blueprint): Blueprint {
   return out;
 }
 
+/** The regular shield emitters' bodies (THRUST OG's keeps its own figures). */
+const shieldEmitters = (bp: Blueprint): BodyInput[] => bp.components.filter((c) => c.part === "shield-emitter").map((c) => body(bp, c.bodies[0])).filter((b) => !!b.shield);
+
+/**
+ * One field a ship (Chloe, 19 November 2026; SHD-007): its emitters' areas are summed, and every
+ * emitter gets the shield of that total, at the largest field radius asked of any. In the game the
+ * first that can holds the field; the others stand by.
+ */
+function reshield(bp: Blueprint): void {
+  const ems = shieldEmitters(bp);
+  if (!ems.length) return;
+  const area = ems.reduce((a, b) => a + Math.abs(polygonArea(shapeVertices(b.shape))), 0);
+  const s = shieldSpec(area, Math.max(...ems.map((b) => b.shield!.radius)));
+  for (const b of ems) b.shield = { ...b.shield!, radius: s.radius, draw: s.draw, hitEfficiency: s.hitEfficiency };
+}
+
+/** The ship's emitters' area together, m². */
+const shieldArea = (bp: Blueprint): number => shieldEmitters(bp).reduce((a, b) => a + Math.abs(polygonArea(shapeVertices(b.shape))), 0);
+
 /** A battery's note: how long it alone holds the ship's shields up. */
 function shieldNote(bp: Blueprint, capacity: number): string {
-  const draw = bp.ship.bodies.reduce((s, x) => s + (x.shield?.draw ?? 0), 0);
+  const draw = Math.max(0, ...bp.ship.bodies.map((x) => x.shield?.draw ?? 0)); // one field a ship
   return draw > 0 ? `. About ${round(capacity / draw, 1)} s of shield alone` : "";
 }
 
@@ -1693,10 +1712,11 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   }
   if (b.shield) ps.push({ key: "radius", label: "Shield radius", unit: "m", value: b.shield.radius, min: 0.5, max: 20, step: 0.05, decimals: 2, tab: "function" });
   if (b.shield && c.part === "shield-emitter") {
-    const s = shieldSpec(Math.abs(polygonArea(shapeVertices(b.shape))), b.shield.radius);
+    const total = shieldArea(bp);
+    const s = shieldSpec(total, b.shield.radius);
     const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "function", readonly: true, note });
     ps.push(
-      ro("leastArea", "Least emitter for this field", "m²", s.leastArea, 2, `Its area is ${round(s.oversize, 2)} × that: the bigger, the cheaper the shield to run and to hit`),
+      ro("leastArea", "Least emitter for this field", "m²", s.leastArea, 2, `${total > Math.abs(polygonArea(shapeVertices(b.shape))) + 1e-9 ? "The ship's emitters together have" : "Its area is"} ${round(s.oversize, 2)} × that: the bigger, the cheaper the shield to run and to hit`),
       ro("shieldDraw", "Draws while up", "kW", s.draw, 0, "With the field's radius, and less as the emitter is bigger"),
       ro("hitEfficiency", "Hit efficiency", "%", round(s.hitEfficiency * 100, 2), 1, "Each hit costs its energy at this efficiency: more as the emitter is bigger, at most 50%"),
     );
@@ -1839,8 +1859,11 @@ function setOther(bp: Blueprint, c: Component, key: string, value: number): Blue
   else if (key === "force" && b.tractor) b.tractor.force = value;
   else if (key === "radius" && b.shield) {
     b.shield.radius = value;
-    // Its draw and efficiency follow (and a field too big for the emitter is cut to fit it).
-    if (c.part === "shield-emitter") applyRules(out, compId);
+    // One field a ship: every emitter's (their draw and efficiency follow, and a field too big for them is cut to fit).
+    if (c.part === "shield-emitter") {
+      for (const e of shieldEmitters(out)) e.shield!.radius = value;
+      reshield(out);
+    }
   }
   return out;
 }
@@ -2056,6 +2079,7 @@ export function removeComponent(bp: Blueprint, compId: string): Blueprint {
   out.ship.links = out.ship.links.filter((l) => !("to" in l && gone.has(l.to as string)) && !("from" in l && gone.has((l as { from: string }).from)));
   out.components = out.components.filter((x) => x.id !== compId);
   out.mix = { ...out.mix, rows: out.mix.rows.filter((r: MixerRow) => !channels.has(r.channel)) };
+  reshield(out);
   return out;
 }
 
@@ -2385,6 +2409,7 @@ export function addComponent(bp: Blueprint, made: { comp: Component; bodies: Bod
   refeed(out);
   reammo(out);
   relink(out);
+  reshield(out);
   return reweld(out, made.comp.id);
 }
 

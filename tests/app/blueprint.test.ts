@@ -674,7 +674,7 @@ function resizeOk(b: Parameters<typeof resizeOk0>[0], id: string, w: number, h: 
 describe("design rules: power (design-rules-proposal.md §4)", async () => {
   const { powerStats, mastodonPreset } = await import("../../src/app/blueprint/model.ts");
   const { measureWorld } = await import("../../src/app/blueprint/measure.ts");
-  const { getProfile, stepInPlace } = await import("../../src/core/index.ts");
+  const { getProfile, powerOf, stepInPlace } = await import("../../src/core/index.ts");
   const { withBlueprint } = await import("../../src/app/playtest.ts");
 
   it("BPD-045 rebalance v1, real-world power: THRUST 1's battery stores 3.3 GJ (450 Wh/kg) and its generators make 102 MW each (50 kW/kg; Chloe: 12.5 was nowhere near enough) from 7 MJ a kg of propellant, at Thrust's masses; a shot draws 72 MJ, the beam 60 MW, the tether 20 MW; the OG parts and the Mastodon have none", () => {
@@ -825,6 +825,32 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     const small = setParam(regular, "shield", "radius", R / 2);
     expect(body(small, "shield").shield!.draw).toBeLessThan(least.draw / 2);
     expect(params(regular, "shield").find((p) => p.key === "leastArea")?.value).toBeCloseTo(SHIELD.refArea, 6);
+  });
+
+  it("BPD-045 SHD-007 two shield emitters make one shield of their area together (Chloe, 19 November 2026): one field in the game, drawing half as much, taking hits twice as cheaply; removing one, as before", async () => {
+    const { instantiate: inst, freeSpot: spot, addComponent: add, removeComponent: rm } = await import("../../src/app/blueprint/model.ts");
+    const made = inst(regular, regular, "shield", "Shield emitter");
+    const at = spot(regular, made.bodies, weldingOf(made.comp));
+    const two = add(regular, made, at.dx, at.dy);
+    const ems = two.ship.bodies.filter((b) => b.shield);
+    expect(ems).toHaveLength(2);
+    const one = body(regular, "shield").shield!;
+    for (const e of ems) {
+      expect(e.shield!.draw).toBeCloseTo(one.draw! / 2, 6);
+      expect(e.shield!.hitEfficiency).toBeCloseTo(one.hitEfficiency! * 2, 6);
+    }
+    expect(powerStats(two)!.shieldDraw).toBeCloseTo(one.draw! / 2, 6);
+    expect(rm(two, made.comp.id).ship.bodies.find((b) => b.id === "shield")!.shield).toEqual(one);
+    // In the game, both on Action C: one field, drawing one emitter's figure.
+    two.mix.rows.find((r) => r.channel === made.bodies[0].shield!.channel)!.lines = [{ control: "action-c", weight: 1 }];
+    const w = measureWorld(two);
+    const before = powerOf(w, "hull")!.stored;
+    stepInPlace(w, [{ type: "control.set", channel: "action-c", value: 1 }], getProfile("sandbox"));
+    for (let i = 0; i < 120; i++) stepInPlace(w, [], getProfile("sandbox"));
+    expect(w.bodies.filter((b) => b.id.endsWith("-field"))).toHaveLength(1);
+    // Half a second: the shield's draw less the generators' output (they run flat out while the battery is below full).
+    const spent = before - powerOf(w, "hull")!.stored;
+    expect(spent).toBeCloseTo((one.draw! / 2 - 12.5) * (121 / 240), 0);
   });
 
   it("BPD-045 a part with a pilot aboard, resized: its own mass goes with its area, the pilot's stays", async () => {
