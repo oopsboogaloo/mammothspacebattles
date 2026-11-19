@@ -853,6 +853,56 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     expect(spent).toBeCloseTo((one.draw! / 2 - 12.5) * (121 / 240), 0);
   });
 
+  it("BPD-047 a railgun's barrel (Chloe, 19 November 2026): longer fires faster and dearer, its muzzle moving to the end; its width is fixed, as a gun's", async () => {
+    const { RAILGUN, railgunShot, SHELL } = await import("../../src/app/blueprint/rules.ts");
+    const { muzzles, resizeComponent: resize } = await import("../../src/app/blueprint/model.ts");
+    const g0 = body(regular, "gun");
+    expect(g0.magazine!.railgun!.speed).toBe(RAILGUN.speed); // 1,200 m/s in the game at 2.8 m
+    expect(g0.magazine!.at).toEqual({ x: 0, y: 0.51 });
+    // Four times as long, twice as fast; the shot four times as dear; the muzzle at the new end.
+    const long = setParam(regular, "gun", "height", 2.8);
+    const g = body(long, "gun");
+    expect(g.magazine!.railgun!.speed).toBeCloseTo(2 * RAILGUN.speed, 6);
+    expect(g.magazine!.railgun!.shot).toBeCloseTo(railgunShot(SHELL.mass, 2 * RAILGUN.speed), 9);
+    expect(g.magazine!.railgun!.shot).toBeCloseTo(4 * g0.magazine!.railgun!.shot!, 9);
+    expect(g.magazine!.at).toEqual({ x: 0, y: 1.56 });
+    expect(muzzles(long).find((m) => m.comp === "gun")!.blocked).toBeNull();
+    // Shorter, slower and cheaper.
+    expect(body(setParam(regular, "gun", "height", 0.35), "gun").magazine!.railgun!.speed).toBeLessThan(RAILGUN.speed);
+    // Its width can't be changed, typed or dragged; a gun's neither.
+    expect(setParam(regular, "gun", "width", 0.6)).toBe(regular);
+    const gb = body(regular, "gun");
+    const dragged = resize(regular, "gun", 0.9, 1.0, { x: gb.position.x, y: gb.position.y - 0.35 }, { x: 0, y: 1 });
+    expect((body(dragged, "gun").shape as { width: number }).width).toBe(0.3);
+    expect((body(dragged, "gun").shape as { height: number }).height).toBe(1);
+    const { mastodonPreset: mast } = await import("../../src/app/blueprint/model.ts");
+    const m = mast(scn);
+    expect(setParam(m, "gun-l", "width", 0.6)).toBe(m);
+    expect(params(regular, "gun").find((p) => p.key === "width")?.readonly).toBe(true);
+  });
+
+  it("BPD-047 a gun whose muzzle is covered doesn't fire, and the designer says so; a saved design whose railguns were lengthened before their muzzles followed loads with them clear (Chloe's six-gun THRUST 1)", async () => {
+    const { muzzles, withCurrentRules } = await import("../../src/app/blueprint/model.ts");
+    // A railgun lengthened when its muzzle didn't follow: the muzzle inside its own barrel.
+    const stale = structuredClone(regular);
+    const g = body(stale, "gun");
+    g.shape = { kind: "box", width: 0.3, height: 1.2 };
+    expect(muzzles(stale).find((x) => x.comp === "gun")!.blocked).toBe("gun");
+    // In the game it never fires.
+    stale.mix.rows.find((r) => r.channel === "fire")!.lines = [{ control: "action-a", weight: 1 }];
+    const w = measureWorld(stale);
+    stepInPlace(w, [{ type: "control.set", channel: "action-a", value: 1 }], getProfile("sandbox"));
+    for (let i = 0; i < 120; i++) stepInPlace(w, [], getProfile("sandbox"));
+    expect(w.events.filter((e) => e.type === "railgun.fired")).toHaveLength(0);
+    // Loaded as a saved design: its muzzle at the barrel's end, and it fires.
+    const fixed = withCurrentRules(stale);
+    expect(muzzles(fixed).find((x) => x.comp === "gun")!.blocked).toBeNull();
+    const w2 = measureWorld(fixed);
+    stepInPlace(w2, [{ type: "control.set", channel: "action-a", value: 1 }], getProfile("sandbox"));
+    for (let i = 0; i < 120; i++) stepInPlace(w2, [], getProfile("sandbox"));
+    expect(w2.events.filter((e) => e.type === "railgun.fired").length).toBeGreaterThan(0);
+  });
+
   it("BPD-045 a part with a pilot aboard, resized: its own mass goes with its area, the pilot's stays", async () => {
     const { component: comp } = await import("../../src/app/blueprint/model.ts");
     const b = structuredClone(regular);

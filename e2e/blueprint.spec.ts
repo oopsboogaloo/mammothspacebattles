@@ -506,3 +506,25 @@ test("BPD-046 the game on its own flies its own ship: no way back to a blueprint
   await expect(page.getByTestId("mth-hud")).toBeVisible();
   await expect(page.getByTestId("hud-battery")).toHaveCount(0);
 });
+
+test("BPD-047 each gun shows where it fires from: a marker at its muzzle; lengthened, the railgun's muzzle moves to the end and it stays clear; its width can't be changed", async ({ page }) => {
+  await openFresh(page);
+  const muzzle = page.getByTestId("muzzle-gun");
+  await expect(muzzle).toHaveCount(1);
+  await expect(muzzle).not.toHaveAttribute("data-blocked", "1");
+  await page.getByTestId("fold-stats").click(); // the performance table sits over the railgun
+  await page.getByTestId("part-gun").locator("polygon").first().click();
+  await expect(page.getByTestId("param-width")).toHaveClass(/\bro\b/); // read-only: no input to type in
+  await expect(page.getByTestId("param-width").locator("input.num")).toHaveCount(0);
+  const len = page.getByTestId("param-height").locator("input.num");
+  await len.fill("5.6"); // twice THRUST 1's 2.8 m
+  await len.press("Enter");
+  // The barrel grew up from the cockpit, and the marker is just past its new end (the view re-zooms, so compare with the barrel itself).
+  await expect.poll(async () => (await page.getByTestId("part-gun").boundingBox())!.height).toBeGreaterThan(80);
+  const gunBox = (await page.getByTestId("part-gun").boundingBox())!;
+  const m = (await muzzle.boundingBox())!;
+  expect(m.y + m.height).toBeLessThan(gunBox.y + 4);
+  expect(m.y).toBeGreaterThan(gunBox.y - 40);
+  await expect(muzzle).not.toHaveAttribute("data-blocked", "1");
+  await expect(page.getByTestId("muzzle-blocked")).toHaveCount(0);
+});

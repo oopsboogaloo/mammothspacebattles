@@ -11,7 +11,7 @@ import { measurementOf, measuring, startMeasure } from "./measureClient.ts";
 import { measureKey } from "./measure.ts";
 import { CockpitControls, LineEditor } from "./Controls.tsx";
 import { drop, KIND_COLOUR, placeAt, view } from "./View.tsx";
-import { addComponent, allOverlaps, mirrorComponent, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, weldMass, wallOf, weldPresetOpen, weldPresetsFor, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
+import { addComponent, allOverlaps, mirrorComponent, muzzles, withoutNewOverlaps, body, channelsOf, component, engines, flipComponent, freeSpot, instantiate, KINDS, params, removeComponent, weldingOf, removeWeld, response, RESPONSE_ROWS, setParam, setWeld, stats, WELD_PRESETS, weldMass, wallOf, weldPresetOpen, weldPresetsFor, welds, worldVertices, type Blueprint, type Kind, type Param, type Tab } from "./model.ts";
 import { allBlueprints, baseline, current, drawerOpen, duplicate, edit, endGesture, importBlueprint, live, mine, newBlank, open, parts, placing, presets, preview, remove, rename, say, selection } from "./store.ts";
 
 // ---------- components ----------
@@ -228,6 +228,8 @@ export function PerformanceBox() {
   ];
   const loose = st.pieces > 1;
   const crossing = allOverlaps(bp);
+  // Guns that can't fire: something in front of the muzzle (Chloe, 19 November 2026).
+  const blocked = muzzles(bp).filter((m) => m.blocked);
   return (
     <div class="stats" data-testid="performance">
       <div class="sh">
@@ -255,6 +257,11 @@ export function PerformanceBox() {
       {crossing.length > 0 && (
         <div class="warnrow" data-testid="overlapping">
           ▲ Overlapping: {crossing.map(([a, b]) => `${component(bp, a).label} and ${component(bp, b).label}`).join("; ")}. Move one clear.
+        </div>
+      )}
+      {blocked.length > 0 && (
+        <div class="warnrow" data-testid="muzzle-blocked">
+          ▲ Can't fire: {blocked.map((m) => `${component(bp, m.comp).label}, its muzzle in ${m.blocked === m.comp ? "its own barrel" : component(bp, m.blocked!).label}`).join("; ")}. Clear the way in front of it.
         </div>
       )}
       {loose && (

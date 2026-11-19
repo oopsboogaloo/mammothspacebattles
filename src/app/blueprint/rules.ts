@@ -93,7 +93,7 @@ export const CONTAINERS: Record<ContainerKind, ContainerRule> = {
  * length (the propellant's push over the barrel: v² ∝ length). It was 100 m/s; Chloe, 19 November
  * 2026: the Mastodon's bullets bounced off everything, 50% faster.
  */
-export const GUN = { speed: 150, length: 0.7, muzzle: 0.16 } as const;
+export const GUN = { speed: 150, length: 0.7, muzzle: 0.16, width: 0.3 } as const;
 export const gunSpeed = (length: number) => round(GUN.speed * Math.sqrt(length / GUN.length), 3);
 
 /** A disc of the same area as a box w × h, m (Chloe, 19 November 2026: projectiles are discs). */
@@ -190,6 +190,15 @@ const G_SPECIFIC = 16;
  * 0.5 × 0.42 m box, 0.52 m across in the game. A shot draws its energy at 40%: 72 MJ.
  */
 export const SHELL = { mass: 40 / 1024, speed: 1200 / 4, shape: discOf(0.125, 0.105), efficiency: 0.4 } as const;
+/**
+ * The railgun's barrel (Chloe, 19 November 2026): a longer one fires faster, a shorter one slower,
+ * as the gun's do: the shell's speed goes as the square root of the length (the same push over a
+ * longer barrel: v² ∝ length), 1,200 m/s in the game from THRUST 1's 2.8 m. Its shot's energy goes
+ * with that speed's square. Its muzzle is just past the barrel's end; its width is fixed.
+ */
+export const RAILGUN = { speed: SHELL.speed, length: 0.7, muzzle: 0.16, width: 0.3 } as const;
+export const railgunSpeed = (length: number) => round(RAILGUN.speed * Math.sqrt(length / RAILGUN.length), 3);
+
 /** A railgun shot, kJ (the designer's units). */
 export const railgunShot = (mass: number = SHELL.mass, speed: number = SHELL.speed): number => (0.5 * mass * speed * speed) / SHELL.efficiency / 1000;
 

@@ -991,6 +991,17 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
   wide as it (4.8 × 1.47 m in the game), with the battery and the main engine moved down 1.47 m
   under it; the railgun stands on the cockpit's top, 1.6 m lower than it was. 48.03 t full, 44.03 t
   without the pilot; 184 m/s² forward.
+- **Guns' barrels (Chloe, 19 November 2026):**
+  - A railgun's speed comes from its barrel's length, as the gun's does: 1,200 m/s from THRUST 1's
+    2.8 m, as the square root of the length (`RAILGUN`, `railgunSpeed`); its shot's energy goes with
+    the speed squared, so a longer railgun fires faster and dearer, a shorter one slower and cheaper.
+    Its muzzle speed is read-only.
+  - Both kinds of gun keep their width (read-only; a drag changes only the length) and grow from the
+    breech, where they're mounted, out toward the muzzle; the muzzle stays just past the barrel's end.
+    (A railgun's muzzle used to stay where THRUST 1's barrel put it: a railgun made longer covered its
+    own muzzle and never fired. A saved design loads with its muzzles moved.)
+  - The blueprint marks each gun's muzzle with a chevron pointing the way its shells fly, red if
+    something covers it, and a warning names any gun that can't fire and what is in its way.
 - **Saved designs load with today's rules** (`withCurrentRules`): every rule is applied again as
   a design is loaded or imported, so the figures that follow from them (power, the shield, the
   railgun's shot, the tractor, what containers hold, the pilot) are today's however they have been
