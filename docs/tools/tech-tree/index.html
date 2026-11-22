@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tech Tree · Mammoth Space Battles</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="tech-tree.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="brand-icon" aria-hidden="true">◈</span>MAMMOTH <span>SPACE BATTLES</span></div>
+    <nav class="switch" aria-label="View">
+      <a href="index.html" id="design-mode">Design view</a>
+      <a href="?view=player" id="player-mode">Player view</a>
+    </nav>
+  </header>
+  <main>
+    <section class="intro">
+      <div><h1>Tech Tree</h1><p id="subtitle"></p></div>
+      <span class="badge" id="draft">DRAFT PROGRESSION</span>
+    </section>
+    <p id="error" class="error" role="alert" hidden></p>
+    <div id="workspace" class="workspace">
+      <section class="map" aria-labelledby="map-title">
+        <header class="map-head">
+          <div><h2 id="map-title">Progression map</h2><p id="map-hint">Select an unlock to inspect its prerequisites.</p></div>
+          <button id="fit" type="button" aria-pressed="false">Fit map</button>
+        </header>
+        <div class="viewport" id="viewport" tabindex="0" aria-label="Tech tree, scroll horizontally to see later unlocks">
+          <div id="extent"><div id="graph"></div></div>
+        </div>
+        <footer class="legend" id="legend"></footer>
+      </section>
+      <aside class="inspector" aria-label="Unlock details">
+        <div class="inspector-label" id="inspector-label">UNLOCK DETAILS</div>
+        <div id="details" aria-live="polite"></div>
+      </aside>
+    </div>
+    <section class="repeat" id="repeat" aria-labelledby="loop-title">
+      <div class="repeat-heading"><span aria-hidden="true">↻</span><div><h2 id="loop-title">Off-moon expedition loop</h2><p>Repeatable activity</p></div></div>
+      <ol id="loop"></ol>
+    </section>
+    <section class="opening" id="opening" aria-labelledby="opening-title"><h2 id="opening-title">Opening game</h2><div id="opening-notes"></div></section>
+    <footer class="foot"><span>MAMMOTH SPACE BATTLES</span><span id="foot-detail">Progression prototype</span></footer>
+  </main>
+</body>
+</html>
+
