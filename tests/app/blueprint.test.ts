@@ -684,8 +684,8 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     for (const id of ["gen-l", "gen-r"]) expect(body(regular, id).power!.output! * E).toBeCloseTo(50 * 2048, 6); // kW
     expect(body(regular, "gen-l").power!.perKg! * 16).toBe(7000);
     for (const id of ["battery", "gen-l", "gen-r"]) expect(body(regular, id).mass).toBe(body(bp, id).mass);
-    // The shield, its emitter the least its field needs (Chloe, 19 November 2026): up, it drains the battery in 5 s on its own; each hit costs the energy it brings at 6.25%.
-    expect(body(regular, "shield").shield!.draw).toBeCloseTo(202.5 / 5, 4);
+    // The shield, its emitter the least its field needs (Chloe, 19 November 2026; its draw doubled, 26 November): up, it drains the battery in 2.5 s on its own; each hit costs the energy it brings at 6.25%.
+    expect(body(regular, "shield").shield!.draw).toBeCloseTo((202.5 / 5) * 2, 3);
     expect(body(regular, "shield").shield!.hitEfficiency).toBeCloseTo(0.0625, 6);
     expect(body(regular, "shield").shield!.hitDraw).toBeUndefined();
     // A shot: 40 kg at 1,200 m/s is 28.8 MJ; at 40%, 72 MJ.
@@ -696,10 +696,10 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     expect(Math.floor(202.5 / POWER.railgunShot)).toBe(46);
     // A faster shot draws more: its energy, at 40%.
     expect(body(setParam(regular, "gun", "speed", 150), "gun").magazine!.railgun!.shot).toBeCloseTo(POWER.railgunShot / 4, 9);
-    // The shield (664 MW) outdraws the generators (205 MW): it drains the battery, in about 7 s.
+    // The shield (1,328 MW) far outdraws the generators (205 MW): it drains the battery in about 3 s.
     expect(powerStats(regular)).toMatchObject({ stored: 202.5, output: 12.5 });
-    expect(powerStats(regular)!.shieldDraw).toBeCloseTo(40.5, 4);
-    expect(powerStats(regular)!.shieldSeconds).toBeCloseTo(202.5 / (40.5 - 12.5), 3);
+    expect(powerStats(regular)!.shieldDraw).toBeCloseTo(81, 3);
+    expect(powerStats(regular)!.shieldSeconds).toBeCloseTo(202.5 / (81 - 12.5), 3);
     // THRUST OG is the game's ship: no power system.
     expect(powerStats(bp)).toBeNull();
     expect(body(bp, "shield").shield!.draw).toBeUndefined();
@@ -710,7 +710,7 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     expect(params(regular, "battery").find((p) => p.key === "width")).toMatchObject({ min: 0.2, max: 2 });
   });
 
-  it("BPD-045 rebalance v1: THRUST 1's shield, up with no hits, drains its battery in 5 s alone, about 7 s with its generators running (burning their propellant): its emitter the least its field needs", () => {
+  it("BPD-045 rebalance v1: THRUST 1's shield, up with no hits, drains its battery in 2.5 s alone, about 3 s with its generators running (burning their propellant): its emitter the least its field needs", () => {
     const run = (b: typeof bp, seconds: number) => {
       const w = measureWorld(b);
       const fuel = () => w.bodies.filter((x) => !x.injector).reduce((s, x) => s + (x.contents ?? []).reduce((a, c) => a + c.mass, 0), 0);
@@ -725,16 +725,16 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
       return { burned: f0 - fuel(), upFor };
     };
     const t1 = run(regular, 32);
-    expect(t1.upFor).toBeGreaterThan(6.8);
-    expect(t1.upFor).toBeLessThan(7.6);
+    expect(t1.upFor).toBeGreaterThan(2.8);
+    expect(t1.upFor).toBeLessThan(3.1);
     // The generators burn their propellant for it, flat out (12.5 kW ÷ 437.5 kJ/kg; 29 kg/s in the game) while it is up.
     expect(t1.burned).toBeGreaterThan(0.9 * (12.5 / 437.5) * t1.upFor);
-    // Generators off (still welded in place, holding the wings): the battery alone, 5 s.
+    // Generators off (still welded in place, holding the wings): the battery alone, 2.5 s.
     const noGen = structuredClone(regular);
     for (const id of ["gen-l", "gen-r"]) delete body(noGen, id).power;
-    const r = run(noGen, 7);
-    expect(r.upFor).toBeGreaterThan(4.8);
-    expect(r.upFor).toBeLessThan(5.2);
+    const r = run(noGen, 4);
+    expect(r.upFor).toBeGreaterThan(2.4);
+    expect(r.upFor).toBeLessThan(2.6);
   }, 120_000);
 
   it("BPD-045 PWR-004 rebalance v1: a hit on THRUST 1's shield costs the energy it brings at 6.25% (its emitter the least it may be): a 40 kg shell at 1,200 m/s (28.8 MJ in the game) about 460 MJ; one that goes off as it hits too, by the mass it had", () => {
@@ -804,7 +804,7 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
     const R = SHIELD.refRadius;
     const least = shieldSpec(SHIELD.refArea, R);
     expect(least.oversize).toBeCloseTo(1, 9);
-    expect(least.draw * 16384).toBeCloseTo(664e3, -3); // kW: 664 MW
+    expect(least.draw * 16384).toBeCloseTo((202.5 / 5) * 2 * 16384, -1); // kW: 1,327 MW (twice 664 MW: Chloe, 26 November 2026)
     expect(least.hitEfficiency).toBeCloseTo(0.0625, 9);
     expect(least.mass * 1024).toBeCloseTo(3000, 2);
     // Twice the area: half the draw, twice the efficiency; four times, a quarter and four times.
@@ -939,6 +939,8 @@ describe("design rules: power (design-rules-proposal.md §4)", async () => {
       if (w.contacts.some((c) => [c.a, c.b].includes("wall"))) lastTouch = w.tick;
     }
     expect(w.tick - lastTouch).toBeGreaterThan(240);
+    // Its battery topped up (the shield, held up all this while, has drained it).
+    for (const b of w.bodies) if (b.power?.capacity) b.power.stored = b.power.capacity;
     const back = v - w.bodies.find((b) => b.id === "hull")!.velocity.x;
     for (const b of w.bodies) if (b.id !== "wall") b.velocity = { x: b.velocity.x + back, y: b.velocity.y };
     for (let i = 0; i < 960; i++) stepInPlace(w, [], getProfile("sandbox"));

@@ -991,6 +991,10 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
   wide as it (4.8 × 1.47 m in the game), with the battery and the main engine moved down 1.47 m
   under it; the railgun stands on the cockpit's top, 1.6 m lower than it was. 48.03 t full, 44.03 t
   without the pilot; 184 m/s² forward.
+- **The shield's running draw doubled (Chloe, 26 November 2026):** 1,328 MW at the least emitter for
+  THRUST 1's field (was 664 MW): its battery alone holds it 2.5 s, with its generators about 3 s.
+  Hits cost what they did. Twice the emitter (14 m², 6 t): 664 MW, about 7 s; four times (28 m²,
+  12 t): 332 MW, about 26 s; eight times (56 m², 24 t): 166 MW, held up by the generators.
 - **Guns' barrels (Chloe, 19 November 2026):**
   - A railgun's speed comes from its barrel's length, as the gun's does: 1,200 m/s from THRUST 1's
     2.8 m, as the square root of the length (`RAILGUN`, `railgunSpeed`); its shot's energy goes with

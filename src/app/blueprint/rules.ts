@@ -235,8 +235,8 @@ export const POWER = {
  * emitter a fixed share of the field's area); THRUST 1's, 7.04 m² for its 17.8 m field in the game, is
  * that minimum. What it has over the minimum, its oversize, buys efficiency:
  * - its draw while up goes with the field's edge (its radius) and falls with the oversize:
- *   `draw` × (R ÷ `refRadius`) ÷ oversize (664 MW at the minimum, THRUST 1's: its battery and
- *   generators hold it about 7 s);
+ *   `draw` × (R ÷ `refRadius`) ÷ oversize (1,328 MW at the minimum, THRUST 1's: its battery and
+ *   generators hold it about 3 s; Chloe, 26 November 2026: twice the 664 MW it was);
  * - each hit costs its energy at `hitEfficiency` × oversize, at most `maxEfficiency`;
  * - it weighs `massPerArea` (THRUST 1's 3 t over its 7.04 m²).
  * An emitter smaller than its field needs projects only the field it can: the radius is cut to fit.
@@ -244,7 +244,7 @@ export const POWER = {
 export const SHIELD = {
   refArea: 7.04 / 16,
   refRadius: 4.452363,
-  draw: (BATTERY_PER_AREA * BATTERY_AREA) / 5,
+  draw: ((BATTERY_PER_AREA * BATTERY_AREA) / 5) * 2,
   hitEfficiency: 0.0625,
   maxEfficiency: 0.5,
   massPerArea: 3000 / 1024 / (7.04 / 16),
