@@ -528,3 +528,21 @@ test("BPD-047 each gun shows where it fires from: a marker at its muzzle; length
   await expect(muzzle).not.toHaveAttribute("data-blocked", "1");
   await expect(page.getByTestId("muzzle-blocked")).toHaveCount(0);
 });
+
+test("BPD-046 a ship saved for Play in a game before a rule was retuned flies with today's figures (the shield's draw)", async ({ page }) => {
+  await openFresh(page);
+  await page.getByTestId("play-in").click();
+  await page.getByTestId("play-in-thrust").click();
+  await page.waitForURL(/thrust\.html\?blueprint=1/);
+  // The ship saved as it was before the shield's draw was doubled.
+  await page.evaluate(() => {
+    const bp = JSON.parse(localStorage.getItem("msb.playtest.v1")!);
+    for (const b of bp.ship.bodies) if (b.shield) b.shield.draw = b.shield.draw / 2;
+    localStorage.setItem("msb.playtest.v1", JSON.stringify(bp));
+  });
+  await page.reload();
+  await page.getByTestId("mth-start").click();
+  await expect(page.getByTestId("mth-hud")).toBeVisible();
+  const draw = await page.evaluate(() => (window as unknown as { __msb: { sandbox: () => { world: { bodies: { shield?: { draw?: number } }[] } } } }).__msb.sandbox().world.bodies.find((b) => b.shield)!.shield!.draw!);
+  expect(draw).toBeCloseTo(((202.5 / 5) * 2) * 16384, -2); // kW, in the game's units: 1,327 MW
+});

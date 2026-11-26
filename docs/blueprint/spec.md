@@ -974,7 +974,7 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
 - **The shield by its emitter's area (Chloe, 19 November 2026; `SHIELD`, `shieldSpec` in rules.ts):**
   only the area counts, as for every part. A field of radius R needs an emitter of at least 7.04 m² ×
   (R ÷ 17.8 m)² in the game; its oversize (area ÷ that least) makes it efficient:
-  - draw while up: 664 MW × (R ÷ 17.8 m) ÷ oversize (with the field's edge);
+  - draw while up: 1,328 MW × (R ÷ 17.8 m) ÷ oversize (with the field's edge; 664 MW until 26 November 2026);
   - hit efficiency: 6.25% × oversize, at most 50%;
   - mass: 426 kg per m² (THRUST 1's 3 t);
   - an emitter too small for the field asked of it projects only what it can: the radius is cut.
@@ -984,13 +984,18 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
   one's radius sets them all). In the game the first that can holds the one field and the others
   stand by, drawing nothing; one takes over if that one is lost. Two of THRUST 1's emitters: half
   the draw and twice the efficiency.
-  THRUST 1 keeps the least (7.04 m², 3 t): 664 MW (its battery alone 5 s, with its generators about
-  7 s), hits at 6.25%. Twice the area halves the draw and doubles the efficiency (14 m², 6 t: the
-  shield it had before); four times (28 m², 12 t), its generators hold it up.
+  THRUST 1 keeps the least (7.04 m², 3 t): 1,328 MW (its battery alone 2.5 s, with its generators
+  about 3 s), hits at 6.25%. Twice the area halves the draw and doubles the efficiency; eight times
+  (56 m², 24 t), its generators hold it up. *(Until 26 November 2026 the draw was half that: 664 MW,
+  5 s and about 7 s.)*
 - **THRUST 1's layout (Chloe, 19 November 2026):** the shield emitter is just under the cockpit, as
   wide as it (4.8 × 1.47 m in the game), with the battery and the main engine moved down 1.47 m
   under it; the railgun stands on the cockpit's top, 1.6 m lower than it was. 48.03 t full, 44.03 t
   without the pilot; 184 m/s² forward.
+- **The shield's running draw doubled (Chloe, 26 November 2026):** 1,328 MW at the least emitter for
+  THRUST 1's field (was 664 MW): its battery alone holds it 2.5 s, with its generators about 3 s.
+  Hits cost what they did. Twice the emitter (14 m², 6 t): 664 MW, about 7 s; four times (28 m²,
+  12 t): 332 MW, about 26 s; eight times (56 m², 24 t): 166 MW, held up by the generators.
 - **Guns' barrels (Chloe, 19 November 2026):**
   - A railgun's speed comes from its barrel's length, as the gun's does: 1,200 m/s from THRUST 1's
     2.8 m, as the square root of the length (`RAILGUN`, `railgunSpeed`); its shot's energy goes with
