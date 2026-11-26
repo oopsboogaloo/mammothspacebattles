@@ -2,7 +2,7 @@
 // designs, not the players' path. The designer saves the blueprint and opens a game's page with
 // `?blueprint=1`; every level that game loads then carries the blueprint's ship in place of its own,
 // wired by the blueprint's mixer, and the game's menus offer the way back.
-import { physicsShip, type Blueprint } from "./blueprint/model.ts";
+import { physicsShip, withCurrentRules, type Blueprint } from "./blueprint/model.ts";
 import { scaleShip } from "../core/scaleScenario.ts";
 import { unitsOf } from "../core/migrateUnits.ts";
 
@@ -15,12 +15,16 @@ export function playIn(game: PlaytestGame, bp: Blueprint): void {
   window.location.href = `${game}.html?blueprint=1`;
 }
 
-/** The blueprint this page is playing with, if it was opened from the designer. */
+/**
+ * The blueprint this page is playing with, if it was opened from the designer: with today's rule
+ * figures, as a saved design loads in the designer (a ship saved here before a rule was retuned, the
+ * shield's draw say, would otherwise fly with the old figures).
+ */
 export const playtest: Blueprint | null = (() => {
   try {
     if (typeof window === "undefined" || !new URLSearchParams(window.location.search).has("blueprint")) return null;
     const raw = localStorage.getItem(PLAYTEST_KEY);
-    return raw ? (JSON.parse(raw) as Blueprint) : null;
+    return raw ? withCurrentRules(JSON.parse(raw) as Blueprint) : null;
   } catch {
     return null;
   }
