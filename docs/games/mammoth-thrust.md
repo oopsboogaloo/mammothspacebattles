@@ -501,6 +501,10 @@ Priority: **M** must, **S** should.
   arrives gently.
 - **MTH-024** `[M]` The level is complete when the ship is above the level's top with the pod
   on its tether.
+  *Chloe, 19 November 2026: you left the levels far too low. Every level with a top has it twice
+  as high as before (level 1: 360 → 720 m; 2: 480 → 960; 3: 280 → 560; 4: 360 → 720; 6: 400 →
+  800; 8: 328 → 656), the rock over the sky moved up with it (`scripts/thrust.ts`). Levels 5 and 7
+  (the asteroid and the station) are left by getting far enough out, as before.*
 
 **Turrets and factory**
 - **MTH-030** `[M]` A turret fires only with a clear line to the ship inside its range, and first

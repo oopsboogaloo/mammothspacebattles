@@ -88,15 +88,23 @@ export const CONTAINERS: Record<ContainerKind, ContainerRule> = {
 };
 
 /**
- * The gun (Chloe, 16 November 2026): bullets fired by their own propellant, so it needs no power,
- * but slower than a railgun of the same length: 100 m/s from a 0.7 m barrel (the railgun's 144),
- * going as the square root of the length (the propellant's push over the barrel: v² ∝ length).
+ * The gun (Chloe, 16 November 2026): bullets fired by their own propellant, so it needs no power:
+ * 150 m/s from a 0.7 m barrel (600 m/s from 2.8 m in the game), going as the square root of the
+ * length (the propellant's push over the barrel: v² ∝ length). It was 100 m/s; Chloe, 19 November
+ * 2026: the Mastodon's bullets bounced off everything, 50% faster.
  */
-export const GUN = { speed: 100, length: 0.7, muzzle: 0.16 } as const;
+export const GUN = { speed: 150, length: 0.7, muzzle: 0.16, width: 0.3 } as const;
 export const gunSpeed = (length: number) => round(GUN.speed * Math.sqrt(length / GUN.length), 3);
 
-/** A bullet: the railgun's shell's mass, in a cartridge that takes twice the room. */
-export const BULLET = { shape: { kind: "box" as const, width: 0.22, height: 0.22 }, mass: 0.166667, restitution: 0, friction: 0.05 };
+/** A disc of the same area as a box w × h, m (Chloe, 19 November 2026: projectiles are discs). */
+const discOf = (w: number, h: number) => ({ kind: "disc" as const, radius: Math.round(Math.sqrt((w * h) / Math.PI) * 1e6) / 1e6 });
+
+/**
+ * A bullet: the railgun's old shell's mass, in a cartridge that takes twice the room. A disc (Chloe,
+ * 19 November 2026) of the area of the 0.22 m square it was: 0.99 m across in the game. A disc has
+ * no corners to catch and tumble on, and is the cheaper shape to collide.
+ */
+export const BULLET = { shape: discOf(0.22, 0.22), mass: 0.166667, restitution: 0, friction: 0.05 };
 
 /** The propellant's mixture by mass: H₂ : O₂ is 1 : 8 (the game's). */
 export const MIXTURE = { h2: 1 / 9, o2: 8 / 9 } as const;
@@ -178,9 +186,19 @@ const G_SPECIFIC = 16;
 
 /**
  * The railgun's shell (Chloe): 40 kg at 1,200 m/s, 28.8 MJ (it was 171 kg at 576 m/s). Its size goes
- * with its mass at the old shell's density. A shot draws its energy at 40%: 72 MJ.
+ * with its mass at the old shell's density: a disc (Chloe, 19 November 2026) of the area of a
+ * 0.5 × 0.42 m box, 0.52 m across in the game. A shot draws its energy at 40%: 72 MJ.
  */
-export const SHELL = { mass: 40 / 1024, speed: 1200 / 4, shape: { kind: "box" as const, width: 0.125, height: 0.105 }, efficiency: 0.4 } as const;
+export const SHELL = { mass: 40 / 1024, speed: 1200 / 4, shape: discOf(0.125, 0.105), efficiency: 0.4 } as const;
+/**
+ * The railgun's barrel (Chloe, 19 November 2026): a longer one fires faster, a shorter one slower,
+ * as the gun's do: the shell's speed goes as the square root of the length (the same push over a
+ * longer barrel: v² ∝ length), 1,200 m/s in the game from THRUST 1's 2.8 m. Its shot's energy goes
+ * with that speed's square. Its muzzle is just past the barrel's end; its width is fixed.
+ */
+export const RAILGUN = { speed: SHELL.speed, length: 0.7, muzzle: 0.16, width: 0.3 } as const;
+export const railgunSpeed = (length: number) => round(RAILGUN.speed * Math.sqrt(length / RAILGUN.length), 3);
+
 /** A railgun shot, kJ (the designer's units). */
 export const railgunShot = (mass: number = SHELL.mass, speed: number = SHELL.speed): number => (0.5 * mass * speed * speed) / SHELL.efficiency / 1000;
 
@@ -196,8 +214,7 @@ const BATTERY_PER_AREA = ((450 * 3600) / G_SPECIFIC / 1000) * BATTERY_MASS_PER_A
  * - generator: 50 kW/kg, 10 × a fuel cell's (THRUST 1's: 102 MW each; Chloe, 18 November 2026,
  *   after flying it: 12.5 kW/kg was nowhere near enough for half the ship).
  * - propellant: ~7 MJ of electricity a kg (H₂ + O₂ at 1 : 8, about 13 MJ/kg, half of it made electric).
- * - shield: up, it drains THRUST 1's battery in 10 s on its own, about 26 s with the generators;
- *   each hit costs the energy it brings at 12.5% (Chloe, 18 November 2026, after flying it: both doubled).
+ * - shield: by its emitter's area (SHIELD, below).
  * - tractor: the beam 60 MW, the tether 20 MW.
  */
 export const POWER = {
@@ -205,14 +222,49 @@ export const POWER = {
   perKg: (7e6 / G_SPECIFIC) / 1000,
   battery: { perArea: BATTERY_PER_AREA, massPerArea: BATTERY_MASS_PER_AREA, chargeFull: 0.05 / (BATTERY_PER_AREA * BATTERY_AREA), min: 0.2, max: 2 },
   generator: { perArea: ((50_000 / G_SPECIFIC) / 1000) * (2 / 0.56), massPerArea: 2 / 0.56, min: 0.3, max: 2 },
-  /** The shield's draw while up (kW), and each hit's: the energy it brings, at this efficiency. */
-  shield: { draw: (BATTERY_PER_AREA * BATTERY_AREA) / 10, hitEfficiency: 0.125 },
   /** A railgun shot, kJ. */
   railgunShot: railgunShot(),
   /** The tractor's beam and its tether, kW. */
   beam: 60e6 / G_ENERGY / 1000,
   tether: 20e6 / G_ENERGY / 1000,
 } as const;
+
+/**
+ * The shield emitter, by its area (Chloe, 19 November 2026; like every part, its shape doesn't
+ * matter). A field of radius R needs an emitter of at least `refArea` × (R ÷ `refRadius`)² (the
+ * emitter a fixed share of the field's area); THRUST 1's, 7.04 m² for its 17.8 m field in the game, is
+ * that minimum. What it has over the minimum, its oversize, buys efficiency:
+ * - its draw while up goes with the field's edge (its radius) and falls with the oversize:
+ *   `draw` × (R ÷ `refRadius`) ÷ oversize (664 MW at the minimum, THRUST 1's: its battery and
+ *   generators hold it about 7 s);
+ * - each hit costs its energy at `hitEfficiency` × oversize, at most `maxEfficiency`;
+ * - it weighs `massPerArea` (THRUST 1's 3 t over its 7.04 m²).
+ * An emitter smaller than its field needs projects only the field it can: the radius is cut to fit.
+ */
+export const SHIELD = {
+  refArea: 7.04 / 16,
+  refRadius: 4.452363,
+  draw: (BATTERY_PER_AREA * BATTERY_AREA) / 5,
+  hitEfficiency: 0.0625,
+  maxEfficiency: 0.5,
+  massPerArea: 3000 / 1024 / (7.04 / 16),
+} as const;
+
+/** A shield emitter's figures from its area and the field radius asked of it (designer's units). */
+export function shieldSpec(area: number, radius: number): { radius: number; oversize: number; draw: number; hitEfficiency: number; mass: number; leastArea: number } {
+  const fits = SHIELD.refRadius * Math.sqrt(area / SHIELD.refArea);
+  const r = Math.min(radius, fits);
+  const leastArea = SHIELD.refArea * (r / SHIELD.refRadius) ** 2;
+  const oversize = leastArea > 0 ? area / leastArea : 1;
+  return {
+    radius: round(r, 6),
+    oversize,
+    draw: round((SHIELD.draw * (r / SHIELD.refRadius)) / oversize, 9),
+    hitEfficiency: round(Math.min(SHIELD.maxEfficiency, SHIELD.hitEfficiency * oversize), 9),
+    mass: round(area * SHIELD.massPerArea, 6),
+    leastArea: round(leastArea, 9),
+  };
+}
 
 /** The pilot (Chloe): a woolly mammoth cow, 4 t, in the cockpit. kg (the designer's units). */
 export const PILOT = { mass: 4000 / 1024 } as const;

@@ -5,7 +5,9 @@
 // returns a new blueprint. The Thrust 1 preset is the Thrust game's ship exactly, until edited.
 import type { BodyInput, JointInput, LinkInput, Mixer, MixerRow, Shape, Vec2 } from "../../core/index.ts";
 import { bodyMass, inertiaOf, mixerValues, normalizePolygon, polygonArea, steerMixer } from "../../core/index.ts";
-import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, PILOT, POWER, PRESSURE, powerSpec, railgunShot, SHELL, WALL, maxWeldQuality, WALL_DENSITY, WELD_K, WELD_UNLOCK, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
+import { collide } from "../../core/collide.ts";
+import { add, sinCos } from "../../core/math.ts";
+import { BULLET, burnEfficiency, CONTAINERS, containerSpec, GUN, gunSpeed, holdPressure, MIXTURE, maxWall, PILOT, POWER, PRESSURE, powerSpec, railgunShot, RAILGUN, railgunSpeed, SHELL, SHIELD, shieldSpec, WALL, maxWeldQuality, WALL_DENSITY, WELD_K, WELD_UNLOCK, weldLimits, weldPointMass, type ContainerKind, type PowerKind } from "./rules.ts";
 import { shown as show } from "./shown.ts";
 
 export type Kind = "cockpit" | "engine" | "tank" | "storage" | "weapon" | "generator" | "battery" | "utility" | "frame";
@@ -334,16 +336,6 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   // Its tanks, magazines, battery, generators and what draws power, from the design rules: at Thrust's sizes, Thrust's figures.
   for (const c of bp.components) applyRules(bp, c.id);
   reammo(bp);
-  // The shield emitter (Chloe, 18 November 2026): 3 t, twice the tether winch's size (two side by
-  // side, 4.4 × 1.6 m in the game), its bottom where it was. The parts around it are to be rearranged.
-  {
-    const winch = body(bp, "tether").shape as { width: number; height: number };
-    const was = body(bp, "shield").shape as { height: number };
-    bp = setParam(bp, "shield", "width", winch.width * 2);
-    bp = setParam(bp, "shield", "height", winch.height);
-    bp = moveComponent(bp, "shield", 0, (winch.height - was.height) / 2);
-    body(bp, "shield").mass = SHIELD_EMITTER_MASS;
-  }
   // The magazines (Chloe, 18 November 2026): 100 rounds is plenty, 50 each, in magazines as small as
   // holds them. Each keeps its corner on the cockpit and the generator below it.
   for (const [id, sx] of [["mag-l", -1], ["mag-r", 1]] as const) {
@@ -370,6 +362,23 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
   // Chloe, 18 November 2026: reverse (and flying on the light thrusters alone) felt lacking against
   // THRUST OG's; their flow raised until reverse matches it (9.8 m/s², from 9.4 at 1.45 kg/s).
   for (const id of ["back-l", "back-r", "front-l", "front-r"]) bp = setParam(bp, id, "rate", LIGHT_RATE);
+  // The shield emitter (Chloe, 19 November 2026): just under the cockpit, as wide as the space there
+  // between the generators (the cockpit's width), and of the least area its field needs (SHIELD:
+  // 7.04 m² in the game, 3 t). The battery and the main engine under it move down to make room; the
+  // railgun, no longer on the emitter, stands on the cockpit's top.
+  {
+    const hb = boundsOf(worldVertices(body(bp, "hull")));
+    const width = round(hb.maxX - hb.minX, 6);
+    const height = round(SHIELD.refArea / width, 6);
+    for (const id of ["battery", "main"]) bp = moveComponent(bp, id, 0, -height);
+    bp = setParam(bp, "shield", "width", width);
+    bp = setParam(bp, "shield", "height", height);
+    const eb = boundsOf(worldVertices(body(bp, "shield")));
+    bp = moveComponent(bp, "shield", round((hb.minX + hb.maxX) / 2 - (eb.minX + eb.maxX) / 2), round(hb.minY - eb.maxY));
+    bp = setParam(bp, "shield", "radius", SHIELD.refRadius);
+    const gb = boundsOf(worldVertices(body(bp, "gun")));
+    bp = moveComponent(bp, "gun", 0, round(hb.maxY - gb.minY));
+  }
   for (const c of bp.components) bp = reweld(bp, c.id);
   return bp;
 }
@@ -380,8 +389,6 @@ export function thrustPreset(scenario: Parameters<typeof thrustShip>[0]): Bluepr
  * game, against the standard 0.1 m), so their armour is 78% of the old magazines'.
  */
 const THRUST_MAGAZINE = { width: 0.3125, height: 0.3125 } as const;
-/** THRUST 1's shield emitter, kg (3 t in the game; Chloe, 18 November 2026). */
-const SHIELD_EMITTER_MASS = 3000 / 1024;
 /** THRUST 1's wing tanks, m tall (THRUST OG's are 1.0): room for the light thrusters' chambers. */
 const THRUST_TANK_HEIGHT = 0.8;
 /**
@@ -790,8 +797,11 @@ export function phiomiaPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
 
 /** The Phiomia's engines: 0.5 m chambers, a 0.25 m throat, nozzles flared to the chamber's inside. */
 const phiomiaEngine = (): Rocket => ({ chamberWidth: 0.5, chamberLength: 0.35, headHeight: 0.15, throat: 0.25, nozzleLength: 0.5, flare: round(Math.atan((0.5 - 2 * 0.1 - 0.25) / 2 / 0.5) / DEG, 6), wall: 0.1, nozzleMass: 0.3 });
-/** Each engine's flow at full, kg/s: gentle, for a ship held together by its beams. */
-const PHIOMIA_FLOW = 0.3;
+/**
+ * Each engine's flow at full, kg/s: gentle, for a ship held together by its beams. Doubled from 0.3
+ * (Chloe, 19 November 2026): it was struggling with its 4 t pilot aboard.
+ */
+const PHIOMIA_FLOW = 0.6;
 
 // ---------- the Loxodon (Chloe's sketch, 16 November 2026) ----------
 
@@ -871,8 +881,8 @@ export function loxodonPreset(scenario: Parameters<typeof thrustShip>[0]): Bluep
 
 /** The Loxodon's engines: a 0.5 m square housing (head, chamber and throat), and a 0.45 m nozzle flared out to 0.54 m. */
 const loxodonEngine = (): Rocket => ({ chamberWidth: 0.5, chamberLength: 0.3, headHeight: 0.1, throat: 0.25, nozzleLength: 0.45, flare: round(Math.atan((0.54 - 0.25) / 2 / 0.45) / DEG, 6), wall: 0.1, nozzleMass: 0.3 });
-/** Each engine's flow at full, kg/s. */
-const LOXODON_FLOW = 0.4;
+/** Each engine's flow at full, kg/s: 50% up from 0.4 (Chloe, 19 November 2026: struggling with its 4 t pilot aboard). */
+const LOXODON_FLOW = 0.6;
 /** A turn alone: the far engine's throttle. Forward and a turn: how far the near engine eases. */
 const LOXODON_TURN = 0.4;
 const LOXODON_EASE = 0.5;
@@ -983,7 +993,7 @@ function fitsLimits(bp: Blueprint, c: Component): boolean {
 /** After a container's outline changes: back within its limits (or refused), its walls no thicker than it allows, and its rules applied. */
 function afterReshape(before: Blueprint, after: Blueprint, compId: string): Blueprint {
   const c = component(after, compId);
-  if (powerKind(c) || c.part === "gun") {
+  if (powerKind(c) || c.part === "gun" || c.part === "railgun" || c.part === "shield-emitter") {
     if (!fitsLimits(after, c)) return before;
     applyRules(after, compId);
     return after;
@@ -1040,14 +1050,21 @@ export function applyRules(bp: Blueprint, compId: string): void {
   }
   for (const id of c.bodies) {
     const x = body(bp, id);
+    // The shield, from its emitter's area and the field asked of it (Chloe, 19 November 2026).
     if (c.part === "shield-emitter" && x.shield) {
       const { hitDraw: _h, minHitDraw: _m, ...rest } = x.shield;
       void _h;
       void _m;
-      x.shield = { ...rest, ...POWER.shield };
+      x.shield = rest;
+      x.mass = shieldSpec(Math.abs(polygonArea(shapeVertices(x.shape))), x.shield.radius).mass;
+      reshield(bp);
     }
-    // A shot draws its shell's energy at the rule's efficiency: as its muzzle speed is set.
-    if (c.part === "railgun" && x.magazine?.railgun) x.magazine = { ...x.magazine, railgun: { ...x.magazine.railgun, shot: railgunShot(x.magazine.shell.mass, x.magazine.railgun.speed) } };
+    // The railgun (Chloe, 19 November 2026): its speed from its barrel's length, its muzzle just past
+    // the barrel's end, and a shot drawing its shell's energy at that speed.
+    if (c.part === "railgun" && x.magazine?.railgun && x.shape.kind === "box") {
+      const speed = railgunSpeed(x.shape.height);
+      x.magazine = { ...x.magazine, at: { x: 0, y: round(x.shape.height / 2 + RAILGUN.muzzle, 6) }, railgun: { ...x.magazine.railgun, speed, shot: railgunShot(x.magazine.shell.mass, speed) } };
+    }
     // The gun: its muzzle speed from its barrel's length, its muzzle at the barrel's end; no power.
     if (c.part === "gun" && x.magazine?.railgun && x.shape.kind === "box") {
       const { shot: _free, ...launch } = x.magazine.railgun;
@@ -1069,7 +1086,7 @@ export function powerStats(bp: Blueprint): { stored: number; output: number; shi
   if (!bodies.some((b) => b.power)) return null;
   const stored = bodies.reduce((s, b) => s + (b.power?.capacity ?? 0), 0);
   const output = bodies.reduce((s, b) => s + (b.power?.output ?? 0), 0);
-  const shieldDraw = bodies.reduce((s, b) => s + (b.shield?.draw ?? 0), 0);
+  const shieldDraw = Math.max(0, ...bodies.map((b) => b.shield?.draw ?? 0)); // one field a ship (SHD-007)
   return { stored, output, shieldDraw, shieldSeconds: shieldDraw > output ? stored / (shieldDraw - output) : Infinity };
 }
 
@@ -1107,9 +1124,73 @@ export function rebalanceV1(bp: Blueprint): Blueprint {
  */
 export function withCurrentRules(bp: Blueprint): Blueprint {
   const out = clone(rebalanceV1(bp));
+  // The regular parts' shells and bullets as they are shaped today (discs since 19 November 2026).
+  for (const c of out.components) {
+    if (!["railgun", "magazine", "gun", "bullet-magazine"].includes(c.part ?? "")) continue;
+    for (const id of c.bodies) {
+      const b = body(out, id);
+      for (const sh of [b.magazine?.shell, b.ammo?.shell]) {
+        if (!sh) continue;
+        if (sh.mass === SHELL.mass) sh.shape = { ...SHELL.shape };
+        else if (sh.mass === BULLET.mass) sh.shape = { ...BULLET.shape };
+      }
+    }
+  }
   for (const c of out.components) applyRules(out, c.id);
   reammo(out);
   return out;
+}
+
+/** A regular gun (chemical or railgun): its width is fixed, its length its barrel. */
+export const isBarrel = (c: Component): boolean => c.part === "gun" || c.part === "railgun";
+/** A barrel's least and most length, m. */
+const BARREL = { min: 0.3, max: 3 } as const;
+
+/**
+ * Where each regular gun's shells come out (its muzzle, in the ship's frame), the way they fly, and
+ * what is in the way there if anything (the gun's own barrel, or another part): a blocked gun
+ * doesn't fire (WPN-008).
+ */
+export function muzzles(bp: Blueprint): { comp: string; at: Vec2; dir: Vec2; blocked: string | null }[] {
+  const out: { comp: string; at: Vec2; dir: Vec2; blocked: string | null }[] = [];
+  for (const c of bp.components) {
+    for (const id of c.bodies) {
+      const b = body(bp, id);
+      if (!b.magazine) continue;
+      const a = (b.angle ?? 0) + (b.magazine.angle ?? 0);
+      const at = add(b.position, rot(b.magazine.at, b.angle ?? 0));
+      const dir = rot({ x: 0, y: 1 }, a);
+      const placed = { shape: b.magazine.shell.shape as Shape, position: at, rot: sinCos(a) };
+      const hit = bp.ship.bodies.find((o) => collide(placed, { shape: o.shape as Shape, position: o.position, rot: sinCos(o.angle ?? 0) }, 0, 0)?.points.some((p) => p.separation < 0));
+      out.push({ comp: c.id, at, dir, blocked: hit ? (bp.components.find((x) => x.bodies.includes(hit.id))?.id ?? hit.id) : null });
+    }
+  }
+  return out;
+}
+
+/** The regular shield emitters' bodies (THRUST OG's keeps its own figures). */
+const shieldEmitters = (bp: Blueprint): BodyInput[] => bp.components.filter((c) => c.part === "shield-emitter").map((c) => body(bp, c.bodies[0])).filter((b) => !!b.shield);
+
+/**
+ * One field a ship (Chloe, 19 November 2026; SHD-007): its emitters' areas are summed, and every
+ * emitter gets the shield of that total, at the largest field radius asked of any. In the game the
+ * first that can holds the field; the others stand by.
+ */
+function reshield(bp: Blueprint): void {
+  const ems = shieldEmitters(bp);
+  if (!ems.length) return;
+  const area = ems.reduce((a, b) => a + Math.abs(polygonArea(shapeVertices(b.shape))), 0);
+  const s = shieldSpec(area, Math.max(...ems.map((b) => b.shield!.radius)));
+  for (const b of ems) b.shield = { ...b.shield!, radius: s.radius, draw: s.draw, hitEfficiency: s.hitEfficiency };
+}
+
+/** The ship's emitters' area together, m². */
+const shieldArea = (bp: Blueprint): number => shieldEmitters(bp).reduce((a, b) => a + Math.abs(polygonArea(shapeVertices(b.shape))), 0);
+
+/** A battery's note: how long it alone holds the ship's shields up. */
+function shieldNote(bp: Blueprint, capacity: number): string {
+  const draw = Math.max(0, ...bp.ship.bodies.map((x) => x.shield?.draw ?? 0)); // one field a ship
+  return draw > 0 ? `. About ${round(capacity / draw, 1)} s of shield alone` : "";
 }
 
 /** Shell feeds (WPN-015): every store of shells feeds every gun that fires shells like them. */
@@ -1618,7 +1699,13 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   const ck = containerKind(c);
   const pk = powerKind(c);
   const lim = ck ? CONTAINERS[ck] : pk ? POWER[pk] : { min: 0.05, max: 10 };
-  if (b.shape.kind === "box") {
+  if (b.shape.kind === "box" && isBarrel(c)) {
+    // A gun's width is fixed; its length is its barrel (Chloe, 19 November 2026).
+    ps.push(
+      { key: "width", label: "Width", unit: "m", value: b.shape.width, min: lim.min, max: lim.max, step: 0.05, decimals: 2, tab: "shape", readonly: true, note: "Fixed: a gun is made longer or shorter, not wider" },
+      { key: "height", label: "Barrel length", unit: "m", value: b.shape.height, min: 0.3, max: 3, step: 0.05, decimals: 2, tab: "shape", note: "Longer fires faster; its muzzle moves to the end" },
+    );
+  } else if (b.shape.kind === "box") {
     ps.push(
       { key: "width", label: "Width", unit: "m", value: b.shape.width, min: lim.min, max: lim.max, step: 0.05, decimals: 2, tab: "shape" },
       { key: "height", label: "Height", unit: "m", value: b.shape.height, min: lim.min, max: lim.max, step: 0.05, decimals: 2, tab: "shape" },
@@ -1640,7 +1727,7 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   if (ck) ps.push(...containerParams(bp, c, ck));
   if (pk && b.power) {
     const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "function", readonly: true, note });
-    if (pk === "battery") ps.push(ro("capacity", "Stores", "kJ", b.power.capacity ?? 0, 0, `${Math.round(show(POWER.battery.perArea, "kJ") / show(1, "m²"))} kJ per m²; full at the start. About ${round((b.power.capacity ?? 0) / POWER.shield.draw, 1)} s of shield alone`));
+    if (pk === "battery") ps.push(ro("capacity", "Stores", "kJ", b.power.capacity ?? 0, 0, `${Math.round(show(POWER.battery.perArea, "kJ") / show(1, "m²"))} kJ per m²; full at the start. ${shieldNote(bp, b.power.capacity ?? 0)}`));
     else ps.push(ro("output", "Makes up to", "kW", b.power.output ?? 0, 0, `${Math.round(show(POWER.generator.perArea, "kW") / show(1, "m²"))} kW per m², burning ${round(show((b.power.output ?? 0) / POWER.perKg, "kg/s"), 1)} kg/s of propellant at full; only while the batteries aren't full`));
   }
   for (const s of ck ? [] : (b.contents ?? [])) {
@@ -1653,6 +1740,7 @@ function partParams(bp: Blueprint, compId: string): Param[] {
   if (b.magazine) {
     ps.push({ key: "count", label: "Shells in the gun", unit: "", value: b.magazine.count, min: 0, max: 1000, step: 1, decimals: 0, tab: "function", ...(bp.ship.links.some((l) => l.kind === "ammo" && l.to === b.id) ? { note: "Magazines welded to it pass it more, one at a time" } : {}) });
     if (b.magazine.railgun && c.part === "gun") ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function", readonly: true, note: `From the barrel's length (its height): ${show(GUN.speed, "m/s")} m/s at ${show(GUN.length, "m")} m, as its square root. Chemical: no power` });
+    else if (b.magazine.railgun && c.part === "railgun") ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function", readonly: true, note: `From the barrel's length: ${show(RAILGUN.speed, "m/s")} m/s at ${show(RAILGUN.length, "m")} m, as its square root. Each shot draws ${Math.round(show(b.magazine.railgun.shot ?? 0, "kJ") / 1000)} MJ` });
     else if (b.magazine.railgun) ps.push({ key: "speed", label: "Muzzle speed", unit: "m/s", value: b.magazine.railgun.speed, min: 1, max: 1000, step: 1, decimals: 0, tab: "function" });
     ps.push({ key: "reload", label: "Reload", unit: "s", value: b.magazine.reload, min: 0.01, max: 10, step: 0.005, decimals: 3, tab: "function" });
   }
@@ -1663,6 +1751,16 @@ function partParams(bp: Blueprint, compId: string): Param[] {
     );
   }
   if (b.shield) ps.push({ key: "radius", label: "Shield radius", unit: "m", value: b.shield.radius, min: 0.5, max: 20, step: 0.05, decimals: 2, tab: "function" });
+  if (b.shield && c.part === "shield-emitter") {
+    const total = shieldArea(bp);
+    const s = shieldSpec(total, b.shield.radius);
+    const ro = (key: string, label: string, unit: string, value: number, decimals: number, note: string): Param => ({ key, label, unit, value, min: 0, max: 1e9, step: 1, decimals, tab: "function", readonly: true, note });
+    ps.push(
+      ro("leastArea", "Least emitter for this field", "m²", s.leastArea, 2, `${total > Math.abs(polygonArea(shapeVertices(b.shape))) + 1e-9 ? "The ship's emitters together have" : "Its area is"} ${round(s.oversize, 2)} × that: the bigger, the cheaper the shield to run and to hit`),
+      ro("shieldDraw", "Draws while up", "kW", s.draw, 0, "With the field's radius, and less as the emitter is bigger"),
+      ro("hitEfficiency", "Hit efficiency", "%", round(s.hitEfficiency * 100, 2), 1, "Each hit costs its energy at this efficiency: more as the emitter is bigger, at most 50%"),
+    );
+  }
   if (!ck && !pk) ps.push(mass());
   if (c.pilot) ps.push({ key: "pilot", label: "Pilot", unit: "kg", value: c.pilot, min: 0, max: 1e9, step: 1, decimals: 0, tab: "build", readonly: true, note: "A woolly mammoth cow, in the cockpit" });
   else if (pk) ps.push({ ...mass(), readonly: true, note: "From its size (the design rules)" });
@@ -1770,8 +1868,15 @@ function setOther(bp: Blueprint, c: Component, key: string, value: number): Blue
   if (c.form && ["fBase", "fTop", "fHeight", "fApex", "fTurn"].includes(key)) return setForm(bp, compId, key, value);
   const out = clone(bp);
   const b = body(out, c.bodies[0]);
+  // A gun is made longer or shorter, not wider (Chloe, 19 November 2026).
+  if (key === "width" && isBarrel(c)) return bp;
   if ((key === "width" || key === "height") && b.shape.kind === "box") {
     const old = b.shape.width * b.shape.height;
+    // A barrel grows from its breech, where it's mounted, out toward its muzzle (Chloe, 19 November 2026).
+    if (key === "height" && isBarrel(c)) {
+      const shift = rot({ x: 0, y: (value - b.shape.height) / 2 }, b.angle ?? 0);
+      b.position = { x: round(b.position.x + shift.x), y: round(b.position.y + shift.y) };
+    }
     b.shape = { ...b.shape, [key]: value };
     // The same stuff, bigger or smaller: mass and what it holds go with its area (a container: its rules).
     const k = (b.shape.width * b.shape.height) / old;
@@ -1799,7 +1904,14 @@ function setOther(bp: Blueprint, c: Component, key: string, value: number): Blue
   else if (key === "reload" && b.magazine) b.magazine.reload = value;
   else if (key === "range" && b.tractor) b.tractor.range = value;
   else if (key === "force" && b.tractor) b.tractor.force = value;
-  else if (key === "radius" && b.shield) b.shield.radius = value;
+  else if (key === "radius" && b.shield) {
+    b.shield.radius = value;
+    // One field a ship: every emitter's (their draw and efficiency follow, and a field too big for them is cut to fit).
+    if (c.part === "shield-emitter") {
+      for (const e of shieldEmitters(out)) e.shield!.radius = value;
+      reshield(out);
+    }
+  }
   return out;
 }
 
@@ -2014,6 +2126,7 @@ export function removeComponent(bp: Blueprint, compId: string): Blueprint {
   out.ship.links = out.ship.links.filter((l) => !("to" in l && gone.has(l.to as string)) && !("from" in l && gone.has((l as { from: string }).from)));
   out.components = out.components.filter((x) => x.id !== compId);
   out.mix = { ...out.mix, rows: out.mix.rows.filter((r: MixerRow) => !channels.has(r.channel)) };
+  reshield(out);
   return out;
 }
 
@@ -2081,6 +2194,11 @@ export function componentSize(bp: Blueprint, compId: string): { w: number; h: nu
  */
 export function resizeComponent(bp: Blueprint, compId: string, w: number, h: number, fixed: Vec2, side: { x: number; y: number }): Blueprint {
   const c = component(bp, compId);
+  // A gun keeps its width: dragged, only its length changes (Chloe, 19 November 2026).
+  if (isBarrel(c)) {
+    w = componentSize(bp, compId).w;
+    h = Math.max(BARREL.min, Math.min(BARREL.max, h));
+  }
   // A container stays within its size limits (§2, §3).
   const kind = containerKind(c);
   if (kind) {
@@ -2343,6 +2461,7 @@ export function addComponent(bp: Blueprint, made: { comp: Component; bodies: Bod
   refeed(out);
   reammo(out);
   relink(out);
+  reshield(out);
   return reweld(out, made.comp.id);
 }
 

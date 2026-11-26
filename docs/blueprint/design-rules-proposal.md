@@ -112,7 +112,7 @@ not a design setting, so the tank rules above stay honest.
 - A bullet magazine holds 240 bullets per m², half a magazine's: a chemically propelled cartridge
   takes twice the room.
 - The gun needs no power. Its muzzle speed is 100 m/s at a 0.7 m barrel, going as the square root
-  of the length. See `spec.md` §22.
+  of the length. See `spec.md` §22. *Since 19 November 2026 (Chloe): 150 m/s at 0.7 m.*
 
 ## 4. Power: batteries, generators, and what uses power
 

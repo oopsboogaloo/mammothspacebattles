@@ -560,9 +560,18 @@ chemically propelled guns.
 
 - **Gun** (Weapons):
   - It fires bullets launched by their own propellant, so it needs no power.
-  - Its muzzle speed comes from its barrel's length, its height: 100 m/s at 0.7 m, going as the
-    square root of the length. The propellant's push over the barrel gives v² ∝ length.
-  - So it is slower than a railgun of the same length (144 m/s at 0.7 m).
+  - Its muzzle speed comes from its barrel's length, its height: 150 m/s at 0.7 m (600 m/s from
+    2.8 m in the game), going as the square root of the length. The propellant's push over the
+    barrel gives v² ∝ length.
+  - *As first set (16 November 2026): 100 m/s at 0.7 m, slower than the railgun of then (144 m/s).*
+  - *Chloe, 19 November 2026: 50% faster (the Mastodon's bullets bounced off everything): 31 MJ a
+    bullet in the game, from 13.7.*
+  - *Chloe, 19 November 2026: projectiles are discs.* The bullet is a disc of the area of the 0.22 m
+    square it was (0.99 m across in the game), and so is THRUST 1's railgun shell (0.52 m across, the
+    area of its 0.5 × 0.42 m box). A disc has no corners to catch and tumble on, and is the cheaper
+    shape to collide (disc–polygon, one contact point, an exact broad-phase circle). Saved designs'
+    shells and bullets are made discs as they load (`withCurrentRules`). Other projectiles may have
+    other shapes later.
   - Its muzzle moves with the barrel's end.
 - **Bullet magazine** (Storage):
   - It follows the magazine's rules (§19), but a bullet's cartridge takes twice the room: 240
@@ -958,6 +967,41 @@ inside: `src/app/blueprint/rules.ts`). Only the regular parts change: THRUST OG 
 - **After the second play (Chloe, 18 November 2026):** the shield draws twice as much while up
   (332 MW: THRUST 1's battery in 10 s alone, about 26 s with its generators), and each hit costs
   its energy at 12.5% (twice as dear).
+- **The Phiomia's and Loxodon's engines (Chloe, 19 November 2026):** both struggled with the 4 t
+  pilot aboard. The Phiomia's flow is doubled (0.6 kg/s each in the designer's units): 44.9 m/s²
+  forward in the game, 4.9 rad/s² turning, its beams still holding. The Loxodon's is 50% up (0.6):
+  61.8 m/s² forward, 6.1 rad/s² turning.
+- **The shield by its emitter's area (Chloe, 19 November 2026; `SHIELD`, `shieldSpec` in rules.ts):**
+  only the area counts, as for every part. A field of radius R needs an emitter of at least 7.04 m² ×
+  (R ÷ 17.8 m)² in the game; its oversize (area ÷ that least) makes it efficient:
+  - draw while up: 664 MW × (R ÷ 17.8 m) ÷ oversize (with the field's edge);
+  - hit efficiency: 6.25% × oversize, at most 50%;
+  - mass: 426 kg per m² (THRUST 1's 3 t);
+  - an emitter too small for the field asked of it projects only what it can: the radius is cut.
+  The emitter's Function tab shows the least area for its field, its draw and its hit efficiency.
+  **Several emitters make one shield** (Chloe, 19 November 2026; SHD-007): their areas are summed,
+  and every emitter gets the shield of that total, at the largest field radius asked of any (setting
+  one's radius sets them all). In the game the first that can holds the one field and the others
+  stand by, drawing nothing; one takes over if that one is lost. Two of THRUST 1's emitters: half
+  the draw and twice the efficiency.
+  THRUST 1 keeps the least (7.04 m², 3 t): 664 MW (its battery alone 5 s, with its generators about
+  7 s), hits at 6.25%. Twice the area halves the draw and doubles the efficiency (14 m², 6 t: the
+  shield it had before); four times (28 m², 12 t), its generators hold it up.
+- **THRUST 1's layout (Chloe, 19 November 2026):** the shield emitter is just under the cockpit, as
+  wide as it (4.8 × 1.47 m in the game), with the battery and the main engine moved down 1.47 m
+  under it; the railgun stands on the cockpit's top, 1.6 m lower than it was. 48.03 t full, 44.03 t
+  without the pilot; 184 m/s² forward.
+- **Guns' barrels (Chloe, 19 November 2026):**
+  - A railgun's speed comes from its barrel's length, as the gun's does: 1,200 m/s from THRUST 1's
+    2.8 m, as the square root of the length (`RAILGUN`, `railgunSpeed`); its shot's energy goes with
+    the speed squared, so a longer railgun fires faster and dearer, a shorter one slower and cheaper.
+    Its muzzle speed is read-only.
+  - Both kinds of gun keep their width (read-only; a drag changes only the length) and grow from the
+    breech, where they're mounted, out toward the muzzle; the muzzle stays just past the barrel's end.
+    (A railgun's muzzle used to stay where THRUST 1's barrel put it: a railgun made longer covered its
+    own muzzle and never fired. A saved design loads with its muzzles moved.)
+  - The blueprint marks each gun's muzzle with a chevron pointing the way its shells fly, red if
+    something covers it, and a warning names any gun that can't fire and what is in its way.
 - **Saved designs load with today's rules** (`withCurrentRules`): every rule is applied again as
   a design is loaded or imported, so the figures that follow from them (power, the shield, the
   railgun's shot, the tractor, what containers hold, the pilot) are today's however they have been
